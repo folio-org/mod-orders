@@ -90,7 +90,7 @@ public class OrderLinePatchOperationService {
 
     return handleUpdateInstance(orderLineUpdateInstanceHolder, requestContext)
       .compose(v -> sendPatchOrderLineRequest(orderLineUpdateInstanceHolder, poLine.getId(), requestContext))
-      .map(v -> orderLineUpdateInstanceHolder.getStoragePoLine());
+      .compose(v -> purchaseOrderLineService.getOrderLineById(poLine.getId(), requestContext));
   }
 
   public Future<Void> handleUpdateInstance(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
@@ -131,15 +131,16 @@ public class OrderLinePatchOperationService {
     String newInstanceId = request.getReplaceInstanceRef().getNewInstanceId();
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCE_RECORDS_BY_ID_ENDPOINT)).withId(newInstanceId);
     return restClient.getAsJsonObject(requestEntry, requestContext)
-      .compose(instanceRecord -> updatePoLineWithInstanceRecordInfo(instanceRecord, poLine, requestContext))
+      .compose(instanceRecord -> updatePoLineWithInstanceRecordInfo(instanceRecord, poLine, newInstanceId, requestContext))
       .compose(updatePoLine -> purchaseOrderLineService.saveOrderLine(updatePoLine, requestContext))
       .onSuccess(v -> logger.info("updateInventoryInstanceInformation:: updated instance info for poLineId: {}", poLine.getId()))
       .onFailure(v -> logger.error("Error when updating retrieving instance record from inventory-storage request to by instanceId {}, poLineId {}", newInstanceId, poLine.getId()));
   }
 
-  private Future<PoLine> updatePoLineWithInstanceRecordInfo(JsonObject lookupObj, PoLine poLine, RequestContext requestContext) {
+  private Future<PoLine> updatePoLineWithInstanceRecordInfo(JsonObject lookupObj, PoLine poLine, String newInstanceId, RequestContext requestContext) {
     Promise<PoLine> promise = Promise.promise();
 
+    poLine.setInstanceId(newInstanceId);
     poLine.setTitleOrPackage(lookupObj.getString(INSTANCE_TITLE));
     poLine.setPublisher(InventoryUtils.getPublisher(lookupObj));
     poLine.setPublicationDate(InventoryUtils.getPublicationDate(lookupObj));
