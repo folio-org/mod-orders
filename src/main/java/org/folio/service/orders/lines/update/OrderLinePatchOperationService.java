@@ -36,7 +36,6 @@ import org.folio.service.inventory.InventoryUtils;
 import org.folio.service.orders.PurchaseOrderLineService;
 
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 import org.folio.orders.utils.HelperUtils;
 
@@ -72,25 +71,25 @@ public class OrderLinePatchOperationService {
     logger.info("patch:: start patching operation: {} for poLineId: {}", request.getOperation(), lineId);
     String newInstanceId = request.getReplaceInstanceRef().getNewInstanceId();
     return inventoryInstanceManager.createShadowInstanceIfNeeded(newInstanceId, requestContext)
-      .compose(v -> patchOrderLine(request, lineId, requestContext))
-      .compose(v -> updateInventoryInstanceInformation(request, lineId, requestContext))
+      .compose(v -> purchaseOrderLineService.getOrderLineById(lineId, requestContext))
+      .compose(poLine -> patchOrderLineAndInstanceInfo(request, poLine, requestContext))
       .onSuccess(v -> logger.info("patch:: successfully patched operation: {} for poLineId: {}", request.getOperation(), lineId))
       .onFailure(e -> logger.error("Failed to patch operation: {} for poLineId: {}", request.getOperation(), lineId, e));
   }
 
-  private Future<Void> patchOrderLine(PatchOrderLineRequest request, String lineId, RequestContext requestContext) {
-    return purchaseOrderLineService.getOrderLineById(lineId, requestContext)
-      .compose(poLine -> {
-        OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
-          .withPathOrderLineRequest(request)
-          .withStoragePoLine(poLine);
+  private Future<Void> patchOrderLineAndInstanceInfo(PatchOrderLineRequest request, PoLine poLine, RequestContext requestContext) {
+    return patchOrderLine(request, poLine, requestContext)
+      .compose(updatedPoLine -> updateInventoryInstanceInformation(request, updatedPoLine, requestContext));
+  }
 
-        return handleUpdateInstance(orderLineUpdateInstanceHolder, requestContext)
-          .compose(v -> sendPatchOrderLineRequest(orderLineUpdateInstanceHolder, lineId, requestContext));
-      })
-      .onFailure(t ->
-        logger.error("Error when sending patch request to order lines endpoint for lineId {}", lineId, t)
-      );
+  private Future<PoLine> patchOrderLine(PatchOrderLineRequest request, PoLine poLine, RequestContext requestContext) {
+    var orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
+      .withPathOrderLineRequest(request)
+      .withStoragePoLine(poLine);
+
+    return handleUpdateInstance(orderLineUpdateInstanceHolder, requestContext)
+      .compose(v -> sendPatchOrderLineRequest(orderLineUpdateInstanceHolder, poLine.getId(), requestContext))
+      .compose(v -> purchaseOrderLineService.getOrderLineById(poLine.getId(), requestContext));
   }
 
   public Future<Void> handleUpdateInstance(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
@@ -118,6 +117,7 @@ public class OrderLinePatchOperationService {
 
   private Future<Void> sendPatchOrderLineRequest(OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder, String lineId,
                                                  RequestContext requestContext) {
+    logger.debug("sendPatchOrderLineRequest:: sending patch request for poLineId: {}", lineId);
     StoragePatchOrderLineRequest storagePatchOrderLineRequest = orderLineUpdateInstanceHolder.getStoragePatchOrderLineRequest();
     if (Objects.nonNull(storagePatchOrderLineRequest)) {
       RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(lineId);
@@ -126,39 +126,28 @@ public class OrderLinePatchOperationService {
     return Future.succeededFuture();
   }
 
-  private Future<Void> updateInventoryInstanceInformation(PatchOrderLineRequest request, String lineId, RequestContext requestContext) {
-    Promise<Void> promise = Promise.promise();
-
+  private Future<Void> updateInventoryInstanceInformation(PatchOrderLineRequest request, PoLine poLine, RequestContext requestContext) {
     String newInstanceId = request.getReplaceInstanceRef().getNewInstanceId();
-    purchaseOrderLineService.getOrderLineById(lineId, requestContext)
-      .compose(poLine -> {
-        RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCE_RECORDS_BY_ID_ENDPOINT)).withId(newInstanceId);
-        return restClient.getAsJsonObject(requestEntry, requestContext)
-          .compose(instanceRecord -> updatePoLineWithInstanceRecordInfo(instanceRecord, poLine, requestContext))
-          .compose(validatedPoLine -> purchaseOrderLineService.saveOrderLine(validatedPoLine, requestContext))
-          .onSuccess(v -> promise.complete())
-          .onFailure(promise::fail);
-      })
-      .onFailure(t -> {
-        logger.error("Error when updating retrieving instance record from inventory-storage request to by instanceId {}, poLineId {}", newInstanceId, lineId);
-        promise.fail(t);
-      });
-
-    return promise.future();
+    poLine.setInstanceId(newInstanceId); // updating instance id in case of retrieval of poLine has old instance id because of race condition
+    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCE_RECORDS_BY_ID_ENDPOINT)).withId(newInstanceId);
+    return restClient.getAsJsonObject(requestEntry, requestContext)
+      .compose(instanceRecord -> updatePoLineWithInstanceRecordInfo(instanceRecord, poLine, requestContext))
+      .compose(updatePoLine -> purchaseOrderLineService.saveOrderLine(updatePoLine, requestContext))
+      .onSuccess(v -> logger.info("updateInventoryInstanceInformation:: updated instance info for poLineId: {}", poLine.getId()))
+      .onFailure(v -> logger.error("Error when updating retrieving instance record from inventory-storage request to by instanceId {}, poLineId {}", newInstanceId, poLine.getId()));
   }
 
   private Future<PoLine> updatePoLineWithInstanceRecordInfo(JsonObject lookupObj, PoLine poLine, RequestContext requestContext) {
-    Promise<PoLine> promise = Promise.promise();
-
     poLine.setTitleOrPackage(lookupObj.getString(INSTANCE_TITLE));
     poLine.setPublisher(InventoryUtils.getPublisher(lookupObj));
     poLine.setPublicationDate(InventoryUtils.getPublicationDate(lookupObj));
     poLine.setContributors(InventoryUtils.getContributors(lookupObj));
 
-    inventoryCache.getISBNProductTypeId(requestContext)
+    return inventoryCache.getISBNProductTypeId(requestContext)
       .compose(isbnTypeId -> {
         List<ProductId> productIds = InventoryUtils.getProductIds(lookupObj);
         Set<String> setOfProductIds = buildSetOfProductIds(productIds, isbnTypeId);
+
         return HelperUtils.executeWithSemaphores(setOfProductIds,
             productId -> inventoryCache.convertToISBN13(extractProductId(productId), requestContext)
               .map(normalizedId -> Map.entry(productId, normalizedId)), requestContext)
@@ -166,29 +155,24 @@ public class OrderLinePatchOperationService {
             .stream()
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)))
           .map(productIdsMap -> {
-            // update productids with normalized values
             productIds.stream()
               .filter(productId -> isISBN(isbnTypeId, productId))
               .forEach(productId -> {
                 productId.withQualifier(extractQualifier(productId.getProductId()));
                 productId.setProductId(productIdsMap.get(productId.getProductId()));
               });
-            return null;
-          })
-          .onSuccess(v -> {
+
             if (Objects.isNull(poLine.getDetails())) {
               poLine.setDetails(new Details());
             }
             poLine.getDetails().setProductIds(removeISBNDuplicates(productIds, isbnTypeId));
-            promise.complete(poLine);
+            return poLine;
           })
-          .onFailure(t -> {
+          .recover(t -> {
             logger.error("Failed update poLine {} with instance", poLine.getId(), t);
-            promise.fail(new HttpException(400, INSTANCE_INVALID_PRODUCT_ID_ERROR.toError()));
-          })
-          .mapEmpty();
+            return Future.failedFuture(new HttpException(400, INSTANCE_INVALID_PRODUCT_ID_ERROR.toError()));
+          });
       });
-    return promise.future();
   }
 
 }
