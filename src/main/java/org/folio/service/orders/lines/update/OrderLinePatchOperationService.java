@@ -129,27 +129,26 @@ public class OrderLinePatchOperationService {
 
   private Future<Void> updateInventoryInstanceInformation(PatchOrderLineRequest request, PoLine poLine, RequestContext requestContext) {
     String newInstanceId = request.getReplaceInstanceRef().getNewInstanceId();
+    poLine.setInstanceId(newInstanceId); // updating instance id in case of retrieval of poLine has old instance id because of race condition
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCE_RECORDS_BY_ID_ENDPOINT)).withId(newInstanceId);
     return restClient.getAsJsonObject(requestEntry, requestContext)
-      .compose(instanceRecord -> updatePoLineWithInstanceRecordInfo(instanceRecord, poLine, newInstanceId, requestContext))
+      .compose(instanceRecord -> updatePoLineWithInstanceRecordInfo(instanceRecord, poLine, requestContext))
       .compose(updatePoLine -> purchaseOrderLineService.saveOrderLine(updatePoLine, requestContext))
       .onSuccess(v -> logger.info("updateInventoryInstanceInformation:: updated instance info for poLineId: {}", poLine.getId()))
       .onFailure(v -> logger.error("Error when updating retrieving instance record from inventory-storage request to by instanceId {}, poLineId {}", newInstanceId, poLine.getId()));
   }
 
-  private Future<PoLine> updatePoLineWithInstanceRecordInfo(JsonObject lookupObj, PoLine poLine, String newInstanceId, RequestContext requestContext) {
-    Promise<PoLine> promise = Promise.promise();
-
-    poLine.setInstanceId(newInstanceId);
+  private Future<PoLine> updatePoLineWithInstanceRecordInfo(JsonObject lookupObj, PoLine poLine, RequestContext requestContext) {
     poLine.setTitleOrPackage(lookupObj.getString(INSTANCE_TITLE));
     poLine.setPublisher(InventoryUtils.getPublisher(lookupObj));
     poLine.setPublicationDate(InventoryUtils.getPublicationDate(lookupObj));
     poLine.setContributors(InventoryUtils.getContributors(lookupObj));
 
-    inventoryCache.getISBNProductTypeId(requestContext)
+    return inventoryCache.getISBNProductTypeId(requestContext)
       .compose(isbnTypeId -> {
         List<ProductId> productIds = InventoryUtils.getProductIds(lookupObj);
         Set<String> setOfProductIds = buildSetOfProductIds(productIds, isbnTypeId);
+
         return HelperUtils.executeWithSemaphores(setOfProductIds,
             productId -> inventoryCache.convertToISBN13(extractProductId(productId), requestContext)
               .map(normalizedId -> Map.entry(productId, normalizedId)), requestContext)
@@ -157,29 +156,24 @@ public class OrderLinePatchOperationService {
             .stream()
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)))
           .map(productIdsMap -> {
-            // update productids with normalized values
             productIds.stream()
               .filter(productId -> isISBN(isbnTypeId, productId))
               .forEach(productId -> {
                 productId.withQualifier(extractQualifier(productId.getProductId()));
                 productId.setProductId(productIdsMap.get(productId.getProductId()));
               });
-            return null;
-          })
-          .onSuccess(v -> {
+
             if (Objects.isNull(poLine.getDetails())) {
               poLine.setDetails(new Details());
             }
             poLine.getDetails().setProductIds(removeISBNDuplicates(productIds, isbnTypeId));
-            promise.complete(poLine);
+            return poLine;
           })
-          .onFailure(t -> {
+          .recover(t -> {
             logger.error("Failed update poLine {} with instance", poLine.getId(), t);
-            promise.fail(new HttpException(400, INSTANCE_INVALID_PRODUCT_ID_ERROR.toError()));
-          })
-          .mapEmpty();
+            return Future.failedFuture(new HttpException(400, INSTANCE_INVALID_PRODUCT_ID_ERROR.toError()));
+          });
       });
-    return promise.future();
   }
 
 }
