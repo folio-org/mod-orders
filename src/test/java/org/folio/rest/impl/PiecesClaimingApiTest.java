@@ -9,7 +9,6 @@ import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
 import org.folio.Organization;
 import org.folio.config.ApplicationConfig;
-import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.ClaimingCollection;
 import org.folio.rest.jaxrs.model.ClaimingPieceResult;
 import org.folio.rest.jaxrs.model.ClaimingResults;
@@ -56,7 +55,6 @@ import static org.folio.rest.impl.MockServer.PIECES_COLLECTION;
 import static org.folio.rest.impl.MockServer.PO_LINES_COLLECTION;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.folio.rest.impl.MockServer.getDataExportSpringJobCreations;
-import static org.folio.rest.impl.MockServer.getDataExportSpringJobExecutions;
 import static org.folio.rest.impl.MockServer.getOrganizationSearches;
 import static org.folio.rest.impl.MockServer.getPieceBatchUpdates;
 import static org.folio.rest.impl.MockServer.getPieceSearches;
@@ -107,7 +105,7 @@ public class PiecesClaimingApiTest {
 
   private static Stream<Arguments> testPostPiecesClaimArgs() {
     var payloadFile = "send-claims-1-piece-1-vendor-1-job.json";
-    var mockHitDto = new MockHitDto(3, 2, 2, 1, 1, 1, 1, 1);
+    var mockHitDto = new MockHitDto(3, 2, 2, 1, 1, 1, 1);
     return Stream.of(
       Arguments.of("One piece One vendor One Job", 0, 17, 69, mockHitDto, payloadFile, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10_CLAIMS, SUCCESS, CREATED),
       Arguments.of("One piece One vendor No Job", 0, 17, 69, null, payloadFile, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, FAILURE, UNPROCESSABLE_ENTITY)
@@ -123,11 +121,10 @@ public class PiecesClaimingApiTest {
     private final int pieceUpdates;
     private final int claimingResults;
     private final int jobCreations;
-    private final int jobExecutions;
 
     public MockHitDto(int pieceSearches, int polSearches, int purchaseOrderRetrievals,
                       int organizationSearches, int pieceUpdates, int claimingResults,
-                      int jobCreations, int jobExecutions) {
+                      int jobCreations) {
       this.pieceSearches = pieceSearches;
       this.polSearches = polSearches;
       this.purchaseOrderRetrievals = purchaseOrderRetrievals;
@@ -135,7 +132,6 @@ public class PiecesClaimingApiTest {
       this.pieceUpdates = pieceUpdates;
       this.claimingResults = claimingResults;
       this.jobCreations = jobCreations;
-      this.jobExecutions = jobExecutions;
     }
   }
 
@@ -191,53 +187,61 @@ public class PiecesClaimingApiTest {
     var organizationSearches = getOrganizationSearches();
     var pieceUpdates = getPieceBatchUpdates();
     var jobCreations = getDataExportSpringJobCreations();
-    var jobExecutions = getDataExportSpringJobExecutions();
 
-    if (response instanceof ClaimingResults claimingResults) {
-      if (Objects.nonNull(dto)) {
-        assertThat(pieceSearches, not(nullValue()));
-        assertThat(polSearches, not(nullValue()));
-        assertThat(purchaseOrderRetrievals, not(nullValue()));
-        assertThat(organizationSearches, not(nullValue()));
-        assertThat(pieceUpdates, not(nullValue()));
-        assertThat(jobCreations, not(nullValue()));
-        assertThat(jobExecutions, not(nullValue()));
-        assertThat(pieceSearches, hasSize(dto.pieceSearches));
-        assertThat(polSearches, hasSize(dto.polSearches));
-        assertThat(purchaseOrderRetrievals, hasSize(dto.purchaseOrderRetrievals));
-        assertThat(organizationSearches, hasSize(dto.organizationSearches));
-        assertThat(pieceUpdates, hasSize(dto.pieceUpdates));
-        assertThat(jobCreations, hasSize(dto.jobCreations));
-        assertThat(jobExecutions, hasSize(dto.jobExecutions));
-        assertThat(claimingResults.getClaimingPieceResults().size(), equalTo(dto.claimingResults));
+    ClaimingResults claimingResults = null;
+    try {
+      claimingResults = response.as(ClaimingResults.class);
+    } catch (Exception ignored) {
+    }
 
-        pieceUpdates.forEach(pieceUpdate -> logger.info("Updated Piece: {}", pieceUpdate.encodePrettily()));
+    if (Objects.nonNull(claimingResults)) {
+      assertThat(pieceSearches, not(nullValue()));
+      assertThat(polSearches, not(nullValue()));
+      assertThat(purchaseOrderRetrievals, not(nullValue()));
+      assertThat(organizationSearches, not(nullValue()));
+      assertThat(pieceUpdates, not(nullValue()));
+      assertThat(jobCreations, not(nullValue()));
+      assertThat(pieceSearches, hasSize(dto.pieceSearches));
+      assertThat(polSearches, hasSize(dto.polSearches));
+      assertThat(purchaseOrderRetrievals, hasSize(dto.purchaseOrderRetrievals));
+      assertThat(organizationSearches, hasSize(dto.organizationSearches));
+      assertThat(pieceUpdates, hasSize(dto.pieceUpdates));
+      assertThat(jobCreations, hasSize(dto.jobCreations));
+      assertThat(claimingResults.getClaimingPieceResults().size(), equalTo(dto.claimingResults));
 
-        var claimedPieceIds = jobCreations.stream()
-          .peek(job -> logger.info("Created job: {}", JsonObject.mapFrom(job).encodePrettily()))
-          .map(job -> job.getJsonObject(EXPORT_TYPE_SPECIFIC_PARAMETERS.getValue())
-            .getJsonObject(VENDOR_EDI_ORDERS_EXPORT_CONFIG.getValue())
-            .getJsonArray(CLAIM_PIECE_IDS.getValue()).size())
-          .mapToInt(value -> value).sum();
-        assertThat(claimedPieceIds, equalTo(request.getClaimingPieceIds().size()));
+      pieceUpdates.forEach(pieceUpdate -> logger.info("Updated Piece: {}", pieceUpdate.encodePrettily()));
 
-        claimingResults.getClaimingPieceResults()
-          .forEach(result -> {
-            if (expectedStatus == SUCCESS) {
-              assertThat(result.getPieceId(), not(nullValue()));
-              assertThat(result.getError(), is(nullValue()));
-            } else {
-              assertThat(result.getError(), is(notNullValue()));
-            }
-            assertThat(result.getStatus(), is(expectedStatus));
-          });
-      }
-    } else if (response instanceof HttpException exception) {
-      assertThat(exception.getErrors().getErrors().size(), is(1));
-      assertThat(exception.getError().getCode(), is("unableToGenerateClaimsForOrgNoIntegrationDetails"));
-      assertThat(exception.getError().getMessage(), is("Unable to generate claims for AMAZ because no claim integrations exist"));
-      assertThat(exception.getError().getParameters().get(0).getValue(), is(piece.getId()));
-      assertThat(exception.getError().getParameters().get(1).getValue(), is("AMAZ"));
+      var claimedPieceIds = jobCreations.stream()
+        .peek(job -> logger.info("Created job: {}", JsonObject.mapFrom(job).encodePrettily()))
+        .map(job -> job.getJsonObject(EXPORT_TYPE_SPECIFIC_PARAMETERS.getValue())
+          .getJsonObject(VENDOR_EDI_ORDERS_EXPORT_CONFIG.getValue())
+          .getJsonArray(CLAIM_PIECE_IDS.getValue()).size())
+        .mapToInt(value -> value).sum();
+      assertThat(claimedPieceIds, equalTo(request.getClaimingPieceIds().size()));
+
+      claimingResults.getClaimingPieceResults()
+        .forEach(result -> {
+          if (expectedStatus == SUCCESS) {
+            assertThat(result.getPieceId(), not(nullValue()));
+            assertThat(result.getError(), is(nullValue()));
+          } else {
+            assertThat(result.getError(), is(notNullValue()));
+          }
+          assertThat(result.getStatus(), is(expectedStatus));
+        });
+    } else {
+      // Cannot use response.as(HttpException.class), fails in runtime
+      var exception = new JsonObject(response.getBody().print());
+      assertThat(exception.getJsonArray("errors").size(), is(1));
+      assertThat(exception.getInteger("total_records"), is(1));
+
+      var error = exception.getJsonArray("errors").getJsonObject(0);
+      assertThat(error.getString("code"), is("unableToGenerateClaimsForOrgNoIntegrationDetails"));
+      assertThat(error.getString("message"), is("Unable to generate claims for AMAZ because no claim integrations exist"));
+
+      var parameters = error.getJsonArray("parameters");
+      assertThat(parameters.getJsonObject(0).getValue("value"), is(piece.getId()));
+      assertThat(parameters.getJsonObject(1).getValue("value"), is("AMAZ"));
     }
   }
 }
