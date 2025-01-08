@@ -1,5 +1,13 @@
 ## 13.0.0 - Unreleased
 
+## 12.9.7 - Released (Ramsons R2 2024)
+The primary focus of this release was to fix inconsistencies in the instance details pane when changing instance connection for PO Line.
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.9.6...v12.9.7)
+
+### Stories
+* [MODORDERS-1218](https://issues.folio.org/browse/MODORDERS-1218) - Different instance details pane opens when user click link in "Item details" accordion after changing instance connection in "Orders" app
+
+
 ## 12.9.6 - Released (Ramsons R2 2024)
 The primary focus of this release was to provide RTR support on Eureka-based environment for order creation through data import
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.9.5...v12.9.6)
