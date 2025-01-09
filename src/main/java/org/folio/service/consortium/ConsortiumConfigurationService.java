@@ -89,13 +89,13 @@ public class ConsortiumConfigurationService {
         }
         String tenantId = TenantTool.tenantId(requestContext.getHeaders());
         var configuration = consortiumConfiguration.get();
-        logger.info("overrideContextToCentralTenantIdNeeded:: tenantId from request: {}, centralTenantId: {}",
+        logger.info("overrideContextToCentralTenantIfNeeded:: tenantId from request: {}, centralTenantId: {}",
           tenantId, configuration.centralTenantId());
         if (StringUtils.equals(tenantId, configuration.centralTenantId())) {
           return Future.succeededFuture(requestContext);
         }
         RequestContext centralContext = createContextWithNewTenantId(requestContext, configuration.centralTenantId());
-        return isCentralOrderingEnabled(requestContext)
+        return isCentralOrderingEnabled(centralContext)
           .compose(isCentralOrderingEnabled -> Future.succeededFuture(isCentralOrderingEnabled ? centralContext : requestContext));
       });
   }
