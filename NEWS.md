@@ -1,5 +1,13 @@
 ## 13.0.0 - Unreleased
 
+## 12.9.8 - Released (Ramsons R2 2024)
+The primary focus of this release was to fix issues with ECS and list of requests previously related to bound pieces is displayed in the wrong order.
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.9.7...v12.9.8)
+
+### Stories
+* [MODORDERS-1231](https://issues.folio.org/browse/MODORDERS-1231) - ECS | User in member tenant cannot bind pieces related to order from Central tenant
+* [MODORDERS-1211](https://issues.folio.org/browse/MODORDERS-1211) - ECS | List of requests previously related to bound pieces is displayed in wrong order
+
 ## 12.9.7 - Released (Ramsons R2 2024)
 The primary focus of this release was to fix inconsistencies in the instance details pane when changing instance connection for PO Line.
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.9.6...v12.9.7)
