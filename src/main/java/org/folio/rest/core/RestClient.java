@@ -46,9 +46,7 @@ public class RestClient {
   }
 
   public <T> Future<T> post(String endpoint, T entity, Class<T> responseType, RequestContext requestContext) {
-    if (log.isDebugEnabled()) {
-      log.debug("Sending 'POST {}", endpoint);
-    }
+    log.debug("Sending 'POST {}", endpoint);
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
     return getVertxWebClient(requestContext.getContext()).postAbs(buildAbsEndpoint(caseInsensitiveHeader, endpoint))
       .putHeaders(caseInsensitiveHeader)
@@ -64,9 +62,7 @@ public class RestClient {
   }
 
   public <T> Future<Void> postEmptyResponse(String endpoint, T entity, RequestContext requestContext) {
-    if (log.isDebugEnabled()) {
-      log.debug("Sending 'POST {}", () -> endpoint);
-    }
+    log.debug("Sending 'POST {}", () -> endpoint);
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
     return getVertxWebClient(requestContext.getContext())
       .postAbs(buildAbsEndpoint(caseInsensitiveHeader, endpoint))
@@ -89,9 +85,7 @@ public class RestClient {
   }
   public <T> Future<Void> put(String endpoint, T dataObject,  RequestContext requestContext) {
     var recordData = JsonObject.mapFrom(dataObject);
-    if (log.isDebugEnabled()) {
-      log.debug("Sending 'PUT {}'", endpoint);
-    }
+    log.debug("Sending 'PUT {}'", endpoint);
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
     return getVertxWebClient(requestContext.getContext())
       .putAbs(buildAbsEndpoint(caseInsensitiveHeader, endpoint))
@@ -108,9 +102,7 @@ public class RestClient {
   }
 
   public <T>Future<Void> patch(String endpoint, T dataObject, RequestContext requestContext) {
-    if (log.isDebugEnabled()) {
-      log.debug("Sending 'PATCH {}'", endpoint);
-    }
+    log.debug("Sending 'PATCH {}'", endpoint);
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
     Promise<Void> promise = Promise.promise();
     return getVertxWebClient(requestContext.getContext())
@@ -129,9 +121,7 @@ public class RestClient {
   }
 
   public Future<Void> delete(String endpointById, boolean skipError404, RequestContext requestContext) {
-    if (log.isDebugEnabled()) {
-      log.debug("Sending {} {}", HttpMethod.DELETE, endpointById);
-    }
+    log.debug("Sending {} {}", HttpMethod.DELETE, endpointById);
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
     Promise<Void> promise = Promise.promise();
     getVertxWebClient(requestContext.getContext())
@@ -181,9 +171,7 @@ public class RestClient {
   }
 
   public <T> Future<T> get(String endpoint, boolean skipError404, Class<T> responseType,  RequestContext requestContext) {
-    if (log.isDebugEnabled()) {
-      log.debug("Calling GET {}", endpoint);
-    }
+    log.debug("Calling GET {}", endpoint);
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
     Promise<T> promise = Promise.promise();
     getVertxWebClient(requestContext.getContext())
@@ -201,9 +189,7 @@ public class RestClient {
 
 
   public Future<JsonObject> getAsJsonObject(String endpoint, boolean skipError404, RequestContext requestContext) {
-    if (log.isDebugEnabled()) {
-      log.debug("Calling GET {}", endpoint);
-    }
+    log.debug("Calling GET {}", endpoint);
     Promise<JsonObject> promise = Promise.promise();
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
     var webClient = getVertxWebClient(requestContext.getContext());
@@ -254,9 +240,7 @@ public class RestClient {
   }
 
   public Future<String> postJsonObjectAndGetId(RequestEntry requestEntry, JsonObject entity, RequestContext requestContext) {
-    if (log.isDebugEnabled()) {
-      log.debug("Sending 'POST {}", requestEntry.buildEndpoint());
-    }
+    log.debug("Sending 'POST {}", requestEntry.buildEndpoint());
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
     return getVertxWebClient(requestContext.getContext())
       .postAbs(buildAbsEndpoint(caseInsensitiveHeader, requestEntry.buildEndpoint()))
@@ -268,9 +252,7 @@ public class RestClient {
   }
 
   public Future<JsonObject> postJsonObject(RequestEntry requestEntry, JsonObject jsonObject, RequestContext requestContext) {
-    if (log.isDebugEnabled()) {
-      log.debug("Sending 'POST {}", requestEntry.buildEndpoint());
-    }
+    log.debug("Sending 'POST {}", requestEntry.buildEndpoint());
     var endpoint = requestEntry.buildEndpoint();
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
     return getVertxWebClient(requestContext.getContext()).postAbs(buildAbsEndpoint(caseInsensitiveHeader, requestEntry.buildEndpoint()))
