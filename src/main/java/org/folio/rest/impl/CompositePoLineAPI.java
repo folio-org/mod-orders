@@ -39,7 +39,6 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 
 public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
   private static final Logger logger = LogManager.getLogger();
@@ -87,13 +86,7 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.debug("Started Invocation of POLine Request with id = {}", lineId);
     helper.getCompositePoLine(lineId, new RequestContext(vertxContext, okapiHeaders))
-      .onSuccess(poLine -> {
-        if (logger.isInfoEnabled()) {
-          logger.debug("Received PO Line Response: {}", JsonObject.mapFrom(poLine)
-            .encodePrettily());
-        }
-        asyncResultHandler.handle(succeededFuture(buildOkResponse(poLine)));
-      })
+      .onSuccess(poLine -> asyncResultHandler.handle(succeededFuture(buildOkResponse(poLine))))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 

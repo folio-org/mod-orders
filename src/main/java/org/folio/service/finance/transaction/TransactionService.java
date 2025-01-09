@@ -16,7 +16,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.rest.acq.model.finance.Batch;
@@ -109,7 +108,7 @@ public class TransactionService {
     }
     return restClient.postEmptyResponse(resourcesPath(FINANCE_BATCH_TRANSACTIONS), batch, requestContext)
       .onSuccess(v -> log.info("batchAllOrNothing completed successfully"))
-      .onFailure(t -> log.error("batchAllOrNothing failed, batch={}", JsonObject.mapFrom(batch), t));
+      .onFailure(t -> log.error("batchAllOrNothing failed", t));
   }
 
   public Future<Void> batchCreate(List<Transaction> transactions, RequestContext requestContext) {

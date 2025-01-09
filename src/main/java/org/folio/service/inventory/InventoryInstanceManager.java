@@ -210,7 +210,6 @@ public class InventoryInstanceManager {
     return CompositeFuture.join(instanceTypeFuture, statusFuture, contributorNameTypeIdFuture)
       .map(v -> buildInstanceRecordJsonObject(compPOL, lookupObj))
       .compose(instanceRecJson -> {
-        logger.debug("Instance record to save : {}", instanceRecJson);
         RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCES));
         return restClient.postJsonObjectAndGetId(requestEntry, instanceRecJson, requestContext);
       });

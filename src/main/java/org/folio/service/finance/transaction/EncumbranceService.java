@@ -152,7 +152,7 @@ public class EncumbranceService {
 
   public Future<Void> updateEncumbrancesOrderStatusAndReleaseIfClosed(CompositePurchaseOrder compPo,
       RequestContext requestContext) {
-    logger.info("updateEncumbrancesOrderStatusAndReleaseIfClosed:: orderId {}  ", compPo.getId());
+    logger.info("updateEncumbrancesOrderStatusAndReleaseIfClosed:: orderId {}", compPo.getId());
     return getOrderEncumbrancesForCurrentFiscalYear(compPo, requestContext).compose(encumbrances -> {
       List<Transaction> toUpdate = encumbrancesToUpdate(compPo.getWorkflowStatus(), encumbrances);
       if (!toUpdate.isEmpty()) {

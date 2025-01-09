@@ -8,8 +8,6 @@ import java.util.Map;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Piece;
@@ -29,11 +27,9 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 
 public class PiecesAPI extends BaseApi implements OrdersPieces, OrdersPiecesRequests, OrdersPiecesBatch {
 
-  private static final Logger logger = LogManager.getLogger();
   @Autowired
   private PieceStorageService pieceStorageService;
   @Autowired
@@ -63,12 +59,7 @@ public class PiecesAPI extends BaseApi implements OrdersPieces, OrdersPiecesRequ
   public void postOrdersPieces(boolean createItem, Piece entity, Map<String, String> okapiHeaders,
                                Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     pieceCreateFlowManager.createPiece(entity, createItem, new RequestContext(vertxContext, okapiHeaders))
-      .onSuccess(piece -> {
-        if (logger.isDebugEnabled()) {
-          logger.debug("Successfully created piece: {}", JsonObject.mapFrom(piece).encodePrettily());
-        }
-        asyncResultHandler.handle(succeededFuture(buildCreatedResponse(piece)));
-      })
+      .onSuccess(piece -> asyncResultHandler.handle(succeededFuture(buildCreatedResponse(piece))))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 

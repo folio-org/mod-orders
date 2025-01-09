@@ -189,7 +189,7 @@ public class PurchaseOrderLineHelper {
               .compose(v -> createPoLineWithOrder(compPOL, po, requestContext)));
         }
         var errors = new Errors().withErrors(validationErrors).withTotalRecords(validationErrors.size());
-        logger.error("Create POL validation error : {}", JsonObject.mapFrom(errors).encodePrettily());
+        logger.error("Create POL validation error: {}", JsonObject.mapFrom(errors).encodePrettily());
         throw new HttpException(RestConstants.VALIDATION_ERROR, errors);
       });
   }

@@ -108,7 +108,7 @@ public class OrderPostProcessingEventHandler implements EventHandler {
   private Future<Void> ensurePoLineWithInstanceId(CompositePoLine poLine, DataImportEventPayload dataImportEventPayload,
                                                   RequestContext requestContext) {
     if (PoLineCommonUtil.isInventoryUpdateNotRequired(poLine)) {
-      LOGGER.debug("ensurePoLineWithInstanceId:: Skipping instanceId filling because poLine does not require inventory entities creation,  jobExecutionId: {}, poLineNumber: {}",
+      LOGGER.debug("ensurePoLineWithInstanceId:: Skipping instanceId filling because poLine does not require inventory entities creation, jobExecutionId: {}, poLineNumber: {}",
         dataImportEventPayload.getJobExecutionId(), poLine.getPoLineNumber());
       return Future.succeededFuture();
     }

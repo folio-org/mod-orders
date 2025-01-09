@@ -32,9 +32,6 @@ public class ConfigurationEntriesService {
   public Future<JsonObject> loadConfiguration(RequestEntry requestEntry, RequestContext requestContext) {
     return restClient.get(requestEntry, Configs.class, requestContext)
       .map(configs -> {
-        if (log.isDebugEnabled()) {
-          log.debug("The response from mod-configuration: {}", JsonObject.mapFrom(configs).encodePrettily());
-        }
         var config = new JsonObject();
         configs.getConfigs()
           .forEach(entry -> config.put(entry.getConfigName(), entry.getValue()));
