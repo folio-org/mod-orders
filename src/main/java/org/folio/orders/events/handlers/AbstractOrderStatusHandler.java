@@ -45,9 +45,6 @@ public abstract class AbstractOrderStatusHandler extends BaseHelper implements H
 
   @Override
   public void handle(Message<JsonObject> message) {
-    JsonObject body = message.body();
-    logger.debug("Received message body: {}", body);
-
     Map<String, String> okapiHeaders = getOkapiHeaders(message);
 
     List<Future<Void>> futures = new ArrayList<>();
@@ -103,7 +100,6 @@ public abstract class AbstractOrderStatusHandler extends BaseHelper implements H
 
   protected JsonArray messageAsJsonArray(String rootElement, Message<JsonObject> message) {
     JsonObject body = message.body();
-    logger.debug("Received message body: {}", body);
     return body.getJsonArray(rootElement);
   }
 

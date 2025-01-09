@@ -447,8 +447,7 @@ public class InventoryItemManager {
           promise.fail(new HttpException(409, BARCODE_IS_NOT_UNIQUE));
         } else {
           var causeParam = new Parameter().withKey("cause").withValue(t.getMessage());
-          logger.error("Failed to create an item: {} in inventory, tenantId: {}",
-            itemData.encodePrettily(), tenantId,  t);
+          logger.error("Failed to create an item in inventory, tenantId: {}", tenantId,  t);
           promise.fail(new HttpException(500, ITEM_CREATION_FAILED, List.of(causeParam)));
         }
       });

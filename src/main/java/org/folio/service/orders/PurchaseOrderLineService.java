@@ -223,23 +223,15 @@ public class PurchaseOrderLineService {
   public Future<CompositePoLine> operateOnPoLine(HttpMethod operation, PoLine poline, RequestContext requestContext) {
     Promise<CompositePoLine> promise = Promise.promise();
     JsonObject line = JsonObject.mapFrom(poline);
-    if (logger.isDebugEnabled()) {
-      logger.debug("The PO line prior to {} operation: {}", operation, line.encodePrettily());
-    }
 
     List<Future<Void>> futures = new ArrayList<>();
     futures.addAll(operateOnSubObjsIfPresent(operation, line, ALERTS, requestContext));
     futures.addAll(operateOnSubObjsIfPresent(operation, line, REPORTING_CODES, requestContext));
 
     GenericCompositeFuture.join(new ArrayList<>(futures))
-      .onSuccess(v -> {
-        if (logger.isDebugEnabled()) {
-          logger.debug("The PO line after {} operation on sub-objects: {}", operation, line.encodePrettily());
-        }
-        promise.complete(line.mapTo(CompositePoLine.class));
-      })
+      .onSuccess(v -> promise.complete(line.mapTo(CompositePoLine.class)))
       .onFailure(t -> {
-        logger.error("Exception resolving one or more poLine sub-object(s) on {} operation", operation,t);
+        logger.error("Exception resolving one or more poLine sub-object(s) on {} operation", operation, t);
         promise.fail(t);
       });
     return promise.future();
@@ -286,7 +278,7 @@ public class PurchaseOrderLineService {
 
     future
       .onSuccess(jsonResponse -> {
-        logger.info("The {} {} operation completed with following response body: {}", operation, url, jsonResponse.encodePrettily());
+        logger.info("The {} {} operation completed", operation, url);
         promise.complete(jsonResponse);
       })
       .onFailure(t -> {

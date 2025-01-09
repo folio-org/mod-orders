@@ -21,7 +21,6 @@ import org.folio.rest.jaxrs.resource.OrdersOrderTemplates;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
-import io.vertx.core.json.JsonObject;
 
 public class OrderTemplatesAPI implements OrdersOrderTemplates {
 
@@ -35,14 +34,8 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     OrderTemplatesHelper orderTemplatesHelper = new OrderTemplatesHelper(okapiHeaders, vertxContext);
     orderTemplatesHelper.createOrderTemplate(entity)
-      .onSuccess(template -> {
-        if (logger.isDebugEnabled()) {
-          logger.debug("Successfully created new order template: {}", JsonObject.mapFrom(template)
-            .encodePrettily());
-        }
-        asyncResultHandler.handle(succeededFuture(
-          orderTemplatesHelper.buildResponseWithLocation(String.format(ORDER_TEMPLATE_LOCATION_PREFIX, template.getId()), template)));
-      })
+      .onSuccess(template -> asyncResultHandler.handle(succeededFuture(
+        orderTemplatesHelper.buildResponseWithLocation(String.format(ORDER_TEMPLATE_LOCATION_PREFIX, template.getId()), template))))
       .onFailure(t -> handlePostPutErrorResponse(asyncResultHandler, t, orderTemplatesHelper));
   }
 

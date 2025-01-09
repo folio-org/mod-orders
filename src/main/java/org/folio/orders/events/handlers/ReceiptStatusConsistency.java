@@ -42,11 +42,8 @@ public class ReceiptStatusConsistency extends BaseHelper implements Handler<Mess
   @Override
   public void handle(Message<JsonObject> message) {
     var messageFromEventBus = message.body();
-    logger.info("Received message body: {}", messageFromEventBus);
-
     var okapiHeaders = getOkapiHeaders(message);
     var requestContext = new RequestContext(ctx, okapiHeaders);
-
     var poLineId = getPoLineId(messageFromEventBus);
     var future = pieceStorageService.getPiecesByLineId(poLineId, requestContext)
       .compose(pieces -> purchaseOrderLineService.getOrderLineById(poLineId, requestContext)

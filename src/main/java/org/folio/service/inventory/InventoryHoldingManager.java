@@ -188,7 +188,7 @@ public class InventoryHoldingManager {
     return collectResultsOnSuccess(futures).map(holdings -> {
       if (logger.isDebugEnabled()) {
         String deletedIds = holdings.stream().map(holding -> holding.getString(ID)).collect(Collectors.joining(","));
-        logger.debug(String.format("Holding ids : %s", deletedIds));
+        logger.debug("Holding ids: {}", deletedIds);
       }
       return holdings.stream().filter(Objects::nonNull).collect(toList());
     });

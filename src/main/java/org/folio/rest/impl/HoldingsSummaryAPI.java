@@ -6,8 +6,6 @@ import java.util.Map;
 
 import javax.ws.rs.core.Response;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.resource.OrdersHoldingSummary;
@@ -19,11 +17,8 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 
 public class HoldingsSummaryAPI extends BaseApi implements OrdersHoldingSummary {
-
-  private static final Logger logger = LogManager.getLogger();
 
   @Autowired
   private HoldingsSummaryService holdingsSummaryService;
@@ -40,12 +35,7 @@ public class HoldingsSummaryAPI extends BaseApi implements OrdersHoldingSummary 
     var requestContext = new RequestContext(vertxContext, okapiHeaders);
 
     holdingsSummaryService.getHoldingsSummary(holdingId, requestContext)
-      .onSuccess(holdingSummary -> {
-        if (logger.isInfoEnabled()) {
-          logger.debug("Successfully retrieved : {}", JsonObject.mapFrom(holdingSummary).encodePrettily());
-        }
-        asyncResultHandler.handle(succeededFuture(this.buildOkResponse(holdingSummary)));
-      })
+      .onSuccess(holdingSummary -> asyncResultHandler.handle(succeededFuture(this.buildOkResponse(holdingSummary))))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
