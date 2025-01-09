@@ -14,7 +14,6 @@ import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
@@ -46,7 +45,6 @@ public class RestClient {
   }
 
   public <T> Future<T> post(String endpoint, T entity, Class<T> responseType, RequestContext requestContext) {
-    log.debug("Sending 'POST {}", endpoint);
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
     return getVertxWebClient(requestContext.getContext()).postAbs(buildAbsEndpoint(caseInsensitiveHeader, endpoint))
       .putHeaders(caseInsensitiveHeader)
@@ -62,7 +60,6 @@ public class RestClient {
   }
 
   public <T> Future<Void> postEmptyResponse(String endpoint, T entity, RequestContext requestContext) {
-    log.debug("Sending 'POST {}", () -> endpoint);
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
     return getVertxWebClient(requestContext.getContext())
       .postAbs(buildAbsEndpoint(caseInsensitiveHeader, endpoint))
@@ -85,7 +82,6 @@ public class RestClient {
   }
   public <T> Future<Void> put(String endpoint, T dataObject,  RequestContext requestContext) {
     var recordData = JsonObject.mapFrom(dataObject);
-    log.debug("Sending 'PUT {}'", endpoint);
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
     return getVertxWebClient(requestContext.getContext())
       .putAbs(buildAbsEndpoint(caseInsensitiveHeader, endpoint))
@@ -102,7 +98,6 @@ public class RestClient {
   }
 
   public <T>Future<Void> patch(String endpoint, T dataObject, RequestContext requestContext) {
-    log.debug("Sending 'PATCH {}'", endpoint);
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
     Promise<Void> promise = Promise.promise();
     return getVertxWebClient(requestContext.getContext())
@@ -121,7 +116,6 @@ public class RestClient {
   }
 
   public Future<Void> delete(String endpointById, boolean skipError404, RequestContext requestContext) {
-    log.debug("Sending {} {}", HttpMethod.DELETE, endpointById);
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
     Promise<Void> promise = Promise.promise();
     getVertxWebClient(requestContext.getContext())
@@ -171,7 +165,6 @@ public class RestClient {
   }
 
   public <T> Future<T> get(String endpoint, boolean skipError404, Class<T> responseType,  RequestContext requestContext) {
-    log.debug("Calling GET {}", endpoint);
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
     Promise<T> promise = Promise.promise();
     getVertxWebClient(requestContext.getContext())
@@ -189,7 +182,6 @@ public class RestClient {
 
 
   public Future<JsonObject> getAsJsonObject(String endpoint, boolean skipError404, RequestContext requestContext) {
-    log.debug("Calling GET {}", endpoint);
     Promise<JsonObject> promise = Promise.promise();
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
     var webClient = getVertxWebClient(requestContext.getContext());
@@ -240,7 +232,6 @@ public class RestClient {
   }
 
   public Future<String> postJsonObjectAndGetId(RequestEntry requestEntry, JsonObject entity, RequestContext requestContext) {
-    log.debug("Sending 'POST {}", requestEntry.buildEndpoint());
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
     return getVertxWebClient(requestContext.getContext())
       .postAbs(buildAbsEndpoint(caseInsensitiveHeader, requestEntry.buildEndpoint()))
@@ -252,7 +243,6 @@ public class RestClient {
   }
 
   public Future<JsonObject> postJsonObject(RequestEntry requestEntry, JsonObject jsonObject, RequestContext requestContext) {
-    log.debug("Sending 'POST {}", requestEntry.buildEndpoint());
     var endpoint = requestEntry.buildEndpoint();
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
     return getVertxWebClient(requestContext.getContext()).postAbs(buildAbsEndpoint(caseInsensitiveHeader, requestEntry.buildEndpoint()))

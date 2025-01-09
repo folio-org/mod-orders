@@ -6,8 +6,6 @@ import java.util.Map;
 
 import javax.ws.rs.core.Response;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.resource.OrdersHoldingSummary;
@@ -21,8 +19,6 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 
 public class HoldingsSummaryAPI extends BaseApi implements OrdersHoldingSummary {
-
-  private static final Logger logger = LogManager.getLogger();
 
   @Autowired
   private HoldingsSummaryService holdingsSummaryService;

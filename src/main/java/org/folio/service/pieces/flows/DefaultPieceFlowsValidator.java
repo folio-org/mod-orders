@@ -41,7 +41,7 @@ public class DefaultPieceFlowsValidator {
     combinedErrors.addAll(relatedOrderErrors);
     if (CollectionUtils.isNotEmpty(combinedErrors)) {
       Errors errors = new Errors().withErrors(combinedErrors).withTotalRecords(combinedErrors.size());
-      logger.error("Validation error: {}", JsonObject.mapFrom(errors).encodePrettily());
+      if (logger.isErrorEnabled()) logger.error("Validation error: {}", JsonObject.mapFrom(errors).encodePrettily());
       throw new HttpException(RestConstants.BAD_REQUEST, errors);
     }
   }
