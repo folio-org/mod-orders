@@ -29,7 +29,6 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 
 public class PiecesAPI extends BaseApi implements OrdersPieces, OrdersPiecesRequests, OrdersPiecesBatch {
 
@@ -63,12 +62,7 @@ public class PiecesAPI extends BaseApi implements OrdersPieces, OrdersPiecesRequ
   public void postOrdersPieces(boolean createItem, Piece entity, Map<String, String> okapiHeaders,
                                Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     pieceCreateFlowManager.createPiece(entity, createItem, new RequestContext(vertxContext, okapiHeaders))
-      .onSuccess(piece -> {
-        if (logger.isDebugEnabled()) {
-          logger.debug("Successfully created piece: {}", JsonObject.mapFrom(piece).encodePrettily());
-        }
-        asyncResultHandler.handle(succeededFuture(buildCreatedResponse(piece)));
-      })
+      .onSuccess(piece -> asyncResultHandler.handle(succeededFuture(buildCreatedResponse(piece))))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 

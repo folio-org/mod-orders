@@ -29,7 +29,6 @@ import org.apache.logging.log4j.Logger;
 import org.folio.models.ItemStatus;
 import org.folio.models.pieces.PieceDeletionHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
-import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
@@ -164,7 +163,7 @@ public class UnOpenCompositeOrderManager {
       return deleteExpectedPieces(compPOL, requestContext).onSuccess(pieces -> {
           if (logger.isDebugEnabled()) {
             String deletedIds = pieces.stream().map(Piece::getId).collect(Collectors.joining(","));
-            logger.debug(String.format("Pieces were removed : %s", deletedIds));
+            logger.debug("Pieces were removed: {}", deletedIds);
           }
         })
         .mapEmpty();
@@ -239,7 +238,7 @@ public class UnOpenCompositeOrderManager {
       .map(resultDeletedHoldingVsLocationIds -> {
         if (logger.isDebugEnabled()) {
           String deletedIds = resultDeletedHoldingVsLocationIds.stream().map(Pair::getKey).collect(Collectors.joining(","));
-          logger.debug(String.format("Holdings were removed : %s", deletedIds));
+          logger.debug("Holdings were removed: {}", deletedIds);
         }
         return resultDeletedHoldingVsLocationIds;
       });
@@ -352,7 +351,7 @@ public class UnOpenCompositeOrderManager {
           String deletedIds = resultDeletedHoldingVsLocationIds.stream()
             .map(Pair::getKey)
             .collect(Collectors.joining(","));
-          logger.debug(String.format("Holdings were removed : %s", deletedIds));
+          logger.debug("Holdings were removed: {}", deletedIds);
         }
         return resultDeletedHoldingVsLocationIds;
       });
@@ -380,7 +379,7 @@ public class UnOpenCompositeOrderManager {
     return collectResultsOnSuccess(deletedItems).map(resultDeletedItems -> {
       if (logger.isDebugEnabled()) {
         String deletedIds = resultDeletedItems.stream().map(item -> item.getString(ID)).collect(Collectors.joining(","));
-        logger.debug(String.format("Item were removed : %s", deletedIds));
+        logger.debug("Item were removed: {}", deletedIds);
       }
       return resultDeletedItems;
     });

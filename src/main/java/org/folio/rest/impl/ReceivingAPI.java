@@ -32,7 +32,6 @@ import org.folio.rest.jaxrs.resource.OrdersReceivingHistory;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
-import io.vertx.core.json.JsonObject;
 
 public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersExpect, OrdersBindPieces, OrdersReceivingHistory {
 
@@ -53,7 +52,7 @@ public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersExpect,
   @Validate
   public void postOrdersCheckIn(CheckinCollection entity, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    logger.debug("Checkin {} items", entity.getTotalRecords());
+    logger.debug("CheckIn {} items", entity.getTotalRecords());
     CheckinHelper helper = new CheckinHelper(entity, okapiHeaders, vertxContext);
     helper.checkinPieces(entity, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(result -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(result))))
@@ -96,12 +95,7 @@ public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersExpect,
     ReceivingHelper helper = new ReceivingHelper(okapiHeaders, vertxContext);
 
     helper.getReceivingHistory(limit, offset, query, new RequestContext(vertxContext, okapiHeaders))
-      .onSuccess(receivingHistory -> {
-        if (logger.isInfoEnabled()) {
-          logger.debug("Successfully retrieved receiving history: {} ", JsonObject.mapFrom(receivingHistory).encodePrettily());
-        }
-        asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(receivingHistory)));
-      })
+      .onSuccess(receivingHistory -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(receivingHistory))))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 

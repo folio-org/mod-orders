@@ -169,15 +169,13 @@ public class PurchaseOrderHelper {
           if (CollectionUtils.isEmpty(errors)) {
             logger.info("postCompositeOrder :: Creating PO and POLines...");
             return createPurchaseOrder(compPO, tenantConfig, requestContext)
-              .onSuccess(po -> logger.info("postCompositeOrder :: Successfully Placed Order: {}",
-                JsonObject.mapFrom(po).encodePrettily()));
+              .onSuccess(po -> logger.info("postCompositeOrder :: Successfully Placed Order"));
           } else {
             throw new HttpException(422, new Errors().withErrors(errors)
               .withTotalRecords(errors.size()));
           }
         }))
-      .onFailure(t -> logger.error("postCompositeOrder :: Failed to create order: {}",
-        JsonObject.mapFrom(compPO).encodePrettily(), t));
+      .onFailure(t -> logger.error("postCompositeOrder :: Failed to create order", t));
   }
 
   /**
@@ -207,15 +205,14 @@ public class PurchaseOrderHelper {
       .map(validationErrors -> {
         if (CollectionUtils.isNotEmpty(validationErrors)) {
           Errors errors = new Errors().withErrors(validationErrors).withTotalRecords(validationErrors.size());
-          logger.error("putCompositeOrderById :: Validation error. Failed to update purchase order : {}",
+          logger.error("putCompositeOrderById :: Validation error. Failed to update purchase order, errors: {}",
             JsonObject.mapFrom(errors).encodePrettily());
           throw new HttpException(RestConstants.VALIDATION_ERROR, errors);
         }
         return null;
       }).compose(v -> updateOrder(compPO, deleteHoldings, requestContext))
-      .onSuccess(v -> logger.info("putCompositeOrderById :: Successfully updated order: {}", compPO.getId()))
-      .onFailure(t -> logger.error("putCompositeOrderById :: Failed to update order: {}",
-        JsonObject.mapFrom(compPO).encodePrettily(), t));
+      .onSuccess(v -> logger.info("putCompositeOrderById :: Successfully updated order, id: {}", compPO.getId()))
+      .onFailure(t -> logger.error("putCompositeOrderById :: Failed to update order", t));
   }
 
   /**

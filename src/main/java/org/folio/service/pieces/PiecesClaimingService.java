@@ -168,7 +168,7 @@ public class PiecesClaimingService {
         var vendorIntegrationDetails = config.stream()
           .filter(configEntry -> isExportTypeClaimsAndCorrectVendorId(vendor.getId(), configEntry))
           .toList();
-        log.info("checkVendorIntegrationDetails:: Found vendor integration details, vendorId: {}, integrationDetails: {}", vendor.getId(), vendorIntegrationDetails);
+        log.info("checkVendorIntegrationDetails:: Found vendor integration details, vendorId: {}, integrationDetails: {}", vendor.getId(), vendorIntegrationDetails.size());
         return vendorIntegrationDetails.isEmpty();
       })
       .findFirst().orElse(null);
