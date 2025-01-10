@@ -1,5 +1,13 @@
 ## 13.0.0 - Unreleased
 
+## 12.9.9 - Released (Ramsons R2 2024)
+The primary focus of this release was to fix vendor details mapping when vendor code contains brackets during order creation through data import
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.9.8...v12.9.9)
+
+### Bug Fixes
+* [MODORDERS-1239](https://issues.folio.org/browse/MODORDERS-1239) - Upgrade di-core library to v4.3.3 to fix order vendor details mapping 
+
+
 ## 12.9.8 - Released (Ramsons R2 2024)
 The primary focus of this release was to fix issues with ECS and list of requests previously related to bound pieces is displayed in the wrong order.
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.9.7...v12.9.8)
