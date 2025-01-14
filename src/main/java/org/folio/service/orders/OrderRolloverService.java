@@ -9,8 +9,6 @@ import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverError.ErrorType.ORDER_ROLLOVER;
-import static org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus.CLOSED;
-import static org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.RolloverStatus.ERROR;
 import static org.folio.rest.jaxrs.model.RolloverStatus.SUCCESS;
 
@@ -154,8 +152,9 @@ public class OrderRolloverService {
         for (var fundIds : fundIdChunks) {
           semaphore.acquire(() -> {
             // perform rollover for open orders and then for closed orders
-            var future = rolloverOrdersByFundIds(fundIds, ledgerFYRollover, systemCurrency, OPEN, requestContext)
-              .andThen(openOrdersResult -> rolloverOrdersByFundIds(fundIds, ledgerFYRollover, systemCurrency, CLOSED, requestContext)
+            var future = rolloverOrdersByFundIds(fundIds, ledgerFYRollover, systemCurrency, true, requestContext)
+              .andThen(openOrdersResult -> rolloverOrdersByFundIds(fundIds, ledgerFYRollover, systemCurrency,
+                false, requestContext)
               .andThen(closedOrdersResult -> throwExceptionIfOneOfFailed(openOrdersResult, closedOrdersResult)))
               .onComplete(asyncResult -> semaphore.release());
 
@@ -180,8 +179,8 @@ public class OrderRolloverService {
   }
 
   private Future<Void> rolloverOrdersByFundIds(List<String> chunkFundIds, LedgerFiscalYearRollover ledgerFYRollover,
-                                               String systemCurrency, PurchaseOrder.WorkflowStatus workflowStatus, RequestContext requestContext) {
-    var query = buildOpenOrClosedOrderQueryByFundIdsAndTypes(chunkFundIds, workflowStatus, ledgerFYRollover);
+                                               String systemCurrency, boolean openOrders, RequestContext requestContext) {
+    var query = buildOpenOrClosedOrderQueryByFundIdsAndTypes(chunkFundIds, openOrders, ledgerFYRollover);
     var totalRecordsFuture = purchaseOrderLineService.getOrderLineCollection(query, 0, 0, requestContext)
       .map(PoLineCollection::getTotalRecords);
     var ctx = requestContext.getContext();
@@ -200,8 +199,8 @@ public class OrderRolloverService {
           // can produce "thread blocked" warnings because of large number of data
           semaphore.acquire(() -> {
             var future = purchaseOrderLineService.getOrderLines(query, atomicChunkCounter.getAndIncrement() * POLINES_CHUNK_SIZE_200, POLINES_CHUNK_SIZE_200, requestContext)
-              .compose(poLines -> rolloverOrders(systemCurrency, poLines, ledgerFYRollover, workflowStatus, requestContext))
-              .compose(modifiedPoLines -> saveOrderLines(modifiedPoLines, ledgerFYRollover, workflowStatus, requestContext))
+              .compose(poLines -> rolloverOrders(systemCurrency, poLines, ledgerFYRollover, openOrders, requestContext))
+              .compose(modifiedPoLines -> saveOrderLines(modifiedPoLines, ledgerFYRollover, openOrders, requestContext))
               .onComplete(asyncResult -> semaphore.release());
             futures.add(future);
             if (futures.size() == numberOfChunks) {
@@ -215,25 +214,24 @@ public class OrderRolloverService {
   }
 
   private Future<Void> saveOrderLines(List<PoLine> orderLines, LedgerFiscalYearRollover ledgerFYRollover,
-                                      PurchaseOrder.WorkflowStatus workflowStatus, RequestContext requestContext) {
+      boolean openOrders, RequestContext requestContext) {
     logger.info("saveOrderLines:: Saving POLs after rollover processing, size: {}", orderLines.size());
     return purchaseOrderLineService.saveOrderLinesWithoutSearchLocationsUpdate(orderLines, requestContext)
-      .recover(t -> handlePoLineUpdateFailures(orderLines, ledgerFYRollover, workflowStatus, t, requestContext)
+      .recover(t -> handlePoLineUpdateFailures(orderLines, ledgerFYRollover, openOrders, t, requestContext)
         .map(v -> {
           throw new HttpException(400, ErrorCodes.PO_LINE_ROLLOVER_FAILED.toError());
         }));
   }
 
   private Future<Void> handlePoLineUpdateFailures(List<PoLine> poLines, LedgerFiscalYearRollover ledgerFYRollover,
-                                                  PurchaseOrder.WorkflowStatus workflowStatus,
-                                                  Throwable t, RequestContext requestContext) {
+      boolean openOrders, Throwable t, RequestContext requestContext) {
     return GenericCompositeFuture.join(poLines.stream()
-        .map(poLine -> handlePoLineUpdateFailure(poLine, ledgerFYRollover, workflowStatus, t, requestContext))
+        .map(poLine -> handlePoLineUpdateFailure(poLine, ledgerFYRollover, openOrders, t, requestContext))
         .toList())
       .mapEmpty();
   }
 
-  private Future<Void> handlePoLineUpdateFailure(PoLine poLine, LedgerFiscalYearRollover ledgerFYRollover, PurchaseOrder.WorkflowStatus workflowStatus,
+  private Future<Void> handlePoLineUpdateFailure(PoLine poLine, LedgerFiscalYearRollover ledgerFYRollover, boolean openOrders,
       Throwable t, RequestContext requestContext) {
     logger.error("PO line {} update failed while making rollover", poLine.getId(), t);
     var failureDto = new FailedLedgerRolloverPoLineDto(
@@ -244,13 +242,13 @@ public class OrderRolloverService {
       JsonObject.mapFrom(poLine).encode(), // requestBody
       t.getMessage(), // responseBody
       ((HttpException) t).getCode(), // statusCode
-      workflowStatus.value() // purchase order workflow status (Open / Closed)
+      openOrders ? "Open" : "Closed OR Pending" // purchase order workflow status (saved as text)
     );
     return failedLedgerRolloverPoLineDao.saveFailedRolloverRecord(failureDto, requestContext.getHeaders().get(OKAPI_HEADER_TENANT));
   }
 
   private Future<List<PoLine>> rolloverOrders(String systemCurrency, List<PoLine> poLines, LedgerFiscalYearRollover ledgerFYRollover,
-                                              PurchaseOrder.WorkflowStatus workflowStatus, RequestContext requestContext) {
+      boolean openOrders, RequestContext requestContext) {
     if (poLines.isEmpty()) {
       return Future.succeededFuture(emptyList());
     }
@@ -259,17 +257,17 @@ public class OrderRolloverService {
       .collect(toList());
     return getEncumbrancesForRollover(poLineIds, ledgerFYRollover, requestContext)
       .compose(encumbrances -> {
-        if (OPEN.equals(workflowStatus)) {
+        if (openOrders) {
           var holders = buildPoLineEncumbrancesHolders(systemCurrency, poLines, encumbrances, requestContext);
           var modifiedPoLines = applyPoLinesRolloverChanges(holders);
           return Future.succeededFuture(modifiedPoLines);
         } else {
-          return removeEncumbrancesFromClosedPoLines(poLines, encumbrances, requestContext);
+          return removeEncumbrancesFromPoLines(poLines, encumbrances, requestContext);
         }
       });
   }
 
-  private Future<List<PoLine>> removeEncumbrancesFromClosedPoLines(List<PoLine> poLines, List<Transaction> transactions, RequestContext requestContext) {
+  private Future<List<PoLine>> removeEncumbrancesFromPoLines(List<PoLine> poLines, List<Transaction> transactions, RequestContext requestContext) {
     return Future.succeededFuture()
       .compose(v -> {
         if (transactions.isEmpty()) {
@@ -427,13 +425,16 @@ public class OrderRolloverService {
       .collect(Collectors.joining(delimiter));
   }
 
-  protected String buildOpenOrClosedOrderQueryByFundIdsAndTypes(List<String> fundIds, PurchaseOrder.WorkflowStatus workflowStatus, LedgerFiscalYearRollover ledgerFYRollover) {
+  protected String buildOpenOrClosedOrderQueryByFundIdsAndTypes(List<String> fundIds, boolean openOrders,
+      LedgerFiscalYearRollover ledgerFYRollover) {
     StringBuilder resultQuery = new StringBuilder();
     if (!ledgerFYRollover.getEncumbrancesRollover().isEmpty()) {
       resultQuery.append("(").append(buildOrderTypesQuery(ledgerFYRollover)).append(")").append(AND);
     }
-    resultQuery.append("(purchaseOrder.workflowStatus==").append(workflowStatus).append(")").append(AND).append("(").append(buildFundIdQuery(fundIds)).append(")");
-    if (workflowStatus == CLOSED) {
+    resultQuery.append("(").append(buildOrderStatusQuery(openOrders)).append(")")
+      .append(AND)
+      .append("(").append(buildFundIdQuery(fundIds)).append(")");
+    if (!openOrders) {
       // MODORDERS-904 Avoid rollover re-processing of old already processed closed orders in previous fiscal years
       resultQuery.append(AND).append("(").append(PO_LINE_NON_EMPTY_ENCUMBRANCE_QUERY).append(")");
     }
@@ -462,5 +463,16 @@ public class OrderRolloverService {
       return PurchaseOrder.OrderType.ONE_TIME;
     }
     return PurchaseOrder.OrderType.ONGOING;
+  }
+
+  private String buildOrderStatusQuery(boolean openOrders) {
+    String statusQuery = "purchaseOrder.workflowStatus";
+    if (openOrders) {
+      statusQuery += "==";
+    } else {
+      statusQuery += "<>";
+    }
+    statusQuery += "Open";
+    return statusQuery;
   }
 }

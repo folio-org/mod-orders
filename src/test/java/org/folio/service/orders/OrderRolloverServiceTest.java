@@ -45,7 +45,6 @@ import org.folio.rest.jaxrs.model.FundDistribution.DistributionType;
 import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
-import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.RolloverStatus;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
@@ -54,6 +53,7 @@ import org.folio.service.finance.rollover.LedgerRolloverErrorService;
 import org.folio.service.finance.rollover.LedgerRolloverProgressService;
 import org.folio.service.finance.transaction.TransactionService;
 import org.folio.utils.CurrencyConversionMockHelper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -99,18 +99,23 @@ public class OrderRolloverServiceTest {
   private ArgumentCaptor<List<PoLine>> argumentCaptor;
 
   private RequestContext requestContext;
-
   private final String systemCurrency = "USD";
+  private AutoCloseable mockitoMocks;
 
   @BeforeEach
   public void initMocks() {
-    MockitoAnnotations.openMocks(this);
+    mockitoMocks = MockitoAnnotations.openMocks(this);
     Map<String, String> okapiHeadersMock = new HashMap<>();
     okapiHeadersMock.put(OKAPI_URL, "http://localhost:" + mockPort);
     okapiHeadersMock.put(X_OKAPI_TOKEN.getName(), X_OKAPI_TOKEN.getValue());
     okapiHeadersMock.put(X_OKAPI_TENANT.getName(), X_OKAPI_TENANT.getValue());
     okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
     requestContext = new RequestContext(Vertx.vertx().getOrCreateContext(), okapiHeadersMock);
+  }
+
+  @AfterEach
+  void afterEach() throws Exception {
+    mockitoMocks.close();
   }
 
   @Test
@@ -729,40 +734,40 @@ public class OrderRolloverServiceTest {
   private static Stream<Arguments> testBuildOpenOrClosedOrderQueryByFundIdsAndTypesArgs() {
     return Stream.of(
       Arguments.of("(purchaseOrder.orderType == One-Time) and (purchaseOrder.workflowStatus==Open) and (fundDistribution =/@fundId \"%s\") sortBy metadata.createdDate",
-        PurchaseOrder.WorkflowStatus.OPEN,
+        true,
         List.of(new EncumbranceRollover().withOrderType(EncumbranceRollover.OrderType.ONE_TIME).withBasedOn(EncumbranceRollover.BasedOn.INITIAL_AMOUNT).withIncreaseBy(0d))),
-      Arguments.of("(purchaseOrder.orderType == One-Time) and (purchaseOrder.workflowStatus==Closed) and (fundDistribution =/@fundId \"%s\") and (fundDistribution == \"*\\\"encumbrance\\\": \\\"*\") sortBy metadata.createdDate",
-        PurchaseOrder.WorkflowStatus.CLOSED,
+      Arguments.of("(purchaseOrder.orderType == One-Time) and (purchaseOrder.workflowStatus<>Open) and (fundDistribution =/@fundId \"%s\") and (fundDistribution == \"*\\\"encumbrance\\\": \\\"*\") sortBy metadata.createdDate",
+        false,
         List.of(new EncumbranceRollover().withOrderType(EncumbranceRollover.OrderType.ONE_TIME).withBasedOn(EncumbranceRollover.BasedOn.INITIAL_AMOUNT).withIncreaseBy(0d)))
     );
   }
 
   @ParameterizedTest
   @MethodSource("testBuildOpenOrClosedOrderQueryByFundIdsAndTypesArgs")
-  void testBuildOpenOrClosedOrderQueryByFundIdsAndTypes(String expectedQueryTemplate, PurchaseOrder.WorkflowStatus workflowStatus, List<EncumbranceRollover> encumbranceRollovers) {
+  void testBuildOpenOrClosedOrderQueryByFundIdsAndTypes(String expectedQueryTemplate, boolean openOrders, List<EncumbranceRollover> encumbranceRollovers) {
     var fundId = UUID.randomUUID().toString();
     var ledgerFiscalYearRollover = new LedgerFiscalYearRollover().withId(UUID.randomUUID().toString()).withEncumbrancesRollover(encumbranceRollovers);
     var expectedQuery = String.format(expectedQueryTemplate, fundId);
-    var actualQuery = orderRolloverService.buildOpenOrClosedOrderQueryByFundIdsAndTypes(List.of(fundId), workflowStatus, ledgerFiscalYearRollover);
+    var actualQuery = orderRolloverService.buildOpenOrClosedOrderQueryByFundIdsAndTypes(List.of(fundId), openOrders, ledgerFiscalYearRollover);
     Assertions.assertEquals(expectedQuery, actualQuery);
   }
 
   private static Stream<Arguments> testBuildOpenOrClosedOrderQueryByFundIdsAndTypesWithoutSettingsArgs() {
     return Stream.of(
       Arguments.of("(purchaseOrder.workflowStatus==Open) and (fundDistribution =/@fundId \"%s\") sortBy metadata.createdDate",
-        PurchaseOrder.WorkflowStatus.OPEN),
-      Arguments.of("(purchaseOrder.workflowStatus==Closed) and (fundDistribution =/@fundId \"%s\") and (fundDistribution == \"*\\\"encumbrance\\\": \\\"*\") sortBy metadata.createdDate",
-        PurchaseOrder.WorkflowStatus.CLOSED)
+        true),
+      Arguments.of("(purchaseOrder.workflowStatus<>Open) and (fundDistribution =/@fundId \"%s\") and (fundDistribution == \"*\\\"encumbrance\\\": \\\"*\") sortBy metadata.createdDate",
+        false)
     );
   }
 
   @ParameterizedTest
   @MethodSource("testBuildOpenOrClosedOrderQueryByFundIdsAndTypesWithoutSettingsArgs")
-  void testBuildOpenOrClosedOrderQueryByFundIdsAndTypesWithoutSettings(String expectedQueryTemplate, PurchaseOrder.WorkflowStatus workflowStatus) {
+  void testBuildOpenOrClosedOrderQueryByFundIdsAndTypesWithoutSettings(String expectedQueryTemplate, boolean openOrders) {
     var fundId = UUID.randomUUID().toString();
     var ledgerFiscalYearRollover = new LedgerFiscalYearRollover().withId(UUID.randomUUID().toString()).withEncumbrancesRollover(List.of());
     var expectedQuery = String.format(expectedQueryTemplate, fundId);
-    var actualQuery = orderRolloverService.buildOpenOrClosedOrderQueryByFundIdsAndTypes(List.of(fundId), workflowStatus, ledgerFiscalYearRollover);
+    var actualQuery = orderRolloverService.buildOpenOrClosedOrderQueryByFundIdsAndTypes(List.of(fundId), openOrders, ledgerFiscalYearRollover);
     Assertions.assertEquals(expectedQuery, actualQuery);
   }
 }
