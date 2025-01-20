@@ -1450,14 +1450,6 @@
     {
       "id": "data-import-converter-storage",
       "version": "1.5"
-    },
-    {
-      "id": "circulation",
-      "version": "14.4"
-    },
-    {
-      "id": "inventory",
-      "version": "14.4"
     }
   ],
   "optional": [
