@@ -1,5 +1,13 @@
 ## 13.0.0 - Unreleased
 
+## 12.9.10 - Released (Ramsons R2 2024)
+The primary focus of this release was to add missing interfaces
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.9.9...v12.9.10)
+
+### Bug Fixes
+* [MODORDERS-1244](https://issues.folio.org/browse/MODORDERS-1244) - Add missing required interfaces to Module Descriptor
+
+
 ## 12.9.9 - Released (Ramsons R2 2024)
 The primary focus of this release was to fix vendor details mapping when vendor code contains brackets during order creation through data import
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.9.8...v12.9.9)
