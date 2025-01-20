@@ -1438,6 +1438,26 @@
     {
       "id": "contributor-name-types",
       "version": "1.3"
+    },
+    {
+      "id": "source-manager-job-executions",
+      "version": "3.4"
+    },
+    {
+      "id": "organizations.organizations",
+      "version": "1.2"
+    },
+    {
+      "id": "data-import-converter-storage",
+      "version": "1.5"
+    },
+    {
+      "id": "circulation",
+      "version": "14.4"
+    },
+    {
+      "id": "inventory",
+      "version": "14.4"
     }
   ],
   "optional": [
