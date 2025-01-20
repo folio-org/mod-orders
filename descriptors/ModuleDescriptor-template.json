@@ -1450,6 +1450,10 @@
     {
       "id": "data-import-converter-storage",
       "version": "1.5"
+    },
+    {
+      "id": "request-move",
+      "version": "0.7"
     }
   ],
   "optional": [
