@@ -666,6 +666,22 @@
       ]
     },
     {
+      "id": "wrapper-pieces",
+      "version": "1.0",
+      "handlers": [
+        {
+          "methods": ["GET"],
+          "pathPattern": "/orders/wrapper-pieces",
+          "permissionsRequired": ["orders.wrapper-pieces.collection.get"]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/orders/wrapper-pieces/{id}",
+          "permissionsRequired": ["orders.wrapper-pieces.item.get"]
+        }
+      ]
+    },
+    {
       "id": "acquisition-methods",
       "version": "1.0",
       "handlers": [
@@ -1264,6 +1280,10 @@
       "version": "5.0"
     },
     {
+      "id": "orders-storage.wrapper-pieces",
+      "version": "1.0"
+    },
+    {
       "id": "orders-storage.receiving-history",
       "version": "4.0"
     },
@@ -1597,6 +1617,25 @@
         "orders.pieces.item.put",
         "orders.pieces.item.delete",
         "orders.piece-requests.collection.get"
+      ]
+    },
+    {
+      "permissionName" : "orders.wrapper-pieces.collection.get",
+      "displayName" : "orders.wrapper-pieces-collection get",
+      "description" : "Get a collection of wrapper pieces"
+    },
+    {
+      "permissionName" : "orders.wrapper-pieces.item.get",
+      "displayName" : "orders.wrapper-pieces-item get",
+      "description" : "Fetch a wrapper piece"
+    },
+    {
+      "permissionName" : "orders.wrapper-pieces.all",
+      "displayName" : "All orders wrapper pieces perms",
+      "description" : "All permissions for the orders-wrapper-pieces",
+      "subPermissions" : [
+        "orders.wrapper-pieces.collection.get",
+        "orders.wrapper-pieces.item.get"
       ]
     },
     {
@@ -2061,6 +2100,7 @@
         "orders.expect.collection.post",
         "orders.receiving-history.collection.get",
         "orders.pieces.all",
+        "orders.wrapper-pieces.all",
         "orders.acquisitions-units-assignments.all",
         "orders.order-templates.all",
         "orders.titles.all",
