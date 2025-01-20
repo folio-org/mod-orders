@@ -1384,6 +1384,10 @@
       "version": "10.0 11.0 12.0 13.0 14.0"
     },
     {
+      "id": "request-move",
+      "version": "0.7"
+    },
+    {
       "id": "finance-storage.budget-expense-classes",
       "version": "2.0"
     },
@@ -1450,10 +1454,6 @@
     {
       "id": "data-import-converter-storage",
       "version": "1.5"
-    },
-    {
-      "id": "request-move",
-      "version": "0.7"
     }
   ],
   "optional": [
