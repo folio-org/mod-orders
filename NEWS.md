@@ -1,7 +1,7 @@
 ## 13.0.0 - Unreleased
 
 ## 12.9.10 - Released (Ramsons R2 2024)
-The primary focus of this release was to add missing requirements
+The primary focus of this release was to add missing interfaces
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.9.9...v12.9.10)
 
 ### Bug Fixes
