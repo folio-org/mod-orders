@@ -14,6 +14,7 @@ import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.FundDistribution;
@@ -37,6 +38,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_NOT_FOUND_FOR_FISCAL_YEAR;
+import static org.folio.rest.core.exceptions.ErrorCodes.MULTIPLE_FISCAL_YEARS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.empty;
@@ -220,7 +222,7 @@ public class FinanceHoldersBuilderTest {
   }
 
   @Test
-  void shouldThrowExceptionWithMultipleFiscalYears() {
+  void shouldThrowExceptionWhenBudgetNotFoundForBudget() {
     // Note: when the funds are using multiple fiscal years, some budgets will not be found using the first fiscal year
     // The same error can also happen if a budget is missing or inactive.
     // Given
@@ -262,6 +264,49 @@ public class FinanceHoldersBuilderTest {
     assertEquals("[2]", error.getParameters().get(3).getValue());
     assertEquals(fiscalYear1.getId(), error.getParameters().get(4).getValue());
     assertEquals(fiscalYear1.getCode(), error.getParameters().get(5).getValue());
+  }
+
+  @Test
+  void shouldThrowExceptionWithMultipleFiscalYears() {
+    var purchaseOrderId = UUID.randomUUID().toString();
+    var fiscalYear1 = new FiscalYear().withId(UUID.randomUUID().toString()).withCode("FY1");
+    var fiscalYear2 = new FiscalYear().withId(UUID.randomUUID().toString()).withCode("FY1");
+
+    var ledger1 = new Ledger().withId(UUID.randomUUID().toString())
+      .withRestrictEncumbrance(true).withFiscalYearOneId(fiscalYear1.getId());
+    var ledger2 = new Ledger().withId(UUID.randomUUID().toString())
+      .withRestrictEncumbrance(true).withFiscalYearOneId(fiscalYear2.getId());
+
+    var fund1 = new Fund().withId(holder1.getFundId()).withLedgerId(ledger1.getId());
+    var fund2 = new Fund().withId(holder2.getFundId()).withLedgerId(ledger2.getId());
+
+    var budget1 = new Budget()
+      .withId(UUID.randomUUID().toString())
+      .withFundId(fund1.getId())
+      .withFiscalYearId(fiscalYear1.getId());
+
+    var holders = List.of(holder1, holder2);
+    holders.get(0).withPurchaseOrder(new CompositePurchaseOrder().withId(purchaseOrderId));
+
+    when(fundService.getAllFunds(anyCollection(), any()))
+      .thenReturn(Future.succeededFuture(List.of(fund1, fund2)));
+    when(ledgerService.getLedgersByIds(anyCollection(), any()))
+      .thenReturn(Future.succeededFuture(List.of(ledger1, ledger2)));
+    when(fiscalYearService.getCurrentFiscalYear(anyString(), any()))
+      .thenReturn(Future.succeededFuture(fiscalYear1));
+    when(budgetService.getBudgetsByQuery(anyString(), any()))
+      .thenReturn(Future.succeededFuture(List.of(budget1)));
+
+    // When
+    Future<Void> f = financeHoldersBuilder.withFinances(holders, requestContext);
+
+    // Then
+    HttpException httpException = (HttpException)f.cause();
+    assertEquals(422, httpException.getCode());
+    Error error = httpException.getError();
+    assertEquals(MULTIPLE_FISCAL_YEARS.getCode(), error.getCode());
+    assertEquals(List.of(fiscalYear1.getId(), fiscalYear2.getId()).toString(), error.getParameters().get(0).getValue());
+    assertEquals(purchaseOrderId, error.getParameters().get(1).getValue());
   }
 
   @Test
