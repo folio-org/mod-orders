@@ -36,7 +36,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(VertxExtension.class)
-class WrapperPieceStorageServiceTest {
+public class WrapperPieceStorageServiceTest {
 
   @Mock private ConsortiumConfigurationService consortiumConfigurationService;
   @Mock private ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever;
