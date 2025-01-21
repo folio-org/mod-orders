@@ -32,14 +32,14 @@ public class WrapperPieceStorageService extends PieceStorageService {
       .compose(cql -> getAllWrapperPieces(limit, offset, cql, requestContext));
   }
 
-  public Future<WrapperPieceCollection> getAllWrapperPieces(int limit, int offset, String query, RequestContext requestContext) {
+  private Future<WrapperPieceCollection> getAllWrapperPieces(int limit, int offset, String query, RequestContext requestContext) {
     log.debug("getAllWrapperPieces:: limit: {}, offset: {}, query: {}", limit, offset, query);
     var requestEntry = new RequestEntry(WRAPPER_PIECES_STORAGE_ENDPOINT).withQuery(query).withOffset(offset).withLimit(limit);
-    return super.restClient.get(requestEntry, WrapperPieceCollection.class, requestContext);
+    return restClient.get(requestEntry, WrapperPieceCollection.class, requestContext);
   }
 
   public Future<WrapperPiece> getWrapperPieceById(String pieceId, RequestContext requestContext) {
     var requestEntry = new RequestEntry(WRAPPER_PIECES_STORAGE_BY_ID_ENDPOINT).withId(pieceId);
-    return super.restClient.get(requestEntry, WrapperPiece.class, requestContext);
+    return restClient.get(requestEntry, WrapperPiece.class, requestContext);
   }
 }

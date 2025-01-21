@@ -4,7 +4,6 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import lombok.extern.slf4j.Slf4j;
 import org.folio.CopilotGenerated;
 import org.folio.rest.acq.model.Organization;
 import org.folio.rest.core.exceptions.HttpException;
@@ -48,7 +47,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-@Slf4j
 @ExtendWith(VertxExtension.class)
 @CopilotGenerated(partiallyGenerated = true)
 public class PiecesClaimingServiceTest {
