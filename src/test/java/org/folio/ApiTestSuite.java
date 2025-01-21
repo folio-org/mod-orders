@@ -39,6 +39,7 @@ import org.folio.rest.impl.PurchaseOrdersApiTest;
 import org.folio.rest.impl.ReceivingHistoryApiTest;
 import org.folio.rest.impl.RoutingListsApiTest;
 import org.folio.rest.impl.TitlesApiTest;
+import org.folio.rest.impl.WrapperPiecesAPITest;
 import org.folio.rest.impl.crud.ConfigurationCrudTest;
 import org.folio.rest.impl.protection.LinesProtectionTest;
 import org.folio.rest.impl.protection.OrdersProtectionTest;
@@ -564,5 +565,9 @@ public class ApiTestSuite {
 
   @Nested
   class WrapperPieceStorageServiceTestNested extends WrapperPieceStorageServiceTest {
+  }
+
+  @Nested
+  class WrapperPiecesAPITestNested extends WrapperPiecesAPITest {
   }
 }
