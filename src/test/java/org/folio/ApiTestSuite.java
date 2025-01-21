@@ -99,6 +99,7 @@ import org.folio.service.pieces.PieceStorageServiceTest;
 import org.folio.service.pieces.PieceUpdateInventoryServiceTest;
 import org.folio.service.pieces.PieceUtilTest;
 import org.folio.service.pieces.PiecesClaimingServiceTest;
+import org.folio.service.pieces.WrapperPieceStorageServiceTest;
 import org.folio.service.pieces.flows.BasePieceFlowHolderBuilderTest;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidatorTest;
 import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManagerTest;
@@ -559,5 +560,9 @@ public class ApiTestSuite {
 
   @Nested
   class PieceUtilTestNested extends PieceUtilTest {
+  }
+
+  @Nested
+  class WrapperPieceStorageServiceTestNested extends WrapperPieceStorageServiceTest {
   }
 }
