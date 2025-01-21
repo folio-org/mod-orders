@@ -9,6 +9,7 @@ import static org.folio.orders.utils.QueryUtils.convertFieldListToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.getConversionQuery;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_NOT_FOUND_FOR_FISCAL_YEAR;
+import static org.folio.rest.core.exceptions.ErrorCodes.MULTIPLE_FISCAL_YEARS;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -154,6 +155,17 @@ public class FinanceHoldersBuilder {
 
   private Future<FiscalYear> getFiscalYear(List<Ledger> ledgers,
       List<? extends EncumbranceRelationsHolder> encumbranceHolders, RequestContext requestContext) {
+    List<String> fiscalYearIds = ledgers.stream()
+      .map(Ledger::getFiscalYearOneId)
+      .distinct()
+      .toList();
+    if (fiscalYearIds.size() > 1) {
+      List<Parameter> parameters = List.of(
+        new Parameter().withKey("fiscalYearIds").withValue(fiscalYearIds.toString()),
+        new Parameter().withKey("poId").withValue(encumbranceHolders.get(0).getPurchaseOrder().getId())
+      );
+      throw new HttpException(422, MULTIPLE_FISCAL_YEARS.toError().withParameters(parameters));
+    }
     return fiscalYearService.getCurrentFiscalYear(ledgers.get(0).getId(), requestContext)
       .map(fiscalYear -> {
         encumbranceHolders.forEach(holder -> holder.withCurrentFiscalYearId(fiscalYear.getId())

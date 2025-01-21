@@ -62,6 +62,7 @@ public enum ErrorCodes {
   APPROVAL_REQUIRED_TO_OPEN("orderApprovalRequired","Approval is required to open order"),
   ISBN_NOT_VALID("invalidISBN", "ISBN value is invalid"),
   FUNDS_NOT_FOUND("fundsNotFound", "The fund records are not found"),
+  MULTIPLE_FISCAL_YEARS("multipleFiscalYears", "Order line fund distributions have active budgets in multiple fiscal years."),
   CURRENT_FISCAL_YEAR_NOT_FOUND("currentFYearNotFound", "Current fiscal year not found for ledger"),
   CURRENT_FISCAL_YEAR_ID_NOT_FOUND("currentFYearIdNotFound", "Current fiscal year id not found for POLine"),
   TITLE_NOT_FOUND("titleNotFound", "Associated title not found for PO Line"),
