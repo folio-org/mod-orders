@@ -91,6 +91,7 @@ import static org.folio.orders.utils.ResourcePathResolver.TAGS;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.orders.utils.ResourcePathResolver.TRANSACTIONS_ENDPOINT;
 import static org.folio.orders.utils.ResourcePathResolver.USER_TENANTS_ENDPOINT;
+import static org.folio.orders.utils.ResourcePathResolver.WRAPPER_PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
@@ -128,6 +129,7 @@ import static org.folio.service.inventory.InventoryManagerTest.OLD_LOCATION_ID;
 import static org.folio.service.inventory.InventoryManagerTest.ONLY_NEW_HOLDING_EXIST_ID;
 
 import io.vertx.core.MultiMap;
+
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
 import java.time.Instant;
@@ -335,8 +337,10 @@ public class MockServer {
   public static final String CONSISTENT_ECS_PURCHASE_ORDER_ID_ELECTRONIC = "01c8d44a-dc73-4bca-a4d1-ef28bdfb9275";
   public static final String CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL_SINGLE_ITEM = "b25f8ef6-04c4-4290-8531-9bbcefeb8c11";
   public static final String CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL_MULTIPLE_ITEMS = "0c9a0e56-3518-4f0c-bfbb-98cc47b07f6c";
-  public static final String MOCKDATA_LOCATIONS_JSON = "mockdata/locations/locations.json";
-  public static final String MOCKDATA_MATERIAL_TYPES_JSON = "mockdata/material-types/material-types.json";
+  public static final String MOCK_DATA_LOCATIONS_JSON = "mockdata/locations/locations.json";
+  public static final String MOCK_DATA_MATERIAL_TYPES_JSON = "mockdata/material-types/material-types.json";
+  public static final String MOCK_DATA_WRAPPER_PIECES_JSON = "mockdata/wrapper-pieces/wrapper-pieces.json";
+  public static final String MOCK_DATA_WRAPPER_PIECES_BY_ID_JSON = "mockdata/wrapper-pieces/wrapper-pieces-by-id.json";
 
   public static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
   public static HashMap<String, List<String>> serverRqQueries = new HashMap<>();
@@ -376,10 +380,9 @@ public class MockServer {
     HttpServer server = vertx.createHttpServer();
     Promise<HttpServer> deploymentComplete = Promise.promise();
     server.requestHandler(defineRoutes()).listen(port, result -> {
-      if(result.succeeded()) {
+      if (result.succeeded()) {
         deploymentComplete.complete(result.result());
-      }
-      else {
+      } else {
         deploymentComplete.fail(result.cause());
       }
     });
@@ -509,6 +512,7 @@ public class MockServer {
   public static List<JsonObject> getAcqUnitsSearches() {
     return getCollectionRecords(getRqRsEntries(HttpMethod.GET, ACQUISITIONS_UNITS));
   }
+
   public static List<JsonObject> getAcqUnitsRetrievals() {
     return getRecordsByIds(getRqRsEntries(HttpMethod.GET, ACQUISITIONS_UNITS));
   }
@@ -678,8 +682,10 @@ public class MockServer {
     router.get("/data-import-profiles/jobProfileSnapshots/:id").handler(this::handleGetJobProfileSnapshotById);
     router.get("/change-manager/jobExecutions/:id").handler(this::handleGetJobExecutionById);
     router.get("/organizations/organizations").handler(this::handleGetOrganizations);
-    router.get("/locations").handler(ctx -> handleGetJsonResource(ctx, MOCKDATA_LOCATIONS_JSON));
-    router.get("/material-types").handler(ctx -> handleGetJsonResource(ctx, MOCKDATA_MATERIAL_TYPES_JSON));
+    router.get("/locations").handler(ctx -> handleGetJsonResource(ctx, MOCK_DATA_LOCATIONS_JSON));
+    router.get("/material-types").handler(ctx -> handleGetJsonResource(ctx, MOCK_DATA_MATERIAL_TYPES_JSON));
+    router.get(resourcesPath(WRAPPER_PIECES_STORAGE)).handler(ctx -> handleGetJsonResource(ctx, MOCK_DATA_WRAPPER_PIECES_JSON));
+    router.get(resourcesPath(WRAPPER_PIECES_STORAGE) + "/:id").handler(ctx -> handleGetJsonResource(ctx, MOCK_DATA_WRAPPER_PIECES_BY_ID_JSON));
     // PUT
     router.put(resourcePath(PURCHASE_ORDER_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER_STORAGE));
     router.put(resourcePath(PO_LINES_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES_STORAGE));
@@ -820,12 +826,11 @@ public class MockServer {
     FundCollection funds = getFundsByIds(Collections.singletonList(id))
       .mapTo(FundCollection.class);
 
-    if (funds.getTotalRecords() == 0){
+    if (funds.getTotalRecords() == 0) {
       serverResponse(ctx, 404, APPLICATION_JSON, id);
-    }
-    else {
+    } else {
       JsonObject fund = new JsonObject()
-        .put("fund",JsonObject.mapFrom(funds.getFunds().get(0)))
+        .put("fund", JsonObject.mapFrom(funds.getFunds().get(0)))
         .put("groupIds", new JsonArray());
       addServerRqRsData(HttpMethod.GET, FUNDS, fund);
 
@@ -981,7 +986,7 @@ public class MockServer {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else if (ID_DOES_NOT_EXIST.equals(id)) {
       serverResponse(ctx, 404, APPLICATION_JSON, id);
-    } else if(id.equals("133a7916-f05e-4df4-8f7f-09eb2a7076d1")) {
+    } else if (id.equals("133a7916-f05e-4df4-8f7f-09eb2a7076d1")) {
       FiscalYear fiscalYear = new FiscalYear();
       fiscalYear.setId("ac2164c7-ba3d-1bc2-a12c-e35ceccbfaf2");
       fiscalYear.setCode("test2020");
@@ -990,7 +995,7 @@ public class MockServer {
       fiscalYear.setPeriodStart(Date.from(Instant.now().minus(365, DAYS)));
       fiscalYear.setPeriodEnd(Date.from(Instant.now().plus(365, DAYS)));
       serverResponse(ctx, 200, APPLICATION_JSON, JsonObject.mapFrom(fiscalYear).encodePrettily());
-    } else  {
+    } else {
       FiscalYear fiscalYear = new FiscalYear();
       fiscalYear.setId(UUID.randomUUID().toString());
       fiscalYear.setCode("test2020");
@@ -1003,7 +1008,7 @@ public class MockServer {
   }
 
   private void handleGetPoLineNumber(RoutingContext ctx) {
-    if(PO_NUMBER_ERROR_TENANT.equals(ctx.request().getHeader(OKAPI_HEADER_TENANT))) {
+    if (PO_NUMBER_ERROR_TENANT.equals(ctx.request().getHeader(OKAPI_HEADER_TENANT))) {
       ctx.response()
         .setStatusCode(500)
         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
@@ -1114,14 +1119,14 @@ public class MockServer {
           .filter(holding -> holding.getString("permanentLocationId").equals(OLD_LOCATION_ID))
           .collect(toList());
         holdings = new JsonObject().put("holdingsRecords", new JsonArray(holdingsList));
-      }  else if (queryParam.contains(OLD_LOCATION_ID) && !queryParam.contains(NON_EXISTED_NEW_HOLDING_ID)) {
+      } else if (queryParam.contains(OLD_LOCATION_ID) && !queryParam.contains(NON_EXISTED_NEW_HOLDING_ID)) {
         List<JsonObject> holdingsList = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH)).getJsonArray("holdingsRecords").stream()
           .map(o -> ((JsonObject) o))
           .filter(holding -> holding.getString("permanentLocationId").equals(OLD_LOCATION_ID)
             || !holding.getString("permanentLocationId").equals(NON_EXISTED_NEW_HOLDING_ID))
           .collect(toList());
         holdings = new JsonObject().put("holdingsRecords", new JsonArray(holdingsList));
-      }  else {
+      } else {
         holdings = new JsonObject().put("holdingsRecords", new JsonArray());
       }
       if (queryParam.contains(NEW_LOCATION_ID) && queryParam.contains(ONLY_NEW_HOLDING_EXIST_ID)) {
@@ -1177,7 +1182,7 @@ public class MockServer {
           .map(holdingId -> new JsonObject(mockData).getJsonArray("holdingsRecords").getJsonObject(0).put(ID, holdingId))
           .toList();
       } catch (IOException e) {
-          holdingRecords = Collections.emptyList();
+        holdingRecords = Collections.emptyList();
       }
     }
 
@@ -1255,7 +1260,7 @@ public class MockServer {
           int lineIndex = query.indexOf(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER) + ITEM_PURCHASE_ORDER_LINE_IDENTIFIER.length() + 2;
           String purchaseOrderLineIdentifier = query.substring(lineIndex, lineIndex + 36);
           int holdingIndex = query.indexOf(ITEM_HOLDINGS_RECORD_ID) + ITEM_HOLDINGS_RECORD_ID.length() + 2;
-          String holdingsRecordId = query.substring(holdingIndex,  holdingIndex + 36);
+          String holdingsRecordId = query.substring(holdingIndex, holdingIndex + 36);
           final Iterator<Object> iterator = jsonArray.iterator();
           while (iterator.hasNext()) {
             JsonObject item = (JsonObject) iterator.next();
@@ -1296,19 +1301,19 @@ public class MockServer {
         JsonArray jsonArray = items.getJsonArray(ITEMS);
 
         final Iterator<Object> iterator = jsonArray.iterator();
-          while (iterator.hasNext()) {
-            JsonObject item = (JsonObject) iterator.next();
-            if (!id.equals(item.getString(ID))) {
-              iterator.remove();
-            }
+        while (iterator.hasNext()) {
+          JsonObject item = (JsonObject) iterator.next();
+          if (!id.equals(item.getString(ID))) {
+            iterator.remove();
           }
+        }
 
-        if  (!jsonArray.isEmpty()) {
+        if (!jsonArray.isEmpty()) {
           items.put(TOTAL_RECORDS, jsonArray.size());
           addServerRqRsData(HttpMethod.GET, ITEM_RECORDS, jsonArray.getJsonObject(0));
 
           ctx.response().setStatusCode(200).putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-                                           .end(jsonArray.getJsonObject(0).encodePrettily());
+            .end(jsonArray.getJsonObject(0).encodePrettily());
         } else {
           ctx.response().setStatusCode(404).end();
         }
@@ -1424,7 +1429,7 @@ public class MockServer {
           body = new JsonObject().put(ORGANIZATIONS, organizations);
         }
       }
-    } catch(IOException e) {
+    } catch (IOException e) {
       ctx.response()
         .setStatusCode(HttpStatus.HTTP_NOT_FOUND.toInt())
         .end();
@@ -1585,13 +1590,11 @@ public class MockServer {
       JsonObject receivingHistory;
       if (queryParam.contains(RECEIVING_HISTORY_PURCHASE_ORDER_ID)) {
         receivingHistory = new JsonObject(getMockData(RECEIVING_HISTORY_MOCK_DATA_PATH + "receivingHistory.json"));
-      } else if(queryParam.contains(INTERNAL_SERVER_ERROR.getReasonPhrase())) {
+      } else if (queryParam.contains(INTERNAL_SERVER_ERROR.getReasonPhrase())) {
         throw new HttpException(500, "Exception in orders-storage module");
-      }
-      else if(queryParam.contains(BAD_QUERY)) {
+      } else if (queryParam.contains(BAD_QUERY)) {
         throw new HttpException(400, "QueryValidationException");
-      }
-      else {
+      } else {
         receivingHistory = new JsonObject();
         receivingHistory.put("receivingHistory", new JsonArray());
         receivingHistory.put("totalRecords", 0);
@@ -1622,18 +1625,18 @@ public class MockServer {
         return;
       }
 
-      String tenant = ctx.request().getHeader(OKAPI_HEADER_TENANT) ;
+      String tenant = ctx.request().getHeader(OKAPI_HEADER_TENANT);
       if (PO_NUMBER_ERROR_X_OKAPI_TENANT.getValue().equals(tenant)) {
         tenant = EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10.getValue();
       }
       if (NON_EXIST_INSTANCE_STATUS_TENANT_HEADER.getValue().equals(tenant) ||
-       NON_EXIST_INSTANCE_TYPE_TENANT_HEADER.getValue().equals(tenant) ||
-       NON_EXIST_LOAN_TYPE_TENANT_HEADER.getValue().equals(tenant)) {
+        NON_EXIST_INSTANCE_TYPE_TENANT_HEADER.getValue().equals(tenant) ||
+        NON_EXIST_LOAN_TYPE_TENANT_HEADER.getValue().equals(tenant)) {
         tenant = EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1.getValue();
       }
       try {
         serverResponse(ctx, 200, APPLICATION_JSON, getMockData(String.format(CONFIG_MOCK_PATH, tenant)));
-      } catch(Exception exc){
+      } catch (Exception exc) {
         serverResponse(ctx, 200, APPLICATION_JSON, getMockData(String.format(CONFIG_MOCK_PATH, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10.getValue())));
       }
     } catch (IOException e) {
@@ -1647,7 +1650,8 @@ public class MockServer {
     addServerRqRsData(HttpMethod.DELETE, subObj, new JsonObject().put(ID, id));
     if (ID_DOES_NOT_EXIST.equals(id)) {
       serverResponse(ctx, 404, TEXT_PLAIN, id);
-    } if (ID_BAD_FORMAT.equals(id)) {
+    }
+    if (ID_BAD_FORMAT.equals(id)) {
       serverResponse(ctx, 400, TEXT_PLAIN, id);
     } else if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id) || ORDER_DELETE_ERROR_TENANT.equals(tenant)) {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
@@ -1705,7 +1709,7 @@ public class MockServer {
             poLineCollection = buildPoLineCollection(tenant, compPO.getJsonArray(COMPOSITE_PO_LINES), poId);
           }
         } else {
-        // Attempt to find POLine in mock server memory
+          // Attempt to find POLine in mock server memory
           poLineCollection.getPoLines().addAll(postedPoLines.stream()
             .map(jsonObj -> jsonObj.mapTo(PoLine.class))
             .toList());
@@ -1770,7 +1774,7 @@ public class MockServer {
           replaceObjectsByIds(line, ALERTS, REPORTING_CODES);
           return line.mapTo(PoLine.class);
         })
-        .map(line -> line.withPurchaseOrderId(StringUtils.isNotEmpty(poId) ? poId : UUID.randomUUID().toString() ))
+        .map(line -> line.withPurchaseOrderId(StringUtils.isNotEmpty(poId) ? poId : UUID.randomUUID().toString()))
         .collect(Collectors.toList());
 
       // Set PO Line number if empty
@@ -1850,7 +1854,8 @@ public class MockServer {
 
     if (ID_DOES_NOT_EXIST.equals(id)) {
       serverResponse(ctx, 404, APPLICATION_JSON, id);
-    } if (ID_BAD_FORMAT.equals(id)) {
+    }
+    if (ID_BAD_FORMAT.equals(id)) {
       serverResponse(ctx, 400, APPLICATION_JSON, id);
     } else if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
@@ -1873,7 +1878,7 @@ public class MockServer {
     } else {
       try {
         JsonObject collection;
-        if(REASONS_FOR_CLOSURE.equals(subObj)) {
+        if (REASONS_FOR_CLOSURE.equals(subObj)) {
           ReasonForClosureCollection reasonsCollection = new ReasonForClosureCollection();
           List<ReasonForClosure> reasons = Lists.newArrayList(REASON_FOR_CLOSURE.getTestSample().mapTo(ReasonForClosure.class));
           collection = JsonObject.mapFrom(reasonsCollection.withReasonsForClosure(reasons).withTotalRecords(reasons.size()));
@@ -1881,7 +1886,7 @@ public class MockServer {
           PrefixCollection prefixCollection = new PrefixCollection();
           List<Prefix> prefixes = Lists.newArrayList(PREFIX.getTestSample().mapTo(Prefix.class));
           collection = JsonObject.mapFrom(prefixCollection.withPrefixes(prefixes).withTotalRecords(prefixes.size()));
-        } else if(SUFFIXES.equals(subObj)) {
+        } else if (SUFFIXES.equals(subObj)) {
           SuffixCollection suffixCollection = new SuffixCollection();
           List<Suffix> suffixes = Lists.newArrayList(SUFFIX.getTestSample().mapTo(Suffix.class));
           collection = JsonObject.mapFrom(suffixCollection.withSuffixes(suffixes).withTotalRecords(suffixes.size()));
@@ -1975,7 +1980,7 @@ public class MockServer {
                 status = condition.split("receivingStatus==")[1];
               }
             }
-            logger.info("poLineId: {}",  polId);
+            logger.info("poLineId: {}", polId);
             logger.info("receivingStatus: {}", status);
 
             String path = PIECE_RECORDS_MOCK_DATA_PATH + String.format("pieceRecords-%s.json", polId);
@@ -2127,7 +2132,8 @@ public class MockServer {
 
     if (ID_DOES_NOT_EXIST.equals(id)) {
       serverResponse(ctx, 404, APPLICATION_JSON, id);
-    } if (ID_BAD_FORMAT.equals(id)) {
+    }
+    if (ID_BAD_FORMAT.equals(id)) {
       serverResponse(ctx, 400, APPLICATION_JSON, id);
     } else if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id) || ctx.body().asString().contains("500500500500")) {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
@@ -2426,7 +2432,7 @@ public class MockServer {
       }
       serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
       addServerRqRsData(HttpMethod.GET, TRANSACTIONS_ENDPOINT, new JsonObject(body));
-    } catch(IOException e) {
+    } catch (IOException e) {
       logger.error("handleTransactionGetEntry error", e);
     }
   }
@@ -2488,7 +2494,7 @@ public class MockServer {
   }
 
   private void handleGetPoNumber(RoutingContext ctx) {
-    if(PO_NUMBER_ERROR_TENANT.equals(ctx.request().getHeader(OKAPI_HEADER_TENANT))) {
+    if (PO_NUMBER_ERROR_TENANT.equals(ctx.request().getHeader(OKAPI_HEADER_TENANT))) {
       ctx.response()
         .setStatusCode(500)
         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
@@ -2512,7 +2518,7 @@ public class MockServer {
 
       serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
       addServerRqRsData(HttpMethod.GET, CONTRIBUTOR_NAME_TYPES, new JsonObject(body));
-    } else if (StringUtils.isEmpty(queryParam) || queryParam.startsWith("id==")){
+    } else if (StringUtils.isEmpty(queryParam) || queryParam.startsWith("id==")) {
       List<String> contributorNameTypeIds = extractIdsFromQuery(queryParam);
 
       JsonObject contributorNameTypeCollection = getMockAsJson(CONTRIBUTOR_NAME_TYPES_PATH);
@@ -2633,9 +2639,9 @@ public class MockServer {
       if (StringUtils.isNotEmpty(userId)) {
         memberships.getAcquisitionsUnitMemberships().removeIf(membership -> !membership.getUserId().equals(userId));
         List<String> acquisitionsUnitIds = extractValuesFromQuery(ACQUISITIONS_UNIT_ID, query);
-          if (!acquisitionsUnitIds.isEmpty()) {
-            memberships.getAcquisitionsUnitMemberships().removeIf(membership -> !acquisitionsUnitIds.contains(membership.getAcquisitionsUnitId()));
-          }
+        if (!acquisitionsUnitIds.isEmpty()) {
+          memberships.getAcquisitionsUnitMemberships().removeIf(membership -> !acquisitionsUnitIds.contains(membership.getAcquisitionsUnitId()));
+        }
       }
 
       JsonObject data = JsonObject.mapFrom(memberships.withTotalRecords(memberships.getAcquisitionsUnitMemberships().size()));
@@ -2920,8 +2926,7 @@ public class MockServer {
         .withInvoiceId(UUID.randomUUID().toString())
         .withReleaseEncumbrance(true);
       invoiceLineCollection = new InvoiceLineCollection().withInvoiceLines(List.of(invoiceLine)).withTotalRecords(1);
-    }
-    else {
+    } else {
       serverResponse(ctx, HttpStatus.HTTP_NOT_FOUND.toInt(), APPLICATION_JSON, "invoice line not found");
       return;
     }
@@ -2938,15 +2943,16 @@ public class MockServer {
 
     if (ID_DOES_NOT_EXIST.equals(id)) {
       serverResponse(ctx, 404, APPLICATION_JSON, id);
-    } if (ID_BAD_FORMAT.equals(id)) {
+    }
+    if (ID_BAD_FORMAT.equals(id)) {
       serverResponse(ctx, 400, APPLICATION_JSON, id);
     } else if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id) || ctx.body().asString().contains("500500500500")) {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       ctx.response()
-          .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-          .setStatusCode(204)
-          .end();
+        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+        .setStatusCode(204)
+        .end();
     }
   }
 

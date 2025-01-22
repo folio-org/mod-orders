@@ -95,6 +95,7 @@ import org.folio.service.orders.lines.update.OrderLineUpdateInstanceStrategyReso
 import org.folio.service.orders.lines.update.instance.WithHoldingOrderLineUpdateInstanceStrategy;
 import org.folio.service.orders.lines.update.instance.WithoutHoldingOrderLineUpdateInstanceStrategy;
 import org.folio.service.organization.OrganizationService;
+import org.folio.service.pieces.WrapperPieceStorageService;
 import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
 import org.folio.service.pieces.PieceDeleteInventoryService;
 import org.folio.service.pieces.ItemRecreateInventoryService;
@@ -528,6 +529,14 @@ public class ApplicationConfig {
                                           SettingsRetriever settingsRetriever,
                                           RestClient restClient) {
     return new PieceStorageService(consortiumConfigurationService, consortiumUserTenantsRetriever, settingsRetriever, restClient);
+  }
+
+  @Bean
+  WrapperPieceStorageService wrapperPieceStorageService(ConsortiumConfigurationService consortiumConfigurationService,
+                                                        ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever,
+                                                        SettingsRetriever settingsRetriever,
+                                                        RestClient restClient) {
+    return new WrapperPieceStorageService(consortiumConfigurationService, consortiumUserTenantsRetriever, settingsRetriever, restClient);
   }
 
   @Bean

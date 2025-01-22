@@ -46,9 +46,11 @@ public class PieceStorageService {
   private final ConsortiumConfigurationService consortiumConfigurationService;
   private final ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever;
   private final SettingsRetriever settingsRetriever;
-  private final RestClient restClient;
+  protected final RestClient restClient;
 
-  public PieceStorageService(ConsortiumConfigurationService consortiumConfigurationService, ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever, SettingsRetriever settingsRetriever, RestClient restClient) {
+  public PieceStorageService(ConsortiumConfigurationService consortiumConfigurationService,
+                             ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever,
+                             SettingsRetriever settingsRetriever, RestClient restClient) {
     this.consortiumConfigurationService = consortiumConfigurationService;
     this.consortiumUserTenantsRetriever = consortiumUserTenantsRetriever;
     this.settingsRetriever = settingsRetriever;
@@ -146,7 +148,7 @@ public class PieceStorageService {
     return restClient.get(requestEntry, PieceCollection.class, requestContext);
   }
 
-  private Future<List<String>> getUserTenantsIfNeeded(RequestContext requestContext) {
+  protected Future<List<String>> getUserTenantsIfNeeded(RequestContext requestContext) {
     return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
       .compose(consortiumConfiguration -> {
         if (consortiumConfiguration.isEmpty()) {

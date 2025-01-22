@@ -39,6 +39,7 @@ import org.folio.rest.impl.PurchaseOrdersApiTest;
 import org.folio.rest.impl.ReceivingHistoryApiTest;
 import org.folio.rest.impl.RoutingListsApiTest;
 import org.folio.rest.impl.TitlesApiTest;
+import org.folio.rest.impl.WrapperPiecesAPITest;
 import org.folio.rest.impl.crud.ConfigurationCrudTest;
 import org.folio.rest.impl.protection.LinesProtectionTest;
 import org.folio.rest.impl.protection.OrdersProtectionTest;
@@ -99,6 +100,7 @@ import org.folio.service.pieces.PieceStorageServiceTest;
 import org.folio.service.pieces.PieceUpdateInventoryServiceTest;
 import org.folio.service.pieces.PieceUtilTest;
 import org.folio.service.pieces.PiecesClaimingServiceTest;
+import org.folio.service.pieces.WrapperPieceStorageServiceTest;
 import org.folio.service.pieces.flows.BasePieceFlowHolderBuilderTest;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidatorTest;
 import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManagerTest;
@@ -559,5 +561,13 @@ public class ApiTestSuite {
 
   @Nested
   class PieceUtilTestNested extends PieceUtilTest {
+  }
+
+  @Nested
+  class WrapperPieceStorageServiceTestNested extends WrapperPieceStorageServiceTest {
+  }
+
+  @Nested
+  class WrapperPiecesAPITestNested extends WrapperPiecesAPITest {
   }
 }

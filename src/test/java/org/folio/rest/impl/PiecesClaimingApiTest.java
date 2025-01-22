@@ -4,8 +4,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.restassured.http.Header;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import lombok.extern.log4j.Log4j2;
 import org.folio.ApiTestSuite;
 import org.folio.Organization;
 import org.folio.config.ApplicationConfig;
@@ -70,17 +69,17 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
+@Log4j2
 @ExtendWith(VertxExtension.class)
 public class PiecesClaimingApiTest {
 
-  private static final Logger logger = LogManager.getLogger();
   private static boolean runningOnOwn;
 
-  private static final String ORGANIZATIONS_KEY = "organizations";
-  private static final String PO_LINES_KEY = "poLines";
-  private static final String PIECES_KEY = "pieces";
-  private static final String ENTRY_ID = "id";
-  private static final String CLAIMING_MOCK_DATA_FOLDER = "claiming/";
+  static final String ORGANIZATIONS_KEY = "organizations";
+  static final String PO_LINES_KEY = "poLines";
+  static final String PIECES_KEY = "pieces";
+  static final String ENTRY_ID = "id";
+  static final String CLAIMING_MOCK_DATA_FOLDER = "claiming/";
 
   @BeforeAll
   static void before() throws InterruptedException, ExecutionException, TimeoutException {
@@ -140,7 +139,7 @@ public class PiecesClaimingApiTest {
   void testPostPiecesClaim(String name, int vendorIdx, int poLineIdx, int pieceIdx, MockHitDto dto,
                            String payloadFile, Header header, ClaimingPieceResult.Status expectedStatus,
                            HttpResponseStatus expectedResponseStatus) {
-    logger.info("Testing postPiecesClaim, name: {}", name);
+    log.info("Testing postPiecesClaim, name: {}", name);
 
     var organization = getMockAsJson(ORGANIZATION_COLLECTION)
       .getJsonArray(ORGANIZATIONS_KEY).getJsonObject(vendorIdx)
@@ -182,7 +181,7 @@ public class PiecesClaimingApiTest {
       .filter(Objects::nonNull).filter(poLineId -> poLineId.equals(purchaseOrder.getId()))
       .toList();
 
-    purchaseOrderRetrievals.forEach(entry -> logger.info("Retrieved PurchaseOrder: {}", entry));
+    purchaseOrderRetrievals.forEach(entry -> log.info("Retrieved PurchaseOrder: {}", entry));
 
     var organizationSearches = getOrganizationSearches();
     var pieceUpdates = getPieceBatchUpdates();
@@ -209,10 +208,10 @@ public class PiecesClaimingApiTest {
       assertThat(jobCreations, hasSize(dto.jobCreations));
       assertThat(claimingResults.getClaimingPieceResults().size(), equalTo(dto.claimingResults));
 
-      pieceUpdates.forEach(pieceUpdate -> logger.info("Updated Piece: {}", pieceUpdate.encodePrettily()));
+      pieceUpdates.forEach(pieceUpdate -> log.info("Updated Piece: {}", pieceUpdate.encodePrettily()));
 
       var claimedPieceIds = jobCreations.stream()
-        .peek(job -> logger.info("Created job: {}", JsonObject.mapFrom(job).encodePrettily()))
+        .peek(job -> log.info("Created job: {}", JsonObject.mapFrom(job).encodePrettily()))
         .map(job -> job.getJsonObject(EXPORT_TYPE_SPECIFIC_PARAMETERS.getValue())
           .getJsonObject(VENDOR_EDI_ORDERS_EXPORT_CONFIG.getValue())
           .getJsonArray(CLAIM_PIECE_IDS.getValue()).size())
