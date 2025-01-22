@@ -1,5 +1,6 @@
 package org.folio.service.exchange;
 
+import static org.folio.service.exchange.FolioExchangeRateType.FOLIO_CURRENT;
 import static org.javamoney.moneta.convert.ExchangeRateType.ECB;
 import static org.javamoney.moneta.convert.ExchangeRateType.IDENTITY;
 
@@ -51,7 +52,7 @@ public class FinanceApiExchangeRateProvider implements ExchangeRateProvider {
   }
 
   private org.folio.rest.acq.model.finance.ExchangeRate getExchangeRateFromService(ConversionQuery conversionQuery) {
-      double exchangeRate = MonetaryConversions.getExchangeRateProvider(IDENTITY, ECB)
+      double exchangeRate = MonetaryConversions.getExchangeRateProvider(IDENTITY, FOLIO_CURRENT, ECB)
         .getExchangeRate(conversionQuery.getBaseCurrency(), conversionQuery.getCurrency())
         .getFactor()
         .doubleValue();

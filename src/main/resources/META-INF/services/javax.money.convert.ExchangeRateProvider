@@ -1,0 +1,2 @@
+org.folio.service.exchange.FolioCurrentCurrencyRateProvider
+org.folio.service.exchange.FolioHistoryCurrencyRateProvider
