@@ -672,12 +672,21 @@
         {
           "methods": ["GET"],
           "pathPattern": "/orders/wrapper-pieces",
-          "permissionsRequired": ["orders.wrapper-pieces.collection.get"]
+          "permissionsRequired": ["orders.wrapper-pieces.collection.get"],
+          "modulePermissions": [
+            "orders-storage.wrapper-pieces.collection.get",
+            "orders-storage.settings.collection.get",
+            "consortia.user-tenants.collection.get",
+            "user-tenants.collection.get"
+          ]
         },
         {
           "methods": ["GET"],
           "pathPattern": "/orders/wrapper-pieces/{id}",
-          "permissionsRequired": ["orders.wrapper-pieces.item.get"]
+          "permissionsRequired": ["orders.wrapper-pieces.item.get"],
+          "modulePermissions": [
+            "orders-storage.wrapper-pieces.item.get"
+          ]
         }
       ]
     },
