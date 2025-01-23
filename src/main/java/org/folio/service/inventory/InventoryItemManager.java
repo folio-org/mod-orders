@@ -149,6 +149,7 @@ public class InventoryItemManager {
         if (poLineId == null || item == null || item.isEmpty()) {
           return Future.succeededFuture();
         }
+        logger.info("updateItemWithPieceFields:: {}", item);
         InventoryUtils.updateItemWithPieceFields(item, piece);
         return updateItem(item, requestContext);
       });
@@ -204,7 +205,7 @@ public class InventoryItemManager {
               .compose(updatedRequestContext -> {
                 List<String> existingItemIds;
                 if (pieceFormat == Piece.Format.ELECTRONIC) {
-                  existingItemIds = getElectronicItemIds(compPOL, existingItems);
+                  existingItemIds = getElectronicItemIds(compPOL, existingItems); // get electronics
                   return createMissingElectronicItems(comPO, compPOL, pieceWithHoldingId,
                     expectedQuantity - existingItemIds.size(), updatedRequestContext)
                     .map(createdItemIds -> buildPieces(location, polId, pieceFormat, createdItemIds, existingItemIds));
@@ -265,6 +266,7 @@ public class InventoryItemManager {
       .collect(toList());
   }
 
+  // 8
   private List<Piece> buildPieces(Location location, String polId, Piece.Format pieceFormat, List<String> createdItemIds,
                                   List<String> existingItemIds) {
     List<String> itemIds = ListUtils.union(createdItemIds, existingItemIds);
@@ -296,6 +298,7 @@ public class InventoryItemManager {
     }
   }
 
+  // get items
   public Future<List<JsonObject>> getItemsByHoldingId(String holdingId, RequestContext requestContext) {
     String query = String.format("holdingsRecordId==%s", holdingId);
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(ITEMS)).withQuery(query)
@@ -308,6 +311,7 @@ public class InventoryItemManager {
       });
   }
 
+  // 5
   public Future<String> openOrderCreateItemRecord(CompositePurchaseOrder compPO, CompositePoLine compPOL,
                                                   String holdingId, RequestContext requestContext) {
     final int ITEM_QUANTITY = 1;
