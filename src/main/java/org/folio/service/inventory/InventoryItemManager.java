@@ -143,18 +143,32 @@ public class InventoryItemManager {
     if (piece.getItemId() == null || piece.getPoLineId() == null || piece.getIsBound()) {
       return Future.succeededFuture();
     }
-    logger.info("updateItemWithPieceFields:: piece {} item {}", piece.getId(), piece.getItemId());
     String itemId = piece.getItemId();
     String poLineId = piece.getPoLineId();
+    return fetchAndUpdateItem(itemId, poLineId, piece, requestContext, 2);
+  }
+
+  private Future<Void> fetchAndUpdateItem(String itemId, String poLineId, Piece piece, RequestContext requestContext, int retries) {
     return getItemRecordById(itemId, true, requestContext)
       .compose(item -> {
         if (poLineId == null || item == null || item.isEmpty()) {
           return Future.succeededFuture();
         }
-        logger.info("updateItemWithPieceFields:: {}", item);
+        logger.info("fetchAndUpdateItem:: Current item: {}", item);
         InventoryUtils.updateItemWithPieceFields(item, piece);
-        return updateItem(item, requestContext);
+        return updateItem(item, requestContext)
+          .recover(error -> {
+            if (isConflictError(error) && retries > 0) {
+              logger.warn("Conflict detected, retrying... Attempts left: {}", retries - 1);
+              return fetchAndUpdateItem(itemId, poLineId, piece, requestContext, retries - 1);
+            }
+            return Future.failedFuture(error);
+          });
       });
+  }
+
+  private boolean isConflictError(Throwable error) {
+    return error instanceof HttpException && ((HttpException) error).getCode() == 409;
   }
 
   public Future<Void> deleteItem(String id, boolean skipNotFoundException, RequestContext requestContext) {
