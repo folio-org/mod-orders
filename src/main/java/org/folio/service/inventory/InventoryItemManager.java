@@ -98,6 +98,7 @@ public class InventoryItemManager {
 
   public Future<JsonObject> getItemRecordById(String itemId, boolean skipThrowNorFoundException, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(ITEM_BY_ID_ENDPOINT)).withId(itemId);
+    logger.info("getItemRecordById:: {}", requestContext.toString());
     return restClient.getAsJsonObject(requestEntry, skipThrowNorFoundException, requestContext);
   }
 
