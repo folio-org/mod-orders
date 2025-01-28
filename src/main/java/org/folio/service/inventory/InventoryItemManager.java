@@ -142,6 +142,7 @@ public class InventoryItemManager {
     if (piece.getItemId() == null || piece.getPoLineId() == null || piece.getIsBound()) {
       return Future.succeededFuture();
     }
+    logger.info("updateItemWithPieceFields:: piece {} item {}", piece.getId(), piece.getItemId());
     String itemId = piece.getItemId();
     String poLineId = piece.getPoLineId();
     return getItemRecordById(itemId, true, requestContext)
