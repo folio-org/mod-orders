@@ -92,7 +92,6 @@ public class OpenCompositeOrderPieceService {
       .toList());
   }
 
-  // 1
   private Future<List<Piece>> createPieces(OpenOrderPieceHolder holder, CompositePurchaseOrder order, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     logger.debug("createPieces:: Trying to create pieces");
     List<Piece> piecesToCreate = new ArrayList<>(holder.getPiecesWithLocationToProcess());
@@ -110,7 +109,6 @@ public class OpenCompositeOrderPieceService {
       });
   }
 
-  // 2
   public Future<Piece> createPiece(Piece piece, CompositePurchaseOrder order, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     logger.debug("createPiece:: Creating piece - {}", piece.getId());
     return titlesService.getTitleById(piece.getTitleId(), requestContext)
@@ -150,8 +148,6 @@ public class OpenCompositeOrderPieceService {
   public Future<Void> openOrderUpdateInventory(CompositePurchaseOrder compPO, CompositePoLine compPOL,
                                                Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     if (!Boolean.TRUE.equals(compPOL.getIsPackage())) {
-      // 4
-      logger.info("openOrderUpdateInventory:: {}", compPOL);
       return inventoryItemManager.updateItemWithPieceFields(piece, requestContext);
     }
     var locationContext = createContextWithNewTenantId(requestContext, piece.getReceivingTenantId());
