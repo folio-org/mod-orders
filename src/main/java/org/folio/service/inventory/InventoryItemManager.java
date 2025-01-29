@@ -72,7 +72,7 @@ public class InventoryItemManager {
   private static final String LOOKUP_ITEM_QUERY = "purchaseOrderLineIdentifier==%s and holdingsRecordId==%s";
   private static final String ITEM_STOR_ENDPOINT = "/item-storage/items";
   private static final String BUILDING_PIECE_MESSAGE = "Building {} {} piece(s) for PO Line with id={}";
-  private static final ConcurrentHashMap<String, Promise<Void>> itemsQueue = new ConcurrentHashMap<>();
+  private static final ConcurrentHashMap<String, Promise<Void>> updateItemFutures = new ConcurrentHashMap<>();
 
   private final RestClient restClient;
   private final ConfigurationEntriesCache configurationEntriesCache;
@@ -149,7 +149,7 @@ public class InventoryItemManager {
     Promise<Void> promise = Promise.promise();
 
     // Chain the operation to the previous one for the same item
-    itemsQueue.compute(piece.getItemId(), (key, existingPromise) -> {
+    updateItemFutures.compute(piece.getItemId(), (key, existingPromise) -> {
       if (existingPromise == null) {
         // No existing operation, start processing immediately
         fetchAndUpdate(piece, requestContext, promise);
@@ -183,7 +183,7 @@ public class InventoryItemManager {
         }
 
         // Remove the completed operation from the map
-        itemsQueue.remove(itemId, promise);
+        updateItemFutures.remove(itemId, promise);
       });
   }
 
