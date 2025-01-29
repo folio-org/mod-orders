@@ -1,5 +1,6 @@
 package org.folio.service.orders;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -15,6 +16,7 @@ import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.invoice.Invoice;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.service.finance.FiscalYearService;
 import org.folio.service.finance.transaction.TransactionService;
 import org.folio.service.invoice.InvoiceLineService;
@@ -53,6 +55,7 @@ public class CompositeOrderTotalFieldsPopulateService implements CompositeOrderD
     return invoiceService.getInvoicesByOrderId(holder.getOrderId(), requestContext)
       .compose(invoices -> getCurrentFiscalYearIds(invoices, holder.getFiscalYear(), requestContext)
         .compose(fiscalYears -> getInvoiceLinesByInvoiceIds(invoices, fiscalYears, requestContext))
+        .map(invoiceLines -> filterInvoiceLinesWithPoLines(invoiceLines, holder.getOrder().getCompositePoLines()))
         .map(invoiceLines -> groupInvoiceLinesByInvoices(invoices, invoiceLines))
         .compose(invoiceToInvoiceLinesMap -> transactionService.getTransactions(query, requestContext)
           .map(transactions -> populateTotalFields(holder, invoiceToInvoiceLinesMap, transactions))))
@@ -76,6 +79,11 @@ public class CompositeOrderTotalFieldsPopulateService implements CompositeOrderD
       .filter(invoice -> invoice.getFiscalYearId() != null && fiscalYearIds.contains(invoice.getFiscalYearId()))
       .map(invoice -> invoiceLineService.getInvoiceLinesByInvoiceIdAndStatus(invoice.getId(), InvoiceLine.InvoiceLineStatus.PAID, requestContext)).toList())
       .map(invoiceLinesLists -> invoiceLinesLists.stream().flatMap(List::stream).toList());
+  }
+
+  private List<InvoiceLine> filterInvoiceLinesWithPoLines(List<InvoiceLine> invoiceLines, List<CompositePoLine> poLines) {
+    Set<String> poLineIds = poLines.stream().map(CompositePoLine::getId).collect(Collectors.toCollection(HashSet::new));
+    return invoiceLines.stream().filter(invoiceLine -> poLineIds.contains(invoiceLine.getPoLineId())).toList();
   }
 
   private Map<Invoice, List<InvoiceLine>> groupInvoiceLinesByInvoices(List<Invoice> invoices, List<InvoiceLine> invoiceLines) {
