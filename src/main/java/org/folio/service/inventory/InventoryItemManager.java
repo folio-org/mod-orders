@@ -3,9 +3,9 @@ package org.folio.service.inventory;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import one.util.streamex.IntStreamEx;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.ListUtils;
@@ -141,8 +141,7 @@ public class InventoryItemManager {
     return collectResultsOnSuccess(futures);
   }
 
-  // Use ConcurrentHashMap to store locks for each item ID
-  private static final ConcurrentHashMap<String, Lock> itemLocks = new ConcurrentHashMap<>();
+  private static final ConcurrentHashMap<String, Queue<Promise<Void>>> itemQueues = new ConcurrentHashMap<>();
 
   public Future<Void> updateItemWithPieceFields(Piece piece, RequestContext requestContext) {
     if (piece.getItemId() == null || piece.getPoLineId() == null || piece.getIsBound()) {
@@ -150,32 +149,60 @@ public class InventoryItemManager {
     }
 
     String itemId = piece.getItemId();
+
+    // Create a promise for this operation and add to the item's queue
+    Promise<Void> promise = Promise.promise();
+    itemQueues.compute(itemId, (k, queue) -> {
+      Queue<Promise<Void>> q = (queue != null) ? queue : new ConcurrentLinkedQueue<>();
+      q.add(promise);
+      return q;
+    });
+
+    // Trigger processing if this is the first item in the queue
+    processNextOperation(itemId, piece, requestContext);
+
+    return promise.future();
+  }
+
+  private void processNextOperation(String itemId, Piece piece, RequestContext requestContext) {
+    Queue<Promise<Void>> queue = itemQueues.get(itemId);
+    if (queue == null || queue.isEmpty()) return;
+
+    // Process the next operation in the queue
+    Promise<Void> currentPromise = queue.peek();
+    if (currentPromise == null) return;
+
     String poLineId = piece.getPoLineId();
 
-    // Get or create a lock for the specific item ID
-    Lock lock = itemLocks.computeIfAbsent(itemId, k -> new ReentrantLock());
-
-    return Future.future(promise -> {
-      lock.lock(); // Acquire lock before processing
-      getItemRecordById(itemId, true, requestContext)
-        .compose(item -> {
-          if (poLineId == null || item == null || item.isEmpty()) {
-            return Future.succeededFuture();
-          }
-          InventoryUtils.updateItemWithPieceFields(item, piece);
-          return updateItem(item, requestContext);
-        })
-        .onComplete(ar -> {
-          lock.unlock(); // Release lock in all cases
-          itemLocks.remove(itemId, lock); // Cleanup if no contention
+    getItemRecordById(itemId, true, requestContext)
+      .compose(item -> {
+        if (poLineId == null || item == null || item.isEmpty()) {
+          return Future.succeededFuture();
+        }
+        InventoryUtils.updateItemWithPieceFields(item, piece);
+        return updateItem(item, requestContext);
+      })
+      .onComplete(ar -> {
+        // Complete the current promise and remove from queue
+        Queue<Promise<Void>> q = itemQueues.get(itemId);
+        if (q != null && !q.isEmpty() && q.peek() == currentPromise) {
+          q.poll();
           if (ar.succeeded()) {
-            promise.complete();
+            currentPromise.complete();
           } else {
-            promise.fail(ar.cause());
+            currentPromise.fail(ar.cause());
           }
-        });
-    });
+        }
+
+        // Process next operation if queue still has items
+        if (q != null && !q.isEmpty()) {
+          processNextOperation(itemId, piece, requestContext);
+        } else {
+          itemQueues.remove(itemId);
+        }
+      });
   }
+
   public Future<Void> deleteItem(String id, boolean skipNotFoundException, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(ITEM_BY_ID_ENDPOINT)).withId(id);
     return restClient.delete(requestEntry, skipNotFoundException, requestContext);
