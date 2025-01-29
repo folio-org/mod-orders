@@ -1,5 +1,13 @@
 ## 13.0.0 - Unreleased
 
+## 12.9.11 - Released (Ramsons R2 2024)
+The primary focus of this release was to fix calculation of total expended amount
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.9.10...v12.9.11)
+
+### Bug Fixes
+* [MODORDERS-1248](https://issues.folio.org/browse/MODORDERS-1248) - Use only invoice lines related to the order to calculate total expended
+
+
 ## 12.9.10 - Released (Ramsons R2 2024)
 The primary focus of this release was to add missing interfaces
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.9.9...v12.9.10)
