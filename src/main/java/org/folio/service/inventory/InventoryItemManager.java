@@ -3,6 +3,9 @@ package org.folio.service.inventory;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import one.util.streamex.IntStreamEx;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.ListUtils;
@@ -98,7 +101,6 @@ public class InventoryItemManager {
 
   public Future<JsonObject> getItemRecordById(String itemId, boolean skipThrowNorFoundException, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(ITEM_BY_ID_ENDPOINT)).withId(itemId);
-    logger.info("getItemRecordById:: {}", requestContext.toString());
     return restClient.getAsJsonObject(requestEntry, skipThrowNorFoundException, requestContext);
   }
 
@@ -139,38 +141,41 @@ public class InventoryItemManager {
     return collectResultsOnSuccess(futures);
   }
 
+  // Use ConcurrentHashMap to store locks for each item ID
+  private static final ConcurrentHashMap<String, Lock> itemLocks = new ConcurrentHashMap<>();
+
   public Future<Void> updateItemWithPieceFields(Piece piece, RequestContext requestContext) {
     if (piece.getItemId() == null || piece.getPoLineId() == null || piece.getIsBound()) {
       return Future.succeededFuture();
     }
+
     String itemId = piece.getItemId();
     String poLineId = piece.getPoLineId();
-    return fetchAndUpdateItem(itemId, poLineId, piece, requestContext, 2);
-  }
 
-  private Future<Void> fetchAndUpdateItem(String itemId, String poLineId, Piece piece, RequestContext requestContext, int retries) {
-    return getItemRecordById(itemId, true, requestContext)
-      .compose(item -> {
-        if (poLineId == null || item == null || item.isEmpty()) {
-          return Future.succeededFuture();
-        }
-        logger.info("fetchAndUpdateItem:: Current item: {}", item);
-        InventoryUtils.updateItemWithPieceFields(item, piece);
-        return updateItem(item, requestContext)
-          .recover(error -> {
-            if (isConflictError(error) && retries > 0) {
-              logger.warn("Conflict detected, retrying... Attempts left: {}", retries - 1);
-              return fetchAndUpdateItem(itemId, poLineId, piece, requestContext, retries - 1);
-            }
-            return Future.failedFuture(error);
-          });
-      });
-  }
+    // Get or create a lock for the specific item ID
+    Lock lock = itemLocks.computeIfAbsent(itemId, k -> new ReentrantLock());
 
-  private boolean isConflictError(Throwable error) {
-    return error instanceof HttpException && ((HttpException) error).getCode() == 409;
+    return Future.future(promise -> {
+      lock.lock(); // Acquire lock before processing
+      getItemRecordById(itemId, true, requestContext)
+        .compose(item -> {
+          if (poLineId == null || item == null || item.isEmpty()) {
+            return Future.succeededFuture();
+          }
+          InventoryUtils.updateItemWithPieceFields(item, piece);
+          return updateItem(item, requestContext);
+        })
+        .onComplete(ar -> {
+          lock.unlock(); // Release lock in all cases
+          itemLocks.remove(itemId, lock); // Cleanup if no contention
+          if (ar.succeeded()) {
+            promise.complete();
+          } else {
+            promise.fail(ar.cause());
+          }
+        });
+    });
   }
-
   public Future<Void> deleteItem(String id, boolean skipNotFoundException, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(ITEM_BY_ID_ENDPOINT)).withId(id);
     return restClient.delete(requestEntry, skipNotFoundException, requestContext);
