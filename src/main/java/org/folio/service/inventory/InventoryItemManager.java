@@ -3,9 +3,7 @@ package org.folio.service.inventory;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
-import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import one.util.streamex.IntStreamEx;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.ListUtils;
@@ -141,39 +139,34 @@ public class InventoryItemManager {
     return collectResultsOnSuccess(futures);
   }
 
-  private static final ConcurrentHashMap<String, Queue<Promise<Void>>> itemQueues = new ConcurrentHashMap<>();
+  private static final ConcurrentHashMap<String, Promise<Void>> itemsQueue = new ConcurrentHashMap<>();
 
   public Future<Void> updateItemWithPieceFields(Piece piece, RequestContext requestContext) {
     if (piece.getItemId() == null || piece.getPoLineId() == null || piece.getIsBound()) {
       return Future.succeededFuture();
     }
 
-    String itemId = piece.getItemId();
-
-    // Create a promise for this operation and add to the item's queue
+    // Create a promise for this operation
     Promise<Void> promise = Promise.promise();
-    itemQueues.compute(itemId, (k, queue) -> {
-      Queue<Promise<Void>> q = (queue != null) ? queue : new ConcurrentLinkedQueue<>();
-      q.add(promise);
-      return q;
-    });
 
-    // Trigger processing if this is the first item in the queue
-    processNextOperation(itemId, piece, requestContext);
+    // Chain the operation to the previous one for the same item
+    itemsQueue.compute(piece.getItemId(), (key, existingPromise) -> {
+      if (existingPromise == null) {
+        // No existing operation, start processing immediately
+        fetchAndUpdate(piece, requestContext, promise);
+      } else {
+        // Chain this operation to the previous one
+        existingPromise.future().onComplete(ar -> fetchAndUpdate(piece, requestContext, promise));
+      }
+      return promise;
+    });
 
     return promise.future();
   }
 
-  private void processNextOperation(String itemId, Piece piece, RequestContext requestContext) {
-    Queue<Promise<Void>> queue = itemQueues.get(itemId);
-    if (queue == null || queue.isEmpty()) return;
-
-    // Process the next operation in the queue
-    Promise<Void> currentPromise = queue.peek();
-    if (currentPromise == null) return;
-
+  private void fetchAndUpdate(Piece piece, RequestContext requestContext, Promise<Void> promise) {
+    String itemId = piece.getItemId();
     String poLineId = piece.getPoLineId();
-
     getItemRecordById(itemId, true, requestContext)
       .compose(item -> {
         if (poLineId == null || item == null || item.isEmpty()) {
@@ -183,23 +176,15 @@ public class InventoryItemManager {
         return updateItem(item, requestContext);
       })
       .onComplete(ar -> {
-        // Complete the current promise and remove from queue
-        Queue<Promise<Void>> q = itemQueues.get(itemId);
-        if (q != null && !q.isEmpty() && q.peek() == currentPromise) {
-          q.poll();
-          if (ar.succeeded()) {
-            currentPromise.complete();
-          } else {
-            currentPromise.fail(ar.cause());
-          }
+        // Complete the current promise
+        if (ar.succeeded()) {
+          promise.complete();
+        } else {
+          promise.fail(ar.cause());
         }
 
-        // Process next operation if queue still has items
-        if (q != null && !q.isEmpty()) {
-          processNextOperation(itemId, piece, requestContext);
-        } else {
-          itemQueues.remove(itemId);
-        }
+        // Remove the completed operation from the map
+        itemsQueue.remove(itemId, promise);
       });
   }
 
