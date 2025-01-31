@@ -102,6 +102,11 @@ public class OpenCompositeOrderPieceService {
 
     var piecesToCreateFutures = piecesToCreate.stream()
       .map(piece -> piece.withTitleId(holder.getTitleId()))
+      .peek(piece -> {
+        if (!order.getCompositePoLines().get(0).getIsPackage()) {
+          chainCall(piecesToCreate, p -> inventoryItemManager.updateItemWithPieceFields(p, requestContext));
+        }
+      })
       .map(piece -> createPiece(piece, order, isInstanceMatchingDisabled, requestContext))
       .toList();
     return collectResultsOnSuccess(piecesToCreateFutures)
@@ -149,9 +154,6 @@ public class OpenCompositeOrderPieceService {
    */
   public Future<Void> openOrderUpdateInventory(CompositePurchaseOrder compPO, CompositePoLine compPOL,
                                                Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    if (!Boolean.TRUE.equals(compPOL.getIsPackage())) {
-      return chainCall(Collections.singletonList(piece), p -> inventoryItemManager.updateItemWithPieceFields(p, requestContext));
-    }
     var locationContext = createContextWithNewTenantId(requestContext, piece.getReceivingTenantId());
     return titlesService.getTitleById(piece.getTitleId(), requestContext)
       .compose(title -> titlesService.updateTitleWithInstance(title, isInstanceMatchingDisabled, locationContext, requestContext).map(title::withInstanceId))
