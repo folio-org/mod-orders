@@ -35,7 +35,6 @@ import java.util.Map;
 import java.util.Optional;
 
 import static java.util.stream.Collectors.toList;
-import static org.folio.orders.utils.HelperUtils.chainCall;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.QueryUtils.convertIdsToCqlQuery;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
@@ -147,14 +146,15 @@ public class InventoryItemManager {
     String itemId = piece.getItemId();
 
     return getItemRecordById(itemId, true, requestContext)
-      .compose(item -> {
-        if (item == null || item.isEmpty()) {
-          return Future.succeededFuture(); // Nothing to update
-        }
-        InventoryUtils.updateItemWithPieceFields(item, piece);
-        return chainCall(Collections.singletonList(item), i -> updateItem(i, requestContext));
-      });
+        .compose(item -> {
+          if (item == null || item.isEmpty()) {
+            return Future.succeededFuture();
+          }
+          InventoryUtils.updateItemWithPieceFields(item, piece);
+          return updateItem(item, requestContext);
+        });
   }
+
 
   public Future<Void> deleteItem(String id, boolean skipNotFoundException, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(ITEM_BY_ID_ENDPOINT)).withId(id);
