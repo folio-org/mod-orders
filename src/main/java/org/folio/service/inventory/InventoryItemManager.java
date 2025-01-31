@@ -146,18 +146,15 @@ public class InventoryItemManager {
 
     String itemId = piece.getItemId();
 
-    return chainCall(Collections.singletonList(itemId), id ->
-      getItemRecordById(id, true, requestContext)
-        .compose(item -> {
-          if (item == null || item.isEmpty()) {
-            return Future.succeededFuture();
-          }
-          InventoryUtils.updateItemWithPieceFields(item, piece);
-          return updateItem(item, requestContext);
-        })
-    );
+    return getItemRecordById(itemId, true, requestContext)
+      .compose(item -> {
+        if (item == null || item.isEmpty()) {
+          return Future.succeededFuture(); // Nothing to update
+        }
+        InventoryUtils.updateItemWithPieceFields(item, piece);
+        return chainCall(Collections.singletonList(item), i -> updateItem(i, requestContext));
+      });
   }
-
 
   public Future<Void> deleteItem(String id, boolean skipNotFoundException, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(ITEM_BY_ID_ENDPOINT)).withId(id);
