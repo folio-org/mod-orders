@@ -165,10 +165,9 @@ public class InventoryItemManager {
 
   private void fetchAndUpdate(Piece piece, RequestContext requestContext, Promise<Void> promise) {
     String itemId = piece.getItemId();
-    String poLineId = piece.getPoLineId();
     getItemRecordById(itemId, true, requestContext)
       .compose(item -> {
-        if (poLineId == null || item == null || item.isEmpty()) {
+        if (item == null || item.isEmpty()) {
           return Future.succeededFuture();
         }
         InventoryUtils.updateItemWithPieceFields(item, piece);
