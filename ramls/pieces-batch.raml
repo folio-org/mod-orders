@@ -9,9 +9,26 @@ documentation:
     content: <b>Endpoint for batch operations on Pieces</b>
 
 types:
+  piece-collection: !include acq-models/mod-orders-storage/schemas/piece_collection.json
   piece-batch-status-collection: !include acq-models/mod-orders/schemas/pieceStatusBatchCollection.json
+  errors: !include raml-util/schemas/errors.schema
+
+traits:
+  validate: !include raml-util/traits/validation.raml
+
+resourceTypes:
+  post-with-200: !include rtypes/post-json-200.raml
 
 /orders/pieces-batch:
+  type:
+    post-with-200:
+      requestSchema: piece-collection
+      responseSchema: piece-collection
+      requestExample: !include acq-models/mod-orders-storage/examples/piece_collection.sample
+      responseExample: !include acq-models/mod-orders-storage/examples/piece_collection.sample
+  is: [ validate ]
+  post:
+    description: Create batch pieces
   /status:
     put:
       description: Batch status update for pieces

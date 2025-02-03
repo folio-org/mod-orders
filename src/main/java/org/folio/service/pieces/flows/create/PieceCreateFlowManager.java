@@ -6,6 +6,7 @@ import org.folio.models.pieces.PieceCreationHolder;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.service.ProtectionService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
@@ -45,6 +46,12 @@ public class PieceCreateFlowManager {
       .compose(v -> pieceCreateFlowInventoryManager.processInventory(holder.getPurchaseOrderToSave(), holder.getPoLineToSave(), holder.getPieceToCreate(), holder.isCreateItem(), requestContext))
       .compose(compPoLine -> updatePoLine(holder, requestContext))
       .compose(v -> pieceStorageService.insertPiece(pieceToCreate, requestContext));
+  }
+
+  public Future<Piece> createPieces(PieceCollection pieceCollection, RequestContext requestContext) {
+    logger.info("createPieces:: Trying to create '{}' pieces", pieceCollection.getPieces().size());
+
+    return basePieceFlowHolderBuilder.updateHolderWithOrderInformation();
   }
 
   protected Future<Void> updatePoLine(PieceCreationHolder holder, RequestContext requestContext) {
