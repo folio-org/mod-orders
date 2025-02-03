@@ -2,13 +2,11 @@ package org.folio.service.orders.flows.update.open;
 
 import static org.folio.orders.events.utils.EventUtils.createPoLineUpdateEvent;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
-import static org.folio.orders.utils.HelperUtils.chainCall;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
 import static org.folio.service.pieces.PieceUtil.updatePieceStatus;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletionException;
@@ -102,11 +100,6 @@ public class OpenCompositeOrderPieceService {
 
     var piecesToCreateFutures = piecesToCreate.stream()
       .map(piece -> piece.withTitleId(holder.getTitleId()))
-      .peek(piece -> {
-        if (!order.getCompositePoLines().get(0).getIsPackage()) {
-          chainCall(piecesToCreate, p -> inventoryItemManager.updateItemWithPieceFields(p, requestContext));
-        }
-      })
       .map(piece -> createPiece(piece, order, isInstanceMatchingDisabled, requestContext))
       .toList();
     return collectResultsOnSuccess(piecesToCreateFutures)
@@ -154,6 +147,9 @@ public class OpenCompositeOrderPieceService {
    */
   public Future<Void> openOrderUpdateInventory(CompositePurchaseOrder compPO, CompositePoLine compPOL,
                                                Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+    if (!Boolean.TRUE.equals(compPOL.getIsPackage())) {
+      return inventoryItemManager.updateItemWithPieceFields(piece, requestContext);
+    }
     var locationContext = createContextWithNewTenantId(requestContext, piece.getReceivingTenantId());
     return titlesService.getTitleById(piece.getTitleId(), requestContext)
       .compose(title -> titlesService.updateTitleWithInstance(title, isInstanceMatchingDisabled, locationContext, requestContext).map(title::withInstanceId))
