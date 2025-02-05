@@ -79,7 +79,7 @@ public class PieceCreateFlowManager {
     var futures = holder.getPiecesToCreate().stream()
       .map(piece -> pieceCreateFlowInventoryManager.processInventory(holder.getPurchaseOrderToSave(),
         holder.getPoLineToSave(), piece, holder.isCreateItem(), requestContext))
-      .collect(Collectors.toList());
+      .toList();
     return collectResultsOnSuccess(futures).mapEmpty();
   }
 
@@ -87,14 +87,14 @@ public class PieceCreateFlowManager {
     var pieceCreationHolderList = createPieceCreationHolderList(holder);
     var futures = pieceCreationHolderList.stream()
       .map(pieceCreationHolder -> updatePoLine(pieceCreationHolder, requestContext))
-      .collect(Collectors.toList());
+      .toList();
     return collectResultsOnSuccess(futures).mapEmpty();
   }
 
   private List<PieceCreationHolder> createPieceCreationHolderList(PieceBatchCreationHolder holder) {
     return holder.getPiecesToCreate().stream()
       .map(piece -> createPieceCreationHolder(piece, holder))
-      .collect(Collectors.toList());
+      .toList();
   }
 
   private PieceCreationHolder createPieceCreationHolder(Piece piece, PieceBatchCreationHolder holder) {
