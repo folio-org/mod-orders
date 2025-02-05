@@ -4,7 +4,6 @@ import static org.folio.orders.utils.FutureUtils.asFuture;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import io.vertx.core.Future;
 import org.apache.logging.log4j.LogManager;

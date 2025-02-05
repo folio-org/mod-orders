@@ -67,8 +67,15 @@ public class RestClient {
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
     return getVertxWebClient(requestContext.getContext()).postAbs(buildAbsEndpoint(caseInsensitiveHeader, endpoint))
       .putHeaders(caseInsensitiveHeader)
-      .expect(SUCCESS_RESPONSE_PREDICATE)
       .sendJson(entity)
+      .compose(response -> {
+        if (response.statusCode() >= 200 && response.statusCode() < 300) {
+          return Future.succeededFuture(response);
+        } else {
+          String error = response.bodyAsString();
+          return Future.failedFuture(getHttpException(response.statusCode(), error));
+        }
+      })
       .map(bufferHttpResponse -> bufferHttpResponse.bodyAsJsonObject().mapTo(responseType))
       .onFailure(log::error);
   }
