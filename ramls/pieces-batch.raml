@@ -29,6 +29,14 @@ resourceTypes:
   is: [ validate ]
   post:
     description: Create batch pieces
+    queryParameters:
+      createItem:
+        displayName: Should item will be created for piece
+        type: boolean
+        description: Should item will be created for piece
+        example: true
+        required: false
+        default: false
   /status:
     put:
       description: Batch status update for pieces

@@ -104,9 +104,9 @@ public class PiecesAPI extends BaseApi implements OrdersPieces, OrdersPiecesRequ
   }
 
   @Override
-  public void postOrdersPiecesBatch(PieceCollection pieceCollection, Map<String, String> okapiHeaders,
+  public void postOrdersPiecesBatch(boolean createItem, PieceCollection pieceCollection, Map<String, String> okapiHeaders,
                                     Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    pieceCreateFlowManager.createPieces(pieceCollection, new RequestContext(vertxContext, okapiHeaders))
+    pieceCreateFlowManager.createPieces(pieceCollection, createItem, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(pieces -> asyncResultHandler.handle(succeededFuture(buildCreatedResponse(pieces))))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
