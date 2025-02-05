@@ -68,6 +68,7 @@ import java.util.stream.Stream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
+import org.folio.CopilotGenerated;
 import org.folio.HttpStatus;
 import org.folio.config.ApplicationConfig;
 import org.folio.orders.events.handlers.HandlersTestHelper;
@@ -80,6 +81,7 @@ import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
@@ -91,15 +93,17 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+@CopilotGenerated(partiallyGenerated = true)
 public class PieceApiTest {
 
   private static final Logger logger = LogManager.getLogger();
 
   public static final String PIECES_ENDPOINT = "/orders/pieces";
+  public static final String PIECES_BATCH_ENDPOINT = "/orders/pieces-batch";
   private static final String PIECES_ID_PATH = PIECES_ENDPOINT + "/%s";
   static final String CONSISTENT_RECEIVED_STATUS_PIECE_UUID = "7d0aa803-a659-49f0-8a95-968f277c87d7";
-  private JsonObject pieceJsonReqData = getMockAsJson(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord.json");
-
+  private final JsonObject pieceJsonReqData = getMockAsJson(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord.json");
+  private final JsonObject piecesBatchReqData = getMockAsJson(PIECE_RECORDS_MOCK_DATA_PATH + "pieces-batch-request.json");
   private static boolean runningOnOwn;
 
   @BeforeAll
@@ -260,6 +264,47 @@ public class PieceApiTest {
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(Piece.class);
 
     assertNull(piece.getReceiptDate());
+  }
+
+  @Test
+  void testPostOrdersPiecesBatch() {
+    logger.info("=== Test POST Orders Pieces Batch ===");
+
+    var pieceCollection = piecesBatchReqData.mapTo(PieceCollection.class);
+    pieceCollection.getPieces().forEach(piece -> piece.setPoLineId("2bafc9e1-9dd3-4ede-9f23-c4a03f8bb2d5"));
+
+    var createdPieces = verifyPostResponse(PIECES_BATCH_ENDPOINT, JsonObject.mapFrom(pieceCollection).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt()).as(PieceCollection.class);
+
+    assertThat(createdPieces.getPieces(), hasSize(2));
+    assertThat(createdPieces.getPieces().get(0).getId(), notNullValue());
+    assertThat(createdPieces.getPieces().get(1).getId(), notNullValue());
+  }
+
+  @Test
+  void testPostOrdersPiecesBatchBadRequest() {
+    logger.info("=== Test POST Orders Pieces Batch - Bad Request ===");
+
+    var pieceCollection = piecesBatchReqData.mapTo(PieceCollection.class);
+    pieceCollection.getPieces().get(0).withPoLineId(ID_BAD_FORMAT);
+
+    int status422 = HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt();
+    verifyPostResponse(PIECES_BATCH_ENDPOINT, JsonObject.mapFrom(pieceCollection).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, new Header(X_ECHO_STATUS, String.valueOf(status422))),
+      APPLICATION_JSON, status422);
+  }
+
+  @Test
+  void testPostOrdersPiecesBatchInternalServerError() {
+    logger.info("=== Test POST Orders Pieces Batch - Internal Server Error ===");
+
+    var pieceCollection = piecesBatchReqData.mapTo(PieceCollection.class);
+    pieceCollection.getPieces().get(0).withPoLineId(ID_FOR_INTERNAL_SERVER_ERROR);
+
+    int status500 = HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt();
+    verifyPostResponse(PIECES_BATCH_ENDPOINT, JsonObject.mapFrom(pieceCollection).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, new Header(X_ECHO_STATUS, String.valueOf(status500))),
+      APPLICATION_JSON, status500);
   }
 
   @Test

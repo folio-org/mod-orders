@@ -46,6 +46,15 @@ public class DefaultPieceFlowsValidator {
     }
   }
 
+  public void isPieceBatchRequestValid(List<Piece> piecesToCreate, CompositePurchaseOrder originalOrder, CompositePoLine originPoLine, boolean isCreateItem) {
+    var titleIds = piecesToCreate.stream().map(Piece::getTitleId).distinct().toList();
+    var poLineIds = piecesToCreate.stream().map(Piece::getPoLineId).distinct().toList();
+    if (titleIds.size() > 1 || poLineIds.size() > 1) {
+      throw new HttpException(RestConstants.BAD_REQUEST, new Errors().withErrors(List.of(new Error().withMessage("All pieces in the batch should have the same titleId and poLineId"))));
+    }
+    piecesToCreate.forEach(piece -> isPieceRequestValid(piece, originalOrder, originPoLine, isCreateItem));
+  }
+
   public static List<Error> validateItemCreateFlag(Piece pieceToCreate, CompositePoLine originPoLine, boolean createItem) {
     if (createItem && !isCreateItemForPiecePossible(pieceToCreate, originPoLine)) {
       String msg = String.format(CREATE_ITEM_FOR_PIECE_IS_NOT_ALLOWED_ERROR.getDescription(), pieceToCreate.getFormat(), originPoLine.getId());
