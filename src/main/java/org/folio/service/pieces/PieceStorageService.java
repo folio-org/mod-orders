@@ -96,7 +96,7 @@ public class PieceStorageService {
     return restClient.post(requestEntry, piece, Piece.class, requestContext);
   }
 
-  public Future<PieceCollection> insertPieceBatch(List<Piece> pieces, RequestContext requestContext) {
+  public Future<PieceCollection> insertPiecesBatch(List<Piece> pieces, RequestContext requestContext) {
     var pieceCollection = new PieceCollection().withPieces(pieces).withTotalRecords(pieces.size());
     RequestEntry requestEntry = new RequestEntry(PIECES_STORAGE_BATCH_ENDPOINT);
     return restClient.postBatch(requestEntry, pieceCollection, PieceCollection.class, requestContext);

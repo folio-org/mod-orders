@@ -66,7 +66,7 @@ public class PieceCreateFlowManager {
       .compose(v -> protectionService.isOperationRestricted(holder.getTitle().getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext))
       .compose(v -> processInventory(holder, requestContext))
       .compose(v -> updatePoLine(holder, requestContext))
-      .compose(v -> pieceStorageService.insertPieceBatch(holder.getPiecesToCreate(), requestContext));
+      .compose(v -> pieceStorageService.insertPiecesBatch(holder.getPiecesToCreate(), requestContext));
   }
 
   private Future<Void> processInventory(PieceCreationHolder holder, RequestContext requestContext) {

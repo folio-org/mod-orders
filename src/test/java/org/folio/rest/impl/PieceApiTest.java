@@ -271,7 +271,6 @@ public class PieceApiTest {
     logger.info("=== Test POST Orders Pieces Batch ===");
 
     var pieceCollection = piecesBatchReqData.mapTo(PieceCollection.class);
-    pieceCollection.getPieces().forEach(piece -> piece.setPoLineId("2bafc9e1-9dd3-4ede-9f23-c4a03f8bb2d5"));
 
     var createdPieces = verifyPostResponse(PIECES_BATCH_ENDPOINT, JsonObject.mapFrom(pieceCollection).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt()).as(PieceCollection.class);
