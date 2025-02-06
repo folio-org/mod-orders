@@ -104,7 +104,7 @@ public class OpenCompositeOrderPieceService {
       .map(piece -> piece.withTitleId(holder.getTitleId()))
       .toList();
 
-    // Perform individual validations for each piece before creating batch pieces
+    // Perform individual acq unit validations for each piece and open order inventory update operation before creating batch pieces
     var validationFutures = preparedPieces.stream()
       .map(piece -> openOrderUpdateInventory(piece, order, isInstanceMatchingDisabled, requestContext))
       .collect(Collectors.toList());
@@ -122,7 +122,7 @@ public class OpenCompositeOrderPieceService {
   }
 
   private Future<Piece> openOrderUpdateInventory(Piece piece, CompositePurchaseOrder order, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    logger.debug("validatePiece:: Validating piece - {}", piece.getId());
+    logger.debug("openOrderUpdateInventory:: Validating acq unit and updating order '{}' inventory - {}", order.getId(), piece.getId());
     return titlesService.getTitleById(piece.getTitleId(), requestContext)
       .compose(title ->
         protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
