@@ -107,7 +107,7 @@ public class OpenCompositeOrderPieceService {
     // Perform individual acq unit validations for each piece and open order inventory update operation before creating batch pieces
     var validationFutures = preparedPieces.stream()
       .map(piece -> openOrderUpdateInventory(piece, order, isInstanceMatchingDisabled, requestContext))
-      .collect(Collectors.toList());
+      .toList();
 
     logger.info("createPieces:: Passed acq unit validation and open order '{}' inventory update", order.getId());
     return collectResultsOnSuccess(validationFutures)
