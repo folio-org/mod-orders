@@ -481,6 +481,10 @@ public class MockServer {
     return serverRqRs.get(PIECES_STORAGE, HttpMethod.POST);
   }
 
+  public static List<JsonObject> getCreatedPiecesBatch() {
+    return serverRqRs.get(PIECES_STORAGE_BATCH, HttpMethod.POST);
+  }
+
   public static List<JsonObject> getPieceSearches() {
     return serverRqRs.get(PIECES_STORAGE, HttpMethod.GET);
   }
@@ -2519,6 +2523,7 @@ public class MockServer {
     }
 
     addServerRqRsData(HttpMethod.POST, PIECES_STORAGE_BATCH, body);
+    addServerRqRsData(HttpMethod.SEARCH, PIECES_STORAGE_BATCH, body);
   }
 
   private void handleGetPoNumber(RoutingContext ctx) {
