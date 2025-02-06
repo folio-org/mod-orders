@@ -2523,6 +2523,7 @@ public class MockServer {
     }
 
     addServerRqRsData(HttpMethod.POST, PIECES_STORAGE_BATCH, body);
+    addServerRqRsData(HttpMethod.SEARCH, PIECES_STORAGE_BATCH, body);
   }
 
   private void handleGetPoNumber(RoutingContext ctx) {
