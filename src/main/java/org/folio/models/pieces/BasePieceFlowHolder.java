@@ -37,8 +37,9 @@ public abstract class BasePieceFlowHolder {
     return this;
   }
 
-  public void withTitleInformation(Title title) {
+  public BasePieceFlowHolder withTitleInformation(Title title) {
     this.title = title;
+    return this;
   }
 
   public CompositePurchaseOrder getOriginPurchaseOrder() {

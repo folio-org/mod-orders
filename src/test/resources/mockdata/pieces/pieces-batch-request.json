@@ -1,0 +1,39 @@
+{
+  "pieces": [
+    {
+      "id": "8853e1d5-b7db-4b01-a1cd-a0661e78fc50",
+      "format": "Physical",
+      "itemId": "400ffb07-3f43-4c08-9e54-6070a8aa446d",
+      "isBound": false,
+      "titleId": "9a665b22-9fe5-4c95-b4ee-837a5433c95d",
+      "locationId": "53cf956f-c1df-410b-8bea-27f712cca7c0",
+      "poLineId": "2bafc9e1-9dd3-4ede-9f23-c4a03f8bb2d5",
+      "supplement": false,
+      "displaySummary": "1",
+      "displayToPublic": false,
+      "receivingStatus": "Received",
+      "displayOnHolding": false,
+      "discoverySuppress": false,
+      "receivingTenantId": "university",
+      "statusUpdatedDate": "2024-08-22T05:46:39.042+00:00"
+    },
+    {
+      "id": "a977c7e7-61c3-40ec-9e17-a23263646688",
+      "format": "Physical",
+      "itemId": "05b10ba2-adc1-4fe2-aa0f-8a05633d135b",
+      "isBound": false,
+      "titleId": "9a665b22-9fe5-4c95-b4ee-837a5433c95d",
+      "locationId": "53cf956f-c1df-410b-8bea-27f712cca7c0",
+      "poLineId": "2bafc9e1-9dd3-4ede-9f23-c4a03f8bb2d5",
+      "supplement": false,
+      "displaySummary": "2",
+      "displayToPublic": false,
+      "receivingStatus": "Received",
+      "displayOnHolding": false,
+      "discoverySuppress": false,
+      "receivingTenantId": "university",
+      "statusUpdatedDate": "2024-08-22T06:58:44.362+00:00"
+    }
+  ],
+  "totalRecords": 2
+}
