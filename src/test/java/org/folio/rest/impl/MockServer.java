@@ -481,6 +481,10 @@ public class MockServer {
     return serverRqRs.get(PIECES_STORAGE, HttpMethod.POST);
   }
 
+  public static List<JsonObject> getCreatedPiecesBatch() {
+    return serverRqRs.get(PIECES_STORAGE_BATCH, HttpMethod.POST);
+  }
+
   public static List<JsonObject> getPieceSearches() {
     return serverRqRs.get(PIECES_STORAGE, HttpMethod.GET);
   }
