@@ -99,7 +99,6 @@ public class PieceStorageService {
   public Future<PieceCollection> insertPiecesBatch(List<Piece> pieces, RequestContext requestContext) {
     var pieceCollection = new PieceCollection().withPieces(pieces).withTotalRecords(pieces.size());
     RequestEntry requestEntry = new RequestEntry(PIECES_STORAGE_BATCH_ENDPOINT);
-    log.info("insertPiecesBatch:: {}", requestContext.getHeaders().toString());
     return restClient.postBatch(requestEntry, pieceCollection, PieceCollection.class, requestContext);
   }
 

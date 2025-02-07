@@ -108,13 +108,15 @@ public class OpenCompositeOrderPieceService {
     // Collect pieces after validation
     List<Future<Piece>> validationFutures = new ArrayList<>();
 
+    // Use chainCallCollect to sequentially process each piece with openOrderUpdateInventory.
     return chainCall(preparedPieces, piece ->
       openOrderUpdateInventory(piece, order, isInstanceMatchingDisabled, requestContext)
         .onSuccess(validatedPiece -> validationFutures.add(Future.succeededFuture(validatedPiece)))
-    )
-      .compose(ignored -> collectResultsOnSuccess(validationFutures)) // Ensures all pieces are validated
+      )
+      .compose(ignored -> collectResultsOnSuccess(validationFutures))
       .compose(validatedPieces -> {
         logger.info("createPieces:: Passed acq unit validation and open order '{}' inventory update", order.getId());
+        // Once all pieces have been updated, insert them in batch.
         return pieceStorageService.insertPiecesBatch(validatedPieces, requestContext)
           .map(PieceCollection::getPieces);
       })
