@@ -96,6 +96,7 @@ public class OpenCompositeOrderPieceService {
 
   private Future<List<Piece>> createPieces(OpenOrderPieceHolder holder, CompositePurchaseOrder order, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     logger.debug("createPieces:: Trying to create pieces");
+
     List<Piece> piecesToCreate = new ArrayList<>(holder.getPiecesWithLocationToProcess());
     piecesToCreate.addAll(holder.getPiecesWithHoldingToProcess());
     piecesToCreate.addAll(holder.getPiecesWithoutLocationId());
@@ -104,20 +105,25 @@ public class OpenCompositeOrderPieceService {
       .map(piece -> piece.withTitleId(holder.getTitleId()))
       .toList();
 
-    // Perform individual acq unit validations for each piece and open order inventory update operation before creating batch pieces
-    List<Piece> validationPieces = new ArrayList<>();
+    // Collect pieces after validation
+    List<Future<Piece>> validationFutures = new ArrayList<>();
 
-    chainCall(preparedPieces, piece -> openOrderUpdateInventory(piece, order, isInstanceMatchingDisabled, requestContext))
-      .onSuccess(validationPieces::add);
-
-    logger.info("createPieces:: Passed acq unit validation and open order '{}' inventory update", order.getId());
-    return pieceStorageService.insertPiecesBatch(validationPieces, requestContext)
-      .map(PieceCollection::getPieces)
+    return chainCall(preparedPieces, piece ->
+      openOrderUpdateInventory(piece, order, isInstanceMatchingDisabled, requestContext)
+        .onSuccess(validatedPiece -> validationFutures.add(Future.succeededFuture(validatedPiece)))
+    )
+      .compose(ignored -> collectResultsOnSuccess(validationFutures)) // Ensures all pieces are validated
+      .compose(validatedPieces -> {
+        logger.info("createPieces:: Passed acq unit validation and open order '{}' inventory update", order.getId());
+        return pieceStorageService.insertPiecesBatch(validatedPieces, requestContext)
+          .map(PieceCollection::getPieces);
+      })
       .recover(th -> {
         logger.error("Piece creation failed", th);
         return Future.failedFuture(new CompletionException("Piece creation error", th));
       });
   }
+
 
   private Future<Piece> openOrderUpdateInventory(Piece piece, CompositePurchaseOrder order, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     logger.debug("openOrderUpdateInventory:: Validating acq unit and updating order '{}' inventory - {}", order.getId(), piece.getId());
