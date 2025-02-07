@@ -104,19 +104,13 @@ public class OpenCompositeOrderPieceService {
       .map(piece -> piece.withTitleId(holder.getTitleId()))
       .toList();
 
-    // Perform individual acq unit validations for each piece and open order inventory update operation before creating batch pieces
-    List<Future<Piece>> validationFutures = preparedPieces.stream()
-      .map(piece -> openOrderUpdateInventory(piece, order, isInstanceMatchingDisabled, requestContext))
-      .toList();
-
-    if (!order.getCompositePoLines().get(0).getIsPackage()) {
-      chainCall(validationFutures, pieceFuture -> inventoryItemManager.updateItemWithPieceFields(pieceFuture.result(), requestContext));
-    }
-
-    logger.info("createPieces:: Passed acq unit validation and open order '{}' inventory update", order.getId());
-    return collectResultsOnSuccess(validationFutures)
-      .compose(validatedPieces ->
-        pieceStorageService.insertPiecesBatch(validatedPieces, requestContext)
+    // Sequentially update each piece's inventory using chainCall.
+    return chainCall(preparedPieces, piece ->
+      openOrderUpdateInventory(piece, order, isInstanceMatchingDisabled, requestContext)
+    )
+      // Once all pieces are updated sequentially, insert them in batch.
+      .compose(ignored ->
+        pieceStorageService.insertPiecesBatch(preparedPieces, requestContext)
           .map(PieceCollection::getPieces)
       )
       .recover(th -> {
