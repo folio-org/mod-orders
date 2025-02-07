@@ -111,7 +111,7 @@ public class OpenCompositeOrderPieceService {
     // Use chainCallCollect to sequentially process each piece with openOrderUpdateInventory.
     return chainCall(preparedPieces, piece ->
       openOrderUpdateInventory(piece, order, isInstanceMatchingDisabled, requestContext)
-        .onSuccess(validatedPiece -> validationFutures.add(Future.succeededFuture(validatedPiece)))
+        .map(validatedPiece -> validationFutures.add(Future.succeededFuture(validatedPiece)))
       )
       .compose(ignored -> collectResultsOnSuccess(validationFutures))
       .compose(validatedPieces -> {
