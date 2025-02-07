@@ -164,6 +164,9 @@ public class OpenCompositeOrderPieceService {
    */
   public Future<Void> openOrderUpdateInventory(CompositePurchaseOrder compPO, CompositePoLine compPOL,
                                                Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+    if (!Boolean.TRUE.equals(compPOL.getIsPackage())) {
+      return inventoryItemManager.updateItemWithPieceFields(piece, requestContext);
+    }
     var locationContext = createContextWithNewTenantId(requestContext, piece.getReceivingTenantId());
     return titlesService.getTitleById(piece.getTitleId(), requestContext)
       .compose(title -> titlesService.updateTitleWithInstance(title, isInstanceMatchingDisabled, locationContext, requestContext).map(title::withInstanceId))
