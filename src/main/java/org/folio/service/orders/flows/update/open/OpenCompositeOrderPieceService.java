@@ -24,6 +24,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.ProtectionService;
 import org.folio.service.inventory.InventoryHoldingManager;
@@ -98,23 +99,37 @@ public class OpenCompositeOrderPieceService {
     piecesToCreate.addAll(holder.getPiecesWithHoldingToProcess());
     piecesToCreate.addAll(holder.getPiecesWithoutLocationId());
 
-    var piecesToCreateFutures = piecesToCreate.stream()
+    var preparedPieces = piecesToCreate.stream()
       .map(piece -> piece.withTitleId(holder.getTitleId()))
-      .map(piece -> createPiece(piece, order, isInstanceMatchingDisabled, requestContext))
       .toList();
-    return collectResultsOnSuccess(piecesToCreateFutures)
-       .recover(th -> {
-         logger.error("Piece creation failed", th);
-         throw new CompletionException("Piece creation error", th);
+
+    // Perform individual acq unit validations for each piece and open order inventory update operation before creating batch pieces
+    var validationFutures = preparedPieces.stream()
+      .map(piece -> openOrderUpdateInventory(piece, order, isInstanceMatchingDisabled, requestContext))
+      .toList();
+
+    logger.info("createPieces:: Passed acq unit validation and open order '{}' inventory update", order.getId());
+    return collectResultsOnSuccess(validationFutures)
+      .compose(validatedPieces ->
+        pieceStorageService.insertPiecesBatch(validatedPieces, requestContext)
+          .map(PieceCollection::getPieces)
+      )
+      .recover(th -> {
+        logger.error("Piece creation failed", th);
+        return Future.failedFuture(new CompletionException("Piece creation error", th));
       });
   }
 
-  public Future<Piece> createPiece(Piece piece, CompositePurchaseOrder order, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    logger.debug("createPiece:: Creating piece - {}", piece.getId());
+  private Future<Piece> openOrderUpdateInventory(Piece piece, CompositePurchaseOrder order, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+    logger.debug("openOrderUpdateInventory:: Validating acq unit and updating order '{}' inventory - {}", order.getId(), piece.getId());
     return titlesService.getTitleById(piece.getTitleId(), requestContext)
-      .compose(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext))
-      .compose(v -> openOrderUpdateInventory(order, order.getCompositePoLines().get(0), piece, isInstanceMatchingDisabled, requestContext))
-      .compose(v -> pieceStorageService.insertPiece(piece, requestContext));
+      .compose(title ->
+        protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
+      )
+      .compose(v ->
+        openOrderUpdateInventory(order, order.getCompositePoLines().get(0), piece, isInstanceMatchingDisabled, requestContext)
+      )
+      .map(v -> piece);
   }
 
   public Future<Piece> updatePiece(Piece piece, RequestContext requestContext) {

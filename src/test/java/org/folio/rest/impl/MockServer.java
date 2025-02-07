@@ -481,6 +481,10 @@ public class MockServer {
     return serverRqRs.get(PIECES_STORAGE, HttpMethod.POST);
   }
 
+  public static List<JsonObject> getCreatedPiecesBatch() {
+    return serverRqRs.get(PIECES_STORAGE_BATCH, HttpMethod.POST);
+  }
+
   public static List<JsonObject> getPieceSearches() {
     return serverRqRs.get(PIECES_STORAGE, HttpMethod.GET);
   }
@@ -600,6 +604,7 @@ public class MockServer {
     router.post(resourcesPath(ALERTS)).handler(ctx -> handlePostGenericSubObj(ctx, ALERTS));
     router.post(resourcesPath(REPORTING_CODES)).handler(ctx -> handlePostGenericSubObj(ctx, REPORTING_CODES));
     router.post(resourcesPath(PIECES_STORAGE)).handler(ctx -> handlePostGenericSubObj(ctx, PIECES_STORAGE));
+    router.post(resourcesPath(PIECES_STORAGE_BATCH)).handler(this::handlePostPiecesBatch);
     router.post(resourcesPath(ORDER_TEMPLATES)).handler(ctx -> handlePostGenericSubObj(ctx, ORDER_TEMPLATES));
     router.post(resourcesPath(FINANCE_BATCH_TRANSACTIONS)).handler(this::handleBatchTransactions);
     router.post(resourcesPath(TITLES)).handler(ctx -> handlePostGenericSubObj(ctx, TITLES));
@@ -2491,6 +2496,34 @@ public class MockServer {
 
     addServerRqRsData(HttpMethod.POST, PO_LINES_STORAGE, body);
     addServerRqRsData(HttpMethod.SEARCH, PO_LINES_STORAGE, body);
+  }
+
+  private void handlePostPiecesBatch(RoutingContext ctx) {
+    logger.info("handlePostPiecesBatch got: {}", ctx.body().asString());
+    JsonObject body = ctx.body().asJsonObject();
+    PieceCollection pieceCollection = body.mapTo(PieceCollection.class);
+
+    pieceCollection.getPieces().forEach(piece -> {
+      if (piece.getId() == null) {
+        piece.setId(UUID.randomUUID().toString());
+      }
+    });
+
+    if (pieceCollection.getPieces().stream().anyMatch(piece -> ID_FOR_INTERNAL_SERVER_ERROR.equals(piece.getPoLineId()))) {
+      ctx.response()
+        .setStatusCode(500)
+        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+        .end();
+    } else {
+      pieceCollection.getPieces().forEach(piece -> addMockEntry(PIECES_STORAGE, piece));
+      ctx.response()
+        .setStatusCode(201)
+        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+        .end(JsonObject.mapFrom(pieceCollection).encodePrettily());
+    }
+
+    addServerRqRsData(HttpMethod.POST, PIECES_STORAGE_BATCH, body);
+    addServerRqRsData(HttpMethod.SEARCH, PIECES_STORAGE_BATCH, body);
   }
 
   private void handleGetPoNumber(RoutingContext ctx) {

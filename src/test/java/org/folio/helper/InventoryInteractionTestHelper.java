@@ -94,6 +94,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Contributor;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ReceivedItem;
 
@@ -188,12 +189,17 @@ public class InventoryInteractionTestHelper {
   }
 
   public static void verifyPiecesQuantityForSuccessCase(List<CompositePoLine> poLines, List<JsonObject> createdPieces) {
+    List<Piece> pieces = createdPieces
+      .stream()
+      .map(pieceObj -> pieceObj.mapTo(PieceCollection.class))
+      .flatMap(pieceCollection -> pieceCollection.getPieces().stream())
+      .toList();
     int totalQuantity = 0;
     for (CompositePoLine poLine : poLines) {
       if (poLine.getCheckinItems() != null && poLine.getCheckinItems()) continue;
       totalQuantity += calculateTotalQuantity(poLine);
     }
-    assertEquals(totalQuantity, createdPieces.size());
+    assertEquals(totalQuantity, pieces.size());
   }
 
   public static List<JsonObject> joinExistingAndNewItems() {
@@ -236,7 +242,7 @@ public class InventoryInteractionTestHelper {
     List<Piece> pieces = pieceJsons
       .stream()
       .map(pieceObj -> pieceObj.mapTo(Piece.class))
-      .collect(Collectors.toList());
+      .toList();
 
     // Verify quantity of created pieces
     int totalForAllPoLines = 0;
@@ -310,11 +316,11 @@ public class InventoryInteractionTestHelper {
       .collect(Collectors.toList());
     List<Piece> pieces = pieceJsons
       .stream()
-      .map(pieceObj -> pieceObj.mapTo(Piece.class))
-      .collect(Collectors.toList());
+      .map(pieceObj -> pieceObj.mapTo(PieceCollection.class))
+      .flatMap(pieceCollection -> pieceCollection.getPieces().stream())
+      .toList();
 
     // Verify quantity of created pieces
-    int totalForAllPoLines = 0;
     for (CompositePoLine poLine : compositePoLines) {
       Map<String, List<JsonObject>> createdHoldingsByLocationId =
         getCreatedHoldings().stream()
@@ -323,8 +329,6 @@ public class InventoryInteractionTestHelper {
       List<Location> locations = poLine.getLocations().stream()
         .filter(location -> PoLineCommonUtil.isHoldingCreationRequiredForLocation(poLine, location) && !Objects.equals(location.getLocationId(), ID_FOR_INTERNAL_SERVER_ERROR))
         .collect(Collectors.toList());
-
-      // Prepare data first
 
       // Calculated quantities
       int expectedElQty = 0;
@@ -347,13 +351,7 @@ public class InventoryInteractionTestHelper {
       List<Piece> poLinePieces = pieces
         .stream()
         .filter(piece -> piece.getPoLineId().equals(poLine.getId()))
-        .collect(Collectors.toList());
-
-
-      Map<String, Long> piecesByLocationIdQuantity =
-        poLinePieces.stream()
-            .filter(piece -> Objects.nonNull(piece.getLocationId()))
-            .collect(groupingBy(Piece::getLocationId, Collectors.counting()));
+        .toList();
 
       int expectedTotal = expectedWithItemQty + expectedWithoutItemQty + expectedWithoutLocation;
       // Make sure that quantities by piece type and by item presence are the same
@@ -375,8 +373,6 @@ public class InventoryInteractionTestHelper {
         }
         assertThat(piece.getFormat(), notNullValue());
       });
-
-      totalForAllPoLines += expectedTotal;
     }
   }
 

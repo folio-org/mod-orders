@@ -12,6 +12,7 @@ import org.folio.rest.annotations.Validate;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceBatchStatusCollection;
+import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.resource.OrdersPieces;
 import org.folio.rest.jaxrs.resource.OrdersPiecesBatch;
 import org.folio.rest.jaxrs.resource.OrdersPiecesRequests;
@@ -100,6 +101,14 @@ public class PiecesAPI extends BaseApi implements OrdersPieces, OrdersPiecesRequ
     circulationRequestsRetriever.getRequesterIdsToRequestsByPieceIds(pieceIds, status, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(requests -> asyncResultHandler.handle(succeededFuture(buildOkResponse(requests))))
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
+  }
+
+  @Override
+  public void postOrdersPiecesBatch(boolean createItem, PieceCollection pieceCollection, Map<String, String> okapiHeaders,
+                                    Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    pieceCreateFlowManager.createPieces(pieceCollection, createItem, new RequestContext(vertxContext, okapiHeaders))
+      .onSuccess(pieces -> asyncResultHandler.handle(succeededFuture(buildCreatedResponse(pieces))))
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override

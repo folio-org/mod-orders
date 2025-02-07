@@ -1,5 +1,6 @@
 package org.folio.service.pieces.flows;
 
+import static org.folio.rest.core.exceptions.ErrorCodes.ALL_PIECES_MUST_HAVE_THE_SAME_POLINE_ID_AND_TITLE_ID;
 import static org.folio.rest.core.exceptions.ErrorCodes.CREATE_ITEM_FOR_PIECE_IS_NOT_ALLOWED_ERROR;
 import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_DISPLAY_ON_HOLDINGS_IS_NOT_CONSISTENT;
 
@@ -8,6 +9,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import java.util.stream.Collectors;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -19,6 +21,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.pieces.validators.PieceValidatorUtil;
@@ -44,6 +47,18 @@ public class DefaultPieceFlowsValidator {
       if (logger.isErrorEnabled()) logger.error("Validation error: {}", JsonObject.mapFrom(errors).encodePrettily());
       throw new HttpException(RestConstants.BAD_REQUEST, errors);
     }
+  }
+
+  public void isPieceBatchRequestValid(List<Piece> piecesToCreate, CompositePurchaseOrder originalOrder, CompositePoLine originPoLine, boolean isCreateItem) {
+    var titlePoLineIds = piecesToCreate.stream()
+      .collect(Collectors.groupingBy(piece -> piece.getTitleId() + ":" + piece.getPoLineId()));
+    if (titlePoLineIds.size() > 1) {
+      var param = new Parameter().withKey("titlePoLineIds").withValue(titlePoLineIds.keySet().toString());
+      var error = ALL_PIECES_MUST_HAVE_THE_SAME_POLINE_ID_AND_TITLE_ID.toError().withParameters(List.of(param));
+      logger.error("isPieceBatchRequestValid:: Validation Error {}", error.getMessage());
+      throw new HttpException(RestConstants.VALIDATION_ERROR, ALL_PIECES_MUST_HAVE_THE_SAME_POLINE_ID_AND_TITLE_ID);
+    }
+    piecesToCreate.forEach(piece -> isPieceRequestValid(piece, originalOrder, originPoLine, isCreateItem));
   }
 
   public static List<Error> validateItemCreateFlag(Piece pieceToCreate, CompositePoLine originPoLine, boolean createItem) {

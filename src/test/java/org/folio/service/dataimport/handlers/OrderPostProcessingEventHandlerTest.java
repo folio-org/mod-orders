@@ -28,6 +28,7 @@ import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.dataimport.PoLineImportProgressService;
@@ -54,6 +55,7 @@ import static org.folio.DataImportEventTypes.DI_ORDER_CREATED_READY_FOR_POST_PRO
 import static org.folio.TestConfig.closeMockServer;
 import static org.folio.helper.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoUpdate;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE_BATCH;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
@@ -64,6 +66,7 @@ import static org.folio.rest.impl.MockServer.getCreatedHoldings;
 import static org.folio.rest.impl.MockServer.getCreatedInstances;
 import static org.folio.rest.impl.MockServer.getCreatedItems;
 import static org.folio.rest.impl.MockServer.getCreatedPieces;
+import static org.folio.rest.impl.MockServer.getCreatedPiecesBatch;
 import static org.folio.rest.impl.MockServer.getPurchaseOrderUpdates;
 import static org.folio.rest.impl.TitlesApiTest.SAMPLE_TITLE_ID;
 import static org.folio.rest.jaxrs.model.EntityType.HOLDINGS;
@@ -216,9 +219,9 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     assertNull(getCreatedHoldings());
     assertNull(getCreatedItems());
 
-    List<JsonObject> createdPieces = getCreatedPieces();
+    List<JsonObject> createdPieces = getCreatedPiecesBatch();
     assertEquals(1, createdPieces.size());
-    Piece piece = createdPieces.get(0).mapTo(Piece.class);
+    Piece piece = createdPieces.get(0).mapTo(PieceCollection.class).getPieces().get(0);
     assertEquals(poLine.getId(), piece.getPoLineId());
     assertEquals(itemJson.getString(ID), piece.getItemId());
 
@@ -531,10 +534,11 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
       .withTitle(poLine.getTitleOrPackage()).withPoLineId(poLine.getId())
       .withPoLineNumber(poLine.getPoLineNumber())
       .withInstanceId(poLine.getInstanceId());
+    var piece = new Piece().withPoLineId(poLine.getId()).withFormat(OTHER)
+      .withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
+      .withTitleId(title.getId());
+    var pieceCollection = new PieceCollection().withPieces(List.of(piece));
     addMockEntry(TITLES, JsonObject.mapFrom(title));
-    addMockEntry(PIECES_STORAGE,
-      new Piece().withPoLineId(poLine.getId()).withFormat(OTHER)
-        .withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
-        .withTitleId(title.getId()));
+    addMockEntry(PIECES_STORAGE_BATCH, pieceCollection);
   }
 }

@@ -59,6 +59,27 @@ public class RestClient {
       .onFailure(log::error);
   }
 
+  public <T> Future<T> postBatch(RequestEntry requestEntry, T entity, Class<T> responseType, RequestContext requestContext) {
+    return postBatch(requestEntry.buildEndpoint(), entity, responseType, requestContext);
+  }
+
+  public <T> Future<T> postBatch(String endpoint, T entity, Class<T> responseType, RequestContext requestContext) {
+    var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
+    return getVertxWebClient(requestContext.getContext()).postAbs(buildAbsEndpoint(caseInsensitiveHeader, endpoint))
+      .putHeaders(caseInsensitiveHeader)
+      .sendJson(entity)
+      .compose(response -> {
+        if (response.statusCode() >= 200 && response.statusCode() < 300) {
+          return Future.succeededFuture(response);
+        } else {
+          String error = response.bodyAsString();
+          return Future.failedFuture(getHttpException(response.statusCode(), error));
+        }
+      })
+      .map(bufferHttpResponse -> bufferHttpResponse.bodyAsJsonObject().mapTo(responseType))
+      .onFailure(log::error);
+  }
+
   public <T> Future<Void> postEmptyResponse(String endpoint, T entity, RequestContext requestContext) {
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
     return getVertxWebClient(requestContext.getContext())

@@ -96,6 +96,12 @@ public class PieceStorageService {
     return restClient.post(requestEntry, piece, Piece.class, requestContext);
   }
 
+  public Future<PieceCollection> insertPiecesBatch(List<Piece> pieces, RequestContext requestContext) {
+    var pieceCollection = new PieceCollection().withPieces(pieces).withTotalRecords(pieces.size());
+    RequestEntry requestEntry = new RequestEntry(PIECES_STORAGE_BATCH_ENDPOINT);
+    return restClient.postBatch(requestEntry, pieceCollection, PieceCollection.class, requestContext);
+  }
+
   public Future<Void> deletePiece(String pieceId, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(PIECE_STORAGE_BY_ID_ENDPOINT).withId(pieceId);
     return restClient.delete(requestEntry, requestContext);

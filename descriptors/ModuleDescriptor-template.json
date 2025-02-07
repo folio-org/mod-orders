@@ -229,7 +229,7 @@
             "orders-storage.alerts.item.put",
             "orders-storage.alerts.item.delete",
             "orders-storage.pieces.collection.get",
-            "orders-storage.pieces.item.post",
+            "orders-storage.pieces-batch.collection.post",
             "orders-storage.po-lines.collection.get",
             "finance.funds.collection.get",
             "finance.funds.item.get",
@@ -626,6 +626,46 @@
             "orders-storage.titles.item.get",
             "invoice.invoice-lines.collection.get",
             "invoice.invoice-lines.item.put"
+          ]
+        },
+        {
+          "methods": ["POST"],
+          "pathPattern": "/orders/pieces-batch",
+          "permissionsRequired": ["orders.pieces.collection.post"],
+          "modulePermissions": [
+            "acquisitions-units-storage.units.collection.get",
+            "acquisitions-units-storage.memberships.collection.get",
+            "configuration.entries.collection.get",
+            "inventory.items.item.put",
+            "inventory.items.collection.get",
+            "inventory-storage.holdings-sources.collection.get",
+            "inventory.instances.collection.get",
+            "inventory.instances.item.get",
+            "inventory.instances.item.post",
+            "inventory-storage.holdings.collection.get",
+            "inventory-storage.holdings.item.post",
+            "inventory-storage.holdings.item.get",
+            "inventory-storage.loan-types.collection.get",
+            "inventory-storage.items.item.post",
+            "inventory-storage.instance-types.collection.get",
+            "inventory-storage.instance-statuses.collection.get",
+            "inventory-storage.contributor-name-types.collection.get",
+            "finance.funds.budget.item.get",
+            "finance.fiscal-years.item.get",
+            "finance.transactions.batch.execute",
+            "finance-storage.ledgers.collection.get",
+            "orders-storage.pieces.collection.get",
+            "orders-storage.po-lines.item.get",
+            "orders-storage.po-lines.item.put",
+            "orders-storage.po-lines.collection.get",
+            "orders-storage.purchase-orders.item.get",
+            "orders-storage.titles.item.get",
+            "orders-storage.titles.item.put",
+            "orders-storage.alerts.item.get",
+            "orders-storage.reporting-codes.item.get",
+            "user-tenants.collection.get",
+            "consortia.sharing-instances.item.post",
+            "orders-storage.pieces-batch.collection.post"
           ]
         },
         {
@@ -1621,6 +1661,11 @@
       "description": "Delete an existing piece"
     },
     {
+      "permissionName": "orders.pieces.collection.post",
+      "displayName": "orders - batch create pieces",
+      "description": "Batch create pieces"
+    },
+    {
       "permissionName": "orders.pieces.collection.put",
       "displayName": "orders - batch update piece statuses",
       "description": "Batch update piece statuses"
@@ -1636,6 +1681,7 @@
       "description" : "All permissions for the pieces",
       "subPermissions" : [
         "orders.pieces.collection.get",
+        "orders.pieces.collection.post",
         "orders.pieces.collection.put",
         "orders.pieces.item.post",
         "orders.pieces.item.get",
@@ -2164,7 +2210,7 @@
         "orders-storage.alerts.item.get",
         "orders-storage.alerts.item.put",
         "orders-storage.alerts.item.delete",
-        "orders-storage.pieces.item.post",
+        "orders-storage.pieces-batch.collection.post",
         "orders-storage.pieces.item.get",
         "orders-storage.pieces.item.delete",
         "orders-storage.pieces.collection.get",
@@ -2239,7 +2285,7 @@
         "orders-storage.po-lines.item.post",
         "orders-storage.po-lines.item.put",
         "orders-storage.po-lines.collection.get",
-        "orders-storage.pieces.item.post",
+        "orders-storage.pieces-batch.collection.post",
         "orders-storage.pieces.collection.get",
         "orders-storage.po-line-number.get",
         "orders-storage.po-number.get",

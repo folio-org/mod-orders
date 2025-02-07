@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import java.util.UUID;
 
+import org.folio.CopilotGenerated;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -20,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+@CopilotGenerated(partiallyGenerated = true)
 public class DefaultPieceFlowsValidatorTest {
   private static final String ORDER_IRD = UUID.randomUUID().toString();
   private static final String LOCATION_ID = UUID.randomUUID().toString();
@@ -160,4 +162,70 @@ public class DefaultPieceFlowsValidatorTest {
       .anyMatch(error -> error.getCode().equals(ErrorCodes.PIECE_RELATED_ORDER_DATA_IS_NOT_VALID.getCode()));
     assertTrue(isErrorPresent);
   }
+
+  @Test
+  void testIsPieceBatchRequestValidWithSameTitleIdAndPoLineId() {
+    var piece1 = new Piece().withPoLineId(PO_LINE_ID).withLocationId(LOCATION_ID).withFormat(Piece.Format.ELECTRONIC);
+    var piece2 = new Piece().withPoLineId(PO_LINE_ID).withLocationId(LOCATION_ID).withFormat(Piece.Format.ELECTRONIC);
+    var loc = new Location().withLocationId(LOCATION_ID).withQuantityElectronic(1).withQuantity(1);
+    var cost = new Cost().withQuantityElectronic(1);
+    var eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
+    var originOrder = new CompositePurchaseOrder().withId(ORDER_IRD).withWorkflowStatus(WorkflowStatus.OPEN);
+    var originPoLine = new CompositePoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
+      .withOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(PO_LINE_ID)
+      .withEresource(eresource)
+      .withLocations(List.of(loc)).withCost(cost);
+
+    defaultPieceFlowsValidator.isPieceBatchRequestValid(List.of(piece1, piece2), originOrder, originPoLine, true);
+  }
+
+  @Test
+  void testIsPieceBatchRequestCheckEachPieceValidation() {
+    var piece1 = new Piece().withPoLineId(PO_LINE_ID).withTitleId(ORDER_IRD).withLocationId(LOCATION_ID).withFormat(Piece.Format.ELECTRONIC);
+    var piece2 = new Piece().withPoLineId(PO_LINE_ID).withTitleId(ORDER_IRD).withLocationId(LOCATION_ID).withFormat(Piece.Format.PHYSICAL);
+    var originOrder = new CompositePurchaseOrder().withId(ORDER_IRD).withWorkflowStatus(WorkflowStatus.OPEN);
+    var originPoLine = new CompositePoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
+      .withOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(PO_LINE_ID);
+
+    var exception = Assertions.assertThrows(HttpException.class, () ->
+      defaultPieceFlowsValidator.isPieceBatchRequestValid(List.of(piece1, piece2), originOrder, originPoLine, true));
+    boolean isErrorPresent = exception.getErrors().getErrors().stream()
+      .anyMatch(error -> error.getCode().equals(ErrorCodes.CREATE_ITEM_FOR_PIECE_IS_NOT_ALLOWED_ERROR.getCode()));
+    assertTrue(isErrorPresent);
+  }
+
+  @Test
+  void testIsPieceBatchRequestValidWithDifferentTitleIds() {
+    var piece1 = new Piece().withPoLineId(PO_LINE_ID).withTitleId(UUID.randomUUID().toString()).withLocationId(LOCATION_ID).withFormat(Piece.Format.PHYSICAL);
+    var piece2 = new Piece().withPoLineId(PO_LINE_ID).withTitleId(UUID.randomUUID().toString()).withLocationId(LOCATION_ID).withFormat(Piece.Format.PHYSICAL);
+    var originOrder = new CompositePurchaseOrder().withId(ORDER_IRD).withWorkflowStatus(WorkflowStatus.OPEN);
+    var originPoLine = new CompositePoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
+      .withOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(PO_LINE_ID);
+
+    var exception = Assertions.assertThrows(HttpException.class, () ->
+      defaultPieceFlowsValidator.isPieceBatchRequestValid(List.of(piece1, piece2), originOrder, originPoLine, true));
+
+    boolean isErrorPresent = exception.getErrors().getErrors().stream()
+      .anyMatch(error -> error.getMessage().equals("All pieces in the batch should have the same titleId and poLineId"));
+    assertTrue(isErrorPresent);
+  }
+
+  @Test
+  void testIsPieceBatchRequestValidWithDifferentPoLineIds() {
+    var piece1 = new Piece().withPoLineId(UUID.randomUUID().toString()).withTitleId(ORDER_IRD)
+      .withLocationId(LOCATION_ID).withFormat(Piece.Format.ELECTRONIC);
+    var piece2 = new Piece().withPoLineId(UUID.randomUUID().toString()).withTitleId(ORDER_IRD)
+      .withLocationId(LOCATION_ID).withFormat(Piece.Format.ELECTRONIC);
+    var originOrder = new CompositePurchaseOrder().withId(ORDER_IRD).withWorkflowStatus(WorkflowStatus.OPEN);
+    var originPoLine = new CompositePoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
+      .withOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(PO_LINE_ID);
+
+    var exception = Assertions.assertThrows(HttpException.class, () ->
+      defaultPieceFlowsValidator.isPieceBatchRequestValid(List.of(piece1, piece2), originOrder, originPoLine, true));
+
+    boolean isErrorPresent = exception.getErrors().getErrors().stream()
+      .anyMatch(error -> error.getMessage().equals("All pieces in the batch should have the same titleId and poLineId"));
+    assertTrue(isErrorPresent);
+  }
+
 }

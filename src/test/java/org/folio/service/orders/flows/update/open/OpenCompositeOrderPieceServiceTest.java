@@ -21,7 +21,6 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -52,6 +51,7 @@ import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.ProtectionService;
 import org.folio.service.inventory.InventoryHoldingManager;
@@ -279,22 +279,22 @@ public class OpenCompositeOrderPieceServiceTest {
     doReturn(succeededFuture(null)).when(openCompositeOrderPieceService).openOrderUpdateInventory(any(CompositePurchaseOrder.class),
       any(CompositePoLine.class), any(Piece.class), any(Boolean.class), eq(requestContext));
     doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByPoLineId(line, requestContext);
-    doReturn(succeededFuture(new Piece())).when(pieceStorageService).insertPiece(any(Piece.class), eq(requestContext));
+    doReturn(succeededFuture(new PieceCollection())).when(pieceStorageService).insertPiecesBatch(any(), eq(requestContext));
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
     doReturn(succeededFuture(compOrder)).when(purchaseOrderStorageService).getCompositeOrderById(eq(orderId), eq(requestContext));
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(titleId, requestContext);
 
-    final ArgumentCaptor<Piece> pieceArgumentCaptor = ArgumentCaptor.forClass(Piece.class);
-    doAnswer((Answer<Future<Piece>>) invocation -> {
-      Piece piece = invocation.getArgument(0);
-      return succeededFuture(piece);
-    }).when(pieceStorageService).insertPiece(pieceArgumentCaptor.capture(), eq(requestContext));
+    final ArgumentCaptor<List<Piece>> pieceArgumentCaptor = ArgumentCaptor.forClass(List.class);
+    doAnswer((Answer<Future<PieceCollection>>) invocation -> {
+      List<Piece> pieces = invocation.getArgument(0);
+      var pieceCollection = new PieceCollection().withPieces(pieces);
+      return succeededFuture(pieceCollection);
+    }).when(pieceStorageService).insertPiecesBatch(pieceArgumentCaptor.capture(), eq(requestContext));
 
     //When
     List<Piece> createdPieces = openCompositeOrderPieceService.handlePieces(line, titleId, Collections.emptyList(), false, requestContext).result();
     //Then
-    List<Piece> piecesLoc1 = createdPieces.stream().filter(piece -> piece.getLocationId().equals(locationId1))
-                                          .toList();
+    List<Piece> piecesLoc1 = createdPieces.stream().filter(piece -> piece.getLocationId().equals(locationId1)).toList();
     assertEquals(qty1, piecesLoc1.size());
     piecesLoc1.forEach(piece -> {
       assertNull(piece.getHoldingId());
@@ -343,16 +343,17 @@ public class OpenCompositeOrderPieceServiceTest {
     doReturn(succeededFuture(null)).when(openCompositeOrderPieceService).openOrderUpdateInventory(any(CompositePurchaseOrder.class),
       any(CompositePoLine.class), any(Piece.class), any(Boolean.class), eq(requestContext));
     doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByPoLineId(line, requestContext);
-    doReturn(succeededFuture(new Piece())).when(pieceStorageService).insertPiece(any(Piece.class), eq(requestContext));
+    doReturn(succeededFuture(new PieceCollection())).when(pieceStorageService).insertPiecesBatch(any(), eq(requestContext));
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
     doReturn(succeededFuture(compOrder)).when(purchaseOrderStorageService).getCompositeOrderById(eq(orderId), eq(requestContext));
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(titleId, requestContext);
 
-    final ArgumentCaptor<Piece> pieceArgumentCaptor = ArgumentCaptor.forClass(Piece.class);
-    doAnswer((Answer<Future<Piece>>) invocation -> {
-      Piece piece = invocation.getArgument(0);
-      return succeededFuture(piece);
-    }).when(pieceStorageService).insertPiece(pieceArgumentCaptor.capture(), eq(requestContext));
+    final ArgumentCaptor<List<Piece>> pieceArgumentCaptor = ArgumentCaptor.forClass(List.class);
+    doAnswer((Answer<Future<PieceCollection>>) invocation -> {
+      List<Piece> pieces = invocation.getArgument(0);
+      var pieceCollection = new PieceCollection().withPieces(pieces);
+      return succeededFuture(pieceCollection);
+    }).when(pieceStorageService).insertPiecesBatch(pieceArgumentCaptor.capture(), eq(requestContext));
 
     //When
     List<Piece> createdPieces = openCompositeOrderPieceService.handlePieces(line, titleId, Collections.emptyList(), false, requestContext).result();
@@ -406,16 +407,17 @@ public class OpenCompositeOrderPieceServiceTest {
     doReturn(succeededFuture(null)).when(openCompositeOrderPieceService).openOrderUpdateInventory(any(CompositePurchaseOrder.class),
       any(CompositePoLine.class), any(Piece.class), any(Boolean.class), eq(requestContext));
     doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByPoLineId(line, requestContext);
-    doReturn(succeededFuture(new Piece())).when(pieceStorageService).insertPiece(any(Piece.class), eq(requestContext));
+    doReturn(succeededFuture(new PieceCollection())).when(pieceStorageService).insertPiecesBatch(any(), eq(requestContext));
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
     doReturn(succeededFuture(compOrder)).when(purchaseOrderStorageService).getCompositeOrderById(eq(orderId), eq(requestContext));
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(titleId, requestContext);
 
-    final ArgumentCaptor<Piece> pieceArgumentCaptor = ArgumentCaptor.forClass(Piece.class);
-    doAnswer((Answer<Future<Piece>>) invocation -> {
-      Piece piece = invocation.getArgument(0);
-      return succeededFuture(piece);
-    }).when(pieceStorageService).insertPiece(pieceArgumentCaptor.capture(), eq(requestContext));
+    final ArgumentCaptor<List<Piece>> pieceArgumentCaptor = ArgumentCaptor.forClass(List.class);
+    doAnswer((Answer<Future<PieceCollection>>) invocation -> {
+      List<Piece> pieces = invocation.getArgument(0);
+      var pieceCollection = new PieceCollection().withPieces(pieces);
+      return succeededFuture(pieceCollection);
+    }).when(pieceStorageService).insertPiecesBatch(pieceArgumentCaptor.capture(), eq(requestContext));
 
     //When
     List<Piece> createdPieces = openCompositeOrderPieceService.handlePieces(line, titleId, Collections.emptyList(), false, requestContext).result();
@@ -468,16 +470,17 @@ public class OpenCompositeOrderPieceServiceTest {
     doReturn(succeededFuture(null)).when(openCompositeOrderPieceService).openOrderUpdateInventory(any(CompositePurchaseOrder.class),
       any(CompositePoLine.class), any(Piece.class), any(Boolean.class), eq(requestContext));
     doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByPoLineId(line, requestContext);
-    doReturn(succeededFuture(new Piece())).when(pieceStorageService).insertPiece(any(Piece.class), eq(requestContext));
+    doReturn(succeededFuture(new PieceCollection())).when(pieceStorageService).insertPiecesBatch(any(), eq(requestContext));
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
     doReturn(succeededFuture(compOrder)).when(purchaseOrderStorageService).getCompositeOrderById(eq(orderId), eq(requestContext));
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(titleId, requestContext);
 
-    final ArgumentCaptor<Piece> pieceArgumentCaptor = ArgumentCaptor.forClass(Piece.class);
-    doAnswer((Answer<Future<Piece>>) invocation -> {
-      Piece piece = invocation.getArgument(0);
-      return succeededFuture(piece);
-    }).when(pieceStorageService).insertPiece(pieceArgumentCaptor.capture(), eq(requestContext));
+    final ArgumentCaptor<List<Piece>> pieceArgumentCaptor = ArgumentCaptor.forClass(List.class);
+    doAnswer((Answer<Future<PieceCollection>>) invocation -> {
+      List<Piece> pieces = invocation.getArgument(0);
+      var pieceCollection = new PieceCollection().withPieces(pieces);
+      return succeededFuture(pieceCollection);
+    }).when(pieceStorageService).insertPiecesBatch(pieceArgumentCaptor.capture(), eq(requestContext));
 
     //When
     List<Piece> createdPieces = openCompositeOrderPieceService.handlePieces(line, titleId, Collections.emptyList(), false, requestContext).result();
@@ -546,16 +549,17 @@ public class OpenCompositeOrderPieceServiceTest {
     doReturn(succeededFuture(null)).when(openCompositeOrderPieceService).openOrderUpdateInventory(any(CompositePurchaseOrder.class),
       any(CompositePoLine.class), any(Piece.class), any(Boolean.class), eq(requestContext));
     doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByPoLineId(line, requestContext);
-    doReturn(succeededFuture(new Piece())).when(pieceStorageService).insertPiece(any(Piece.class), eq(requestContext));
+    doReturn(succeededFuture(new PieceCollection())).when(pieceStorageService).insertPiecesBatch(any(), eq(requestContext));
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
     doReturn(succeededFuture(compOrder)).when(purchaseOrderStorageService).getCompositeOrderById(eq(orderId), eq(requestContext));
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(titleId, requestContext);
 
-    final ArgumentCaptor<Piece> pieceArgumentCaptor = ArgumentCaptor.forClass(Piece.class);
-    doAnswer((Answer<Future<Piece>>) invocation -> {
-      Piece piece = invocation.getArgument(0);
-      return succeededFuture(piece);
-    }).when(pieceStorageService).insertPiece(pieceArgumentCaptor.capture(), eq(requestContext));
+    final ArgumentCaptor<List<Piece>> pieceArgumentCaptor = ArgumentCaptor.forClass(List.class);
+    doAnswer((Answer<Future<PieceCollection>>) invocation -> {
+      List<Piece> pieces = invocation.getArgument(0);
+      var pieceCollection = new PieceCollection().withPieces(pieces);
+      return succeededFuture(pieceCollection);
+    }).when(pieceStorageService).insertPiecesBatch(pieceArgumentCaptor.capture(), eq(requestContext));
 
     //When
     List<Piece> createdPieces = openCompositeOrderPieceService.handlePieces(line, titleId, expectedPiecesWithItem, false, requestContext).result();

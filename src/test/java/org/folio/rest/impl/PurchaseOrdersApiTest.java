@@ -69,6 +69,7 @@ import static org.folio.rest.impl.MockServer.getCreatedHoldings;
 import static org.folio.rest.impl.MockServer.getCreatedInstances;
 import static org.folio.rest.impl.MockServer.getCreatedItems;
 import static org.folio.rest.impl.MockServer.getCreatedPieces;
+import static org.folio.rest.impl.MockServer.getCreatedPiecesBatch;
 import static org.folio.rest.impl.MockServer.getHoldingsSearches;
 import static org.folio.rest.impl.MockServer.getInstanceStatusesSearches;
 import static org.folio.rest.impl.MockServer.getInstanceTypesSearches;
@@ -1106,7 +1107,7 @@ public class PurchaseOrdersApiTest {
 
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
 
-    List<JsonObject> createdPieces = getCreatedPieces();
+    List<JsonObject> createdPieces = getCreatedPiecesBatch();
     verifyPiecesQuantityForSuccessCase(Collections.singletonList(line), createdPieces);
   }
 
@@ -1245,7 +1246,7 @@ public class PurchaseOrdersApiTest {
     assertNull(getInstancesSearches());
     assertNull(getHoldingsSearches());
     assertNull(getItemsSearches());
-    assertNotNull(getCreatedPieces());
+    assertNotNull(getCreatedPiecesBatch());
     assertNull(getCreatedInstances());
   }
 
@@ -1268,7 +1269,7 @@ public class PurchaseOrdersApiTest {
     assertNotNull(getInstancesSearches());
     assertNull(getHoldingsSearches());
     assertNull(getItemsSearches());
-    assertNotNull(getCreatedPieces());
+    assertNotNull(getCreatedPiecesBatch());
   }
 
   @Test
@@ -1289,7 +1290,7 @@ public class PurchaseOrdersApiTest {
     assertNotNull(getHoldingsSearches());
     assertNotNull(getCreatedHoldings());
     assertNull(getItemsSearches());
-    assertNotNull(getCreatedPieces());
+    assertNotNull(getCreatedPiecesBatch());
   }
 
   @Test
@@ -1310,7 +1311,7 @@ public class PurchaseOrdersApiTest {
     assertNotNull(getInstancesSearches());
     assertNotNull(getCreatedHoldings());
     assertNotNull(getItemsSearches());
-    assertNotNull(getCreatedPieces());
+    assertNotNull(getCreatedPiecesBatch());
   }
 
   @Test
@@ -1347,10 +1348,10 @@ public class PurchaseOrdersApiTest {
     List<JsonObject> items = joinExistingAndNewItems();
     verifyItemsCreated(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, 2, items, respLine1);
 
-    List<JsonObject> createdPieces = getCreatedPieces();
+    List<JsonObject> createdPieces = getCreatedPiecesBatch();
     verifyOpenOrderPiecesCreated(items, resp.getCompositePoLines(), createdPieces, 0);
 
-    assertNotNull(getCreatedPieces());
+    assertNotNull(getCreatedPiecesBatch());
   }
 
   @Test
@@ -1388,10 +1389,10 @@ public class PurchaseOrdersApiTest {
     List<JsonObject> items = joinExistingAndNewItems();
     verifyItemsCreated(EMPTY_CONFIG_X_OKAPI_TENANT, 1, items, respLine1);
 
-    List<JsonObject> createdPieces = getCreatedPieces();
+    List<JsonObject> createdPieces = getCreatedPiecesBatch();
     verifyOpenOrderPiecesCreated(items, resp.getCompositePoLines(), createdPieces, 1);
 
-    assertNotNull(getCreatedPieces());
+    assertNotNull(getCreatedPiecesBatch());
   }
 
   @Test
@@ -1456,7 +1457,7 @@ public class PurchaseOrdersApiTest {
     verifyItemsCreated(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, 4, items, respLine1);
     verifyItemsCreated(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, 0, items, respLine2);
 
-    List<JsonObject> createdPieces = getCreatedPieces();
+    List<JsonObject> createdPieces = getCreatedPiecesBatch();
     verifyOpenOrderPiecesCreated(items, compPo.getCompositePoLines(), createdPieces, 0);
 
     verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT.value(), compPo.getCompositePoLines().size());
@@ -2394,7 +2395,7 @@ public class PurchaseOrdersApiTest {
     List<JsonObject> items = joinExistingAndNewItems();
     verifyItemsCreated(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, 4, items, respLine1);
 
-    List<JsonObject> createdPieces = getCreatedPieces();
+    List<JsonObject> createdPieces = getCreatedPiecesBatch();
     verifyOpenOrderPiecesCreated(items, resp.getCompositePoLines(), createdPieces, 0);
   }
 
