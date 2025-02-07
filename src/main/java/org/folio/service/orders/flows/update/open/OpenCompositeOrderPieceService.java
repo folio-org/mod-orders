@@ -125,12 +125,9 @@ public class OpenCompositeOrderPieceService {
       .compose(title ->
         protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
       )
-      .compose(v -> {
-        if (order.getCompositePoLines().get(0).getIsPackage()) {
-          return openOrderUpdateInventory(order, order.getCompositePoLines().get(0), piece, isInstanceMatchingDisabled, requestContext);
-        }
-        return Future.succeededFuture();
-      })
+      .compose(v ->
+        openOrderUpdateInventory(order, order.getCompositePoLines().get(0), piece, isInstanceMatchingDisabled, requestContext)
+      )
       .map(v -> piece);
   }
 
