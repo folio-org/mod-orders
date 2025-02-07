@@ -3,7 +3,6 @@ package org.folio.service.inventory;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
-import java.util.concurrent.ConcurrentHashMap;
 import one.util.streamex.IntStreamEx;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.ListUtils;
@@ -72,7 +71,6 @@ public class InventoryItemManager {
   private static final String LOOKUP_ITEM_QUERY = "purchaseOrderLineIdentifier==%s and holdingsRecordId==%s";
   private static final String ITEM_STOR_ENDPOINT = "/item-storage/items";
   private static final String BUILDING_PIECE_MESSAGE = "Building {} {} piece(s) for PO Line with id={}";
-  private static final ConcurrentHashMap<String, Promise<Void>> updateItemFutures = new ConcurrentHashMap<>();
 
   private final RestClient restClient;
   private final ConfigurationEntriesCache configurationEntriesCache;
@@ -144,45 +142,13 @@ public class InventoryItemManager {
     if (piece.getItemId() == null || piece.getPoLineId() == null || piece.getIsBound()) {
       return Future.succeededFuture();
     }
-
-    // Create a promise for this operation
-    Promise<Void> promise = Promise.promise();
-
-    // Chain the operation to the previous one for the same item
-    updateItemFutures.compute(piece.getItemId(), (key, existingPromise) -> {
-      if (existingPromise == null) {
-        // No existing operation, start processing immediately
-        fetchAndUpdate(piece, requestContext, promise);
-      } else {
-        // Chain this operation to the previous one
-        existingPromise.future().onComplete(ar -> fetchAndUpdate(piece, requestContext, promise));
-      }
-      return promise;
-    });
-
-    return promise.future();
-  }
-
-  private void fetchAndUpdate(Piece piece, RequestContext requestContext, Promise<Void> promise) {
-    String itemId = piece.getItemId();
-    getItemRecordById(itemId, true, requestContext)
+    return getItemRecordById(piece.getItemId(), true, requestContext)
       .compose(item -> {
         if (item == null || item.isEmpty()) {
           return Future.succeededFuture();
         }
         InventoryUtils.updateItemWithPieceFields(item, piece);
         return updateItem(item, requestContext);
-      })
-      .onComplete(ar -> {
-        // Complete the current promise
-        if (ar.succeeded()) {
-          promise.complete();
-        } else {
-          promise.fail(ar.cause());
-        }
-
-        // Remove the completed operation from the map
-        updateItemFutures.remove(itemId, promise);
       });
   }
 
