@@ -2,6 +2,7 @@ package org.folio.service.orders.flows.update.open;
 
 import static org.folio.orders.events.utils.EventUtils.createPoLineUpdateEvent;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
+import static org.folio.orders.utils.HelperUtils.chainCall;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
 import static org.folio.service.pieces.PieceUtil.updatePieceStatus;
@@ -95,30 +96,36 @@ public class OpenCompositeOrderPieceService {
 
   private Future<List<Piece>> createPieces(OpenOrderPieceHolder holder, CompositePurchaseOrder order, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     logger.debug("createPieces:: Trying to create pieces");
+
     List<Piece> piecesToCreate = new ArrayList<>(holder.getPiecesWithLocationToProcess());
     piecesToCreate.addAll(holder.getPiecesWithHoldingToProcess());
     piecesToCreate.addAll(holder.getPiecesWithoutLocationId());
 
-    var preparedPieces = piecesToCreate.stream()
+    List<Piece> preparedPieces = piecesToCreate.stream()
       .map(piece -> piece.withTitleId(holder.getTitleId()))
       .toList();
 
-    // Perform individual acq unit validations for each piece and open order inventory update operation before creating batch pieces
-    var validationFutures = preparedPieces.stream()
-      .map(piece -> openOrderUpdateInventory(piece, order, isInstanceMatchingDisabled, requestContext))
-      .toList();
+    // Collect pieces after validation
+    List<Future<Piece>> piecesFutures = new ArrayList<>();
 
-    logger.info("createPieces:: Passed acq unit validation and open order '{}' inventory update", order.getId());
-    return collectResultsOnSuccess(validationFutures)
-      .compose(validatedPieces ->
-        pieceStorageService.insertPiecesBatch(validatedPieces, requestContext)
-          .map(PieceCollection::getPieces)
+    // Use chainCallCollect to sequentially process each piece with openOrderUpdateInventory.
+    return chainCall(preparedPieces, piece ->
+      openOrderUpdateInventory(piece, order, isInstanceMatchingDisabled, requestContext)
+        .map(validatedPiece -> piecesFutures.add(Future.succeededFuture(validatedPiece)))
       )
+      .compose(ignored -> collectResultsOnSuccess(piecesFutures))
+      .compose(validatedPieces -> {
+        logger.info("createPieces:: Passed acq unit validation and open order '{}' inventory update", order.getId());
+        // Once all pieces have been updated, insert them in batch.
+        return pieceStorageService.insertPiecesBatch(validatedPieces, requestContext)
+          .map(PieceCollection::getPieces);
+      })
       .recover(th -> {
         logger.error("Piece creation failed", th);
         return Future.failedFuture(new CompletionException("Piece creation error", th));
       });
   }
+
 
   private Future<Piece> openOrderUpdateInventory(Piece piece, CompositePurchaseOrder order, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     logger.debug("openOrderUpdateInventory:: Validating acq unit and updating order '{}' inventory - {}", order.getId(), piece.getId());

@@ -142,17 +142,16 @@ public class InventoryItemManager {
     if (piece.getItemId() == null || piece.getPoLineId() == null || piece.getIsBound()) {
       return Future.succeededFuture();
     }
-    String itemId = piece.getItemId();
-    String poLineId = piece.getPoLineId();
-    return getItemRecordById(itemId, true, requestContext)
+    return getItemRecordById(piece.getItemId(), true, requestContext)
       .compose(item -> {
-        if (poLineId == null || item == null || item.isEmpty()) {
+        if (item == null || item.isEmpty()) {
           return Future.succeededFuture();
         }
         InventoryUtils.updateItemWithPieceFields(item, piece);
         return updateItem(item, requestContext);
       });
   }
+
 
   public Future<Void> deleteItem(String id, boolean skipNotFoundException, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(ITEM_BY_ID_ENDPOINT)).withId(id);
