@@ -104,15 +104,15 @@ public class OpenCompositeOrderPieceService {
       .map(piece -> piece.withTitleId(holder.getTitleId()))
       .toList();
 
-    // Sequentially update each piece's inventory using chainCall.
-    return chainCall(preparedPieces, piece ->
-      openOrderUpdateInventory(piece, order, isInstanceMatchingDisabled, requestContext)
-    )
-      // Once all pieces are updated sequentially, insert them in batch.
-      .compose(ignored ->
-        pieceStorageService.insertPiecesBatch(preparedPieces, requestContext)
-          .map(PieceCollection::getPieces)
-      )
+    // Perform individual acq unit validations for each piece and open order inventory update operation before creating batch pieces
+    List<Piece> validationPieces = new ArrayList<>();
+
+    chainCall(preparedPieces, piece -> openOrderUpdateInventory(piece, order, isInstanceMatchingDisabled, requestContext))
+      .onSuccess(validationPieces::add);
+
+    logger.info("createPieces:: Passed acq unit validation and open order '{}' inventory update", order.getId());
+    return pieceStorageService.insertPiecesBatch(validationPieces, requestContext)
+      .map(PieceCollection::getPieces)
       .recover(th -> {
         logger.error("Piece creation failed", th);
         return Future.failedFuture(new CompletionException("Piece creation error", th));
@@ -125,9 +125,12 @@ public class OpenCompositeOrderPieceService {
       .compose(title ->
         protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
       )
-      .compose(v ->
-        openOrderUpdateInventory(order, order.getCompositePoLines().get(0), piece, isInstanceMatchingDisabled, requestContext)
-      )
+      .compose(v -> {
+        if (order.getCompositePoLines().get(0).getIsPackage()) {
+          return openOrderUpdateInventory(order, order.getCompositePoLines().get(0), piece, isInstanceMatchingDisabled, requestContext);
+        }
+        return Future.succeededFuture();
+      })
       .map(v -> piece);
   }
 
@@ -161,9 +164,6 @@ public class OpenCompositeOrderPieceService {
    */
   public Future<Void> openOrderUpdateInventory(CompositePurchaseOrder compPO, CompositePoLine compPOL,
                                                Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    if (!Boolean.TRUE.equals(compPOL.getIsPackage())) {
-      return inventoryItemManager.updateItemWithPieceFields(piece, requestContext);
-    }
     var locationContext = createContextWithNewTenantId(requestContext, piece.getReceivingTenantId());
     return titlesService.getTitleById(piece.getTitleId(), requestContext)
       .compose(title -> titlesService.updateTitleWithInstance(title, isInstanceMatchingDisabled, locationContext, requestContext).map(title::withInstanceId))
