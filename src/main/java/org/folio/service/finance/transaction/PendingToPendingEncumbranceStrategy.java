@@ -56,7 +56,11 @@ public class PendingToPendingEncumbranceStrategy implements EncumbranceWorkflowS
     EncumbrancesProcessingHolder holder = new EncumbrancesProcessingHolder();
     List<EncumbranceRelationsHolder> toUpdate = getTransactionsToUpdate(encumbranceRelationsHolders);
     List<EncumbranceRelationsHolder> toDelete = getTransactionsToDelete(encumbranceRelationsHolders);
-    List<Transaction> toRelease = toDelete.stream().map(EncumbranceRelationsHolder::getOldEncumbrance).toList();
+    // 0-amount encumbrances are not released before deletion to avoid blocking pending order fund distributions (MODORDERS-1253)
+    List<Transaction> toRelease = toDelete.stream()
+      .map(EncumbranceRelationsHolder::getOldEncumbrance)
+      .filter(tr -> tr.getAmount() != 0d)
+      .toList();
     holder.withEncumbrancesForUpdate(toUpdate);
     holder.withEncumbrancesForRelease(toRelease);
     holder.withEncumbrancesForDelete(toDelete);

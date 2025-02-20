@@ -229,11 +229,9 @@ public class PendingToPendingEncumbranceStrategyTest {
         assertEquals(0, holder.getEncumbrancesForCreate().size());
         assertEquals(0, holder.getEncumbrancesForUpdate().size());
         assertEquals(1, holder.getEncumbrancesForDelete().size());
-        assertEquals(1, holder.getEncumbrancesForRelease().size());
+        assertEquals(0, holder.getEncumbrancesForRelease().size());
         assertEquals(0, holder.getEncumbrancesForUnrelease().size());
         assertEquals(1, holder.getPendingPaymentsToUpdate().size());
-        String releasedId = holder.getEncumbrancesForRelease().get(0).getId();
-        assertEquals(encumbranceId, releasedId);
         String deletedId = holder.getEncumbrancesForDelete().get(0).getOldEncumbrance().getId();
         assertEquals(encumbranceId, deletedId);
         Transaction updatedPendingPayment = holder.getPendingPaymentsToUpdate().get(0);
