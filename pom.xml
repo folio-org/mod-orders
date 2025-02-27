@@ -55,7 +55,7 @@
     <ramlfiles_path>${basedir}/ramls</ramlfiles_path>
     <ramlfiles_util_path>${ramlfiles_path}/raml-util</ramlfiles_util_path>
     <ramlfiles_acq_models_path>${ramlfiles_path}/acq-models</ramlfiles_acq_models_path>
-    <raml-module-builder.version>35.3.0</raml-module-builder.version>
+    <raml-module-builder.version>35.4.0-SNAPSHOT</raml-module-builder.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
