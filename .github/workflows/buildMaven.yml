@@ -15,7 +15,7 @@ jobs:
         ref: ${{ github.REF }}
     - uses: actions/setup-java@v1
       with:
-        java-version: '11'
+        java-version: '21'
     - run: echo "FOLIO registry is $folioRegistry"
       env:
         folioRegistry:  https://repository.folio.org/repository/maven-snapshots/
@@ -28,7 +28,7 @@ jobs:
     - run: echo "Starting MvnDeploy stage..."
     - run: mvn dependency:list | { grep -i snapshot || true; }
     - run: >
-        mvn clean org.jacoco:jacoco-maven-plugin:prepare-agent install 
+        mvn clean org.jacoco:jacoco-maven-plugin:prepare-agent install
         org.jacoco:jacoco-maven-plugin:report
     - run: docker build --pull=true --no-cache=true -t ${{ env.module_name }}:${{ env.module_version }} .
     # - if: github.REF == 'master'
@@ -70,8 +70,7 @@ jobs:
           name: ci-raml-lint
           path: ci/lintRamlCop.html
       - run: rm -rf ci && rm -rf folio-tools
-      
 
-        
 
-  
+
+
