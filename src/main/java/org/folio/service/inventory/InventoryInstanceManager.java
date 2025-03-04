@@ -264,7 +264,7 @@ public class InventoryInstanceManager {
   }
 
   private String buildProductIdQuery(ProductId productId) {
-    return String.format("(identifiers =/@identifierTypeId=\"%s\"/@value \"%s\")",
+    return String.format("(identifiers =/@value/@identifierTypeId=\"%s\" \"%s\")",
       productId.getProductIdType(), productId.getProductId());
   }
 
