@@ -1,6 +1,27 @@
-## 13.0.0 - Unreleased
-* [MODORDERS-1215](https://issues.folio.org/browse/MODORDERS-1215) Assign to system user permissions required for data import
+## 13.1.0 - Unreleased
+
+## 13.0.0 - Released (Sunflower R1 2025)
+The primary focus of this release was to enhance multi-tenant functionality, improve piece management, and implement various inventory and order processing features.
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.9.0...v13.0.0)
+
+### Stories
+* [MODORDERS-1109](https://issues.folio.org/browse/MODORDERS-1109) - Batch create pieces ddk API
 * [MODORDERS-1207](https://folio-org.atlassian.net/browse/MODORDERS-1207) The order with 'Pending' status is created after importing file with mapping profile what contains 'Open' purchase order status
+* [MODORDERS-1209](https://issues.folio.org/browse/MODORDERS-1209) - Implement API to Send claims for multiple pieces
+* [MODORDERS-1210](https://issues.folio.org/browse/MODORDERS-1210) - Implement API to change piece statuses in batch
+* [MODORDERS-1215](https://issues.folio.org/browse/MODORDERS-1215) Assign to system user permissions required for data import
+* [MODORDERS-1220](https://issues.folio.org/browse/MODORDERS-1220) - Update validation to prevent adding piece to an pending order with synchronized status
+* [MODORDERS-1237](https://issues.folio.org/browse/MODORDERS-1237) - Create a new API and wrapper model for Claiming with an Organization Id
+* [MODORDERS-1253](https://issues.folio.org/browse/MODORDERS-1253) - User can edit fund distribution for unopened order with inactive budget in POL
+
+### Bug Fixes
+* [MODORDERS-1235](https://issues.folio.org/browse/MODORDERS-1235) - Wrong error message appears when trying to open order with two POLs contain funds from different fiscal years
+
+### Dependencies
+* Bump `raml` from `35.3.0` to `35.4.0`
+* Bump `java` from `17` to `21`
+
 
 ## 12.9.0 - Released (Ramsons R2 2024)
 The primary focus of this release was to enhance multi-tenant functionality, improve piece management, and implement various inventory and order processing features.
