@@ -8,11 +8,11 @@ The primary focus of this release was to enhance multi-tenant functionality, imp
 ### Stories
 * [MODORDERS-1109](https://issues.folio.org/browse/MODORDERS-1109) - Batch create pieces API
 * [MODORDERS-1203](https://issues.folio.org/browse/MODORDERS-1203) - Total expended amount is not displayed when order has no fund distributions
-* [MODORDERS-1207](https://folio-org.atlassian.net/browse/MODORDERS-1207) The order with 'Pending' status is created after importing file with mapping profile what contains 'Open' purchase order status
+* [MODORDERS-1207](https://folio-org.atlassian.net/browse/MODORDERS-1207) - The order with 'Pending' status is created after importing file with mapping profile what contains 'Open' purchase order status
 * [MODORDERS-1209](https://issues.folio.org/browse/MODORDERS-1209) - Implement API to Send claims for multiple pieces
 * [MODORDERS-1210](https://issues.folio.org/browse/MODORDERS-1210) - Implement API to change piece statuses in batch
-* [MODORDERS-1215](https://issues.folio.org/browse/MODORDERS-1215) Assign to system user permissions required for data import
-* [MODORDERS-1217](https://issues.folio.org/browse/MODORDERS-1217) Ongoing orders cannot be reopened with inactive budget for fund
+* [MODORDERS-1215](https://issues.folio.org/browse/MODORDERS-1215) - Assign to system user permissions required for data import
+* [MODORDERS-1217](https://issues.folio.org/browse/MODORDERS-1217)- Ongoing orders cannot be reopened with inactive budget for fund
 * [MODORDERS-1220](https://issues.folio.org/browse/MODORDERS-1220) - Update validation to prevent adding piece to an pending order with synchronized status
 * [MODORDERS-1226](https://issues.folio.org/browse/MODORDERS-1226) - Update validation to prevent opening an order without po lines
 * [MODORDERS-1227](https://issues.folio.org/browse/MODORDERS-1227) - Perform a new round of deletion of sensitive information from logs in acq modules
