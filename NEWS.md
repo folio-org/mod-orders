@@ -6,7 +6,7 @@ The primary focus of this release was to enhance multi-tenant functionality, imp
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.9.0...v13.0.0)
 
 ### Stories
-* [MODORDERS-1109](https://issues.folio.org/browse/MODORDERS-1109) - Batch create pieces ddk API
+* [MODORDERS-1109](https://issues.folio.org/browse/MODORDERS-1109) - Batch create pieces API
 * [MODORDERS-1203](https://issues.folio.org/browse/MODORDERS-1203) - Total expended amount is not displayed when order has no fund distributions
 * [MODORDERS-1207](https://folio-org.atlassian.net/browse/MODORDERS-1207) The order with 'Pending' status is created after importing file with mapping profile what contains 'Open' purchase order status
 * [MODORDERS-1209](https://issues.folio.org/browse/MODORDERS-1209) - Implement API to Send claims for multiple pieces
