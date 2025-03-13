@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.folio</groupId>
   <artifactId>mod-orders</artifactId>
-  <version>13.0.0-SNAPSHOT</version>
+  <version>13.1.0-SNAPSHOT</version>
 
   <name>Orders Business Logic</name>
   <description>Business logic to manage orders in FOLIO</description>
@@ -79,6 +79,7 @@
     <folio-di-support.version>3.0.0</folio-di-support.version>
     <folio-isbn-util.version>1.7.1</folio-isbn-util.version>
     <mod-di-converter-storage-client.version>2.3.1</mod-di-converter-storage-client.version>
+    <data-import-processing-core.version>4.4.0</data-import-processing-core.version>
 
     <!--Maven plugin dependencies-->
     <build-helper-maven-plugin.version>3.6.0</build-helper-maven-plugin.version>
@@ -257,7 +258,7 @@
     <dependency>
       <groupId>org.folio</groupId>
       <artifactId>data-import-processing-core</artifactId>
-      <version>4.4.0-SNAPSHOT</version>
+      <version>${data-import-processing-core.version}</version>
     </dependency>
     <dependency>
       <groupId>com.github.rworsnop</groupId>
