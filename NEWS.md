@@ -29,8 +29,8 @@ The primary focus of this release was to enhance multi-tenant functionality, imp
 * [MODORDERS-1248](https://issues.folio.org/browse/MODORDERS-1248) - Total expended value on order details pane contains invoice total value instead of invoice line total
 
 ### Dependencies
-* Bump `java` from `17` to `21`
 * Bump `raml` from `35.3.0` to `35.4.0`
+* Bump `java` from `17` to `21`
 
 
 ## 12.9.0 - Released (Ramsons R2 2024)
