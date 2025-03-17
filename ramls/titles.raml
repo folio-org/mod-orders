@@ -50,8 +50,16 @@ resourceTypes:
       id:
         description: The UUID of a Title
         type: UUID
-    post:
+    put:
       description: Unlink a title from an instance
+      queryParameters:
+        deleteHolding:
+          displayName: The associated holding should be removed
+          type: boolean
+          description: The associated holding should be removed
+          example: true
+          required: false
+          default: false
       responses:
         204:
           description: Title unlinked
