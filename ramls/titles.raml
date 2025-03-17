@@ -44,3 +44,18 @@ resourceTypes:
       collection-item:
         exampleItem: !include acq-models/mod-orders-storage/examples/title_get.sample
         schema: title
+
+  /unlink/{id}:
+    uriParameters:
+      id:
+        description: The UUID of a Title
+        type: UUID
+    post:
+      description: Unlink a title from an instance
+      responses:
+        204:
+          description: Title unlinked
+        404:
+          description: Title not found
+        500:
+          description: Internal server error

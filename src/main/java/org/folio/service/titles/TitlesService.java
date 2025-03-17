@@ -10,6 +10,7 @@ import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -30,6 +31,8 @@ import org.folio.service.ProtectionService;
 import io.vertx.core.Future;
 import lombok.extern.log4j.Log4j2;
 import one.util.streamex.StreamEx;
+import org.folio.service.inventory.InventoryHoldingManager;
+import org.folio.service.inventory.InventoryItemManager;
 
 @Log4j2
 public class TitlesService {
@@ -38,11 +41,15 @@ public class TitlesService {
   private final RestClient restClient;
   private final ProtectionService protectionService;
   private final TitleInstanceService titleInstanceService;
-
-  public TitlesService(RestClient restClient, ProtectionService protectionService, TitleInstanceService titleInstanceService) {
+  private final InventoryHoldingManager inventoryHoldingManager;
+  private final InventoryItemManager inventoryItemManager;
+  public TitlesService(RestClient restClient, ProtectionService protectionService, TitleInstanceService titleInstanceService,
+                       InventoryHoldingManager inventoryHoldingManager, InventoryItemManager inventoryItemManager) {
     this.restClient = restClient;
     this.protectionService = protectionService;
     this.titleInstanceService = titleInstanceService;
+    this.inventoryHoldingManager = inventoryHoldingManager;
+    this.inventoryItemManager = inventoryItemManager;
   }
 
   public Future<Title> createTitle(Title title, RequestContext requestContext) {
@@ -121,6 +128,10 @@ public class TitlesService {
       .map(TitleCollection::getTitles);
   }
 
+  public Future<List<Title>> getTitlesByInstanceId(String instanceId, RequestContext requestContext) {
+    return getTitlesByQuery("instanceId==" + instanceId, requestContext);
+  }
+
   public Future<Map<String, List<Title>>> fetchNonPackageTitles(CompositePurchaseOrder compPO, RequestContext requestContext) {
     List<String> lineIds = getNonPackageLineIds(compPO.getCompositePoLines());
     return getTitlesByPoLineIds(lineIds, requestContext);
@@ -142,4 +153,54 @@ public class TitlesService {
         .map(v -> entity.getInstanceId()));
   }
 
+  public Future<Void> unlinkTitleFromPackage(String titleId, RequestContext requestContext) {
+    // Check holding and item existence for title
+    // if holdings have reference other titles then skip,
+    // if holding doesn't have reference and ask confirm if yes then delete related pieces, items, holdings
+    return getTitleById(titleId, requestContext)
+      .compose(title -> checkHoldingAndItemExistence(title, requestContext))
+      .compose(title -> {
+        title.setPackageName(null);
+        title.setPoLineId(null);
+        return saveTitleWithAcqUnitsCheck(title, requestContext);
+      });
+  }
+
+  private Future<Title> checkHoldingAndItemExistence(Title title, RequestContext requestContext) {
+    var instanceId = title.getInstanceId();
+    if (StringUtils.isEmpty(instanceId)) {
+      return Future.succeededFuture(title);
+    }
+    return getTitlesByInstanceId(instanceId, requestContext)
+      .compose(titles -> {
+        if (titles.size() > 1) {
+          return Future.succeededFuture();
+        }
+        return inventoryHoldingManager.getHoldingRecords(instanceId, requestContext)
+          .compose(holdingRecords -> {
+            if (holdingRecords.isEmpty()) {
+              title.setInstanceId(null);
+              return Future.succeededFuture(title);
+            }
+            List<String> holdingIds = holdingRecords.stream().map(holding -> holding.getString("id")).toList();
+            List<Future<List<Void>>> deletionFuture = new ArrayList<>();
+
+            holdingIds.forEach(holdingId ->
+              deletionFuture.add(inventoryItemManager.getItemsByHoldingId(holdingId, requestContext).compose(
+                items -> {
+                  var itemIds = items.stream().map(item -> item.getString("id")).toList();
+                  return inventoryItemManager.deleteItems(itemIds, true, requestContext);
+                })));
+            // delete pieces
+            // delete holdings
+            return collectResultsOnSuccess(deletionFuture);
+          });
+      });
+  }
+
+  public Future<Void> unlinkTitleFromPackage(Title title, RequestContext requestContext) {
+    title.setPackageName(null);
+    title.setPoLineId(null);
+    return saveTitleWithAcqUnitsCheck(title, requestContext);
+  }
 }
