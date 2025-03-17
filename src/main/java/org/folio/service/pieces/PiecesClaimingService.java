@@ -20,6 +20,7 @@ import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.caches.ConfigurationEntriesCache;
+import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.organization.OrganizationService;
@@ -70,6 +71,7 @@ public class PiecesClaimingService {
   private final PurchaseOrderStorageService purchaseOrderStorageService;
   private final OrganizationService organizationService;
   private final PieceUpdateFlowManager pieceUpdateFlowManager;
+  private final ConsortiumConfigurationService consortiumConfigurationService;
   private final RestClient restClient;
 
   /**
@@ -85,7 +87,8 @@ public class PiecesClaimingService {
       log.info("sendClaims:: Cannot send claims piece ids are empty - No claims are sent");
       throwHttpException(CANNOT_SEND_CLAIMS_PIECE_IDS_ARE_EMPTY, claimingCollection, HttpStatus.HTTP_BAD_REQUEST);
     }
-    return configurationEntriesCache.loadConfiguration(DATA_EXPORT_SPRING_CONFIG_MODULE_NAME, requestContext)
+    return consortiumConfigurationService.overrideContextToCentralTenantIfNeeded(requestContext)
+      .compose(overrideContext -> configurationEntriesCache.loadConfiguration(DATA_EXPORT_SPRING_CONFIG_MODULE_NAME, overrideContext)
       .compose(config -> {
         if (CollectionUtils.isEmpty(config.getMap())) {
           log.info("sendClaims:: Cannot retrieve config entries - No claims are sent");
@@ -93,7 +96,7 @@ public class PiecesClaimingService {
         }
         var pieceIds = claimingCollection.getClaimingPieceIds().stream().toList();
         log.info("sendClaims:: Received pieces to be claimed, pieceIds: {}", pieceIds);
-        return groupPieceIdsByVendor(pieceIds, requestContext)
+        return groupPieceIdsByVendor(pieceIds, overrideContext)
           .compose(pieceIdsByVendors -> {
             if (CollectionUtils.isEmpty(pieceIdsByVendors)) {
               log.info("sendClaims:: Cannot find pieces with late status to process - No claims are sent");
@@ -106,10 +109,10 @@ public class PiecesClaimingService {
               log.info("sendClaims:: Unable to generate claims because no claim integrations exist - No claims are sent");
               throwHttpExceptionOnMissingVendorIntegrationDetails(claimingCollection, vendorWithoutIntegrationDetails);
             }
-            return createJobsByVendor(claimingCollection, config, pieceIdsByVendors, requestContext);
+            return createJobsByVendor(claimingCollection, config, pieceIdsByVendors, overrideContext);
           });
       })
-      .onFailure(t -> log.error("sendClaims:: Failed send claims: {}", JsonObject.mapFrom(claimingCollection).encodePrettily(), t));
+      .onFailure(t -> log.error("sendClaims:: Failed send claims: {}", JsonObject.mapFrom(claimingCollection).encodePrettily(), t)));
   }
 
   private Future<Map<Organization, List<String>>> groupPieceIdsByVendor(List<String> pieceIds, RequestContext requestContext) {
