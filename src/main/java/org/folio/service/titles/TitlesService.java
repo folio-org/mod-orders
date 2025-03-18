@@ -12,6 +12,7 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -143,10 +144,6 @@ public class TitlesService {
     return getTitlesByQuery("poLineId==" + poLineId, requestContext);
   }
 
-  public Future<List<Title>> getTitlesByInstanceId(String instanceId, RequestContext requestContext) {
-    return getTitlesByQuery("instanceId==" + instanceId, requestContext);
-  }
-
   public Future<Map<String, List<Title>>> fetchNonPackageTitles(CompositePurchaseOrder compPO, RequestContext requestContext) {
     List<String> lineIds = getNonPackageLineIds(compPO.getCompositePoLines());
     return getTitlesByPoLineIds(lineIds, requestContext);
@@ -168,42 +165,45 @@ public class TitlesService {
         .map(v -> entity.getInstanceId()));
   }
 
+  /**
+   * Unlinks a title from a package. This involves checking the existence of holdings and items for the title.
+   * If the holdings have references to other titles, the unlinking process skips them.
+   * If the holdings do not have references, it asks for confirmation to delete related pieces, items, and holdings.
+   *
+   * @param titleId        the ID of the title to unlink
+   * @param deleteHolding  flag indicating whether to delete the holding if it has no other references
+   * @param requestContext the request context
+   * @return a Future representing the result of the unlinking operation
+   */
   public Future<Void> unlinkTitleFromPackage(String titleId, boolean deleteHolding, RequestContext requestContext) {
-    // Check holding and item existence for title
-    // if holdings have reference other titles then skip,
-    // if holding doesn't have reference and ask confirm if yes then delete related pieces, items, holdings
-
-    // check first holding and item existence
-    // if holding exists and check if holding has connected to multiple titles through poLine
-    // if holding exists and holding don't have connected titles and then return holding object to get confirmation delete holding true/false
+    log.debug("Trying to unlink title with id: {}", titleId);
     return getTitleById(titleId, requestContext)
       .compose(title -> purchaseOrderLineService.getOrderLineById(title.getPoLineId(), requestContext)
         .compose(poLine -> processHoldings(poLine, deleteHolding, requestContext))
-        .compose(v -> unlinkTitleFromPackage(title, requestContext)));
+        .compose(holdings -> unlinkTitleFromPackage(title, holdings, requestContext)));
   }
 
-  private Future<Object> processHoldings(PoLine poLine, boolean deleteHolding, RequestContext requestContext) {
+  private Future<List<String>> processHoldings(PoLine poLine, boolean deleteHolding, RequestContext requestContext) {
     return getTitleByPoLineId(poLine.getId(), requestContext)
       .compose(titles -> {
         if (titles.size() > 1) {
+          log.info("processHoldings:: Holdings in poLine '{}' connected to multiple '{}' titles", titles.size(), poLine.getId());
           return Future.succeededFuture();
         }
+
+        List<String> holdingIds = PoLineCommonUtil.getHoldings(poLine);
+
         if (Boolean.FALSE.equals(deleteHolding)) {
-          List<String> holdingIds = checkHoldingExistence(poLine);
+          log.info("processHoldings:: Holdings in poLine '{}' will not be deleted", poLine.getId());
           return Future.succeededFuture(holdingIds);
         }
-        return deleteHoldingItemPieces(poLine, requestContext)
-          .map((String) null);
+
+        return deleteHoldingItemPieces(poLine, holdingIds, requestContext)
+          .map(Collections.emptyList());
       });
   }
 
-  private List<String> checkHoldingExistence(PoLine poLine) {
-    return PoLineCommonUtil.getHoldings(poLine);
-  }
-
-  private Future<Void> deleteHoldingItemPieces(PoLine poLine, RequestContext requestContext) {
-    var holdingIds = PoLineCommonUtil.getHoldings(poLine);
-
+  private Future<Void> deleteHoldingItemPieces(PoLine poLine, List<String> holdingIds, RequestContext requestContext) {
     return deleteItemsForHolding(holdingIds, requestContext)
       .compose(v -> deletePiecesForPoLine(poLine.getId(), requestContext))
       .compose(v -> deleteHoldings(holdingIds, requestContext));
@@ -222,6 +222,8 @@ public class TitlesService {
     }
 
     return combineResultListsOnSuccess(deleteItemFutures)
+      .onSuccess(v -> log.info("deleteItemsForHolding:: Items were deleted successfully for holdingIds: {}", holdingIds))
+      .onFailure(t -> log.error("deleteItemsForHolding:: Failed to delete items for holdingIds: {}", holdingIds, t))
       .mapEmpty();
   }
 
@@ -230,7 +232,9 @@ public class TitlesService {
       .compose(pieces -> {
         var pieceIds = pieces.stream().map(Piece::getId).toList();
         return pieceStorageService.deletePiecesByIds(pieceIds, requestContext);
-      });
+      })
+      .onSuccess(v -> log.info("deletePiecesForPoLine:: Pieces were deleted successfully for poLineId: {}", poLineId))
+      .onFailure(t -> log.error("deletePiecesForPoLine:: Failed to delete pieces for poLineId: {}", poLineId, t));
   }
 
   private Future<Void> deleteHoldings(List<String> holdingIds, RequestContext requestContext) {
@@ -239,10 +243,17 @@ public class TitlesService {
       .toList();
 
     return collectResultsOnSuccess(deleteHoldingFutures)
+      .onSuccess(v -> log.info("deleteHoldings:: Holdings '{}' were deleted successfully", holdingIds))
+      .onFailure(t -> log.error("deleteHoldings:: Failed to delete holdings '{}'", holdingIds, t))
       .mapEmpty();
   }
 
-  public Future<Void> unlinkTitleFromPackage(Title title, RequestContext requestContext) {
+  public Future<Void> unlinkTitleFromPackage(Title title, List<String> holdings, RequestContext requestContext) {
+    if (!holdings.isEmpty()) {
+      return Future.succeededFuture();
+    }
+
+    log.info("unlinkTitleFromPackage:: Title '{}' is being unlinked from the package", title.getId());
     title.setPackageName(null);
     title.setPoLineId(null);
     return saveTitleWithAcqUnitsCheck(title, requestContext);
