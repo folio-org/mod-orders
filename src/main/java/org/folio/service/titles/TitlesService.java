@@ -12,7 +12,6 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -22,6 +21,7 @@ import com.google.common.collect.Sets;
 import io.vertx.core.Future;
 import lombok.extern.log4j.Log4j2;
 import one.util.streamex.StreamEx;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
@@ -175,15 +175,16 @@ public class TitlesService {
    * @param requestContext the request context
    * @return a Future representing the result of the unlinking operation
    */
-  public Future<Void> unlinkTitleFromPackage(String titleId, boolean deleteHolding, RequestContext requestContext) {
-    log.debug("Trying to unlink title with id: {}", titleId);
+  public Future<List<String>> unlinkTitleFromPackage(String titleId, String deleteHolding, RequestContext requestContext) {
+    log.debug("Trying to unlink title with id: {} and deleteHolding: {}", titleId, deleteHolding);
+
     return getTitleById(titleId, requestContext)
       .compose(title -> purchaseOrderLineService.getOrderLineById(title.getPoLineId(), requestContext)
         .compose(poLine -> processHoldings(poLine, deleteHolding, requestContext))
-        .compose(holdings -> unlinkTitleFromPackage(title, holdings, requestContext)));
+        .compose(holdings -> deleteTitle(title, holdings, requestContext)));
   }
 
-  private Future<List<String>> processHoldings(PoLine poLine, boolean deleteHolding, RequestContext requestContext) {
+  private Future<List<String>> processHoldings(PoLine poLine, String deleteHolding, RequestContext requestContext) {
     return getTitleByPoLineId(poLine.getId(), requestContext)
       .compose(titles -> {
         if (titles.size() > 1) {
@@ -191,22 +192,40 @@ public class TitlesService {
           return Future.succeededFuture();
         }
 
-        List<String> holdingIds = PoLineCommonUtil.getHoldings(poLine);
-
-        if (Boolean.FALSE.equals(deleteHolding)) {
+        if (StringUtils.isEmpty(deleteHolding)) {
           log.info("processHoldings:: Holdings in poLine '{}' will not be deleted", poLine.getId());
-          return Future.succeededFuture(holdingIds);
+          return getHoldings(poLine, requestContext);
         }
 
-        return deleteHoldingItemPieces(poLine, holdingIds, requestContext)
-          .map(Collections.emptyList());
+        if (!"true".equalsIgnoreCase(deleteHolding) && !"false".equalsIgnoreCase(deleteHolding)) {
+          throw new IllegalArgumentException("deleteHolding must be either 'true' or 'false'");
+        }
+
+        if (Boolean.parseBoolean(deleteHolding)) {
+          return deleteHoldingItemPieces(poLine, requestContext)
+            .mapEmpty();
+        }
+
+        return Future.succeededFuture();
       });
   }
 
-  private Future<Void> deleteHoldingItemPieces(PoLine poLine, List<String> holdingIds, RequestContext requestContext) {
-    return deleteItemsForHolding(holdingIds, requestContext)
-      .compose(v -> deletePiecesForPoLine(poLine.getId(), requestContext))
-      .compose(v -> deleteHoldings(holdingIds, requestContext));
+  private Future<List<String>> getHoldings(PoLine poLine, RequestContext requestContext) {
+    return pieceStorageService.getPiecesByLineId(poLine.getId(), requestContext)
+      .compose(pieces -> {
+        var holdingIdsFromPieces = pieces.stream().map(Piece::getHoldingId).toList();
+        var holdingIdsFromPoLine = PoLineCommonUtil.getHoldings(poLine);
+        var holdingIds = StreamEx.of(holdingIdsFromPieces, holdingIdsFromPoLine).flatMap(List::stream).distinct().toList();
+        return Future.succeededFuture(CollectionUtils.isNotEmpty(holdingIds) ? holdingIds : List.of());
+      });
+  }
+
+  private Future<Void> deleteHoldingItemPieces(PoLine poLine, RequestContext requestContext) {
+    // TODO: add correct context for deletion of holdings reference change instance connection
+    return getHoldings(poLine, requestContext)
+      .compose(holdingIds -> deleteItemsForHolding(holdingIds, requestContext)
+        .compose(v -> deletePiecesForPoLine(poLine.getId(), requestContext))
+        .compose(v -> deleteHoldings(holdingIds, requestContext)));
   }
 
   private Future<Void> deleteItemsForHolding(List<String> holdingIds, RequestContext requestContext) {
@@ -248,14 +267,13 @@ public class TitlesService {
       .mapEmpty();
   }
 
-  public Future<Void> unlinkTitleFromPackage(Title title, List<String> holdings, RequestContext requestContext) {
-    if (!holdings.isEmpty()) {
-      return Future.succeededFuture();
+  private Future<List<String>> deleteTitle(Title title, List<String> holdings, RequestContext requestContext) {
+    if (CollectionUtils.isNotEmpty(holdings)) {
+      return Future.succeededFuture(holdings);
     }
 
     log.info("unlinkTitleFromPackage:: Title '{}' is being unlinked from the package", title.getId());
-    title.setPackageName(null);
-    title.setPoLineId(null);
-    return saveTitleWithAcqUnitsCheck(title, requestContext);
+    return deleteTitle(title.getId(), requestContext)
+      .mapEmpty();
   }
 }

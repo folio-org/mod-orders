@@ -957,6 +957,20 @@
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get"
           ]
+        },
+        {
+          "methods": ["DELETE"],
+          "pathPattern": "/orders/titles/unlink/{id}",
+          "permissionsRequired": ["orders.titles-unlink.item.delete"],
+          "modulePermissions": [
+            "orders-storage.titles.item.get",
+            "orders-storage.titles.item.delete",
+            "orders-storage.pieces.collection.get",
+            "orders-storage.pieces.collection.delete",
+            "orders-storage.po-lines.item.get",
+            "inventory-storage.holdings.item.delete",
+            "inventory-storage.items.collection.delete"
+          ]
         }
       ]
     },
@@ -1926,6 +1940,11 @@
       "description": "Delete an existing title"
     },
     {
+     "permissionName": "orders.titles-unlink.item.delete",
+     "displayName": "Titles - unlink title from package",
+     "description": "Unlink title from package"
+    },
+    {
       "permissionName": "orders.titles.all",
       "displayName": "All titles perms",
       "description": "All permissions for the titles",
@@ -1934,7 +1953,8 @@
         "orders.titles.item.post",
         "orders.titles.item.get",
         "orders.titles.item.put",
-        "orders.titles.item.delete"
+        "orders.titles.item.delete",
+        "orders.titles-unlink.item.delete"
       ]
     },
     {

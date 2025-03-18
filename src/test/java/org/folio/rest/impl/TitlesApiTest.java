@@ -374,8 +374,8 @@ public class TitlesApiTest {
 
     @Bean
     TitlesService titlesService(RestClient restClient, ProtectionService protectionService, TitleInstanceService titleInstanceService,
-                                InventoryItemManager inventoryItemManager, InventoryHoldingManager inventoryHoldingManager,
-                                PieceStorageService pieceStorageService, PurchaseOrderLineService purchaseOrderLineService) {
+                                InventoryHoldingManager inventoryHoldingManager, InventoryItemManager inventoryItemManager,
+                                PurchaseOrderLineService purchaseOrderLineService, PieceStorageService pieceStorageService) {
       return new TitlesService(restClient, protectionService, titleInstanceService, inventoryHoldingManager, inventoryItemManager,
         purchaseOrderLineService, pieceStorageService);
     }

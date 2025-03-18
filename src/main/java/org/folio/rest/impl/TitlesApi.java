@@ -108,11 +108,9 @@ public class TitlesApi extends BaseApi implements OrdersTitles {
   }
 
   @Override
-  public void putOrdersTitlesUnlinkById(String id, boolean deleteHolding, Map<String, String> okapiHeaders,
-                                        Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void deleteOrdersTitlesUnlinkById(String id, String deleteHolding, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     titlesService.unlinkTitleFromPackage(id, deleteHolding, new RequestContext(vertxContext, okapiHeaders))
-      .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
+      .onSuccess(response -> asyncResultHandler.handle(succeededFuture(buildOkResponse(response))))
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
-
 }
