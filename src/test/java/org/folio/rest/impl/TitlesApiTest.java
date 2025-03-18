@@ -60,6 +60,10 @@ import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.TitleCollection;
 import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.ProtectionService;
+import org.folio.service.inventory.InventoryHoldingManager;
+import org.folio.service.inventory.InventoryItemManager;
+import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.titles.TitleInstanceService;
 import org.folio.service.titles.TitleValidationService;
 import org.folio.service.titles.TitlesService;
@@ -369,8 +373,11 @@ public class TitlesApiTest {
     }
 
     @Bean
-    TitlesService titlesService(RestClient restClient, ProtectionService protectionService, TitleInstanceService titleInstanceService) {
-      return new TitlesService(restClient, protectionService, titleInstanceService);
+    TitlesService titlesService(RestClient restClient, ProtectionService protectionService, TitleInstanceService titleInstanceService,
+                                InventoryItemManager inventoryItemManager, InventoryHoldingManager inventoryHoldingManager,
+                                PieceStorageService pieceStorageService, PurchaseOrderLineService purchaseOrderLineService) {
+      return new TitlesService(restClient, protectionService, titleInstanceService, inventoryHoldingManager, inventoryItemManager,
+        purchaseOrderLineService, pieceStorageService);
     }
 
     @Bean
