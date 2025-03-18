@@ -216,7 +216,7 @@ public class PiecesClaimingApiTest {
           .getJsonObject(VENDOR_EDI_ORDERS_EXPORT_CONFIG.getValue())
           .getJsonArray(CLAIM_PIECE_IDS.getValue()).size())
         .mapToInt(value -> value).sum();
-      assertThat(claimedPieceIds, equalTo(request.getClaimingPieceIds().size()));
+      assertThat(claimedPieceIds, equalTo(request.getClaimingPieces().size()));
 
       claimingResults.getClaimingPieceResults()
         .forEach(result -> {

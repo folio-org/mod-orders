@@ -1,6 +1,8 @@
 {
-  "claimingPieceIds": [
-    "dcd0ba36-b660-4751-b9fe-c8ac61ff6f99"
+  "claimingPieces": [
+    {
+      "id": "dcd0ba36-b660-4751-b9fe-c8ac61ff6f99"
+    }
   ],
   "claimingInterval": 1,
   "internalNote": "internal",

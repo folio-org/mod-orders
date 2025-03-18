@@ -9,6 +9,7 @@ import org.folio.rest.acq.model.Organization;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.ClaimingCollection;
+import org.folio.rest.jaxrs.model.ClaimingPiece;
 import org.folio.rest.jaxrs.model.ClaimingPieceResult;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -76,10 +77,8 @@ public class PiecesClaimingServiceTest {
 
   @Test
   void testSendClaims_emptyClaimingPieceIds(VertxTestContext testContext) {
-    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of());
+    var claimingCollection = new ClaimingCollection().withClaimingPieces(List.of());
     var requestContext = mock(RequestContext.class);
-
-    when(consortiumConfigurationService.overrideContextToCentralTenantIfNeeded(eq(requestContext))).thenReturn(Future.succeededFuture(requestContext));
 
     var throwable = Assertions.assertThrows(HttpException.class, () -> piecesClaimingService.sendClaims(claimingCollection, requestContext));
     Assertions.assertInstanceOf(HttpException.class, throwable);
@@ -93,10 +92,9 @@ public class PiecesClaimingServiceTest {
   @Test
   void testSendClaims_noConfigEntries(VertxTestContext testContext) {
     var pieceId1 = UUID.randomUUID().toString();
-    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of(pieceId1)).withClaimingInterval(1);
+    var claimingCollection = new ClaimingCollection().withClaimingPieces(List.of(new ClaimingPiece().withId(pieceId1))).withClaimingInterval(1);
     var requestContext = mock(RequestContext.class);
 
-    when(consortiumConfigurationService.overrideContextToCentralTenantIfNeeded(eq(requestContext))).thenReturn(Future.succeededFuture(requestContext));
     when(configurationEntriesCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject()));
 
     piecesClaimingService.sendClaims(claimingCollection, requestContext)
@@ -117,10 +115,9 @@ public class PiecesClaimingServiceTest {
   @Test
   void testSendClaims_noPiecesFound(VertxTestContext testContext) {
     var pieceId1 = UUID.randomUUID().toString();
-    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of(pieceId1)).withClaimingInterval(1);
+    var claimingCollection = new ClaimingCollection().withClaimingPieces(List.of(new ClaimingPiece().withId(pieceId1))).withClaimingInterval(1);
     var requestContext = mock(RequestContext.class);
 
-    when(consortiumConfigurationService.overrideContextToCentralTenantIfNeeded(eq(requestContext))).thenReturn(Future.succeededFuture(requestContext));
     when(configurationEntriesCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("key", "value")));
     when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of()));
 
@@ -141,10 +138,9 @@ public class PiecesClaimingServiceTest {
 
   @Test
   void testSendClaims_pieceStatusNotLate(VertxTestContext testContext) {
-    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1")).withClaimingInterval(1);
+    var claimingCollection = new ClaimingCollection().withClaimingPieces(List.of(new ClaimingPiece().withId("pieceId1"))).withClaimingInterval(1);
     var requestContext = mock(RequestContext.class);
 
-    when(consortiumConfigurationService.overrideContextToCentralTenantIfNeeded(eq(requestContext))).thenReturn(Future.succeededFuture(requestContext));
     when(configurationEntriesCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("CLAIMS_vendorId", createIntegrationDetail())));
     when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of(new Piece().withId("pieceId1").withPoLineId("poLineId1").withReceivingStatus(Piece.ReceivingStatus.RECEIVED))));
     when(purchaseOrderLineService.getOrderLineById(any(), any())).thenReturn(Future.succeededFuture(new PoLine().withPurchaseOrderId("orderId1")));
@@ -173,10 +169,9 @@ public class PiecesClaimingServiceTest {
   void testSendClaims_missingOrganizationIntegrationDetailsForTwoOrganizations(VertxTestContext testContext) {
     var pieceId = UUID.randomUUID().toString();
     var piece = new Piece().withId(pieceId).withPoLineId("poLineId").withReceivingStatus(Piece.ReceivingStatus.LATE);
-    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of(pieceId));
+    var claimingCollection = new ClaimingCollection().withClaimingPieces(List.of(new ClaimingPiece().withId(pieceId)));
     var requestContext = mock(RequestContext.class);
 
-    when(consortiumConfigurationService.overrideContextToCentralTenantIfNeeded(eq(requestContext))).thenReturn(Future.succeededFuture(requestContext));
     when(configurationEntriesCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject()
       .put("CLAIMS_vendorId1", createIntegrationDetail())));
     when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of(piece)));
@@ -210,10 +205,9 @@ public class PiecesClaimingServiceTest {
     var piece1 = new Piece().withId(pieceId1).withPoLineId("poLineId1").withReceivingStatus(Piece.ReceivingStatus.LATE);
     var piece2 = new Piece().withId(pieceId2).withPoLineId("poLineId2").withReceivingStatus(Piece.ReceivingStatus.LATE);
     var piece3 = new Piece().withId(pieceId3).withPoLineId("poLineId3").withReceivingStatus(Piece.ReceivingStatus.LATE);
-    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of(pieceId1, pieceId2, pieceId3));
+    var claimingCollection = new ClaimingCollection().withClaimingPieces(List.of(new ClaimingPiece().withId(pieceId1), new ClaimingPiece().withId(pieceId2), new ClaimingPiece().withId(pieceId3)));
     var requestContext = mock(RequestContext.class);
 
-    when(consortiumConfigurationService.overrideContextToCentralTenantIfNeeded(eq(requestContext))).thenReturn(Future.succeededFuture(requestContext));
     when(configurationEntriesCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject()
       .put("CLAIMS_vendorId1", createIntegrationDetail())));
     when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of(piece1, piece2, piece3)));
@@ -256,7 +250,30 @@ public class PiecesClaimingServiceTest {
 
   @Test
   void testSendClaims_success(VertxTestContext testContext) {
-    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1")).withClaimingInterval(1);
+    var claimingCollection = new ClaimingCollection().withClaimingPieces(List.of(new ClaimingPiece().withId("pieceId1"))).withClaimingInterval(1);
+    var requestContext = mock(RequestContext.class);
+
+    when(configurationEntriesCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("CLAIMS_vendorId", createIntegrationDetail())));
+    when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of(new Piece().withId("pieceId1").withPoLineId("poLineId1").withReceivingStatus(Piece.ReceivingStatus.LATE))));
+    when(purchaseOrderLineService.getOrderLineById(any(), any())).thenReturn(Future.succeededFuture(new PoLine().withPurchaseOrderId("orderId1")));
+    when(purchaseOrderStorageService.getPurchaseOrderById(any(), any())).thenReturn(Future.succeededFuture(new PurchaseOrder().withVendor("vendorId")));
+    when(organizationService.getVendorById(any(), any())).thenReturn(Future.succeededFuture(new Organization().withId("vendorId").withCode("VENDOR").withIsVendor(true)));
+    when(pieceUpdateFlowManager.updatePiecesStatuses(any(), any(), any(), any(), any(), any())).thenReturn(Future.succeededFuture());
+    when(restClient.post(eq(resourcesPath(DATA_EXPORT_SPRING_CREATE_JOB)), any(), any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("status", "CREATED")));
+    when(restClient.postEmptyResponse(any(), any(), any())).thenReturn(Future.succeededFuture());
+
+    piecesClaimingService.sendClaims(claimingCollection, requestContext)
+      .onComplete(testContext.succeeding(result -> testContext.verify(() -> {
+        assertEquals(1, result.getClaimingPieceResults().size());
+        assertEquals("pieceId1", result.getClaimingPieceResults().getFirst().getPieceId());
+        assertEquals(ClaimingPieceResult.Status.SUCCESS, result.getClaimingPieceResults().getFirst().getStatus());
+        testContext.completeNow();
+      })));
+  }
+
+  @Test
+  void testSendClaims_successWithReceivingTenantId(VertxTestContext testContext) {
+    var claimingCollection = new ClaimingCollection().withClaimingPieces(List.of(new ClaimingPiece().withId("pieceId1").withReceivingTenantId("receivingTenantId"))).withClaimingInterval(1);
     var requestContext = mock(RequestContext.class);
 
     when(consortiumConfigurationService.overrideContextToCentralTenantIfNeeded(eq(requestContext))).thenReturn(Future.succeededFuture(requestContext));
@@ -280,10 +297,9 @@ public class PiecesClaimingServiceTest {
 
   @Test
   void testSendClaims_successWithTwoPieces(VertxTestContext testContext) {
-    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1", "pieceId2")).withClaimingInterval(1);
+    var claimingCollection = new ClaimingCollection().withClaimingPieces(List.of(new ClaimingPiece().withId("pieceId1"), new ClaimingPiece().withId("pieceId2"))).withClaimingInterval(1);
     var requestContext = mock(RequestContext.class);
 
-    when(consortiumConfigurationService.overrideContextToCentralTenantIfNeeded(eq(requestContext))).thenReturn(Future.succeededFuture(requestContext));
     when(configurationEntriesCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("CLAIMS_vendorId", createIntegrationDetail())));
     when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of(
       new Piece().withId("pieceId1").withPoLineId("poLineId1").withReceivingStatus(Piece.ReceivingStatus.LATE),
@@ -309,10 +325,10 @@ public class PiecesClaimingServiceTest {
 
   @Test
   void testSendClaims_successWithMultipleOrganizations(VertxTestContext testContext) {
-    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1", "pieceId2", "pieceId3", "pieceId4", "pieceId5")).withClaimingInterval(1);
+    var claimingCollection = new ClaimingCollection().withClaimingPieces(List.of(new ClaimingPiece().withId("pieceId1"), new ClaimingPiece().withId("pieceId2"),
+      new ClaimingPiece().withId("pieceId3"), new ClaimingPiece().withId("pieceId4"), new ClaimingPiece().withId("pieceId5"))).withClaimingInterval(1);
     var requestContext = mock(RequestContext.class);
 
-    when(consortiumConfigurationService.overrideContextToCentralTenantIfNeeded(eq(requestContext))).thenReturn(Future.succeededFuture(requestContext));
     when(configurationEntriesCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject()
       .put("CLAIMS_vendorId1", createIntegrationDetail())
       .put("CLAIMS_vendorId2", createIntegrationDetail())));
@@ -365,10 +381,10 @@ public class PiecesClaimingServiceTest {
 
   @Test
   void testSendClaims_successWithMultipleOrganizationsAndOneIntegrationDetail(VertxTestContext testContext) {
-    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1", "pieceId2", "pieceId3", "pieceId4", "pieceId5")).withClaimingInterval(1);
+    var claimingCollection = new ClaimingCollection().withClaimingPieces(List.of(new ClaimingPiece().withId("pieceId1"), new ClaimingPiece().withId("pieceId2"),
+      new ClaimingPiece().withId("pieceId3"), new ClaimingPiece().withId("pieceId4"), new ClaimingPiece().withId("pieceId5"))).withClaimingInterval(1);
     var requestContext = mock(RequestContext.class);
 
-    when(consortiumConfigurationService.overrideContextToCentralTenantIfNeeded(eq(requestContext))).thenReturn(Future.succeededFuture(requestContext));
     when(configurationEntriesCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject()
       .put("CLAIMS_vendorId1", createIntegrationDetail())
       .put("CLAIMS_vendorId2", createIntegrationDetail())

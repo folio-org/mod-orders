@@ -5,6 +5,7 @@ import io.vertx.core.json.JsonObject;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import one.util.streamex.StreamEx;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.folio.HttpStatus;
 import org.folio.rest.acq.model.Organization;
@@ -13,6 +14,7 @@ import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.ClaimingCollection;
+import org.folio.rest.jaxrs.model.ClaimingPiece;
 import org.folio.rest.jaxrs.model.ClaimingPieceResult;
 import org.folio.rest.jaxrs.model.ClaimingResults;
 import org.folio.rest.jaxrs.model.Error;
@@ -83,18 +85,28 @@ public class PiecesClaimingService {
    * @return Future of an array of claimingResults
    */
   public Future<ClaimingResults> sendClaims(ClaimingCollection claimingCollection, RequestContext requestContext) {
-    if (CollectionUtils.isEmpty(claimingCollection.getClaimingPieceIds())) {
+    if (CollectionUtils.isEmpty(claimingCollection.getClaimingPieces())) {
       log.info("sendClaims:: Cannot send claims piece ids are empty - No claims are sent");
       throwHttpException(CANNOT_SEND_CLAIMS_PIECE_IDS_ARE_EMPTY, claimingCollection, HttpStatus.HTTP_BAD_REQUEST);
     }
-    return consortiumConfigurationService.overrideContextToCentralTenantIfNeeded(requestContext)
-      .compose(overrideContext -> configurationEntriesCache.loadConfiguration(DATA_EXPORT_SPRING_CONFIG_MODULE_NAME, overrideContext)
+    var hasReceivingTenantIds = claimingCollection.getClaimingPieces().stream()
+      .anyMatch(claimingPieceId -> StringUtils.isNotEmpty(claimingPieceId.getReceivingTenantId()));
+    if (Boolean.TRUE.equals(hasReceivingTenantIds)) {
+      log.info("sendClaims:: Found receiving tenant ids in claiming collection, trying to override request context");
+      return consortiumConfigurationService.overrideContextToCentralTenantIfNeeded(requestContext)
+        .compose(overrideContext -> sendClaimsWithChangedContext(claimingCollection, overrideContext));
+    }
+    return sendClaimsWithChangedContext(claimingCollection, requestContext);
+  }
+
+  private Future<ClaimingResults> sendClaimsWithChangedContext(ClaimingCollection claimingCollection, RequestContext overrideContext) {
+    return configurationEntriesCache.loadConfiguration(DATA_EXPORT_SPRING_CONFIG_MODULE_NAME, overrideContext)
       .compose(config -> {
         if (CollectionUtils.isEmpty(config.getMap())) {
           log.info("sendClaims:: Cannot retrieve config entries - No claims are sent");
           throwHttpException(CANNOT_RETRIEVE_CONFIG_ENTRIES, claimingCollection, HttpStatus.HTTP_BAD_REQUEST);
         }
-        var pieceIds = claimingCollection.getClaimingPieceIds().stream().toList();
+        var pieceIds = claimingCollection.getClaimingPieces().stream().map(ClaimingPiece::getId).toList();
         log.info("sendClaims:: Received pieces to be claimed, pieceIds: {}", pieceIds);
         return groupPieceIdsByVendor(pieceIds, overrideContext)
           .compose(pieceIdsByVendors -> {
@@ -112,7 +124,7 @@ public class PiecesClaimingService {
             return createJobsByVendor(claimingCollection, config, pieceIdsByVendors, overrideContext);
           });
       })
-      .onFailure(t -> log.error("sendClaims:: Failed send claims: {}", JsonObject.mapFrom(claimingCollection).encodePrettily(), t)));
+      .onFailure(t -> log.error("sendClaims:: Failed send claims: {}", JsonObject.mapFrom(claimingCollection).encodePrettily(), t));
   }
 
   private Future<Map<Organization, List<String>>> groupPieceIdsByVendor(List<String> pieceIds, RequestContext requestContext) {
@@ -269,8 +281,8 @@ public class PiecesClaimingService {
   }
 
   private List<Parameter> createPieceIdParameters(ClaimingCollection claimingCollection) {
-    return claimingCollection.getClaimingPieceIds().stream()
-      .map(pieceId -> new Parameter().withKey(PIECE_ID_PARAMETER).withValue(pieceId))
+    return claimingCollection.getClaimingPieces().stream()
+      .map(ClaimingPiece::getId).map(pieceId -> new Parameter().withKey(PIECE_ID_PARAMETER).withValue(pieceId))
       .collect(Collectors.toCollection(ArrayList::new));
   }
 }
