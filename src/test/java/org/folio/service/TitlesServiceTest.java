@@ -41,7 +41,7 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class TitlesServiceTest {
+public class TitlesServiceTest {
 
   private static final String TITLE_ID = "test-title-id";
   private static final String POLINE_ID = "test-poline-id";

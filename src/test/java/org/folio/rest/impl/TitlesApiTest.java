@@ -407,10 +407,6 @@ public class TitlesApiTest {
       return new AcquisitionsUnitsService(restClient);
     }
 
-    @Bean ConfigurationEntriesCache configurationEntriesCache() {
-      return new ConfigurationEntriesCache(new ConfigurationEntriesService(restClient()));
-    }
-
     @Bean
     public InventoryItemManager inventoryItemManager() {
       return mock(InventoryItemManager.class);
