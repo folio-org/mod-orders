@@ -45,6 +45,7 @@ import org.folio.service.pieces.PieceStorageService;
 public class TitlesService {
   private static final String ENDPOINT = resourcesPath(TITLES);
   private static final String BY_ID_ENDPOINT = ENDPOINT + "/{id}";
+
   private final RestClient restClient;
   private final ProtectionService protectionService;
   private final TitleInstanceService titleInstanceService;
@@ -54,7 +55,8 @@ public class TitlesService {
   private final PieceStorageService pieceStorageService;
 
   public TitlesService(RestClient restClient, ProtectionService protectionService, TitleInstanceService titleInstanceService,
-                       InventoryHoldingManager inventoryHoldingManager, InventoryItemManager inventoryItemManager, PurchaseOrderLineService purchaseOrderLineService, PieceStorageService pieceStorageService) {
+                       InventoryHoldingManager inventoryHoldingManager, InventoryItemManager inventoryItemManager,
+                       PurchaseOrderLineService purchaseOrderLineService, PieceStorageService pieceStorageService) {
     this.restClient = restClient;
     this.protectionService = protectionService;
     this.titleInstanceService = titleInstanceService;
@@ -140,7 +142,7 @@ public class TitlesService {
       .map(TitleCollection::getTitles);
   }
 
-  public Future<List<Title>> getTitleByPoLineId(String poLineId, RequestContext requestContext) {
+  public Future<List<Title>> getTitlesByPoLineId(String poLineId, RequestContext requestContext) {
     return getTitlesByQuery("poLineId==" + poLineId, requestContext);
   }
 
@@ -185,7 +187,7 @@ public class TitlesService {
   }
 
   private Future<List<String>> processHoldings(PoLine poLine, String deleteHolding, RequestContext requestContext) {
-    return getTitleByPoLineId(poLine.getId(), requestContext)
+    return getTitlesByPoLineId(poLine.getId(), requestContext)
       .compose(titles -> {
         if (titles.size() > 1) {
           log.info("processHoldings:: Holdings in poLine '{}' connected to multiple '{}' titles", titles.size(), poLine.getId());

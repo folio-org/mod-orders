@@ -37,6 +37,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -94,6 +95,8 @@ public class TitlesApiTest {
 
   @Autowired
   private TitleInstanceService titleInstanceService;
+  @Autowired
+  private TitlesService titlesService;
   private AutoCloseable mockitoMocks;
 
   @BeforeAll
@@ -121,6 +124,7 @@ public class TitlesApiTest {
   void initMocks(){
     mockitoMocks = MockitoAnnotations.openMocks(this);
     autowireDependencies(this);
+    titlesService = spy(titlesService);
   }
 
   @Test
@@ -360,6 +364,17 @@ public class TitlesApiTest {
     verifyDeleteResponse(String.format(TITLES_ID_PATH, ID_FOR_INTERNAL_SERVER_ERROR), APPLICATION_JSON, 500);
   }
 
+  @Test
+  void testUnlinkTitleFromPackage() {
+    logger.info("=== Test unlink title from package by id ===");
+
+    String titleId = UUID.randomUUID().toString();
+    String deleteHolding="true";
+
+    doReturn(succeededFuture(Collections.emptyList())).when(titlesService).unlinkTitleFromPackage(any(), any(), any());
+    verifyDeleteResponse(String.format(TITLES_ENDPOINT + "/unlink/%s?deleteHolding=%s", titleId, deleteHolding), APPLICATION_JSON, 200);
+  }
+
   static class ContextConfiguration {
 
     @Bean
@@ -370,6 +385,25 @@ public class TitlesApiTest {
     @Bean
     AcquisitionsUnitsService acquisitionsUnitsService(RestClient restClient) {
       return new AcquisitionsUnitsService(restClient);
+    }
+
+    @Bean
+    public InventoryItemManager inventoryItemManager() {
+      return mock(InventoryItemManager.class);
+    }
+
+    @Bean
+    public InventoryHoldingManager inventoryHoldingManager() {
+      return mock(InventoryHoldingManager.class);
+    }
+
+    @Bean PurchaseOrderLineService purchaseOrderLineService() {
+      return mock(PurchaseOrderLineService.class);
+    }
+
+    @Bean
+    public PieceStorageService pieceStorageService() {
+      return mock(PieceStorageService.class);
     }
 
     @Bean
