@@ -42,7 +42,7 @@ public class TitlesApi extends BaseApi implements OrdersTitles {
   @Override
   @Validate
   public void getOrdersTitles(String query, String totalRecords, int offset, int limit, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+                              Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     titlesService.getTitles(limit, offset, query, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(titles -> asyncResultHandler.handle(succeededFuture(buildOkResponse(titles))))
@@ -52,7 +52,7 @@ public class TitlesApi extends BaseApi implements OrdersTitles {
   @Override
   @Validate
   public void postOrdersTitles(Title entity, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+                               Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     List<Error> errors = titleValidationService.validateTitle(entity);
     if (CollectionUtils.isNotEmpty(errors)) {
       errors.forEach(this::addProcessingError);
@@ -68,7 +68,7 @@ public class TitlesApi extends BaseApi implements OrdersTitles {
   @Override
   @Validate
   public void getOrdersTitlesById(String id, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+                                  Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     titlesService.getTitleById(id, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(title -> asyncResultHandler.handle(succeededFuture(buildOkResponse(title))))
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
@@ -77,7 +77,7 @@ public class TitlesApi extends BaseApi implements OrdersTitles {
   @Override
   @Validate
   public void deleteOrdersTitlesById(String id, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+                                     Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     titlesService.deleteTitle(id, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
@@ -86,7 +86,7 @@ public class TitlesApi extends BaseApi implements OrdersTitles {
   @Override
   @Validate
   public void putOrdersTitlesById(String id, Title entity, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+                                  Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     // Set id if this is available only in path
     if (isEmpty(entity.getId())) {
       entity.setId(id);
@@ -107,4 +107,16 @@ public class TitlesApi extends BaseApi implements OrdersTitles {
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
+  @Override
+  public void deleteOrdersTitlesUnlinkById(String id, String deleteHolding, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    titlesService.unlinkTitleFromPackage(id, deleteHolding, new RequestContext(vertxContext, okapiHeaders))
+      .onSuccess(response -> {
+        if (response == null || response.isEmpty()) {
+          asyncResultHandler.handle(succeededFuture(buildNoContentResponse()));
+        } else {
+          asyncResultHandler.handle(succeededFuture(buildOkResponse(response)));
+        }
+      })
+      .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
+  }
 }

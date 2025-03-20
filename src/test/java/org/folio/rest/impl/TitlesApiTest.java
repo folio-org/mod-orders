@@ -24,6 +24,7 @@ import static org.folio.TestUtils.getMinimalContentCompositePoLine;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
+import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.rest.core.exceptions.ErrorCodes.*;
 import static org.folio.rest.impl.MockServer.TITLES_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.addMockEntry;
@@ -60,6 +61,14 @@ import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.TitleCollection;
 import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.ProtectionService;
+import org.folio.service.caches.InventoryCache;
+import org.folio.service.configuration.ConfigurationEntriesService;
+import org.folio.service.consortium.ConsortiumConfigurationService;
+import org.folio.service.inventory.InventoryHoldingManager;
+import org.folio.service.inventory.InventoryItemManager;
+import org.folio.service.inventory.InventoryService;
+import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.titles.TitleInstanceService;
 import org.folio.service.titles.TitleValidationService;
 import org.folio.service.titles.TitlesService;
@@ -78,6 +87,7 @@ public class TitlesApiTest {
 
   public static final String TITLES_ENDPOINT = "/orders/titles";
   private static final String TITLES_ID_PATH = TITLES_ENDPOINT + "/%s";
+  private static final String TITLES_UNLINK_ENDPOINT = TITLES_ENDPOINT + "/unlink/%s";
   private static final String VALID_UUID = "c3e26c0e-d6a6-46fb-9309-d494cd0c82de";
   private static final String CONSISTENT_RECEIVED_STATUS_TITLE_UUID = "7d0aa803-a659-49f0-8a95-968f277c87d7";
   private static final String ACQ_UNIT_ID = "f6d2cc9d-82ca-437c-a4e6-e5c30323df00";
@@ -356,6 +366,33 @@ public class TitlesApiTest {
     verifyDeleteResponse(String.format(TITLES_ID_PATH, ID_FOR_INTERNAL_SERVER_ERROR), APPLICATION_JSON, 500);
   }
 
+  @Test
+  void testUnlinkTitleFromPackage() {
+    logger.info("=== Test unlink title from package by id ===");
+
+    String titleId = UUID.randomUUID().toString();
+    String poLineId = UUID.randomUUID().toString();
+    String orderId = UUID.randomUUID().toString();
+    String deleteHolding = "false";
+
+    // Mock title data
+    var title = titleJsonReqData.mapTo(Title.class)
+      .withId(titleId)
+      .withPoLineId(poLineId);
+
+    // Mock PO line data
+    var poLine = getMinimalContentCompositePoLine()
+      .withId(poLineId)
+      .withPurchaseOrderId(orderId)
+      .withIsPackage(true);
+
+    // Add mock entries
+    addMockEntry(TITLES, JsonObject.mapFrom(title));
+    addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
+
+    verifyDeleteResponse(String.format(TITLES_UNLINK_ENDPOINT + "?deleteHolding=%s", titleId, deleteHolding), "", 204);
+  }
+
   static class ContextConfiguration {
 
     @Bean
@@ -369,8 +406,46 @@ public class TitlesApiTest {
     }
 
     @Bean
-    TitlesService titlesService(RestClient restClient, ProtectionService protectionService, TitleInstanceService titleInstanceService) {
-      return new TitlesService(restClient, protectionService, titleInstanceService);
+    public InventoryItemManager inventoryItemManager() {
+      return mock(InventoryItemManager.class);
+    }
+
+    @Bean
+    public InventoryHoldingManager inventoryHoldingManager() {
+      return mock(InventoryHoldingManager.class);
+    }
+
+    @Bean
+    public InventoryService inventoryService() {
+      return new InventoryService(restClient());
+    }
+
+    @Bean
+    public InventoryCache inventoryCache() {
+      return new InventoryCache(inventoryService());
+    }
+
+    @Bean PurchaseOrderLineService purchaseOrderLineService() {
+      return new PurchaseOrderLineService(restClient(), inventoryCache(), inventoryHoldingManager());
+    }
+
+    @Bean
+    public  ConsortiumConfigurationService consortiumConfigurationService() {
+      return mock(ConsortiumConfigurationService.class);
+    }
+
+    @Bean
+    public PieceStorageService pieceStorageService() {
+      return mock(PieceStorageService.class);
+    }
+
+    @Bean
+    TitlesService titlesService(RestClient restClient, ProtectionService protectionService, TitleInstanceService titleInstanceService,
+                                InventoryHoldingManager inventoryHoldingManager, InventoryItemManager inventoryItemManager,
+                                PurchaseOrderLineService purchaseOrderLineService, PieceStorageService pieceStorageService,
+                                ConsortiumConfigurationService consortiumConfigurationService) {
+      return new TitlesService(restClient, protectionService, titleInstanceService, inventoryHoldingManager, inventoryItemManager,
+        purchaseOrderLineService, pieceStorageService, consortiumConfigurationService);
     }
 
     @Bean

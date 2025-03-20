@@ -50,6 +50,7 @@ import org.folio.service.PrefixServiceTest;
 import org.folio.service.ReasonForClosureServiceTest;
 import org.folio.service.SuffixServiceTest;
 import org.folio.service.TagServiceTest;
+import org.folio.service.TitlesServiceTest;
 import org.folio.service.UserServiceTest;
 import org.folio.service.consortium.ConsortiumConfigurationServiceTest;
 import org.folio.service.consortium.SharingInstanceServiceTest;
@@ -569,5 +570,9 @@ public class ApiTestSuite {
 
   @Nested
   class WrapperPiecesAPITestNested extends WrapperPiecesAPITest {
+  }
+
+  @Nested
+  class TitlesServiceTestNested extends TitlesServiceTest {
   }
 }
