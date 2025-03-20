@@ -23,7 +23,6 @@ import static org.folio.TestConstants.X_OKAPI_USER_ID_WITH_ACQ_UNITS;
 import static org.folio.TestUtils.getMinimalContentCompositePoLine;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
-import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.rest.core.exceptions.ErrorCodes.*;
@@ -39,7 +38,6 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -63,9 +61,9 @@ import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.TitleCollection;
 import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.ProtectionService;
-import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.caches.InventoryCache;
 import org.folio.service.configuration.ConfigurationEntriesService;
+import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.inventory.InventoryService;
@@ -432,6 +430,11 @@ public class TitlesApiTest {
     }
 
     @Bean
+    public ConfigurationEntriesService configurationEntriesService() {
+      return new ConfigurationEntriesService(restClient());
+    }
+
+    @Bean
     public PieceStorageService pieceStorageService() {
       return mock(PieceStorageService.class);
     }
@@ -439,9 +442,10 @@ public class TitlesApiTest {
     @Bean
     TitlesService titlesService(RestClient restClient, ProtectionService protectionService, TitleInstanceService titleInstanceService,
                                 InventoryHoldingManager inventoryHoldingManager, InventoryItemManager inventoryItemManager,
-                                PurchaseOrderLineService purchaseOrderLineService, PieceStorageService pieceStorageService) {
+                                PurchaseOrderLineService purchaseOrderLineService, PieceStorageService pieceStorageService,
+                                ConsortiumConfigurationService consortiumConfigurationService) {
       return new TitlesService(restClient, protectionService, titleInstanceService, inventoryHoldingManager, inventoryItemManager,
-        purchaseOrderLineService, pieceStorageService);
+        purchaseOrderLineService, pieceStorageService, consortiumConfigurationService);
     }
 
     @Bean

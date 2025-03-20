@@ -460,9 +460,10 @@ public class ApplicationConfig {
   @Bean
   TitlesService titlesService(RestClient restClient, ProtectionService protectionService, TitleInstanceService titleInstanceService,
                               InventoryItemManager inventoryItemManager, InventoryHoldingManager inventoryHoldingManager,
-                              PieceStorageService pieceStorageService, PurchaseOrderLineService purchaseOrderLineService) {
+                              PieceStorageService pieceStorageService, PurchaseOrderLineService purchaseOrderLineService,
+                              ConsortiumConfigurationService consortiumConfigurationService) {
     return new TitlesService(restClient, protectionService, titleInstanceService, inventoryHoldingManager, inventoryItemManager,
-      purchaseOrderLineService, pieceStorageService);
+      purchaseOrderLineService, pieceStorageService, consortiumConfigurationService);
   }
 
   @Bean
