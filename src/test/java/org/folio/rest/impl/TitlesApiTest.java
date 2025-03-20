@@ -430,8 +430,8 @@ public class TitlesApiTest {
     }
 
     @Bean
-    public ConfigurationEntriesService configurationEntriesService() {
-      return new ConfigurationEntriesService(restClient());
+    public  ConsortiumConfigurationService consortiumConfigurationService() {
+      return mock(ConsortiumConfigurationService.class);
     }
 
     @Bean
