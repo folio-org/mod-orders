@@ -43,6 +43,7 @@ import static org.folio.TestUtils.getMinimalOrder;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.models.claiming.IntegrationDetailField.CLAIM_PIECE_IDS;
 import static org.folio.models.claiming.IntegrationDetailField.EXPORT_TYPE_SPECIFIC_PARAMETERS;
+import static org.folio.models.claiming.IntegrationDetailField.JOB_ID;
 import static org.folio.models.claiming.IntegrationDetailField.VENDOR_EDI_ORDERS_EXPORT_CONFIG;
 import static org.folio.orders.utils.ResourcePathResolver.ORGANIZATION_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
@@ -217,6 +218,11 @@ public class PiecesClaimingApiTest {
           .getJsonArray(CLAIM_PIECE_IDS.getValue()).size())
         .mapToInt(value -> value).sum();
       assertThat(claimedPieceIds, equalTo(request.getClaimingPieceIds().size()));
+
+      var jobId = jobCreations.stream().findFirst()
+        .map(entry -> entry.getString(JOB_ID.getValue()))
+        .orElse(null);
+      assertThat(jobId, is(notNullValue()));
 
       claimingResults.getClaimingPieceResults()
         .forEach(result -> {
