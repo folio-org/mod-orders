@@ -28,7 +28,6 @@ import java.util.stream.Collectors;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.jaxrs.model.Alert;
@@ -362,12 +361,5 @@ public final class PoLineCommonUtil {
 
   public static boolean isCancelledOrOngoingStatus(PoLine poLine) {
     return poLine.getReceiptStatus() == PoLine.ReceiptStatus.CANCELLED || poLine.getReceiptStatus() == ONGOING;
-  }
-
-  public static List<String> getHoldings(PoLine poLine) {
-    return poLine.getLocations().stream()
-      .map(Location::getHoldingId)
-      .filter(StringUtils::isNotEmpty)
-      .toList();
   }
 }
