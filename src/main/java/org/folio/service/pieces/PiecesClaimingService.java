@@ -33,12 +33,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static org.folio.models.claiming.IntegrationDetailField.CLAIM_PIECE_IDS;
 import static org.folio.models.claiming.IntegrationDetailField.EXPORT_TYPE_SPECIFIC_PARAMETERS;
+import static org.folio.models.claiming.IntegrationDetailField.JOB_ID;
 import static org.folio.models.claiming.IntegrationDetailField.VENDOR_EDI_ORDERS_EXPORT_CONFIG;
 import static org.folio.orders.utils.HelperUtils.DATA_EXPORT_SPRING_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
@@ -225,7 +227,9 @@ public class PiecesClaimingService {
   private Future<Void> createJob(String configKey, Object configValue, List<String> pieceIds, RequestContext requestContext) {
     log.info("createJob:: Creating a job, job key: {}, pieces: {}", configKey, pieceIds.size());
     var integrationDetail = new JsonObject(String.valueOf(configValue));
-    integrationDetail.getJsonObject(EXPORT_TYPE_SPECIFIC_PARAMETERS.getValue())
+    var jobId = UUID.randomUUID().toString();
+    integrationDetail.put(JOB_ID.getValue(), jobId)
+      .getJsonObject(EXPORT_TYPE_SPECIFIC_PARAMETERS.getValue())
       .getJsonObject(VENDOR_EDI_ORDERS_EXPORT_CONFIG.getValue())
       .put(CLAIM_PIECE_IDS.getValue(), pieceIds);
     return restClient.post(resourcesPath(DATA_EXPORT_SPRING_CREATE_JOB), integrationDetail, Object.class, requestContext)
