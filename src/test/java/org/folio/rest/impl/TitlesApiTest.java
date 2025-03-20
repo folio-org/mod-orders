@@ -390,7 +390,7 @@ public class TitlesApiTest {
     addMockEntry(TITLES, JsonObject.mapFrom(title));
     addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
 
-    verifyDeleteResponse(String.format(TITLES_UNLINK_ENDPOINT + "?deleteHolding=%s", titleId, deleteHolding), TEXT_PLAIN, 204);
+    verifyDeleteResponse(String.format(TITLES_UNLINK_ENDPOINT + "?deleteHolding=%s", titleId, deleteHolding), "", 204);
   }
 
   static class ContextConfiguration {
