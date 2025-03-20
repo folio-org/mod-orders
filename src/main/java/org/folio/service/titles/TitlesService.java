@@ -314,7 +314,7 @@ public class TitlesService {
 
     var deleteHoldingFutures = holdingIds.stream()
       .map(holdingId -> inventoryHoldingManager.deleteHoldingById(holdingId, true, tenantContext))
-      .collect(Collectors.toList());
+      .toList();
 
     return collectResultsOnSuccess(deleteHoldingFutures)
       .onSuccess(v -> log.info("deleteHoldings:: Holdings '{}' were deleted successfully", holdingIds))
