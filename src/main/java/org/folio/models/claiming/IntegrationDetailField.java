@@ -6,6 +6,7 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum IntegrationDetailField {
+  JOB_ID("id"),
   TENANT("tenant"),
   EXPORT_TYPE_SPECIFIC_PARAMETERS("exportTypeSpecificParameters"),
   VENDOR_EDI_ORDERS_EXPORT_CONFIG("vendorEdiOrdersExportConfig"),
