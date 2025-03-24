@@ -377,7 +377,7 @@ public class TitlesApiTest {
     String titleId = UUID.randomUUID().toString();
     String poLineId = UUID.randomUUID().toString();
     String orderId = UUID.randomUUID().toString();
-    String deleteHolding = "false";
+    String deleteHoldings = "false";
 
     // Mock title data
     var title = titleJsonReqData.mapTo(Title.class)
@@ -397,7 +397,7 @@ public class TitlesApiTest {
     when(consortiumConfigurationService.isCentralOrderingEnabled(any())).thenReturn(succeededFuture(false));
     when(pieceStorageService.getPiecesByLineIdAndTitleId(any(), any(), any())).thenReturn(succeededFuture(List.of()));
 
-    verifyDeleteResponse(String.format(TITLES_UNLINK_ENDPOINT + "?deleteHolding=%s", titleId, deleteHolding), "", 204);
+    verifyDeleteResponse(String.format(TITLES_UNLINK_ENDPOINT + "?deleteHoldings=%s", titleId, deleteHoldings), "", 204);
   }
 
   static class ContextConfiguration {

@@ -187,13 +187,13 @@ public class TitlesService {
    * If the holdings do not have references, it asks for confirmation to delete related pieces, items, and holdings.
    *
    * @param titleId        the ID of the title to unlink
-   * @param deleteHolding  flag indicating whether to delete the holding if it has no other references
+   * @param deleteHoldings  flag indicating whether to delete the holding if it has no other references
    * @param requestContext the request context
    * @return a Future representing the result of the unlinking operation
    */
-  public Future<List<String>> unlinkTitleFromPackage(String titleId, String deleteHolding,
+  public Future<List<String>> unlinkTitleFromPackage(String titleId, String deleteHoldings,
                                                      RequestContext requestContext) {
-    log.debug("Trying to unlink title with id: {} and deleteHolding: {}", titleId, deleteHolding);
+    log.debug("Trying to unlink title with id: {} and deleteHoldings: {}", titleId, deleteHoldings);
 
     return getTitleById(titleId, requestContext)
       .map(TitleHolder::new)
@@ -203,30 +203,30 @@ public class TitlesService {
         .map(holder::withCentralEnabled))
       .compose(holder -> getHoldingsToDeleteWithTenants(holder, requestContext)
         .map(holder::withHoldingIdsToDeleteByTenant))
-      .compose(holder -> processHoldingItemPieces(holder, deleteHolding, requestContext)
+      .compose(holder -> processHoldingItemPieces(holder, deleteHoldings, requestContext)
         .map(v -> holder))
       .compose(holder -> unlinkTitle(holder.getTitle(), requestContext));
   }
 
-  private Future<Void> processHoldingItemPieces(TitleHolder holder, String deleteHolding, RequestContext requestContext) {
+  private Future<Void> processHoldingItemPieces(TitleHolder holder, String deleteHoldings, RequestContext requestContext) {
     List<String> holdingIdsToDelete = holder.getHoldingIdsToDelete();
 
     if (CollectionUtils.isEmpty(holdingIdsToDelete)) {
       return Future.succeededFuture();
     }
 
-    if (StringUtils.isEmpty(deleteHolding)) {
+    if (StringUtils.isEmpty(deleteHoldings)) {
       log.info("processHoldings:: Holdings in poLine '{}' will not be deleted", holder.getPoLine().getId());
       var param = new Parameter().withKey("holdingIds").withValue(holdingIdsToDelete.toString());
       var error = EXISTING_HOLDINGS_FOR_DELETE_CONFIRMATION.toError().withParameters(List.of(param));
       throw new HttpException(BAD_REQUEST, error);
     }
 
-    if (!"true".equalsIgnoreCase(deleteHolding) && !"false".equalsIgnoreCase(deleteHolding)) {
+    if (!"true".equalsIgnoreCase(deleteHoldings) && !"false".equalsIgnoreCase(deleteHoldings)) {
       throw new IllegalArgumentException("deleteHolding must be either 'true' or 'false'");
     }
 
-    return Boolean.parseBoolean(deleteHolding)
+    return Boolean.parseBoolean(deleteHoldings)
       ? deleteHoldingItemPieces(holder, requestContext)
       : Future.succeededFuture();
   }
