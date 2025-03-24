@@ -1,5 +1,13 @@
 ## 13.1.0 - Unreleased
 
+## 13.0.1 - Released (Sunflower R1 2025 Bug Fix)
+The primary focus of this release was to fix an issue with the claiming job erasing the old ones in the "Export manager".
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v13.0.0...v13.0.1)
+
+### Bug Fixes
+* [MODORDERS-1264](https://issues.folio.org/browse/MODORDERS-1264) - New claiming job erases the old ones in "Export manager"
+
 ## 13.0.0 - Released (Sunflower R1 2025)
 The primary focus of this release was to enhance multi-tenant functionality, improve piece management, and implement various inventory and order processing features.
 
