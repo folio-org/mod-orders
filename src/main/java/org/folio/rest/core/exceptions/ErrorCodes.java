@@ -1,7 +1,9 @@
 package org.folio.rest.core.exceptions;
 
+import lombok.Getter;
 import org.folio.rest.jaxrs.model.Error;
 
+@Getter
 public enum ErrorCodes {
   GENERIC_ERROR_CODE("genericError", "Generic error"),
   PO_NUMBER_ALREADY_EXISTS("poNumberNotUnique", "PO Number already exists"),
@@ -151,14 +153,6 @@ public enum ErrorCodes {
   ErrorCodes(String code, String description) {
     this.code = code;
     this.description = description;
-  }
-
-  public String getDescription() {
-    return description;
-  }
-
-  public String getCode() {
-    return code;
   }
 
   @Override

@@ -1,5 +1,6 @@
 package org.folio.service;
 
+import static org.folio.rest.core.exceptions.ErrorCodes.EXISTING_HOLDINGS_FOR_DELETE_CONFIRMATION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -16,13 +17,13 @@ import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.UUID;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import org.folio.rest.core.RestClient;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -98,19 +99,19 @@ public class TitlesServiceTest {
   }
 
   @Test
-  void positive_testUnlinkTitleFromPackage_unlinkTitleWhenNoHoldings() {
-    // Setup
+  void positive_testUnlinkTitleFromPackage_unlinkTitleWhenNoHoldingsToDelete() {
+
     doReturn(Future.succeededFuture(title)).when(titlesService).getTitleById(eq(TITLE_ID), any(RequestContext.class));
     when(purchaseOrderLineService.getOrderLineById(eq(POLINE_ID), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture(poLine));
     when(pieceStorageService.getPiecesByLineIdAndTitleId(eq(POLINE_ID), eq(TITLE_ID), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture(Collections.emptyList()));
     doReturn(Future.succeededFuture()).when(titlesService).deleteTitle(eq(TITLE_ID), any(RequestContext.class));
+    when(consortiumConfigurationService.isCentralOrderingEnabled(any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(true));
 
-    // Execute
-    Future<List<String>> result = titlesService.unlinkTitleFromPackage(TITLE_ID, null, requestContext);
+    var result = titlesService.unlinkTitleFromPackage(TITLE_ID, null, requestContext);
 
-    // Verify
     result.onComplete(ar -> {
       assertTrue(ar.succeeded());
       verify(titlesService).deleteTitle(eq(TITLE_ID), any(RequestContext.class));
@@ -121,55 +122,37 @@ public class TitlesServiceTest {
   }
 
   @Test
-  void positive_testUnlinkTitleFromPackage_returnHoldingsWhenMultipleTitlesExist() {
-    // Setup
-    List<String> holdingIds = Arrays.asList(HOLDING_ID_1, HOLDING_ID_2);
-    List<Piece> pieces = Arrays.asList(
+  void positive_testUnlinkTitleFromPackage_throwErrorWhenDeletableHoldingsExistAndWithoutParamUsage() {
+    var deletableHoldings = List.of(HOLDING_ID_1);
+    var pieces = Arrays.asList(
       new Piece().withId(PIECE_ID_1).withHoldingId(HOLDING_ID_1).withReceivingTenantId(TENANT_ID).withTitleId(TITLE_ID),
       new Piece().withHoldingId(HOLDING_ID_2).withReceivingTenantId(TENANT_ID).withTitleId(TITLE_ID)
     );
-    Map<String, List<String>> holdingsByTenant = new HashMap<>();
-    holdingsByTenant.put(TENANT_ID, holdingIds);
+    var item1 = new JsonObject().put("id", ITEM_ID_1).put("purchaseOrderLineIdentifier", POLINE_ID);
+    var item2 = new JsonObject().put("id", UUID.randomUUID().toString()).put("purchaseOrderLineIdentifier", UUID.randomUUID().toString());
 
     doReturn(Future.succeededFuture(title)).when(titlesService).getTitleById(eq(TITLE_ID), any(RequestContext.class));
     when(purchaseOrderLineService.getOrderLineById(eq(POLINE_ID), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture(poLine));
     when(pieceStorageService.getPiecesByLineIdAndTitleId(eq(POLINE_ID), eq(TITLE_ID), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture(pieces));
+    when(consortiumConfigurationService.isCentralOrderingEnabled(any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(true));
+    when(inventoryItemManager.getItemsByHoldingId(eq(HOLDING_ID_1), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(List.of(item1)));
+    when(inventoryItemManager.getItemsByHoldingId(eq(HOLDING_ID_2), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(List.of(item2)));
 
-    // Execute
-    Future<List<String>> result = titlesService.unlinkTitleFromPackage(TITLE_ID, null, requestContext);
+    var result = titlesService.unlinkTitleFromPackage(TITLE_ID, null, requestContext);
 
-    // Verify
     result.onComplete(ar -> {
-      assertTrue(ar.succeeded());
+      assertTrue(ar.failed());
+
+      var error = ((HttpException) ar.cause()).getError();
+      assertEquals(EXISTING_HOLDINGS_FOR_DELETE_CONFIRMATION.getCode(), error.getCode());
+      assertEquals(deletableHoldings.toString(), error.getParameters().getFirst().getValue());
+
       verify(titlesService, never()).deleteTitle(anyString(), any(RequestContext.class));
-      assertEquals(holdingIds, ar.result());
-    });
-  }
-
-  @Test
-  void positive_testUnlinkTitleFromPackage_returnOnlyDeletableHoldings() {
-    // Setup
-    List<Piece> pieces = Arrays.asList(
-      new Piece().withId(PIECE_ID_1).withHoldingId(HOLDING_ID_1).withReceivingTenantId(TENANT_ID).withTitleId(TITLE_ID),
-      new Piece().withHoldingId(HOLDING_ID_2).withReceivingTenantId(TENANT_ID).withTitleId(TITLE_ID)
-    );
-
-    doReturn(Future.succeededFuture(title)).when(titlesService).getTitleById(eq(TITLE_ID), any(RequestContext.class));
-    when(purchaseOrderLineService.getOrderLineById(eq(POLINE_ID), any(RequestContext.class)))
-      .thenReturn(Future.succeededFuture(poLine));
-    when(pieceStorageService.getPiecesByLineIdAndTitleId(eq(POLINE_ID), eq(TITLE_ID), any(RequestContext.class)))
-      .thenReturn(Future.succeededFuture(pieces));
-
-    // Execute
-    Future<List<String>> result = titlesService.unlinkTitleFromPackage(TITLE_ID, null, requestContext);
-
-    // Verify
-    result.onComplete(ar -> {
-      assertTrue(ar.succeeded());
-      verify(titlesService, never()).deleteTitle(anyString(), any(RequestContext.class));
-      assertEquals(List.of(HOLDING_ID_1, HOLDING_ID_2), ar.result());
     });
   }
 
@@ -178,19 +161,15 @@ public class TitlesServiceTest {
     List<Piece> pieces = Collections.singletonList(
       new Piece().withId(PIECE_ID_1).withHoldingId(HOLDING_ID_1).withReceivingTenantId(TENANT_ID).withTitleId(TITLE_ID)
     );
-    JsonObject item = new JsonObject().put("id", ITEM_ID_1);
-    List<JsonObject> items = Collections.singletonList(item);
-    Map<String, List<String>> holdingsByTenant = new HashMap<>();
-    holdingsByTenant.put(TENANT_ID, Collections.singletonList(HOLDING_ID_1));
+    var item = new JsonObject().put("id", ITEM_ID_1).put("purchaseOrderLineIdentifier", POLINE_ID);
 
     doReturn(Future.succeededFuture(title)).when(titlesService).getTitleById(eq(TITLE_ID), any(RequestContext.class));
     when(purchaseOrderLineService.getOrderLineById(eq(POLINE_ID), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture(poLine));
     when(pieceStorageService.getPiecesByLineIdAndTitleId(eq(POLINE_ID), eq(TITLE_ID), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture(pieces));
-    // For checking deletability
     when(inventoryItemManager.getItemsByHoldingId(eq(HOLDING_ID_1), any(RequestContext.class)))
-      .thenReturn(Future.succeededFuture(items));
+      .thenReturn(Future.succeededFuture(List.of(item)));
     when(inventoryItemManager.deleteItems(eq(Collections.singletonList(ITEM_ID_1)), eq(true), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture(Collections.emptyList()));
     when(pieceStorageService.deletePiecesByIds(eq(Collections.singletonList(PIECE_ID_1)), any(RequestContext.class)))
@@ -199,12 +178,10 @@ public class TitlesServiceTest {
       .thenReturn(Future.succeededFuture());
     doReturn(Future.succeededFuture()).when(titlesService).deleteTitle(eq(TITLE_ID), any(RequestContext.class));
     when(consortiumConfigurationService.isCentralOrderingEnabled(any(RequestContext.class)))
-      .thenReturn(Future.succeededFuture(true));
+      .thenReturn(Future.succeededFuture(false));
 
-    // Execute
-    Future<List<String>> result = titlesService.unlinkTitleFromPackage(TITLE_ID, "true", requestContext);
+    var result = titlesService.unlinkTitleFromPackage(TITLE_ID, "true", requestContext);
 
-    // Verify
     result.onComplete(ar -> {
       assertTrue(ar.succeeded());
       verify(inventoryItemManager).deleteItems(eq(Collections.singletonList(ITEM_ID_1)), eq(true), any(RequestContext.class));
@@ -215,16 +192,11 @@ public class TitlesServiceTest {
   }
 
   @Test
-  void positive_testUnlinkTitleFromPackage_withEnabledCentralOrdering() {
-    // Setup - enable central ordering
-    when(consortiumConfigurationService.isCentralOrderingEnabled(any(RequestContext.class)))
-      .thenReturn(Future.succeededFuture(true));
-
+  void positive_testUnlinkTitleFromPackage_deleteHoldingsItemsAndPiecesWhenDeleteHoldingIsTrue_withEnabledCentralOrdering() {
     List<Piece> pieces = Collections.singletonList(
-      new Piece().withId(PIECE_ID_1).withHoldingId(HOLDING_ID_1).withReceivingTenantId(TENANT_ID).withTitleId(TITLE_ID)
+      new Piece().withId(PIECE_ID_1).withHoldingId(HOLDING_ID_1).withReceivingTenantId("college").withTitleId(TITLE_ID)
     );
-    JsonObject item = new JsonObject().put("id", ITEM_ID_1);
-    List<JsonObject> items = Collections.singletonList(item);
+    var item = new JsonObject().put("id", ITEM_ID_1).put("purchaseOrderLineIdentifier", POLINE_ID);
 
     doReturn(Future.succeededFuture(title)).when(titlesService).getTitleById(eq(TITLE_ID), any(RequestContext.class));
     when(purchaseOrderLineService.getOrderLineById(eq(POLINE_ID), any(RequestContext.class)))
@@ -232,7 +204,7 @@ public class TitlesServiceTest {
     when(pieceStorageService.getPiecesByLineIdAndTitleId(eq(POLINE_ID), eq(TITLE_ID), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture(pieces));
     when(inventoryItemManager.getItemsByHoldingId(eq(HOLDING_ID_1), any(RequestContext.class)))
-      .thenReturn(Future.succeededFuture(items));
+      .thenReturn(Future.succeededFuture(List.of(item)));
     when(inventoryItemManager.deleteItems(eq(Collections.singletonList(ITEM_ID_1)), eq(true), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture(Collections.emptyList()));
     when(pieceStorageService.deletePiecesByIds(eq(Collections.singletonList(PIECE_ID_1)), any(RequestContext.class)))
@@ -240,11 +212,11 @@ public class TitlesServiceTest {
     when(inventoryHoldingManager.deleteHoldingById(eq(HOLDING_ID_1), eq(true), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture());
     doReturn(Future.succeededFuture()).when(titlesService).deleteTitle(eq(TITLE_ID), any(RequestContext.class));
+    when(consortiumConfigurationService.isCentralOrderingEnabled(any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(true));
 
-    // Execute
-    Future<List<String>> result = titlesService.unlinkTitleFromPackage(TITLE_ID, "true", requestContext);
+    var result = titlesService.unlinkTitleFromPackage(TITLE_ID, "true", requestContext);
 
-    // Verify
     result.onComplete(ar -> {
       assertTrue(ar.succeeded());
       verify(consortiumConfigurationService).isCentralOrderingEnabled(any(RequestContext.class));
@@ -257,12 +229,23 @@ public class TitlesServiceTest {
 
   @Test
   void positive_testUnlinkTitleFromPackage_notDeleteHoldingsWhenDeleteHoldingIsFalse() {
+    List<Piece> pieces = Collections.singletonList(
+      new Piece().withId(PIECE_ID_1).withHoldingId(HOLDING_ID_1).withReceivingTenantId("college").withTitleId(TITLE_ID)
+    );
+    var item = new JsonObject().put("id", ITEM_ID_1).put("purchaseOrderLineIdentifier", POLINE_ID);
+
     doReturn(Future.succeededFuture(title)).when(titlesService).getTitleById(eq(TITLE_ID), any(RequestContext.class));
     when(purchaseOrderLineService.getOrderLineById(eq(POLINE_ID), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture(poLine));
     doReturn(Future.succeededFuture()).when(titlesService).deleteTitle(eq(TITLE_ID), any(RequestContext.class));
+    when(inventoryItemManager.getItemsByHoldingId(eq(HOLDING_ID_1), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(List.of(item)));
+    when(pieceStorageService.getPiecesByLineIdAndTitleId(eq(POLINE_ID), eq(TITLE_ID), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(pieces));
+    when(consortiumConfigurationService.isCentralOrderingEnabled(any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(false));
 
-    Future<List<String>> result = titlesService.unlinkTitleFromPackage(TITLE_ID, "false", requestContext);
+    var result = titlesService.unlinkTitleFromPackage(TITLE_ID, "false", requestContext);
 
     result.onComplete(ar -> {
       assertTrue(ar.succeeded());
@@ -275,19 +258,31 @@ public class TitlesServiceTest {
 
   @Test
   void negative_testUnlinkTitleFromPackage_throwExceptionWhenDeleteHoldingIsInvalid() {
+    List<Piece> pieces = Collections.singletonList(
+      new Piece().withId(PIECE_ID_1).withHoldingId(HOLDING_ID_1).withReceivingTenantId("college").withTitleId(TITLE_ID)
+    );
+    var item = new JsonObject().put("id", ITEM_ID_1).put("purchaseOrderLineIdentifier", POLINE_ID);
+
     // Setup
     doReturn(Future.succeededFuture(title)).when(titlesService).getTitleById(eq(TITLE_ID), any(RequestContext.class));
     when(purchaseOrderLineService.getOrderLineById(eq(POLINE_ID), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture(poLine));
+    when(consortiumConfigurationService.isCentralOrderingEnabled(any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(false));
+    when(inventoryItemManager.getItemsByHoldingId(eq(HOLDING_ID_1), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(List.of(item)));
+    when(pieceStorageService.getPiecesByLineIdAndTitleId(eq(POLINE_ID), eq(TITLE_ID), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(pieces));
 
     // Execute
-    Future<List<String>> result = titlesService.unlinkTitleFromPackage(TITLE_ID, "invalid", requestContext);
+    var result = titlesService.unlinkTitleFromPackage(TITLE_ID, "invalid", requestContext);
 
     // Verify
     result.onComplete(ar -> {
       assertTrue(ar.failed());
       assertInstanceOf(IllegalArgumentException.class, ar.cause());
       assertEquals("deleteHolding must be either 'true' or 'false'", ar.cause().getMessage());
+      verify(titlesService, never()).deleteTitle(eq(TITLE_ID), any(RequestContext.class));
     });
   }
 

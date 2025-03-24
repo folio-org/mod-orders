@@ -37,6 +37,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 import java.util.Date;
 import java.util.List;
@@ -62,7 +63,6 @@ import org.folio.rest.jaxrs.model.TitleCollection;
 import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.ProtectionService;
 import org.folio.service.caches.InventoryCache;
-import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryItemManager;
@@ -100,6 +100,10 @@ public class TitlesApiTest {
 
   @Autowired
   private TitleInstanceService titleInstanceService;
+  @Autowired
+  private ConsortiumConfigurationService consortiumConfigurationService;
+  @Autowired
+  private PieceStorageService pieceStorageService;
   private AutoCloseable mockitoMocks;
 
   @BeforeAll
@@ -389,6 +393,9 @@ public class TitlesApiTest {
     // Add mock entries
     addMockEntry(TITLES, JsonObject.mapFrom(title));
     addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
+
+    when(consortiumConfigurationService.isCentralOrderingEnabled(any())).thenReturn(succeededFuture(false));
+    when(pieceStorageService.getPiecesByLineIdAndTitleId(any(), any(), any())).thenReturn(succeededFuture(List.of()));
 
     verifyDeleteResponse(String.format(TITLES_UNLINK_ENDPOINT + "?deleteHolding=%s", titleId, deleteHolding), "", 204);
   }
