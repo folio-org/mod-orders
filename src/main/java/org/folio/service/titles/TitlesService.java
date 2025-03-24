@@ -321,7 +321,7 @@ public class TitlesService {
 
           return inventoryItemManager.deleteItems(itemIds, true, tenantContext);
         }))
-      .collect(Collectors.toList());
+      .toList();
 
     return combineResultListsOnSuccess(deleteItemFutures)
       .onSuccess(v -> log.info("deleteItemsForHolding:: Items were deleted successfully for holdingIds: {}", holdingIds))
