@@ -7,11 +7,14 @@ import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
 
+import javax.ws.rs.core.Response;
 import java.util.List;
 import java.util.Map;
 
-import javax.ws.rs.core.Response;
-
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.core.models.RequestContext;
@@ -22,11 +25,6 @@ import org.folio.service.titles.TitleValidationService;
 import org.folio.service.titles.TitlesService;
 import org.folio.spring.SpringContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
-import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
 
 public class TitlesApi extends BaseApi implements OrdersTitles {
   @Autowired
@@ -108,7 +106,8 @@ public class TitlesApi extends BaseApi implements OrdersTitles {
   }
 
   @Override
-  public void deleteOrdersTitlesUnlinkById(String id, String deleteHolding, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void deleteOrdersTitlesUnlinkById(String id, String deleteHolding, Map<String, String> okapiHeaders,
+                                           Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     titlesService.unlinkTitleFromPackage(id, deleteHolding, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(response -> {
         if (response == null || response.isEmpty()) {

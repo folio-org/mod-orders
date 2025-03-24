@@ -11,17 +11,23 @@ import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import static org.folio.rest.RestConstants.BAD_REQUEST;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
+import static org.folio.rest.core.exceptions.ErrorCodes.EXISTING_HOLDINGS_FOR_DELETE_CONFIRMATION;
 
-import com.google.common.collect.Sets;
-import io.vertx.core.Future;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import com.google.common.collect.Sets;
+
+import io.vertx.core.Future;
 import lombok.extern.log4j.Log4j2;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
@@ -29,10 +35,12 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.orders.utils.QueryUtils;
 import org.folio.rest.core.RestClient;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Title;
@@ -190,15 +198,22 @@ public class TitlesService {
 
     return getTitleById(titleId, requestContext)
       .compose(title -> purchaseOrderLineService.getOrderLineById(title.getPoLineId(), requestContext)
-        .compose(poLine -> processHoldingItemPieces(poLine, title, deleteHolding, requestContext))
-        .compose(holdings -> deleteTitle(title, holdings, requestContext)));
+        .compose(poLine -> consortiumConfigurationService.isCentralOrderingEnabled(requestContext)
+          .compose(isCentralOrderingEnabled -> getHoldingsToDeleteWithTenants(poLine, title, isCentralOrderingEnabled, requestContext)
+            .compose(deletableHoldingIdsByTenant ->
+              processHoldingItemPieces(deletableHoldingIdsByTenant, poLine, title, deleteHolding, isCentralOrderingEnabled, requestContext))
+            .compose(holdings -> unlinkTitle(title, holdings, requestContext)))));
   }
 
-  private Future<List<String>> processHoldingItemPieces(PoLine poLine, Title title, String deleteHolding,
+  private Future<List<String>> processHoldingItemPieces(Map<String, List<String>> holdingIdsToDeleteGroupedByTenant,
+                                                        PoLine poLine, Title title, String deleteHolding, boolean isCentralOrderingEnabled,
                                                         RequestContext requestContext) {
-    if (StringUtils.isEmpty(deleteHolding)) {
+    var extractHoldingIds = holdingIdsToDeleteGroupedByTenant.values().stream().flatMap(Collection::stream).toList();
+    if (StringUtils.isEmpty(deleteHolding) && CollectionUtils.isNotEmpty(extractHoldingIds)) {
       log.info("processHoldings:: Holdings in poLine '{}' will not be deleted", poLine.getId());
-      return getHoldingIds(poLine, title, requestContext);
+      var param = new Parameter().withValue("holdingIds").withKey(extractHoldingIds.toString());
+      var error = EXISTING_HOLDINGS_FOR_DELETE_CONFIRMATION.toError().withParameters(List.of(param));
+      throw new HttpException(BAD_REQUEST, error);
     }
 
     if (!Set.of("true", "false").contains(deleteHolding.toLowerCase())) {
@@ -206,20 +221,18 @@ public class TitlesService {
     }
 
     return Boolean.parseBoolean(deleteHolding)
-      ? deleteHoldingItemPieces(poLine, title, requestContext).mapEmpty()
+      ? deleteHoldingItemPieces(poLine, title, holdingIdsToDeleteGroupedByTenant, isCentralOrderingEnabled, requestContext).mapEmpty()
       : Future.succeededFuture(List.of());
   }
 
-  private Future<List<String>> getHoldingIds(PoLine poLine, Title title, RequestContext requestContext) {
-    return getHoldingsWithTenants(poLine, title, requestContext)
-      .map(holdingsByTenantId ->
-        holdingsByTenantId.values().stream()
-          .flatMap(Collection::stream)
-          .distinct().toList());
+  private Future<Map<String, List<String>>> getHoldingsToDeleteWithTenants(PoLine poLine, Title title, boolean isCentralTenantOrderingEnabled,
+                                                                           RequestContext requestContext) {
+    return getHoldingIdsGroupedByTenantId(poLine, title, requestContext)
+      .compose(holdingIdsGroupedByTenant -> extractDeletableHoldings(holdingIdsGroupedByTenant, poLine, isCentralTenantOrderingEnabled, requestContext));
   }
 
-  private Future<Map<String, List<String>>> getHoldingsWithTenants(PoLine poLine, Title title,
-                                                                   RequestContext requestContext) {
+  private Future<Map<String, List<String>>> getHoldingIdsGroupedByTenantId(PoLine poLine, Title title,
+                                                                           RequestContext requestContext) {
     return pieceStorageService.getPiecesByLineIdAndTitleId(poLine.getId(), title.getId(), requestContext)
       .map(pieces -> pieces.stream()
         .filter(piece -> StringUtils.isNotEmpty(piece.getHoldingId()))
@@ -227,37 +240,71 @@ public class TitlesService {
       );
   }
 
-  private Future<Void> deleteHoldingItemPieces(PoLine poLine, Title title, RequestContext centralContext) {
-    return consortiumConfigurationService.isCentralOrderingEnabled(centralContext)
-      .compose(isCentralOrderingEnabled -> isCentralOrderingEnabled
-        ? deleteHoldingItemPiecesWithEcs(poLine, title, centralContext)
-        : deleteHoldingItemPiecesWithoutEcs(poLine, title, centralContext));
+  private Future<Map<String, List<String>>> extractDeletableHoldings(Map<String, List<String>> holdingIdsByTenant,
+                                                                     PoLine poLine, boolean isCentralOrderingEnabled, RequestContext requestContext) {
+    List<Future<AbstractMap.SimpleEntry<String, String>>> deletableHoldingsFuture = new ArrayList<>();
+
+    holdingIdsByTenant.forEach((tenantId, holdingIds) -> {
+      var tenantContext = isCentralOrderingEnabled
+        ? createContextWithNewTenantId(requestContext, tenantId)
+        : requestContext;
+
+      holdingIds.forEach(holdingId -> deletableHoldingsFuture.add(
+        inventoryItemManager.getItemsByHoldingId(holdingId, tenantContext)
+          .map(items -> items.stream()
+            .anyMatch(item -> poLine.getId().equals(item.getString("purchaseOrderLineIdentifier")))
+            ? new AbstractMap.SimpleEntry<>(tenantId, holdingId)
+            : null
+          )
+      ));
+    });
+
+    return collectResultsOnSuccess(deletableHoldingsFuture)
+      .map(cf -> deletableHoldingsFuture.stream()
+        .map(Future::result)
+        .filter(Objects::nonNull)
+        .collect(Collectors.groupingBy(
+          AbstractMap.SimpleEntry::getKey,
+          Collectors.mapping(AbstractMap.SimpleEntry::getValue, Collectors.toList())
+        ))
+      );
   }
 
-  private Future<Void> deleteHoldingItemPiecesWithEcs(PoLine poLine, Title title, RequestContext centralContext) {
-    return getHoldingsWithTenants(poLine, title, centralContext)
-      .compose(holdingIdsByTenant -> {
-        var tenantOperationFutures = new ArrayList<Future<Void>>();
-
-        holdingIdsByTenant.forEach((tenantId, holdingIds) -> {
-          var tenantContext = createContextWithNewTenantId(centralContext, tenantId);
-
-          tenantOperationFutures.add(
-            deleteItemsForHolding(holdingIds, tenantContext)
-            .compose(v -> deletePiecesForHoldingsInTenant(poLine.getId(), title.getId(), holdingIds, tenantId, centralContext))
-            .compose(v -> deleteHoldings(holdingIds, tenantContext))
-          );
-        });
-
-        return collectResultsOnSuccess(tenantOperationFutures).mapEmpty();
-      });
+  private List<String> getHoldingIds(Map<String, List<String>> holdingIdsToDeleteByTenant) {
+    return holdingIdsToDeleteByTenant.values().stream()
+      .flatMap(Collection::stream)
+      .distinct().toList();
   }
 
-  private Future<Void> deleteHoldingItemPiecesWithoutEcs(PoLine poLine, Title title, RequestContext requestContext) {
-    return getHoldingIds(poLine, title, requestContext)
-      .compose(holdingIds -> deleteItemsForHolding(holdingIds, requestContext)
-        .compose(v -> deletePiecesForHoldingsInTenant(poLine.getId(), title.getId(), holdingIds, null, requestContext))
-        .compose(v -> deleteHoldings(holdingIds, requestContext)));
+  private Future<Void> deleteHoldingItemPieces(PoLine poLine, Title title, Map<String, List<String>> holdingsIdsToDeleteByTenant,
+                                               boolean isCentralOrderingEnabled, RequestContext centralContext) {
+    if (isCentralOrderingEnabled) {
+      return deleteWithMultipleTenants(poLine, title, holdingsIdsToDeleteByTenant, centralContext);
+    }
+    return deleteWithSingleTenant(poLine, title, holdingsIdsToDeleteByTenant, centralContext);
+  }
+
+  private Future<Void> deleteWithMultipleTenants(PoLine poLine, Title title, Map<String, List<String>> holdingsIdsToDeleteByTenant,
+                                                 RequestContext centralContext) {
+    var tenantOperationFutures = new ArrayList<Future<Void>>();
+    holdingsIdsToDeleteByTenant.forEach((tenantId, holdingIds) -> {
+      var tenantContext = createContextWithNewTenantId(centralContext, tenantId);
+
+      tenantOperationFutures.add(
+        deleteItemsForHolding(holdingIds, tenantContext)
+          .compose(v -> deletePiecesForHoldingsInTenant(poLine.getId(), title.getId(), holdingIds, tenantId, centralContext))
+          .compose(v -> deleteHoldings(holdingIds, tenantContext))
+      );
+    });
+
+    return collectResultsOnSuccess(tenantOperationFutures).mapEmpty();
+  }
+
+  private Future<Void> deleteWithSingleTenant(PoLine poLine, Title title, Map<String, List<String>> holdingsIdsToDeleteByTenant, RequestContext requestContext) {
+    var holdingIdsToDelete = getHoldingIds(holdingsIdsToDeleteByTenant);
+    return deleteItemsForHolding(holdingIdsToDelete, requestContext)
+      .compose(v -> deletePiecesForHoldingsInTenant(poLine.getId(), title.getId(), holdingIdsToDelete, null, requestContext))
+      .compose(v -> deleteHoldings(holdingIdsToDelete, requestContext));
   }
 
   private Future<Void> deleteItemsForHolding(List<String> holdingIds, RequestContext tenantContext) {
@@ -322,7 +369,7 @@ public class TitlesService {
       .mapEmpty();
   }
 
-  private Future<List<String>> deleteTitle(Title title, List<String> holdings, RequestContext requestContext) {
+  private Future<List<String>> unlinkTitle(Title title, List<String> holdings, RequestContext requestContext) {
     if (CollectionUtils.isNotEmpty(holdings)) {
       return Future.succeededFuture(holdings);
     }
