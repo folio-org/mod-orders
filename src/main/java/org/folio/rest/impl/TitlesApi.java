@@ -74,10 +74,10 @@ public class TitlesApi extends BaseApi implements OrdersTitles {
 
   @Override
   @Validate
-  public void deleteOrdersTitlesById(String id, Map<String, String> okapiHeaders,
+  public void deleteOrdersTitlesById(String id, String deleteHoldings, Map<String, String> okapiHeaders,
                                      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    titlesService.deleteTitle(id, new RequestContext(vertxContext, okapiHeaders))
-      .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
+    titlesService.deleteTitle(id, deleteHoldings, new RequestContext(vertxContext, okapiHeaders))
+      .onSuccess(response -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
@@ -102,20 +102,6 @@ public class TitlesApi extends BaseApi implements OrdersTitles {
 
     titlesService.saveTitleWithAcqUnitsCheck(entity, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
-      .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
-  }
-
-  @Override
-  public void deleteOrdersTitlesUnlinkById(String id, String deleteHoldings, Map<String, String> okapiHeaders,
-                                           Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    titlesService.unlinkTitleFromPackage(id, deleteHoldings, new RequestContext(vertxContext, okapiHeaders))
-      .onSuccess(response -> {
-        if (response == null || response.isEmpty()) {
-          asyncResultHandler.handle(succeededFuture(buildNoContentResponse()));
-        } else {
-          asyncResultHandler.handle(succeededFuture(buildOkResponse(response)));
-        }
-      })
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 }

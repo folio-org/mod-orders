@@ -44,14 +44,8 @@ resourceTypes:
       collection-item:
         exampleItem: !include acq-models/mod-orders-storage/examples/title_get.sample
         schema: title
-
-  /unlink/{id}:
-    uriParameters:
-      id:
-        description: The UUID of a Title
-        type: UUID
     delete:
-      description: Unlink a title from an instance
+      description: Delete a title record
       queryParameters:
         deleteHoldings:
           displayName: The associated holdings should be removed
@@ -60,10 +54,8 @@ resourceTypes:
           example: "true"
           required: false
       responses:
-        201:
-          description: holdings are existing
         204:
-          description: Title unlinked
+          description: Title deleted
         404:
           description: Title not found
         500:

@@ -347,32 +347,7 @@ public class TitlesApiTest {
 
   @Test
   void deleteTitleByIdTest() {
-    logger.info("=== Test delete title by id ===");
-
-    verifyDeleteResponse(String.format(TITLES_ID_PATH, SAMPLE_TITLE_ID), "", 204);
-  }
-
-  @Test
-  void deleteTitlesByIdWithInvalidFormatTest() {
-    logger.info("=== Test delete title by id - bad Id format 400 ===");
-    verifyDeleteResponse(String.format(TITLES_ID_PATH, ID_BAD_FORMAT), TEXT_PLAIN, 400);
-  }
-
-  @Test
-  void deleteNotExistentTitleTest() {
-    logger.info("=== Test delete title by id - id does not exists 404 ===");
-    verifyDeleteResponse(String.format(TITLES_ID_PATH, ID_DOES_NOT_EXIST), APPLICATION_JSON, 404);
-  }
-
-  @Test
-  void deleteTitleInternalErrorOnStorageTest() {
-    logger.info("=== Test delete title by id - internal error from storage 500 ===");
-    verifyDeleteResponse(String.format(TITLES_ID_PATH, ID_FOR_INTERNAL_SERVER_ERROR), APPLICATION_JSON, 500);
-  }
-
-  @Test
-  void testUnlinkTitleFromPackage() {
-    logger.info("=== Test unlink title from package by id ===");
+    logger.info("=== Test Delete title from package by id ===");
 
     String titleId = UUID.randomUUID().toString();
     String poLineId = UUID.randomUUID().toString();
@@ -398,6 +373,25 @@ public class TitlesApiTest {
     when(pieceStorageService.getPiecesByLineIdAndTitleId(any(), any(), any())).thenReturn(succeededFuture(List.of()));
 
     verifyDeleteResponse(String.format(TITLES_UNLINK_ENDPOINT + "?deleteHoldings=%s", titleId, deleteHoldings), "", 204);
+
+  }
+
+  @Test
+  void deleteTitlesByIdWithInvalidFormatTest() {
+    logger.info("=== Test delete title by id - bad Id format 400 ===");
+    verifyDeleteResponse(String.format(TITLES_ID_PATH, ID_BAD_FORMAT), TEXT_PLAIN, 400);
+  }
+
+  @Test
+  void deleteNotExistentTitleTest() {
+    logger.info("=== Test delete title by id - id does not exists 404 ===");
+    verifyDeleteResponse(String.format(TITLES_ID_PATH, ID_DOES_NOT_EXIST), APPLICATION_JSON, 404);
+  }
+
+  @Test
+  void deleteTitleInternalErrorOnStorageTest() {
+    logger.info("=== Test delete title by id - internal error from storage 500 ===");
+    verifyDeleteResponse(String.format(TITLES_ID_PATH, ID_FOR_INTERNAL_SERVER_ERROR), APPLICATION_JSON, 500);
   }
 
   static class ContextConfiguration {

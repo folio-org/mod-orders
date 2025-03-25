@@ -119,15 +119,6 @@ public class TitlesService {
       .compose(title -> saveTitle(title, requestContext));
   }
 
-  public Future<Void> deleteTitle(String id, RequestContext requestContext) {
-    return getTitleById(id, requestContext)
-      .compose(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), DELETE, requestContext))
-      .compose(v -> {
-        RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(id);
-        return restClient.delete(requestEntry, requestContext);
-      })
-      .mapEmpty();
-  }
 
   public Future<Map<String, List<Title>>> getTitlesByPoLineIds(List<String> poLineIds, RequestContext requestContext) {
     return collectResultsOnSuccess(StreamEx
@@ -182,7 +173,7 @@ public class TitlesService {
   }
 
   /**
-   * Unlinks a title from a package. This involves checking the existence of holdings and items for the title.
+   * Delete title. This involves checking the existence of holdings and items for the title.
    * If the holdings have references to other titles, the unlinking process skips them.
    * If the holdings do not have references, it asks for confirmation to delete related pieces, items, and holdings.
    *
@@ -191,12 +182,14 @@ public class TitlesService {
    * @param requestContext the request context
    * @return a Future representing the result of the unlinking operation
    */
-  public Future<List<String>> unlinkTitleFromPackage(String titleId, String deleteHoldings,
+  public Future<Void> deleteTitle(String titleId, String deleteHoldings,
                                                      RequestContext requestContext) {
-    log.debug("Trying to unlink title with id: {} and deleteHoldings: {}", titleId, deleteHoldings);
+    log.debug("Trying to delete title with id: {} and deleteHoldings: {}", titleId, deleteHoldings);
 
     return getTitleById(titleId, requestContext)
       .map(TitleHolder::new)
+      .compose(holder -> protectionService.isOperationRestricted(holder.getTitle().getAcqUnitIds(), DELETE, requestContext)
+        .map(v -> holder))
       .compose(holder -> purchaseOrderLineService.getOrderLineById(holder.getTitle().getPoLineId(), requestContext)
         .map(holder::withPoLine))
       .compose(holder -> consortiumConfigurationService.isCentralOrderingEnabled(requestContext)
@@ -205,7 +198,7 @@ public class TitlesService {
         .map(holder::withHoldingIdsToDeleteByTenant))
       .compose(holder -> processHoldingItemPieces(holder, deleteHoldings, requestContext)
         .map(v -> holder))
-      .compose(holder -> unlinkTitle(holder.getTitle(), requestContext));
+      .compose(holder -> deleteTitle(holder.getTitleId(), requestContext));
   }
 
   private Future<Void> processHoldingItemPieces(TitleHolder holder, String deleteHoldings, RequestContext requestContext) {
@@ -368,9 +361,9 @@ public class TitlesService {
       .mapEmpty();
   }
 
-  private Future<List<String>> unlinkTitle(Title title, RequestContext requestContext) {
-    log.info("unlinkTitleFromPackage:: Title '{}' is being unlinked from the package", title.getId());
-    return deleteTitle(title.getId(), requestContext)
-      .mapEmpty();
+  private Future<Void> deleteTitle(String id, RequestContext requestContext) {
+    log.info("deleteTitle:: Title '{}' is being deleted", id);
+    var deleteEndpoint = new RequestEntry(BY_ID_ENDPOINT).withId(id).buildEndpoint();
+    return restClient.delete(deleteEndpoint, requestContext);
   }
 }
