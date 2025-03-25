@@ -76,6 +76,16 @@ public class PieceStorageService {
       .map(PieceCollection::getPieces);
   }
 
+  public Future<List<Piece>> getPiecesByLineIdAndTitleId(String lineId, String titleId, RequestContext requestContext) {
+    String query = String.format("poLineId==%s and titleId==%s", lineId, titleId);
+    RequestEntry requestEntry = new RequestEntry(resourcesPath(PIECES_STORAGE)).withQuery(query)
+      .withLimit(Integer.MAX_VALUE)
+      .withOffset(0);
+
+    return restClient.get(requestEntry, PieceCollection.class, requestContext)
+      .map(PieceCollection::getPieces);
+  }
+
   public Future<Piece> getPieceById(String pieceId, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(PIECE_STORAGE_BY_ID_ENDPOINT).withId(pieceId);
     return restClient.get(requestEntry, Piece.class, requestContext);

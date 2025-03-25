@@ -44,3 +44,19 @@ resourceTypes:
       collection-item:
         exampleItem: !include acq-models/mod-orders-storage/examples/title_get.sample
         schema: title
+    delete:
+      description: Delete a title record
+      queryParameters:
+        deleteHoldings:
+          displayName: The associated holdings should be removed
+          type: string
+          description: The associated holdings should be removed
+          example: "true"
+          required: false
+      responses:
+        204:
+          description: Title deleted
+        404:
+          description: Title not found
+        500:
+          description: Internal server error

@@ -229,6 +229,27 @@ public class PieceStorageServiceTest {
     );
   }
 
+  @Test
+  void testGetPiecesByLineIdAndTitleId(VertxTestContext vertxTestContext) {
+    String lineId = UUID.randomUUID().toString();
+    String titleId = UUID.randomUUID().toString();
+    List<Piece> pieces = Collections.singletonList(new Piece().withId(UUID.randomUUID().toString()));
+
+    PieceCollection pieceCollection = new PieceCollection().withPieces(pieces)
+      .withTotalRecords(1);
+
+    when(restClientMock.get(any(RequestEntry.class), any(), any())).thenReturn(Future.succeededFuture(pieceCollection));
+
+    var future = pieceStorageService.getPiecesByLineIdAndTitleId(lineId, titleId, requestContext);
+
+    verify(restClientMock).get(any(RequestEntry.class), eq(PieceCollection.class), eq(requestContext));
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertEquals(pieceCollection.getPieces(), result.result());
+        vertxTestContext.completeNow();
+      });
+  }
+
   private static class ContextConfiguration {
 
     @Bean

@@ -1,7 +1,9 @@
 package org.folio.rest.core.exceptions;
 
+import lombok.Getter;
 import org.folio.rest.jaxrs.model.Error;
 
+@Getter
 public enum ErrorCodes {
   GENERIC_ERROR_CODE("genericError", "Generic error"),
   PO_NUMBER_ALREADY_EXISTS("poNumberNotUnique", "PO Number already exists"),
@@ -142,7 +144,8 @@ public enum ErrorCodes {
   CANNOT_CREATE_JOBS_AND_UPDATE_PIECES("cannotCreateJobsAndUpdatePieces", "Cannot create jobs and update pieces"),
   CANNOT_FIND_PIECE_BY_ID("cannotFindPieceById", "Cannot find a piece by '%s' id"),
   UNABLE_TO_GENERATE_CLAIMS_FOR_ORG_NO_INTEGRATION_DETAILS("unableToGenerateClaimsForOrgNoIntegrationDetails", "Unable to generate claims for %s because no claim integrations exist"),
-  ALL_PIECES_MUST_HAVE_THE_SAME_POLINE_ID_AND_TITLE_ID("allPiecesMustHaveTheSamePoLineIdAndTitleId", "All pieces in the batch should have the same titleId and poLineId"),;
+  ALL_PIECES_MUST_HAVE_THE_SAME_POLINE_ID_AND_TITLE_ID("allPiecesMustHaveTheSamePoLineIdAndTitleId", "All pieces in the batch should have the same titleId and poLineId"),
+  EXISTING_HOLDINGS_FOR_DELETE_CONFIRMATION("existingHoldingsForDeleteConfirmation", "There are existing holdings to delete, Try again with 'deleteHoldings' param");
 
   private final String code;
   private final String description;
@@ -150,14 +153,6 @@ public enum ErrorCodes {
   ErrorCodes(String code, String description) {
     this.code = code;
     this.description = description;
-  }
-
-  public String getDescription() {
-    return description;
-  }
-
-  public String getCode() {
-    return code;
   }
 
   @Override
