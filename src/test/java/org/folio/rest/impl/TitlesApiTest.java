@@ -87,7 +87,6 @@ public class TitlesApiTest {
 
   public static final String TITLES_ENDPOINT = "/orders/titles";
   private static final String TITLES_ID_PATH = TITLES_ENDPOINT + "/%s";
-  private static final String TITLES_UNLINK_ENDPOINT = TITLES_ENDPOINT + "/unlink/%s";
   private static final String VALID_UUID = "c3e26c0e-d6a6-46fb-9309-d494cd0c82de";
   private static final String CONSISTENT_RECEIVED_STATUS_TITLE_UUID = "7d0aa803-a659-49f0-8a95-968f277c87d7";
   private static final String ACQ_UNIT_ID = "f6d2cc9d-82ca-437c-a4e6-e5c30323df00";
@@ -354,32 +353,28 @@ public class TitlesApiTest {
     String orderId = UUID.randomUUID().toString();
     String deleteHoldings = "false";
 
-    // Mock title data
     var title = titleJsonReqData.mapTo(Title.class)
       .withId(titleId)
       .withPoLineId(poLineId);
 
-    // Mock PO line data
     var poLine = getMinimalContentCompositePoLine()
       .withId(poLineId)
       .withPurchaseOrderId(orderId)
       .withIsPackage(true);
 
-    // Add mock entries
     addMockEntry(TITLES, JsonObject.mapFrom(title));
     addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
 
     when(consortiumConfigurationService.isCentralOrderingEnabled(any())).thenReturn(succeededFuture(false));
     when(pieceStorageService.getPiecesByLineIdAndTitleId(any(), any(), any())).thenReturn(succeededFuture(List.of()));
 
-    verifyDeleteResponse(String.format(TITLES_UNLINK_ENDPOINT + "?deleteHoldings=%s", titleId, deleteHoldings), "", 204);
-
+    verifyDeleteResponse(String.format(TITLES_ID_PATH + "?deleteHoldings=%s", titleId, deleteHoldings), "", 204);
   }
 
   @Test
   void deleteTitlesByIdWithInvalidFormatTest() {
     logger.info("=== Test delete title by id - bad Id format 400 ===");
-    verifyDeleteResponse(String.format(TITLES_ID_PATH, ID_BAD_FORMAT), TEXT_PLAIN, 400);
+    verifyDeleteResponse(String.format(TITLES_ID_PATH, ID_BAD_FORMAT), APPLICATION_JSON, 404);
   }
 
   @Test
