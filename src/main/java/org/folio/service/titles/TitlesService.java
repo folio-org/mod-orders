@@ -5,6 +5,7 @@ import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.AcqDesiredPermissions.TITLES_ASSIGN;
 import static org.folio.orders.utils.AcqDesiredPermissions.TITLES_MANAGE;
+import static org.folio.orders.utils.HelperUtils.ID;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.combineResultListsOnSuccess;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
@@ -14,6 +15,7 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.BAD_REQUEST;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.core.exceptions.ErrorCodes.EXISTING_HOLDINGS_FOR_DELETE_CONFIRMATION;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -253,7 +255,7 @@ public class TitlesService {
       holdingIds.forEach(holdingId -> deletableHoldingsFuture.add(
         inventoryItemManager.getItemsByHoldingId(holdingId, tenantContext)
           .map(items -> items.stream()
-            .anyMatch(item -> holder.getPoLineId().equals(item.getString("purchaseOrderLineIdentifier")))
+            .anyMatch(item -> holder.getPoLineId().equals(item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER)))
             ? new AbstractMap.SimpleEntry<>(tenantId, holdingId)
             : null
           )
@@ -310,7 +312,7 @@ public class TitlesService {
           if (items.isEmpty()) return Future.succeededFuture();
 
           var itemIds = items.stream()
-            .map(item -> item.getString("id"))
+            .map(item -> item.getString(ID))
             .toList();
 
           return inventoryItemManager.deleteItems(itemIds, true, tenantContext);
