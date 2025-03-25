@@ -173,14 +173,15 @@ public class TitlesService {
   }
 
   /**
-   * Delete title. This involves checking the existence of holdings and items for the title.
+   * Delete title and unlink poLine from title instance.
+   * This involves checking the existence of holdings and items for the title.
    * If the holdings have references to other titles, the unlinking process skips them.
    * If the holdings do not have references, it asks for confirmation to delete related pieces, items, and holdings.
    *
    * @param titleId        the ID of the title to unlink
    * @param deleteHoldings  flag indicating whether to delete the holding if it has no other references
    * @param requestContext the request context
-   * @return a Future representing the result of the unlinking operation
+   * @return a Future representing the result of the deleting title operation
    */
   public Future<Void> deleteTitle(String titleId, String deleteHoldings,
                                                      RequestContext requestContext) {
