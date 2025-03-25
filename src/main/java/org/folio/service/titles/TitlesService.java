@@ -46,6 +46,7 @@ import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.TitleCollection;
+import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.ProtectionService;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.inventory.InventoryHoldingManager;
@@ -185,8 +186,7 @@ public class TitlesService {
    * @param requestContext the request context
    * @return a Future representing the result of the deleting title operation
    */
-  public Future<Void> deleteTitle(String titleId, String deleteHoldings,
-                                                     RequestContext requestContext) {
+  public Future<Void> deleteTitle(String titleId, String deleteHoldings, RequestContext requestContext) {
     log.debug("Trying to delete title with id: {} and deleteHoldings: {}", titleId, deleteHoldings);
 
     return getTitleById(titleId, requestContext)
@@ -236,7 +236,13 @@ public class TitlesService {
     return pieceStorageService.getPiecesByLineIdAndTitleId(poLine.getId(), title.getId(), requestContext)
       .map(pieces -> pieces.stream()
         .filter(piece -> StringUtils.isNotEmpty(piece.getHoldingId()))
-        .collect(groupingBy(Piece::getReceivingTenantId, mapping(Piece::getHoldingId, toList())))
+        .collect(groupingBy(
+          piece ->
+            piece.getReceivingTenantId() != null
+            ? piece.getReceivingTenantId()
+            : TenantTool.tenantId(requestContext.getHeaders()),
+          mapping(Piece::getHoldingId, toList())
+        ))
       );
   }
 
