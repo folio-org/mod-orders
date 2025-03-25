@@ -374,13 +374,13 @@ public class TitlesApiTest {
   @Test
   void deleteTitlesByIdWithInvalidFormatTest() {
     logger.info("=== Test delete title by id - bad Id format 400 ===");
-    verifyDeleteResponse(String.format(TITLES_ID_PATH, ID_BAD_FORMAT), APPLICATION_JSON, 404);
+    verifyDeleteResponse(String.format(TITLES_ID_PATH, ID_BAD_FORMAT), TEXT_PLAIN, 400);
   }
 
   @Test
   void deleteNotExistentTitleTest() {
     logger.info("=== Test delete title by id - id does not exists 404 ===");
-    verifyDeleteResponse(String.format(TITLES_ID_PATH, ID_DOES_NOT_EXIST), TEXT_PLAIN, 400);
+    verifyDeleteResponse(String.format(TITLES_ID_PATH, ID_DOES_NOT_EXIST), APPLICATION_JSON, 404);
   }
 
   @Test
