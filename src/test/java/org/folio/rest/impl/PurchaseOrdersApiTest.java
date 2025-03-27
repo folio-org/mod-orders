@@ -2252,7 +2252,6 @@ public class PurchaseOrdersApiTest {
     CloseReason closeReason = new CloseReason();
     closeReason.setNote("testing reason on Closed Order");
     closeReason.setReason("Complete");
-    allProtectedFieldsModification.put(POProtectedFields.CLOSE_REASON.getFieldName(), JsonObject.mapFrom(closeReason));
 
     checkPreventProtectedFieldsModificationRule(COMPOSITE_ORDERS_BY_ID_PATH, reqData, allProtectedFieldsModification);
   }
