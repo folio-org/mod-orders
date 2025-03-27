@@ -14,7 +14,6 @@ import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToClo
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToOpen;
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToReopen;
 import static org.folio.orders.utils.POProtectedFields.getFieldNames;
-import static org.folio.orders.utils.POProtectedFields.getFieldNamesForOpenOrder;
 import static org.folio.orders.utils.PermissionsUtil.*;
 import static org.folio.orders.utils.PoLineCommonUtil.verifyOngoingFieldsChanged;
 import static org.folio.orders.utils.PoLineCommonUtil.verifyProtectedFieldsChanged;
@@ -332,8 +331,7 @@ public class PurchaseOrderHelper {
                                                                  JsonObject compPOFromStorageJson) {
     WorkflowStatus storagePOWorkflowStatus = WorkflowStatus.fromValue(compPOFromStorageJson.getString(WORKFLOW_STATUS));
     if (!PENDING.equals(storagePOWorkflowStatus)) {
-      List<String> fieldNames = OPEN.equals(storagePOWorkflowStatus) ? getFieldNamesForOpenOrder() : getFieldNames();
-      verifyProtectedFieldsChanged(fieldNames, compPOFromStorageJson, JsonObject.mapFrom(compPO));
+      verifyProtectedFieldsChanged(getFieldNames(), compPOFromStorageJson, JsonObject.mapFrom(compPO));
       verifyOngoingFieldsChanged(compPOFromStorageJson, compPO);
     }
     return compPOFromStorageJson;
