@@ -8,6 +8,7 @@ import static org.folio.orders.utils.HelperUtils.REASON_CANCELLED;
 import static org.folio.orders.utils.HelperUtils.WORKFLOW_STATUS;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertToCompositePurchaseOrder;
+import static org.folio.orders.utils.HelperUtils.executeAllFailFast;
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isOrderClosing;
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isOrderReopening;
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToClosed;
@@ -184,7 +185,7 @@ public class PurchaseOrderHelper {
    * @return completable future with {@link CompositePurchaseOrder} object with populated uuid on success or an exception if processing fails
    */
   public Future<CompositePurchaseOrder> createPurchaseOrder(CompositePurchaseOrder compPO, JsonObject tenantConfiguration,
-      RequestContext requestContext) {
+                                                            RequestContext requestContext) {
     logger.info("createPurchaseOrder :: orderId: {}", compPO.getId());
     return orderValidationService.validateOrderForCreation(compPO, requestContext)
       .compose(v -> setPoNumberIfMissing(compPO, requestContext))
@@ -196,7 +197,7 @@ public class PurchaseOrderHelper {
   }
 
   public Future<Void> putCompositeOrderById(String orderId, boolean deleteHoldings, CompositePurchaseOrder compPO,
-      RequestContext requestContext) {
+                                            RequestContext requestContext) {
 
     // Set order id from path if not specified in body
     populateOrderId(orderId, compPO);
@@ -228,7 +229,8 @@ public class PurchaseOrderHelper {
       .compose(poFromStorage -> {
         CompositePurchaseOrder clonedPoFromStorage = JsonObject.mapFrom(poFromStorage).mapTo(CompositePurchaseOrder.class);
         boolean isTransitionToOpen = isTransitionToOpen(poFromStorage, compPO);
-        return orderValidationService.validateOrderForUpdate(compPO, poFromStorage, deleteHoldings, requestContext)
+        return validateUserUnaffiliatedPoLineLocations(clonedPoFromStorage.getCompositePoLines(), requestContext)
+          .compose(v -> orderValidationService.validateOrderForUpdate(compPO, poFromStorage, deleteHoldings, requestContext))
           .compose(v -> {
             if (isTransitionToOpen && CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
               compPO.setCompositePoLines(clonedPoFromStorage.getCompositePoLines());
@@ -241,7 +243,6 @@ public class PurchaseOrderHelper {
             }
             return Future.succeededFuture();
           })
-          .compose(v -> validateUserUnaffiliatedPoLineLocations(compPO, requestContext))
           .compose(v -> {
             if (isTransitionToClosed(poFromStorage, compPO)) {
               return closeOrder(compPO, poFromStorage, requestContext);
@@ -286,17 +287,21 @@ public class PurchaseOrderHelper {
     return compositePoLineValidationService.validatePurchaseOrderHasPoLines(purchaseOrder.getCompositePoLines());
   }
 
-  private Future<List<Void>> validateUserUnaffiliatedPoLineLocations(CompositePurchaseOrder purchaseOrder, RequestContext requestContext) {
+  private Future<Void> validateUserUnaffiliatedPoLineLocations(List<CompositePoLine> poLines, RequestContext requestContext) {
+    if (CollectionUtils.isEmpty(poLines)) {
+      return Future.succeededFuture();
+    }
+
     var poLineFutures = new ArrayList<Future<Void>>();
-    purchaseOrder.getCompositePoLines().stream().filter(Objects::nonNull).forEach(poLine -> {
+    poLines.stream().filter(Objects::nonNull).forEach(poLine -> {
       var poLineFuture = compositePoLineValidationService.validateUserUnaffiliatedLocations(poLine.getId(), poLine.getLocations(), requestContext);
       poLineFutures.add(poLineFuture);
     });
-    return collectResultsOnSuccess(poLineFutures);
+    return executeAllFailFast(poLineFutures);
   }
 
   public Future<Void> handleFinalOrderStatus(CompositePurchaseOrder compPO, String initialOrdersStatus,
-                                                        RequestContext requestContext) {
+                                             RequestContext requestContext) {
     PurchaseOrder purchaseOrder = convertToPurchaseOrder(compPO);
 
     return Future.succeededFuture()
@@ -341,6 +346,7 @@ public class PurchaseOrderHelper {
 
   /**
    * Delete a purchase order with given uuid. As a first step the logic deletes all associated PO Lines and then order.
+   *
    * @param orderId purchase order id
    * @return completable future which is just completed with nothing on success or an exception if processing fails
    */
@@ -496,8 +502,8 @@ public class PurchaseOrderHelper {
 
   private void populateInstanceId(Map<String, List<Title>> lineIdsTitles, List<CompositePoLine> lines) {
     getNonPackageLines(lines).forEach(line -> {
-      if (lineIdsTitles.containsKey(line.getId())) {
-        line.setInstanceId(lineIdsTitles.get(line.getId()).get(0).getInstanceId());
+      if (lineIdsTitles.containsKey(line.getId()) && CollectionUtils.isNotEmpty(lineIdsTitles.get(line.getId()))) {
+        line.setInstanceId(lineIdsTitles.get(line.getId()).getFirst().getInstanceId());
       }
     });
   }
