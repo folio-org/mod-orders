@@ -500,7 +500,7 @@ public class PurchaseOrderHelper {
 
   private void populateInstanceId(Map<String, List<Title>> lineIdsTitles, List<CompositePoLine> lines) {
     getNonPackageLines(lines).forEach(line -> {
-      if (lineIdsTitles.containsKey(line.getId())) {
+      if (lineIdsTitles.containsKey(line.getId()) && CollectionUtils.isNotEmpty(lineIdsTitles.get(line.getId()))) {
         line.setInstanceId(lineIdsTitles.get(line.getId()).getFirst().getInstanceId());
       }
     });
