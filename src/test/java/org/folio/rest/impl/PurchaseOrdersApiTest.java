@@ -2229,7 +2229,7 @@ public class PurchaseOrdersApiTest {
     allProtectedFieldsModification.put(COMPOSITE_PO_LINES_PREFIX.concat(POLineFieldNames.ACQUISITION_METHOD.getFieldName()),
       TestUtils.DEPOSITORY_METHOD);
     allProtectedFieldsModification.put(COMPOSITE_PO_LINES_PREFIX.concat(POLineFieldNames.ERESOURCE_USER_LIMIT.getFieldName()),
-      100);
+      "100");
 
     checkPreventProtectedFieldsModificationRule(COMPOSITE_ORDERS_BY_ID_PATH, reqData, allProtectedFieldsModification);
   }
