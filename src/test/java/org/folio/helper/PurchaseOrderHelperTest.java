@@ -1,5 +1,6 @@
 package org.folio.helper;
 
+import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestUtils.getMinimalContentCompositePoLine;
 import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
@@ -11,6 +12,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -18,6 +20,9 @@ import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -211,6 +216,37 @@ public class PurchaseOrderHelperTest {
 
     // Then
     assertTrue(future.succeeded());
+  }
+
+  @Test
+  @DisplayName("Test PUT pending composite order (no change)")
+  void testPutUnOpenOrderValidationThrow() throws IOException {
+    var order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
+    CompositePurchaseOrder compPO = order.mapTo(CompositePurchaseOrder.class);
+    prepareOrderForPostRequest(compPO);
+    compPO.setId(UUID.randomUUID().toString());
+    compPO.getCompositePoLines().forEach(line -> line.withId(UUID.randomUUID().toString()));
+    CompositePurchaseOrder poFromStorage = JsonObject.mapFrom(compPO).mapTo(CompositePurchaseOrder.class);
+    poFromStorage.setCompositePoLines(List.of(getMinimalContentCompositePoLine(order.getString("id"))));
+
+    boolean deleteHoldings = false;
+
+    doReturn(succeededFuture(List.of()))
+      .when(orderValidationService).validateOrderForPut(eq(compPO.getId()), any(CompositePurchaseOrder.class), eq(requestContext));
+    doReturn(succeededFuture(JsonObject.mapFrom(poFromStorage)))
+      .when(purchaseOrderStorageService).getPurchaseOrderByIdAsJson(eq(compPO.getId()), eq(requestContext));
+    doReturn(succeededFuture(poFromStorage))
+      .when(purchaseOrderLineService).populateOrderLines(any(CompositePurchaseOrder.class), eq(requestContext));
+    doReturn(failedFuture("error"))
+      .when(compositePoLineValidationService).validateUserUnaffiliatedLocations(anyString(), any(), eq(requestContext));
+
+    // When
+    Future<Void> future = purchaseOrderHelper.putCompositeOrderById(compPO.getId(), deleteHoldings, compPO, requestContext);
+
+    // Then
+    assertTrue(future.failed());
+
+    verify(orderValidationService, times(0)).validateOrderForUpdate(any(), any(), anyBoolean(), any());
   }
 
   @Test
