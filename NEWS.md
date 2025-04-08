@@ -1,5 +1,13 @@
 ## 13.1.0 - Unreleased
 
+## 13.0.2 - Released (Sunflower R1 2025 Bug Fix)
+The primary focus of this release was to fix an issue where PO line statuses became "Pending" when user without appropriate affiliation is trying to unopen an order.
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v13.0.1...v13.0.2)
+
+### Bug Fixes
+* [MODORDERS-1267](https://issues.folio.org/browse/MODORDERS-1267) - ECS | PO line statuses became "Pending" when user without appropriate affiliation is trying to unopen order
+
 ## 13.0.1 - Released (Sunflower R1 2025 Bug Fix)
 The primary focus of this release was to fix an issue with the claiming job erasing the old ones in the "Export manager".
 
