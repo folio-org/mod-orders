@@ -962,6 +962,7 @@
             "inventory-storage.items.collection.get",
             "inventory-storage.items.collection.delete",
             "configuration.entries.collection.get",
+            "orders-storage.settings.collection.get",
             "user-tenants.collection.get",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get"
