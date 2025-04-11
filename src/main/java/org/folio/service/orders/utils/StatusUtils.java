@@ -3,7 +3,7 @@ package org.folio.service.orders.utils;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.jaxrs.model.CloseReason;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLine.PaymentStatus;
@@ -29,7 +29,7 @@ public class StatusUtils {
   private static final Set<String> resolutionPaymentStatus = Set.of(PaymentStatus.CANCELLED.value(), PaymentStatus.PAYMENT_NOT_REQUIRED.value(), PaymentStatus.FULLY_PAID.value());
   private static final Set<String> resolutionReceiptStatus = Set.of(ReceiptStatus.CANCELLED.value(), ReceiptStatus.RECEIPT_NOT_REQUIRED.value(), ReceiptStatus.FULLY_RECEIVED.value());
 
-  public static boolean isStatusChanged(CompositePoLine compOrderLine, PoLine lineFromStorage) {
+  public static boolean isStatusChanged(PoLine compOrderLine, PoLine lineFromStorage) {
     return !StringUtils.equals(lineFromStorage.getReceiptStatus().value(), compOrderLine.getReceiptStatus().value()) ||
       !StringUtils.equals(lineFromStorage.getPaymentStatus().value(), compOrderLine.getPaymentStatus().value());
   }
@@ -97,9 +97,9 @@ public class StatusUtils {
       || poLine.getReceiptStatus() == PoLine.ReceiptStatus.CANCELLED;
   }
 
-  public static boolean isStatusCanceledCompositePoLine(CompositePoLine compOrderLine) {
-    return compOrderLine.getReceiptStatus() == CompositePoLine.ReceiptStatus.CANCELLED
-      || compOrderLine.getPaymentStatus() == CompositePoLine.PaymentStatus.CANCELLED;
+  public static boolean isStatusCanceledCompositePoLine(PoLine compOrderLine) {
+    return compOrderLine.getReceiptStatus() == PoLine.ReceiptStatus.CANCELLED
+      || compOrderLine.getPaymentStatus() == PoLine.PaymentStatus.CANCELLED;
   }
 
   private static boolean isOrderOpen(PurchaseOrder order) {

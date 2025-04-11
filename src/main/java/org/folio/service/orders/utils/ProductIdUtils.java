@@ -3,7 +3,7 @@ package org.folio.service.orders.utils;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.core.exceptions.HttpException;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ProductId;
 
 import java.util.List;
@@ -21,8 +21,8 @@ public class ProductIdUtils {
 
   private ProductIdUtils() {}
 
-  public static Set<String> buildSetOfProductIdsFromCompositePoLines(List<CompositePoLine> compositePoLines, String isbnTypeId) {
-    List<ProductId> productIds = compositePoLines.stream()
+  public static Set<String> buildSetOfProductIdsFromCompositePoLines(List<PoLine> poLines, String isbnTypeId) {
+    List<ProductId> productIds = poLines.stream()
       .flatMap(pol -> pol.getDetails().getProductIds().stream())
       .toList();
     return buildSetOfProductIds(productIds, isbnTypeId);
@@ -43,9 +43,9 @@ public class ProductIdUtils {
     return throwable instanceof HttpException httpException && ISBN_NOT_VALID.getCode().equals(httpException.getError().getCode());
   }
 
-  public static void removeISBNDuplicates(CompositePoLine compPOL, String isbnTypeId) {
-    List<ProductId> productIds = removeISBNDuplicates(compPOL.getDetails().getProductIds(), isbnTypeId);
-    compPOL.getDetails().setProductIds(productIds);
+  public static void removeISBNDuplicates(PoLine poLine, String isbnTypeId) {
+    List<ProductId> productIds = removeISBNDuplicates(poLine.getDetails().getProductIds(), isbnTypeId);
+    poLine.getDetails().setProductIds(productIds);
   }
 
   public static List<ProductId> removeISBNDuplicates(List<ProductId> productIds, String isbnTypeId) {

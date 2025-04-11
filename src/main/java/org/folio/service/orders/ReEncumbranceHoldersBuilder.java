@@ -22,7 +22,7 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.EncumbranceRollover;
@@ -60,12 +60,12 @@ public class ReEncumbranceHoldersBuilder extends FinanceHoldersBuilder {
   }
 
   public List<ReEncumbranceHolder> buildReEncumbranceHoldersWithOrdersData(CompositePurchaseOrder compPO) {
-    return compPO.getCompositePoLines()
+    return compPO.getPoLines()
       .stream()
-      .flatMap(compositePoLine -> compositePoLine.getFundDistribution()
+      .flatMap(poLine -> poLine.getFundDistribution()
         .stream()
         .map(fundDistribution -> new ReEncumbranceHolder().withFundDistribution(fundDistribution)
-          .withPoLine(compositePoLine)
+          .withPoLine(poLine)
           .withPurchaseOrder(compPO)))
       .collect(toList());
   }
@@ -106,7 +106,7 @@ public class ReEncumbranceHoldersBuilder extends FinanceHoldersBuilder {
       currencyHoldersMap.forEach((poLineCurrency, holders) -> {
         Double exchangeRate = holders.stream()
           .map(ReEncumbranceHolder::getPoLine)
-          .map(CompositePoLine::getCost)
+          .map(PoLine::getCost)
           .map(Cost::getExchangeRate)
           .filter(Objects::nonNull)
           .findFirst().orElse(null);

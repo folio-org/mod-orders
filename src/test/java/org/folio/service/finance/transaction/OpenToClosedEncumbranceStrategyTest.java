@@ -21,7 +21,7 @@ import java.util.UUID;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.FundDistribution;
@@ -51,16 +51,16 @@ public class OpenToClosedEncumbranceStrategyTest {
   void testShouldReleaseAndSetOrderStatusToEncumbrances() {
     // Given
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine poLine = order.getCompositePoLines().get(0);
+    PoLine poLine = order.getPoLines().get(0);
     FundDistribution fundDistribution = poLine.getFundDistribution().get(0);
 
-    Map<String, List<CompositePoLine>> mapFiscalYearsWithCompPOLines = new HashMap<>();
+    Map<String, List<PoLine>> mapFiscalYearsWithPoLines = new HashMap<>();
     String fiscalYearId = UUID.randomUUID().toString();
-    mapFiscalYearsWithCompPOLines.put(fiscalYearId, singletonList(new CompositePoLine().withId(UUID.randomUUID().toString())));
+    mapFiscalYearsWithPoLines.put(fiscalYearId, singletonList(new PoLine().withId(UUID.randomUUID().toString())));
     CompositePurchaseOrder orderFromStorage = JsonObject.mapFrom(order).mapTo(CompositePurchaseOrder.class);
     order.setWorkflowStatus(WorkflowStatus.CLOSED);
-    doReturn(succeededFuture(mapFiscalYearsWithCompPOLines)).when(encumbranceRelationsHoldersBuilder)
-      .retrieveMapFiscalYearsWithCompPOLines(eq(order), eq(orderFromStorage), eq(requestContext));
+    doReturn(succeededFuture(mapFiscalYearsWithPoLines)).when(encumbranceRelationsHoldersBuilder)
+      .retrieveMapFiscalYearsWithPoLines(eq(order), eq(orderFromStorage), eq(requestContext));
 
     Encumbrance encumbrance = new Encumbrance()
       .withSourcePurchaseOrderId(order.getId())

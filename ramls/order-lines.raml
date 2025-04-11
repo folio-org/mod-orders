@@ -11,7 +11,6 @@ documentation:
 types:
   patch_order_line_request: !include acq-models/mod-orders/schemas/patch_order_line_request.json
   create-inventory-type: !include acq-models/mod-orders/schemas/createInventoryType.json
-  composite-po-line: !include acq-models/mod-orders/schemas/composite_po_line.json
   po-line-collection: !include acq-models/mod-orders-storage/schemas/po_line_collection.json
   po-line: !include acq-models/mod-orders-storage/schemas/po_line.json
   errors: !include raml-util/schemas/errors.schema
@@ -35,9 +34,9 @@ resourceTypes:
   type:
     collection:
       exampleCollection: !include acq-models/mod-orders-storage/examples/po_line_collection.sample
-      exampleItem: !include acq-models/mod-orders/examples/composite_po_line.sample
+      exampleItem: !include acq-models/mod-orders-storage/examples/po_line_get.sample
       schemaCollection: po-line-collection
-      schemaItem: composite-po-line
+      schemaItem: po-line
   is: [validate]
   get:
     is: [pageable, searchable: {description: "using CQL (indexes for PO lines)", example: "payment_status==\"Cancelled\""} ]
@@ -52,8 +51,8 @@ resourceTypes:
         type: UUID
     type:
       collection-item:
-        exampleItem: !include acq-models/mod-orders/examples/composite_po_line.sample
-        schema: composite-po-line
+        exampleItem: !include acq-models/mod-orders-storage/examples/po_line_get.sample
+        schema: po-line
     is: [validate]
     get:
       description: Return a purchase order line with given {id}

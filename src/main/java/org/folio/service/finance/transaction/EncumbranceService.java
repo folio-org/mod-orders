@@ -31,7 +31,7 @@ import org.folio.rest.acq.model.finance.TransactionPatch;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Error;
@@ -189,7 +189,7 @@ public class EncumbranceService {
 
   public Future<List<Transaction>> getOrderEncumbrancesForCurrentFiscalYear(CompositePurchaseOrder order,
       RequestContext requestContext) {
-    List<CompositePoLine> poLines = order.getCompositePoLines();
+    List<PoLine> poLines = order.getPoLines();
     if (CollectionUtils.isEmpty(poLines)) {
       return Future.succeededFuture(List.of());
     }
@@ -204,14 +204,14 @@ public class EncumbranceService {
   }
 
   public Future<List<Transaction>> getOrderEncumbrancesToUnrelease(CompositePurchaseOrder compPO,
-                                                                              Map<String, List<CompositePoLine>> mapFiscalYearWithCompPOLines,
+                                                                              Map<String, List<PoLine>> mapFiscalYearWithPoLines,
                                                                               RequestContext requestContext) {
     // Check invoice line's releaseEncumbrance value for each order line
     List<Future<List<Transaction>>> futures =
-      compPO.getCompositePoLines()
+      compPO.getPoLines()
         .stream()
         .filter(poLines -> CollectionUtils.isNotEmpty(poLines.getFundDistribution()))
-        .map(poLine -> getPoLineEncumbrancesToUnrelease(compPO.getOrderType(), poLine, mapFiscalYearWithCompPOLines, requestContext))
+        .map(poLine -> getPoLineEncumbrancesToUnrelease(compPO.getOrderType(), poLine, mapFiscalYearWithPoLines, requestContext))
         .collect(toList());
     return collectResultsOnSuccess(futures)
       .map(listOfLists -> listOfLists.stream()
@@ -223,7 +223,7 @@ public class EncumbranceService {
     return transactionService.getTransactions(buildEncumbrancesByPoLineQuery(poLineId), requestContext);
   }
 
-  public Future<List<Transaction>> getPoLineUnreleasedEncumbrances(CompositePoLine poLine, RequestContext requestContext) {
+  public Future<List<Transaction>> getPoLineUnreleasedEncumbrances(PoLine poLine, RequestContext requestContext) {
     var fundId = getFundId(poLine);
     if (fundId.isEmpty()) {
       logger.info("getPoLineUnreleasedEncumbrances:: no fundId for poLineId: {}, no transactions", poLine.getId());
@@ -234,7 +234,7 @@ public class EncumbranceService {
         buildUnreleasedEncumbrancesByPoLineQuery(poLine.getId(), fiscalYear.getId()), requestContext));
   }
 
-  public Future<List<Transaction>> getPoLineReleasedEncumbrances(CompositePoLine poLine, RequestContext requestContext) {
+  public Future<List<Transaction>> getPoLineReleasedEncumbrances(PoLine poLine, RequestContext requestContext) {
     var fundId = getFundId(poLine);
     if (fundId.isEmpty()) {
       logger.info("getPoLineReleasedEncumbrances:: no fundId for poLineId: {}, no transactions", poLine.getId());
@@ -249,13 +249,13 @@ public class EncumbranceService {
     return transactionService.getTransactionsByIds(transactionIds, requestContext);
   }
 
-  public Future<List<Transaction>> getCurrentPoLinesEncumbrances(List<CompositePoLine> poLines, String fiscalYearId, RequestContext requestContext) {
+  public Future<List<Transaction>> getCurrentPoLinesEncumbrances(List<PoLine> poLines, String fiscalYearId, RequestContext requestContext) {
     String searchCriteria = "fiscalYearId==" + fiscalYearId;
-    List<String> poLineIds = poLines.stream().map(CompositePoLine::getId).collect(toList());
+    List<String> poLineIds = poLines.stream().map(PoLine::getId).collect(toList());
     return transactionService.getTransactionsByPoLinesIds(poLineIds, searchCriteria, requestContext);
   }
 
-  public Future<List<Transaction>> getEncumbrancesByPoLinesFromCurrentFy(Map<String, List<CompositePoLine>> poLinesByFy, RequestContext requestContext) {
+  public Future<List<Transaction>> getEncumbrancesByPoLinesFromCurrentFy(Map<String, List<PoLine>> poLinesByFy, RequestContext requestContext) {
     return collectResultsOnSuccess(poLinesByFy.entrySet().stream()
       .map(entry -> getCurrentPoLinesEncumbrances(entry.getValue(), entry.getKey(), requestContext))
       .collect(toList()))
@@ -356,11 +356,11 @@ public class EncumbranceService {
   }
 
   private Future<List<Transaction>> getPoLineEncumbrancesToUnrelease(CompositePurchaseOrder.OrderType orderType,
-      CompositePoLine poLine, Map<String, List<CompositePoLine>> mapFiscalYearWithCompPOLines, RequestContext requestContext) {
+      PoLine poLine, Map<String, List<PoLine>> mapFiscalYearWithPoLines, RequestContext requestContext) {
 
     final String[] currentFiscalYearId = new String[1];
-    for (Map.Entry<String, List<CompositePoLine>> entry : mapFiscalYearWithCompPOLines.entrySet()) {
-      for (CompositePoLine pLine : entry.getValue()) {
+    for (Map.Entry<String, List<PoLine>> entry : mapFiscalYearWithPoLines.entrySet()) {
+      for (PoLine pLine : entry.getValue()) {
         if (poLine.getId().equals(pLine.getId())) {
           currentFiscalYearId[0] = entry.getKey();
           break;
@@ -384,7 +384,7 @@ public class EncumbranceService {
     return transactionService.getTransactions(buildReleasedEncumbranceByPoLineQuery(poLine.getId(), currentFiscalYearId[0]), requestContext);
   }
 
-  private Future<Boolean> hasNotInvoiceLineWithReleaseEncumbrance(CompositePoLine poLine, RequestContext requestContext) {
+  private Future<Boolean> hasNotInvoiceLineWithReleaseEncumbrance(PoLine poLine, RequestContext requestContext) {
     String query = "poLineId == " + poLine.getId() + AND + "releaseEncumbrance == true" + AND +
       "invoiceLineStatus == (Approved OR Paid)";
     return invoiceLineService.retrieveInvoiceLines(query, requestContext)
@@ -412,7 +412,7 @@ public class EncumbranceService {
     }
   }
 
-  private static Optional<String> getFundId(CompositePoLine poLine) {
+  private static Optional<String> getFundId(PoLine poLine) {
     return poLine.getFundDistribution()
       .stream()
       .findFirst()

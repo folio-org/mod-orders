@@ -42,14 +42,12 @@ import static org.folio.TestUtils.verifyLocationQuantity;
 import static org.folio.helper.PurchaseOrderLineHelper.ERESOURCE;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
-import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.FINANCE_BATCH_TRANSACTIONS;
 import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
-import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.orders.utils.ResourcePathResolver.USER_TENANTS_ENDPOINT;
 import static org.folio.rest.core.exceptions.ErrorCodes.COST_ADDITIONAL_COST_INVALID;
@@ -128,9 +126,9 @@ import org.folio.rest.acq.model.Title;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.exceptions.ErrorCodes;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePoLine.PaymentStatus;
-import org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PoLine.PaymentStatus;
+import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Contributor;
 import org.folio.rest.jaxrs.model.Cost;
@@ -142,7 +140,6 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
@@ -209,14 +206,14 @@ public class PurchaseOrderLinesApiTest {
   void testPostOrderLine() {
     logger.info("=== Test Post Order Line (expected flow) ===");
 
-    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
+    PoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(PoLine.class);
     reqData.getCost().setPoLineEstimatedPrice(null);
     // To skip permission validation by units
     reqData.setId("0009662b-8b80-4001-b704-ca10971f175d");
     reqData.setPurchaseOrderId("9a952cd0-842b-4e71-bddd-014eb128dc8e");
 
-    final CompositePoLine response = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePoLine.class);
+    final PoLine response = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(PoLine.class);
 
     assertThat(response.getPurchaseOrderId(), equalTo(reqData.getPurchaseOrderId()));
     assertThat(response.getInstanceId(), nullValue());
@@ -234,10 +231,10 @@ public class PurchaseOrderLinesApiTest {
   void testPostOrdersLinePhysicalFormatIncorrectQuantity() {
     logger.info("=== Test Post Physical Order Line - incorrect quantity ===");
 
-    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
+    PoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(PoLine.class);
 
     // Set incorrect cost and location quantities
-    reqData.setOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE);
+    reqData.setOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE);
     reqData.getCost().setQuantityPhysical(0);
     reqData.getCost().setQuantityElectronic(1);
     reqData.getLocations().get(0).setQuantityPhysical(1);
@@ -267,10 +264,10 @@ public class PurchaseOrderLinesApiTest {
   void testPostOrdersLineElectronicFormatIncorrectQuantity() {
     logger.info("=== Test Post Electronic Order Line - incorrect quantity ===");
 
-    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
+    PoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(PoLine.class);
 
     // Set incorrect cost and location quantities
-    reqData.setOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE);
+    reqData.setOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE);
     reqData.getCost().setListUnitPrice(null);
     reqData.getCost().setListUnitPriceElectronic(0d);
     reqData.getCost().setQuantityPhysical(0);
@@ -304,10 +301,10 @@ public class PurchaseOrderLinesApiTest {
   void testPostOrdersLinePhysicalFormatDiscount() {
     logger.info("=== Test Post Physical Order Line - discount exceeds total price ===");
 
-    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
+    PoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(PoLine.class);
 
     // Set incorrect cost and location quantities
-    reqData.setOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE);
+    reqData.setOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE);
     reqData.getCost().setQuantityPhysical(2);
     reqData.getCost().setListUnitPrice(10d);
     reqData.getCost().setDiscount(100d);
@@ -329,9 +326,9 @@ public class PurchaseOrderLinesApiTest {
   void testPostWithEmptyConfigOverLimit() {
     logger.info("=== Test PO creation fail with default limit ===");
 
-    JsonObject compPoLineJson = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
+    JsonObject poLineJson = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
 
-    final Errors errors = verifyPostResponse(LINES_PATH, compPoLineJson.encodePrettily(),
+    final Errors errors = verifyPostResponse(LINES_PATH, poLineJson.encodePrettily(),
       prepareHeaders(EMPTY_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).body().as(Errors.class);
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
@@ -343,9 +340,9 @@ public class PurchaseOrderLinesApiTest {
   @Test
   void testPoLineCreationIfPoAlreadyReachedLimit() {
     logger.info("=== Test PO Line over limit creation ===");
-    JsonObject compPoLineJson = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
+    JsonObject poLineJson = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
 
-    final Errors errors = verifyPostResponse(LINES_PATH, compPoLineJson.encodePrettily(),
+    final Errors errors = verifyPostResponse(LINES_PATH, poLineJson.encodePrettily(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1), APPLICATION_JSON, 422).body().as(Errors.class);
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
@@ -409,7 +406,7 @@ public class PurchaseOrderLinesApiTest {
   private void validateNoLineCreatedForNonPendingOrder(String orderId, String errorCode) {
     CompositePurchaseOrder order = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, orderId).mapTo(CompositePurchaseOrder.class);
 
-    CompositePoLine poLine = order.getCompositePoLines().get(0);
+    PoLine poLine = order.getPoLines().get(0);
     poLine.setId(null);
 
     Errors errors = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(poLine).encode(),
@@ -421,7 +418,7 @@ public class PurchaseOrderLinesApiTest {
   void testCreatePoLineWithGetPoLineNumberError() throws IOException {
     logger.info("=== Test Create PO Line - fail on PO Line number generation ===");
     JsonObject json = new JsonObject(getMockData(String.format("%s%s.json", COMP_PO_LINES_MOCK_DATA_PATH, PO_LINE_ID_FOR_SUCCESS_CASE)));
-    CompositePoLine poLine = json.mapTo(CompositePoLine.class);
+    PoLine poLine = json.mapTo(PoLine.class);
     poLine.setId("0009662b-8b80-4001-b704-ca10971f175d");
     poLine.setPurchaseOrderId("9a952cd0-842b-4e71-bddd-014eb128dc8e");
     verifyPostResponse(LINES_PATH, JsonObject.mapFrom(poLine).encode(), prepareHeaders(PO_NUMBER_ERROR_X_OKAPI_TENANT, X_OKAPI_USER_ID), APPLICATION_JSON, 500);
@@ -431,11 +428,11 @@ public class PurchaseOrderLinesApiTest {
   void testPutOrderLineElectronicFormatIncorrectQuantityAndPrice() {
     logger.info("=== Test Put Electronic Order Line - incorrect quantity and Price ===");
 
-    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
+    PoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(PoLine.class);
     reqData.setId(ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
 
     // Set incorrect cost and location quantities
-    reqData.setOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE);
+    reqData.setOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE);
     Cost cost = reqData.getCost();
     cost.setQuantityPhysical(1);
     cost.setQuantityElectronic(0);
@@ -487,7 +484,10 @@ public class PurchaseOrderLinesApiTest {
 
     String url = String.format(LINE_BY_ID_PATH, PO_LINE_ID_FOR_SUCCESS_CASE);
 
-    Errors resp = verifyPut(url, getMockData(PO_LINE_MIN_CONTENT_PATH), "", 422).as(Errors.class);
+    JsonObject reqData = getMockAsJson(PO_LINE_MIN_CONTENT_PATH);
+    reqData.remove("purchaseOrderId");
+
+    Errors resp = verifyPut(url, reqData.encodePrettily(), "", 422).as(Errors.class);
 
     assertEquals(1, resp.getErrors().size());
   }
@@ -497,7 +497,7 @@ public class PurchaseOrderLinesApiTest {
     logger.info("=== Test PUT Order Line By Id - Success case ===");
 
     String lineId = PO_LINE_ID_FOR_SUCCESS_CASE;
-    CompositePoLine body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId).mapTo(CompositePoLine.class);
+    PoLine body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId).mapTo(PoLine.class);
 
     // See MODORDERS-180
     Cost cost = body.getCost();
@@ -521,9 +521,7 @@ public class PurchaseOrderLinesApiTest {
     assertThat(column, not(hasKey(PIECES_STORAGE)));
 
     column = MockServer.serverRqRs.column(HttpMethod.POST);
-    assertEquals(1, column.size());
-    assertThat(column.keySet(), containsInAnyOrder(REPORTING_CODES));
-    assertThat(column.get(REPORTING_CODES), hasSize(3));
+    assertEquals(0, column.size());
 
     column = MockServer.serverRqRs.column(HttpMethod.PUT);
     assertEquals(1, column.size());
@@ -543,11 +541,10 @@ public class PurchaseOrderLinesApiTest {
   void testPutOrderLineWithTagInheritance() {
     logger.info("=== Test PUT Order Line With Tag Inheritance ===");
     String lineId = "bb66b269-76ed-4616-8da9-730d9b817247";
-    CompositePoLine body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId).mapTo(CompositePoLine.class);
+    PoLine body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId).mapTo(PoLine.class);
     body.setCheckinItems(false);
     body.setIsPackage(false);
     body.setReceiptStatus(ReceiptStatus.AWAITING_RECEIPT);
-    body.setReportingCodes(new ArrayList<>());
     body.setPurchaseOrderId(ID_FOR_PRINT_MONOGRAPH_ORDER);
 
     MockServer.addMockEntry(PO_LINES_STORAGE, body);
@@ -589,11 +586,10 @@ public class PurchaseOrderLinesApiTest {
   void testPutOrderLineWithNoTags() {
     logger.info("=== Test PUT Order Line With No Tags ===");
     String lineId = "bb66b269-76ed-4616-8da9-730d9b817247";
-    CompositePoLine body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId).mapTo(CompositePoLine.class);
+    PoLine body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId).mapTo(PoLine.class);
     body.setCheckinItems(false);
     body.setIsPackage(false);
     body.setReceiptStatus(ReceiptStatus.AWAITING_RECEIPT);
-    body.setReportingCodes(new ArrayList<>());
     MockServer.addMockEntry(PO_LINES_STORAGE, body);
     MockServer.addMockEntry(PURCHASE_ORDER_STORAGE, new CompositePurchaseOrder()
       .withId(ID_FOR_PRINT_MONOGRAPH_ORDER)
@@ -634,12 +630,11 @@ public class PurchaseOrderLinesApiTest {
     logger.info("=== Test PUT Order Line By Id - Pieces will be created ===");
 
     String lineId = PO_LINE_ID_FOR_SUCCESS_CASE;
-    CompositePoLine body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId).mapTo(CompositePoLine.class);
+    PoLine body = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId).mapTo(PoLine.class);
 
     body.setCheckinItems(false);
     body.setIsPackage(false);
     body.setReceiptStatus(ReceiptStatus.AWAITING_RECEIPT);
-    body.setReportingCodes(new ArrayList<>());
     MockServer.addMockEntry(PO_LINES_STORAGE, body);
     MockServer.addMockEntry(PURCHASE_ORDER_STORAGE, new CompositePurchaseOrder()
       .withId(ID_FOR_PRINT_MONOGRAPH_ORDER)
@@ -678,8 +673,8 @@ public class PurchaseOrderLinesApiTest {
     assertThat(column, hasKey(PO_LINES_STORAGE));
 
     column = MockServer.serverRqRs.column(HttpMethod.PUT);
-    assertEquals(3, column.size());
-    assertThat(column.keySet(), containsInAnyOrder(PO_LINES_STORAGE, ALERTS, REPORTING_CODES));
+    assertEquals(1, column.size());
+    assertThat(column.keySet(), containsInAnyOrder(PO_LINES_STORAGE));
 
     column = MockServer.serverRqRs.column(HttpMethod.POST);
     assertEquals(1, column.size());
@@ -694,13 +689,13 @@ public class PurchaseOrderLinesApiTest {
     logger.info("=== Test PUT Order Line By Id - No Order update event sent on success ===");
 
     String lineId = ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE;
-    CompositePoLine compositePoLine = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId).mapTo(CompositePoLine.class);
+    PoLine poLine = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, lineId).mapTo(PoLine.class);
     String url = String.format(LINE_BY_ID_PATH, lineId);
 
-    compositePoLine.setIsPackage(true);
-    compositePoLine.setInstanceId(UUID.randomUUID().toString());
+    poLine.setIsPackage(true);
+    poLine.setInstanceId(UUID.randomUUID().toString());
 
-    Errors errors = verifyPut(url, JsonObject.mapFrom(compositePoLine), "", 422).then()
+    Errors errors = verifyPut(url, JsonObject.mapFrom(poLine), "", 422).then()
       .extract()
       .as(Errors.class);
 
@@ -875,7 +870,7 @@ public class PurchaseOrderLinesApiTest {
   void testGetOrderLineByIdWithoutTitle() {
     logger.info("=== Test Get Orderline By Id without title ===");
 
-    final CompositePoLine resp = verifySuccessGet(String.format(LINE_BY_ID_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE), CompositePoLine.class);
+    final PoLine resp = verifySuccessGet(String.format(LINE_BY_ID_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE), PoLine.class);
 
     logger.info(JsonObject.mapFrom(resp).encodePrettily());
 
@@ -892,7 +887,7 @@ public class PurchaseOrderLinesApiTest {
       .withPoLineId(ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE)
       .withTitle("Title"));
 
-    final CompositePoLine resp = verifySuccessGet(String.format(LINE_BY_ID_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE), CompositePoLine.class);
+    final PoLine resp = verifySuccessGet(String.format(LINE_BY_ID_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE), PoLine.class);
 
     logger.info(JsonObject.mapFrom(resp).encodePrettily());
 
@@ -912,7 +907,7 @@ public class PurchaseOrderLinesApiTest {
       .withTitle("Title")
       .withInstanceId(instanceId));
 
-    final CompositePoLine resp = verifySuccessGet(String.format(LINE_BY_ID_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE), CompositePoLine.class);
+    final PoLine resp = verifySuccessGet(String.format(LINE_BY_ID_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE), PoLine.class);
 
     logger.info(JsonObject.mapFrom(resp).encodePrettily());
 
@@ -934,7 +929,7 @@ public class PurchaseOrderLinesApiTest {
       .withInstanceId(instanceId));
     addMockEntry(PO_LINES_STORAGE, getMinimalContentCompositePoLine().withIsPackage(true).withId(polineId));
 
-    final CompositePoLine resp = verifySuccessGet(String.format(LINE_BY_ID_PATH, polineId), CompositePoLine.class);
+    final PoLine resp = verifySuccessGet(String.format(LINE_BY_ID_PATH, polineId), PoLine.class);
 
     logger.info(JsonObject.mapFrom(resp).encodePrettily());
 
@@ -1029,7 +1024,7 @@ public class PurchaseOrderLinesApiTest {
   void testPostOrdersWithInvalidIsbn() {
     logger.info("=== Test Post Order line with invalid ISBN ===");
 
-    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
+    PoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(PoLine.class);
     // To skip permission validation by units
     reqData.setId("0009662b-8b80-4001-b704-ca10971f175d");
     reqData.setPurchaseOrderId("9a952cd0-842b-4e71-bddd-014eb128dc8e");
@@ -1056,7 +1051,7 @@ public class PurchaseOrderLinesApiTest {
   void testPostOrderLineToConvertToIsbn13() {
     logger.info("=== Test Post order line to verify ISBN 10 is normalized to ISBN 13 ===");
 
-    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
+    PoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(PoLine.class);
     // To skip permission validation by units
     reqData.setId("0009662b-8b80-4001-b704-ca10971f175d");
     reqData.setPurchaseOrderId("9a952cd0-842b-4e71-bddd-014eb128dc8e");
@@ -1069,8 +1064,8 @@ public class PurchaseOrderLinesApiTest {
       .withQualifier(productId.getQualifier())
       .withProductId(isbn));
     assertThat(reqData.getDetails().getProductIds(), hasSize(2));
-    CompositePoLine resp = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
-        prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePoLine.class);
+    PoLine resp = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+        prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(PoLine.class);
 
     assertThat(resp.getDetails().getProductIds(), hasSize(1));
     assertThat(resp.getDetails().getProductIds().get(0).getProductId(), equalTo("9780198526636"));
@@ -1080,7 +1075,7 @@ public class PurchaseOrderLinesApiTest {
   void testPostOrderLineToRemoveISBNDuplicates() {
     logger.info("=== Test Post order line to verify ISBN 13 is not repeated ===");
 
-    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
+    PoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(PoLine.class);
     // To skip permission validation by units
     reqData.setId("0009662b-8b80-4001-b704-ca10971f175d");
     reqData.setPurchaseOrderId("9a952cd0-842b-4e71-bddd-014eb128dc8e");
@@ -1107,8 +1102,8 @@ public class PurchaseOrderLinesApiTest {
     reqData.getDetails().getProductIds().add(new ProductId().withProductId(INVALID_ISBN).withProductIdType(invalidIsbn));
 
     assertThat(reqData.getDetails().getProductIds(), hasSize(8));
-    CompositePoLine resp = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePoLine.class);
+    PoLine resp = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(PoLine.class);
 
     assertThat(resp.getDetails().getProductIds(), hasSize(4));
     assertThat(resp.getDetails().getProductIds().get(0).getProductId(), equalTo(isbn1));
@@ -1129,7 +1124,7 @@ public class PurchaseOrderLinesApiTest {
     logger.info("=== Test update poline for opened order should failed when related invoice line is approved  ===");
 
     CompositePurchaseOrder compositePurchaseOrder = verifySuccessGet(String.format(COMP_PO_BY_ID_PATH, "d6966317-96c7-492f-8df6-dc6c19554452"), CompositePurchaseOrder.class);
-    CompositePoLine reqData = compositePurchaseOrder.getCompositePoLines().get(0);
+    PoLine reqData = compositePurchaseOrder.getPoLines().get(0);
     reqData.getFundDistribution().get(0).setFundId("a89eccf0-57a6-495e-898d-32b9b2210f2f");
 
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
@@ -1144,8 +1139,8 @@ public class PurchaseOrderLinesApiTest {
   @Test
   void testPutOrdersWithInvalidIsbn() {
     logger.info("=== Test Put Order line with invalid ISBN ===");
-    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE)
-      .mapTo(CompositePoLine.class);
+    PoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE)
+      .mapTo(PoLine.class);
     reqData.setId(ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
     reqData.getLocations().get(0).setQuantity(2);
     String isbn = INVALID_ISBN;
@@ -1160,7 +1155,7 @@ public class PurchaseOrderLinesApiTest {
   void testUpdatePolineForOpenedOrderWithInactiveAccessProvider() {
     logger.info("=== Test update poline with inactive access provider for opened order  ===");
 
-    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
+    PoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(PoLine.class);
     reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
     reqData.getEresource().setAccessProvider(INACTIVE_ACCESS_PROVIDER_A);
 
@@ -1180,7 +1175,7 @@ public class PurchaseOrderLinesApiTest {
   void testUpdatePolineForOpenedOrderWithChangingCost() {
     logger.info("=== Test update poline for opened order with changed cost ===");
 
-    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
+    PoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(PoLine.class);
     reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
     reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
 
@@ -1206,7 +1201,7 @@ public class PurchaseOrderLinesApiTest {
   void testUpdatePolineForOpenedOrderWithInactiveExpenseClass() {
     logger.info("=== Test update poline for opened order with inactive expense class ===");
 
-    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
+    PoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(PoLine.class);
     reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
     reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
 
@@ -1230,7 +1225,7 @@ public class PurchaseOrderLinesApiTest {
   void testUpdatePolineForOpenedOrderWithChangingDistributionType() {
     logger.info("=== Test update poline for opened order with changed DistributionType ===");
 
-    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
+    PoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(PoLine.class);
     reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
     reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
 
@@ -1252,7 +1247,7 @@ public class PurchaseOrderLinesApiTest {
   void testUpdatePolineForOpenedOrderWithChangingDFundistributionAndCost() {
     logger.info("=== Test update poline for opened order with changed DistributionType ===");
 
-    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
+    PoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(PoLine.class);
     reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
     reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
 
@@ -1279,7 +1274,7 @@ public class PurchaseOrderLinesApiTest {
   void testUpdatePolineForOpenedOrderWithoutUpdatingEncumbrances() {
     logger.info("=== Test update poline. Fund distributions not changed ===");
 
-    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
+    PoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(PoLine.class);
     reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
     reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
 
@@ -1295,8 +1290,8 @@ public class PurchaseOrderLinesApiTest {
       MockServer.getRqRsEntries(HttpMethod.POST, FINANCE_BATCH_TRANSACTIONS).isEmpty());
 
     // double check with updating status only (When only status updated via request from mod-invoices)
-    CompositePoLine updatedLine = getRqRsEntries(HttpMethod.PUT, PO_LINES_STORAGE).get(0).mapTo(CompositePoLine.class);
-    updatedLine.setPaymentStatus(CompositePoLine.PaymentStatus.FULLY_PAID);
+    PoLine updatedLine = getRqRsEntries(HttpMethod.PUT, PO_LINES_STORAGE).get(0).mapTo(PoLine.class);
+    updatedLine.setPaymentStatus(PoLine.PaymentStatus.FULLY_PAID);
     updatedLine.getDetails().getProductIds().iterator().next().setQualifier(null);
 
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(updatedLine).encodePrettily(),
@@ -1309,7 +1304,7 @@ public class PurchaseOrderLinesApiTest {
   void testUpdatePolineForOpenedOrderWithChangingOnlyLocation() {
     logger.info("=== Test update poline for opened order with changed location ===");
 
-    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
+    PoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(PoLine.class);
     String poLineId = "c0d08448-347b-418a-8c2f-5fb50248d67e";
     reqData.setId(poLineId);
     reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
@@ -1342,7 +1337,7 @@ public class PurchaseOrderLinesApiTest {
   void testUpdatePolineForOpenedOrderWithChangingQuantity() {
     logger.info("=== Test update poline for opened order with changed quantity ===");
 
-    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
+    PoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(PoLine.class);
     String poLineId = "c0d08448-347b-418a-8c2f-5fb50248d67e";
     reqData.setId(poLineId);
     reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
@@ -1377,7 +1372,7 @@ public class PurchaseOrderLinesApiTest {
   void testUpdatePolineForOpenedOrderWithChangingQuantityAndCheckinItems() {
     logger.info("=== Test update poline for opened order with changed quantity and checkin items ===");
 
-    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
+    PoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(PoLine.class);
     String poLineId = "c0d08448-347b-418a-8c2f-5fb50248d67e";
     reqData.setId(poLineId);
     reqData.setCheckinItems(true);
@@ -1403,8 +1398,8 @@ public class PurchaseOrderLinesApiTest {
   void testShouldReleaseEncumbrancesAfterCancelledPoLine() {
     logger.info("=== Test release encumbrances after cancelled PoLine  ===");
 
-    CompositePoLine lineFromStorage = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "740809a1-84ca-45d7-a7a8-accc21efd5bd").mapTo(CompositePoLine.class);
-    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "740809a1-84ca-45d7-a7a8-accc21efd5bd").mapTo(CompositePoLine.class);
+    PoLine lineFromStorage = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "740809a1-84ca-45d7-a7a8-accc21efd5bd").mapTo(PoLine.class);
+    PoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "740809a1-84ca-45d7-a7a8-accc21efd5bd").mapTo(PoLine.class);
     reqData.setReceiptStatus(ReceiptStatus.CANCELLED);
     reqData.setPaymentStatus(PaymentStatus.CANCELLED);
 
@@ -1431,11 +1426,11 @@ public class PurchaseOrderLinesApiTest {
   void testShouldChangeItemStatusAfterCancelledPoLine() {
     logger.info("=== Test change item status to 'Order closed' after cancelled PoLine  ===");
 
-    CompositePoLine firstLineFromStorage = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "740809a1-84ca-45d7-a7a8-accc21efd5bd").mapTo(CompositePoLine.class);
+    PoLine firstLineFromStorage = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "740809a1-84ca-45d7-a7a8-accc21efd5bd").mapTo(PoLine.class);
     firstLineFromStorage.setReceiptStatus(ReceiptStatus.CANCELLED);
     firstLineFromStorage.setPaymentStatus(PaymentStatus.CANCELLED);
-    CompositePoLine secondLineFromStorage = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "cc189777-fd26-4ae8-b0e5-08abebb50b51").mapTo(CompositePoLine.class);
-    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "cc189777-fd26-4ae8-b0e5-08abebb50b51").mapTo(CompositePoLine.class);
+    PoLine secondLineFromStorage = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "cc189777-fd26-4ae8-b0e5-08abebb50b51").mapTo(PoLine.class);
+    PoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "cc189777-fd26-4ae8-b0e5-08abebb50b51").mapTo(PoLine.class);
     reqData.setReceiptStatus(ReceiptStatus.CANCELLED);
     reqData.setPaymentStatus(PaymentStatus.CANCELLED);
 
@@ -1463,10 +1458,10 @@ public class PurchaseOrderLinesApiTest {
   void testShouldUnreleasedEncumbrancesAfterUncancelledPoLine() {
     logger.info("=== Test unreleased encumbrances after uncancelled PoLine ===");
 
-    CompositePoLine lineFromStorage = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "740809a1-84ca-45d7-a7a8-accc21efd5bd").mapTo(CompositePoLine.class);
+    PoLine lineFromStorage = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "740809a1-84ca-45d7-a7a8-accc21efd5bd").mapTo(PoLine.class);
     lineFromStorage.setReceiptStatus(ReceiptStatus.CANCELLED);
     lineFromStorage.setPaymentStatus(PaymentStatus.CANCELLED);
-    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "740809a1-84ca-45d7-a7a8-accc21efd5bd").mapTo(CompositePoLine.class);
+    PoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "740809a1-84ca-45d7-a7a8-accc21efd5bd").mapTo(PoLine.class);
     reqData.setReceiptStatus(ReceiptStatus.AWAITING_RECEIPT);
     reqData.setPaymentStatus(PaymentStatus.AWAITING_PAYMENT);
 
@@ -1489,7 +1484,7 @@ public class PurchaseOrderLinesApiTest {
 
   @Test
   void testUpdatePolineForOpenedOrderWithoutUpdatingItems() {
-    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
+    PoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(PoLine.class);
     String poLineId = "c0d08448-347b-418a-8c2f-5fb50248d67e";
     reqData.setId(poLineId);
     reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
@@ -1524,7 +1519,7 @@ public class PurchaseOrderLinesApiTest {
 
   @Test
   void testUpdatePolineForOpenedOrderWithNewLocationWithoutUpdatingItems() {
-    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
+    PoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(PoLine.class);
     String poLineId = "c0d08448-347b-418a-8c2f-5fb50248d67e";
     reqData.setId(poLineId);
     reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
@@ -1679,14 +1674,14 @@ public class PurchaseOrderLinesApiTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = CompositePoLine.OrderFormat.class, names = {"PHYSICAL_RESOURCE", "OTHER"}, mode = EnumSource.Mode.INCLUDE)
-  void testPutPhysicalOrderLineByIdWhenSpecificElementIsPresentAndProtectedFieldsChanged(CompositePoLine.OrderFormat orderFormat) {
+  @EnumSource(value = PoLine.OrderFormat.class, names = {"PHYSICAL_RESOURCE", "OTHER"}, mode = EnumSource.Mode.INCLUDE)
+  void testPutPhysicalOrderLineByIdWhenSpecificElementIsPresentAndProtectedFieldsChanged(PoLine.OrderFormat orderFormat) {
     logger.info("=== Test PUT Order Line By Id - Protected fields changed ===");
 
     String lineId = "0009662b-8b80-4001-b704-ca10971f222d";
     JsonObject body = getMockAsJson(PO_LINES_MOCK_DATA_PATH, lineId);
     Object[] expected = new Object[]{ POLineFieldNames.ACQUISITION_METHOD.getFieldName()};
-    if (CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE == orderFormat) {
+    if (PoLine.OrderFormat.ELECTRONIC_RESOURCE == orderFormat) {
       body.remove(ERESOURCE);
     }
 
@@ -1714,8 +1709,8 @@ public class PurchaseOrderLinesApiTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = CompositePoLine.OrderFormat.class, names = {"ELECTRONIC_RESOURCE"}, mode = EnumSource.Mode.INCLUDE)
-  void testPutElecOrderLineByIdWhenSpecificElementIsPresentAndProtectedFieldsChanged(CompositePoLine.OrderFormat orderFormat) {
+  @EnumSource(value = PoLine.OrderFormat.class, names = {"ELECTRONIC_RESOURCE"}, mode = EnumSource.Mode.INCLUDE)
+  void testPutElecOrderLineByIdWhenSpecificElementIsPresentAndProtectedFieldsChanged(PoLine.OrderFormat orderFormat) {
     logger.info("=== Test PUT Order Line By Id - Protected fields changed ===");
 
     String lineId = "0009662b-8b80-4001-b704-ca10971f222d";
@@ -1747,8 +1742,8 @@ public class PurchaseOrderLinesApiTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = CompositePoLine.OrderFormat.class, names = {"P_E_MIX"}, mode = EnumSource.Mode.INCLUDE)
-  void testPutMixedOrderLineByIdWhenSpecificElementIsPresentAndProtectedFieldsChanged(CompositePoLine.OrderFormat orderFormat) {
+  @EnumSource(value = PoLine.OrderFormat.class, names = {"P_E_MIX"}, mode = EnumSource.Mode.INCLUDE)
+  void testPutMixedOrderLineByIdWhenSpecificElementIsPresentAndProtectedFieldsChanged(PoLine.OrderFormat orderFormat) {
     logger.info("=== Test PUT Order Line By Id - Protected fields changed ===");
 
     String lineId = "0009662b-8b80-4001-b704-ca10971f222d";
@@ -1779,7 +1774,7 @@ public class PurchaseOrderLinesApiTest {
   }
 
   private String getPoLineWithMinContentAndIds(String lineId, String orderId) throws IOException {
-    CompositePoLine poLine = new JsonObject(getMockData(PO_LINE_MIN_CONTENT_PATH)).mapTo(CompositePoLine.class);
+    PoLine poLine = new JsonObject(getMockData(PO_LINE_MIN_CONTENT_PATH)).mapTo(PoLine.class);
     poLine.setId(lineId);
     poLine.setPurchaseOrderId(orderId);
     return JsonObject.mapFrom(poLine).encode();

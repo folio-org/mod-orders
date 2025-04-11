@@ -2,7 +2,7 @@
   "id": "d6966317-96c7-492f-8df6-dc6c19554452",
   "orderType": "One-Time",
   "workflowStatus": "Open",
-  "compositePoLines": [
+  "poLines": [
     {
       "id": "a6edc906-2f9f-5fb2-a373-efac406f0ef2",
       "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",

@@ -17,9 +17,7 @@
           "modulePermissions": [
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
-            "orders-storage.purchase-orders.collection.get",
-            "orders-storage.alerts.item.get",
-            "orders-storage.reporting-codes.item.get"
+            "orders-storage.purchase-orders.collection.get"
           ]
         },
         {
@@ -55,9 +53,7 @@
           "modulePermissions": [
             "orders-storage.purchase-orders.item.get",
             "orders-storage.po-lines.collection.get",
-            "orders-storage.alerts.item.get",
             "orders-storage.titles.collection.get",
-            "orders-storage.reporting-codes.item.get",
             "orders-storage.order-invoice-relationships.collection.get",
             "configuration.entries.collection.get",
             "acquisitions-units-storage.units.collection.get",
@@ -109,8 +105,6 @@
             "orders-storage.purchase-orders.item.delete",
             "orders-storage.po-lines.collection.get",
             "orders-storage.po-lines.item.delete",
-            "orders-storage.alerts.item.delete",
-            "orders-storage.reporting-codes.item.delete",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
             "orders-storage.order-invoice-relationships.collection.get"
@@ -177,8 +171,6 @@
             "orders-storage.po-line-number.get",
             "orders-storage.po-lines.collection.get",
             "orders-storage.po-lines.item.post",
-            "orders-storage.alerts.item.post",
-            "orders-storage.reporting-codes.item.post",
             "configuration.entries.collection.get",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
@@ -204,8 +196,6 @@
           ],
           "modulePermissions": [
             "orders-storage.po-lines.item.get",
-            "orders-storage.alerts.item.get",
-            "orders-storage.reporting-codes.item.get",
             "orders-storage.purchase-orders.item.get",
             "orders-storage.titles.collection.get",
             "configuration.entries.collection.get",
@@ -225,9 +215,6 @@
             "orders.acquisition-units.bypass.execute"
           ],
           "modulePermissions": [
-            "orders-storage.alerts.item.post",
-            "orders-storage.alerts.item.put",
-            "orders-storage.alerts.item.delete",
             "orders-storage.pieces.collection.get",
             "orders-storage.pieces-batch.collection.post",
             "orders-storage.po-lines.collection.get",
@@ -254,9 +241,6 @@
             "orders-storage.po-lines.item.put",
             "orders-storage.purchase-orders.item.get",
             "orders-storage.purchase-orders.item.put",
-            "orders-storage.reporting-codes.item.post",
-            "orders-storage.reporting-codes.item.put",
-            "orders-storage.reporting-codes.item.delete",
             "orders-storage.titles.collection.get",
             "configuration.entries.collection.get",
             "inventory-storage.identifier-types.collection.get",
@@ -290,8 +274,6 @@
             "orders-storage.purchase-orders.item.get",
             "orders-storage.po-lines.item.get",
             "orders-storage.po-lines.item.delete",
-            "orders-storage.alerts.item.delete",
-            "orders-storage.reporting-codes.item.delete",
             "orders-storage.order-invoice-relationships.collection.get",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
@@ -445,9 +427,7 @@
             "orders-storage.purchase-orders.collection.get",
             "orders-storage.titles.item.get",
             "orders-storage.titles.item.put",
-            "orders-storage.titles.collection.get",
-            "orders-storage.alerts.item.get",
-            "orders-storage.reporting-codes.item.get"
+            "orders-storage.titles.collection.get"
           ]
         },
         {
@@ -536,8 +516,6 @@
             "orders-storage.purchase-orders.item.get",
             "orders-storage.titles.item.get",
             "orders-storage.titles.item.put",
-            "orders-storage.alerts.item.get",
-            "orders-storage.reporting-codes.item.get",
             "user-tenants.collection.get",
             "consortia.sharing-instances.item.post"
           ]
@@ -587,8 +565,6 @@
             "orders-storage.purchase-orders.item.get",
             "orders-storage.titles.item.get",
             "orders-storage.titles.item.put",
-            "orders-storage.alerts.item.get",
-            "orders-storage.reporting-codes.item.get",
             "user-tenants.collection.get",
             "consortia.sharing-instances.item.post"
           ]
@@ -620,8 +596,6 @@
             "orders-storage.po-lines.item.get",
             "orders-storage.po-lines.collection.get",
             "orders-storage.purchase-orders.item.get",
-            "orders-storage.alerts.item.get",
-            "orders-storage.reporting-codes.item.get",
             "orders-storage.order-invoice-relationships.collection.get",
             "orders-storage.titles.item.get",
             "invoice.invoice-lines.collection.get",
@@ -661,8 +635,6 @@
             "orders-storage.purchase-orders.item.get",
             "orders-storage.titles.item.get",
             "orders-storage.titles.item.put",
-            "orders-storage.alerts.item.get",
-            "orders-storage.reporting-codes.item.get",
             "user-tenants.collection.get",
             "consortia.sharing-instances.item.post",
             "orders-storage.pieces-batch.collection.post"
@@ -1330,10 +1302,6 @@
       "version": "8.1"
     },
     {
-      "id": "orders-storage.alerts",
-      "version": "3.0"
-    },
-    {
       "id": "orders-storage.pieces",
       "version": "5.0"
     },
@@ -1344,10 +1312,6 @@
     {
       "id": "orders-storage.receiving-history",
       "version": "4.0"
-    },
-    {
-      "id": "orders-storage.reporting-codes",
-      "version": "3.0"
     },
     {
       "id": "orders-storage.po-lines",
@@ -2215,19 +2179,11 @@
         "orders-storage.po-lines.item.post",
         "orders-storage.po-lines.item.put",
         "orders-storage.po-lines.item.delete",
-        "orders-storage.alerts.item.post",
-        "orders-storage.alerts.item.get",
-        "orders-storage.alerts.item.put",
-        "orders-storage.alerts.item.delete",
         "orders-storage.pieces-batch.collection.post",
         "orders-storage.pieces.item.get",
         "orders-storage.pieces.item.delete",
         "orders-storage.pieces.collection.get",
         "orders-storage.po-line-number.get",
-        "orders-storage.reporting-codes.item.post",
-        "orders-storage.reporting-codes.item.get",
-        "orders-storage.reporting-codes.item.put",
-        "orders-storage.reporting-codes.item.delete",
         "orders-storage.titles.collection.get",
         "orders-storage.titles.item.get",
         "orders-storage.order-invoice-relationships.collection.get",
@@ -2289,8 +2245,6 @@
         "orders-storage.purchase-orders.collection.get",
         "orders-storage.purchase-orders.item.post",
         "orders-storage.purchase-orders.item.put",
-        "orders-storage.alerts.item.post",
-        "orders-storage.alerts.item.put",
         "orders-storage.po-lines.item.post",
         "orders-storage.po-lines.item.put",
         "orders-storage.po-lines.collection.get",
@@ -2298,14 +2252,10 @@
         "orders-storage.pieces.collection.get",
         "orders-storage.po-line-number.get",
         "orders-storage.po-number.get",
-        "orders-storage.reporting-codes.item.post",
-        "orders-storage.reporting-codes.item.put",
         "orders-storage.titles.collection.get",
         "orders-storage.titles.item.put",
         "orders-storage.po-lines.item.get",
         "orders-storage.purchase-orders.item.get",
-        "orders-storage.alerts.item.get",
-        "orders-storage.reporting-codes.item.get",
         "configuration.entries.collection.get",
         "finance.funds.budget.item.get",
         "finance.funds.collection.get",

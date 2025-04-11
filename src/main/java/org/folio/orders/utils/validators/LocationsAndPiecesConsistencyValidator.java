@@ -13,7 +13,7 @@ import java.util.Optional;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.rest.core.exceptions.HttpException;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceCollection;
@@ -21,7 +21,7 @@ import org.folio.rest.jaxrs.model.PieceCollection;
 public class LocationsAndPiecesConsistencyValidator {
 
 
-  public static void verifyLocationsAndPiecesConsistency(List<CompositePoLine> poLines, PieceCollection pieces) {
+  public static void verifyLocationsAndPiecesConsistency(List<PoLine> poLines, PieceCollection pieces) {
     if (CollectionUtils.isNotEmpty(poLines)) {
       Map<String, Map<String, Integer>> numOfLocationsByPoLineIdAndLocationIdV = numOfLocationsByPoLineIdAndLocationId(poLines);
       Map<String, Map<String, Integer>> numOfPiecesByPoLineIdAndLocationIdV = numOfPiecesByPoLineAndLocationId(pieces);
@@ -46,12 +46,12 @@ public class LocationsAndPiecesConsistencyValidator {
       .collect(groupingBy(Piece::getPoLineId, groupingBy(LocationsAndPiecesConsistencyValidator::buildPieceKey, summingInt(q -> 1))));
   }
 
-  private static Map<String, Map<String, Integer>> numOfLocationsByPoLineIdAndLocationId(List<CompositePoLine> poLines) {
+  private static Map<String, Map<String, Integer>> numOfLocationsByPoLineIdAndLocationId(List<PoLine> poLines) {
     return poLines.stream()
       .filter(line -> !line.getIsPackage() &&
-        line.getReceiptStatus() != CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED &&
+        line.getReceiptStatus() != PoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED &&
         !line.getCheckinItems())
-      .collect(toMap(CompositePoLine::getId, poLine -> Optional.of(poLine.getLocations())
+      .collect(toMap(PoLine::getId, poLine -> Optional.of(poLine.getLocations())
         .orElse(new ArrayList<>()).stream().collect(toMap(LocationsAndPiecesConsistencyValidator::buildLocationKey, Location::getQuantity, Integer::sum))));
   }
 

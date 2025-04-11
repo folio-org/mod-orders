@@ -13,7 +13,7 @@ import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
@@ -38,10 +38,10 @@ public class OrderLinesSummaryPopulateService implements CompositeOrderDynamicDa
   public Future<CompositeOrderRetrieveHolder> populate(CompositeOrderRetrieveHolder holder,
       RequestContext requestContext) {
     CompositePurchaseOrder compPO = holder.getOrder();
-    List<CompositePoLine> compositePoLines = holder.getOrder().getCompositePoLines();
-    return calculateTotalEstimatedPrice(compositePoLines, requestContext).map(totalAmount -> {
+    List<PoLine> poLines = holder.getOrder().getPoLines();
+    return calculateTotalEstimatedPrice(poLines, requestContext).map(totalAmount -> {
       compPO.setTotalEstimatedPrice(totalAmount);
-      compPO.setTotalItems(calculateTotalItemsQuantity(compositePoLines));
+      compPO.setTotalItems(calculateTotalItemsQuantity(poLines));
       return holder;
     });
   }
@@ -50,22 +50,22 @@ public class OrderLinesSummaryPopulateService implements CompositeOrderDynamicDa
    * Calculates PO's estimated price by summing the Estimated Price of the associated PO Lines. See MODORDERS-181 for more details.
    * At the moment assumption is that all prices could be in the different currency.
    *
-   * @param compositePoLines list of composite PO Lines
+   * @param poLines list of composite PO Lines
    * @return estimated purchase order's total price
    */
-  public Future<Double> calculateTotalEstimatedPrice(List<CompositePoLine> compositePoLines,
+  public Future<Double> calculateTotalEstimatedPrice(List<PoLine> poLines,
       RequestContext requestContext) {
     return configurationEntriesCache.getSystemCurrency(requestContext)
-      .compose(toCurrency -> getCollect(compositePoLines, requestContext, toCurrency)
+      .compose(toCurrency -> getCollect(poLines, requestContext, toCurrency)
         .map(amounts -> amounts.stream()
         .reduce(Money.of(0, toCurrency), Money::add)
         .getNumber()
         .doubleValue()));
   }
 
-  private Future<List<Money>> getCollect(List<CompositePoLine> compositePoLines, RequestContext requestContext, String toCurrency) {
-    var futures = compositePoLines.stream()
-      .map(CompositePoLine::getCost)
+  private Future<List<Money>> getCollect(List<PoLine> poLines, RequestContext requestContext, String toCurrency) {
+    var futures = poLines.stream()
+      .map(PoLine::getCost)
       .map(cost -> requestContext.getContext().<Money>executeBlocking(blockingFuture -> {
         Money money = Money.of(cost.getPoLineEstimatedPrice(), cost.getCurrency());
         if (money.getCurrency().getCurrencyCode().equals(toCurrency)) {
@@ -83,7 +83,7 @@ public class OrderLinesSummaryPopulateService implements CompositeOrderDynamicDa
       .map(CompositeFuture::list);
   }
 
-  private int calculateTotalItemsQuantity(List<CompositePoLine> poLines) {
+  private int calculateTotalItemsQuantity(List<PoLine> poLines) {
     return poLines.stream()
       .mapToInt(HelperUtils::calculateTotalQuantity)
       .sum();

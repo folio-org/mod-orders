@@ -37,7 +37,7 @@ public class PendingToOpenEncumbranceStrategy implements EncumbranceWorkflowStra
   @Override
   public Future<List<EncumbranceRelationsHolder>> prepareProcessEncumbrancesAndValidate(CompositePurchaseOrder compPO,
       CompositePurchaseOrder poAndLinesFromStorage, RequestContext requestContext) {
-    validateFundDistributionTotal(compPO.getCompositePoLines());
+    validateFundDistributionTotal(compPO.getPoLines());
     List<EncumbranceRelationsHolder> holders = encumbranceRelationsHoldersBuilder.buildBaseHolders(compPO);
 
     return encumbranceRelationsHoldersBuilder.withFinances(holders, requestContext)

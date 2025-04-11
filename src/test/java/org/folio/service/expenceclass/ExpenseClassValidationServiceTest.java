@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.junit.jupiter.api.Assertions;
@@ -30,10 +30,10 @@ public class ExpenseClassValidationServiceTest {
   @Test
   @DisplayName("Should not throw DuplicateKeyException")
   void testShouldNotThrowDuplicateKeyException() {
-    CompositePoLine compositePoLine = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE)
-      .mapTo(CompositePoLine.class);
+    PoLine poLine = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE)
+      .mapTo(PoLine.class);
 
-    compositePoLine.getFundDistribution().clear();
+    poLine.getFundDistribution().clear();
 
     var fd = new FundDistribution().withFundId(UUID.randomUUID()
       .toString())
@@ -42,12 +42,12 @@ public class ExpenseClassValidationServiceTest {
       .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
       .withValue(100D);
 
-    compositePoLine.getFundDistribution().add(fd);
+    poLine.getFundDistribution().add(fd);
 
-    List<CompositePoLine> compositePoLineList = new ArrayList<>();
+    List<PoLine> compositePoLineList = new ArrayList<>();
 
-    compositePoLineList.add(compositePoLine);
-    compositePoLineList.add(compositePoLine);
+    compositePoLineList.add(poLine);
+    compositePoLineList.add(poLine);
 
     ExpenseClassValidationService expenseClassValidationService = mock(ExpenseClassValidationService.class,CALLS_REAL_METHODS);
     RequestContext requestContext = new RequestContext(null,null);

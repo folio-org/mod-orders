@@ -13,7 +13,7 @@ import org.folio.helper.PurchaseOrderHelper;
 import org.folio.helper.PurchaseOrderLineHelper;
 import org.folio.kafka.KafkaConfig;
 import org.folio.rest.core.RestClient;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CreateInventoryType;
 import org.folio.service.AcquisitionMethodsService;
 import org.folio.service.AcquisitionsUnitsService;
@@ -71,7 +71,7 @@ import org.folio.service.invoice.POLInvoiceLineRelationService;
 import org.folio.service.orders.CombinedOrderDataPopulateService;
 import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
 import org.folio.service.orders.CompositeOrderRetrieveHolderBuilder;
-import org.folio.service.orders.CompositePoLineValidationService;
+import org.folio.service.orders.PoLineValidationService;
 import org.folio.service.orders.HoldingsSummaryService;
 import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderLinesSummaryPopulateService;
@@ -706,10 +706,10 @@ public class ApplicationConfig {
                                                                   ExpenseClassValidationService expenseClassValidationService,
                                                                   PieceStorageService pieceStorageService,
                                                                   EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
-                                                                  CompositePoLineValidationService compositePoLineValidationService,
+                                                                  PoLineValidationService poLineValidationService,
                                                                   InventoryHoldingManager inventoryHoldingManager) {
     return new OpenCompositeOrderFlowValidator(fundService, expenseClassValidationService, pieceStorageService,
-      encumbranceWorkflowStrategyFactory, compositePoLineValidationService, inventoryHoldingManager);
+      encumbranceWorkflowStrategyFactory, poLineValidationService, inventoryHoldingManager);
   }
 
   @Bean PoNumberHelper poNumberHelper(RestClient restClient, PurchaseOrderStorageService purchaseOrderStorageService) {
@@ -726,22 +726,23 @@ public class ApplicationConfig {
     OpenCompositeOrderManager openCompositeOrderManager, PurchaseOrderStorageService purchaseOrderStorageService,
     ConfigurationEntriesCache configurationEntriesCache, PoNumberHelper poNumberHelper,
     OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator, ReOpenCompositeOrderManager reOpenCompositeOrderManager,
-    OrderValidationService orderValidationService, CompositePoLineValidationService compositePoLineValidationService) {
+    OrderValidationService orderValidationService, PoLineValidationService poLineValidationService) {
     return new PurchaseOrderHelper(purchaseOrderLineHelper, orderLinesSummaryPopulateService, encumbranceService,
       combinedPopulateService, encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, tagService,
       purchaseOrderLineService, titlesService, protectionService, itemStatusSyncService,
       openCompositeOrderManager, purchaseOrderStorageService, configurationEntriesCache,
       poNumberHelper, openCompositeOrderFlowValidator, reOpenCompositeOrderManager,
-      orderValidationService, compositePoLineValidationService);
+      orderValidationService, poLineValidationService);
   }
 
   @Bean
-  public OrderValidationService orderValidationService(CompositePoLineValidationService compositePoLineValidationService,
+  public OrderValidationService orderValidationService(
+    PoLineValidationService poLineValidationService,
     ConfigurationEntriesCache configurationEntriesCache, OrganizationService organizationService,
     ProtectionService protectionService, PrefixService prefixService, PurchaseOrderLineHelper purchaseOrderLineHelper,
     PurchaseOrderLineService purchaseOrderLineService, SuffixService suffixService, PoNumberHelper poNumberHelper,
     UnOpenCompositeOrderManager unOpenCompositeOrderManager) {
-    return new OrderValidationService(compositePoLineValidationService, configurationEntriesCache, organizationService,
+    return new OrderValidationService(poLineValidationService, configurationEntriesCache, organizationService,
       protectionService, prefixService, purchaseOrderLineHelper, purchaseOrderLineService, suffixService, poNumberHelper,
       unOpenCompositeOrderManager);
   }
@@ -758,19 +759,19 @@ public class ApplicationConfig {
                                                   PurchaseOrderLineService purchaseOrderLineService,
                                                   PurchaseOrderStorageService purchaseOrderStorageService,
                                                   RestClient restClient,
-                                                  CompositePoLineValidationService compositePoLineValidationService,
+                                                  PoLineValidationService poLineValidationService,
                                                   OrganizationService organizationService) {
     return new PurchaseOrderLineHelper(itemStatusSyncService, inventoryInstanceManager, encumbranceService, expenseClassValidationService,
       encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, titlesService, protectionService,
-      purchaseOrderLineService, purchaseOrderStorageService, restClient, compositePoLineValidationService,
+      purchaseOrderLineService, purchaseOrderStorageService, restClient, poLineValidationService,
       organizationService);
   }
 
   @Bean
-  CompositePoLineValidationService compositePoLineValidationService(ExpenseClassValidationService expenseClassValidationService,
+  PoLineValidationService compositePoLineValidationService(ExpenseClassValidationService expenseClassValidationService,
                                                                     ConsortiumConfigurationService consortiumConfigurationService,
                                                                     ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever) {
-    return new CompositePoLineValidationService(expenseClassValidationService, consortiumConfigurationService, consortiumUserTenantsRetriever);
+    return new PoLineValidationService(expenseClassValidationService, consortiumConfigurationService, consortiumUserTenantsRetriever);
   }
 
   @Bean TitleValidationService titleValidationService() {
@@ -802,10 +803,10 @@ public class ApplicationConfig {
     ProcessInventoryPhysicalStrategy processInventoryPhysicalStrategy = new ProcessInventoryPhysicalStrategy(consortiumConfigurationService);
     ProcessInventoryMixedStrategy processInventoryMixedStrategy = new ProcessInventoryMixedStrategy(consortiumConfigurationService);
 
-    strategy.put(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE.value(), processInventoryElectronicStrategy);
-    strategy.put(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE.value(), processInventoryPhysicalStrategy);
-    strategy.put(CompositePoLine.OrderFormat.OTHER.value(), processInventoryPhysicalStrategy);
-    strategy.put(CompositePoLine.OrderFormat.P_E_MIX.value(), processInventoryMixedStrategy);
+    strategy.put(PoLine.OrderFormat.ELECTRONIC_RESOURCE.value(), processInventoryElectronicStrategy);
+    strategy.put(PoLine.OrderFormat.PHYSICAL_RESOURCE.value(), processInventoryPhysicalStrategy);
+    strategy.put(PoLine.OrderFormat.OTHER.value(), processInventoryPhysicalStrategy);
+    strategy.put(PoLine.OrderFormat.P_E_MIX.value(), processInventoryMixedStrategy);
 
     return new ProcessInventoryStrategyResolver(strategy);
   }

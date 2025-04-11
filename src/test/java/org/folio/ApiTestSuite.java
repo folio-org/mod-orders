@@ -78,7 +78,7 @@ import org.folio.service.invoice.InvoiceLineServiceTest;
 import org.folio.service.orders.AcquisitionsUnitsServiceTest;
 import org.folio.service.orders.CombinedOrderDataPopulateServiceTest;
 import org.folio.service.orders.CompositeOrderRetrieveHolderBuilderTest;
-import org.folio.service.orders.CompositePoLineValidationServiceTest;
+import org.folio.service.orders.PoLineValidationServiceTest;
 import org.folio.service.orders.FundsDistributionServiceTest;
 import org.folio.service.orders.OrderInvoiceRelationServiceTest;
 import org.folio.service.orders.OrderReEncumberServiceTest;
@@ -385,7 +385,7 @@ public class ApiTestSuite {
   }
 
   @Nested
-  class CompositePoLineValidationServiceTestNested extends CompositePoLineValidationServiceTest {
+  class PoLineValidationServiceTestNested extends PoLineValidationServiceTest {
   }
 
   @Nested

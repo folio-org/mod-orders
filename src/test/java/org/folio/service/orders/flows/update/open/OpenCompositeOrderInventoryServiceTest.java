@@ -9,7 +9,7 @@ import org.folio.models.consortium.ConsortiumConfiguration;
 import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.service.consortium.ConsortiumConfigurationService;
@@ -123,7 +123,7 @@ public class OpenCompositeOrderInventoryServiceTest {
   void shouldFoundHoldingIdByLocationId() throws IOException {
     String titleId = UUID.randomUUID().toString();
     CompositePurchaseOrder purchaseOrder = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    PoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(PoLine.class);
     JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
 
     doReturn(succeededFuture(line)).when(inventoryInstanceManager).openOrderHandleInstance(any(), anyBoolean(), eq(requestContext));
@@ -144,7 +144,7 @@ public class OpenCompositeOrderInventoryServiceTest {
     String titleId = UUID.randomUUID().toString();
     Location location = new Location().withLocationId(UUID.randomUUID().toString()).withTenantId(RandomStringUtils.random(4));
     CompositePurchaseOrder purchaseOrder = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    PoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(PoLine.class);
     line.setLocations(Collections.singletonList(location));
     RequestContext newContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());
 
@@ -167,7 +167,7 @@ public class OpenCompositeOrderInventoryServiceTest {
     String titleId = UUID.randomUUID().toString();
     Location location = new Location().withLocationId(UUID.randomUUID().toString());
     CompositePurchaseOrder purchaseOrder = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    PoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(PoLine.class);
     line.setLocations(Collections.singletonList(location));
     Optional<ConsortiumConfiguration> configuration = Optional.of(new ConsortiumConfiguration(UUID.randomUUID().toString(), UUID.randomUUID().toString()));
 
@@ -231,8 +231,8 @@ public class OpenCompositeOrderInventoryServiceTest {
     @Bean ProcessInventoryStrategyResolver processInventoryStrategyResolver(ProcessInventoryPhysicalStrategy processInventoryPhysicalStrategy,
                                                     ProcessInventoryElectronicStrategy processInventoryElectronicStrategy) {
       Map<String, ProcessInventoryStrategy> strategy = new HashMap<>();
-      strategy.put(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE.value(), processInventoryElectronicStrategy);
-      strategy.put(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE.value(), processInventoryPhysicalStrategy);
+      strategy.put(PoLine.OrderFormat.ELECTRONIC_RESOURCE.value(), processInventoryElectronicStrategy);
+      strategy.put(PoLine.OrderFormat.PHYSICAL_RESOURCE.value(), processInventoryPhysicalStrategy);
       return spy(new ProcessInventoryStrategyResolver(strategy));
     }
 

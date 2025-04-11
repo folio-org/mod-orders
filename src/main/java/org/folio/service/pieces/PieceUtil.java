@@ -1,6 +1,6 @@
 package org.folio.service.pieces;
 
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
+import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.OTHER;
 
 import java.util.Date;
 import java.util.EnumMap;
@@ -12,59 +12,59 @@ import java.util.stream.Collectors;
 
 import org.folio.models.pieces.PieceBatchStatusUpdateHolder;
 import org.folio.orders.utils.PoLineCommonUtil;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
 
 public class PieceUtil {
-  public static List<Location> findOrderPieceLineLocation(Piece piece, CompositePoLine compPoLine) {
+  public static List<Location> findOrderPieceLineLocation(Piece piece, PoLine poLine) {
     if ((piece.getFormat() == Piece.Format.ELECTRONIC || piece.getFormat() == Piece.Format.PHYSICAL) &&
-      (CompositePoLine.OrderFormat.P_E_MIX == compPoLine.getOrderFormat())) {
-      return compPoLine.getLocations().stream()
+      (PoLine.OrderFormat.P_E_MIX == poLine.getOrderFormat())) {
+      return poLine.getLocations().stream()
         .filter(loc -> isLocationMatch(piece, loc)).collect(Collectors.toList());
-    } else if (piece.getFormat() == Piece.Format.ELECTRONIC && CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE == compPoLine.getOrderFormat()) {
-      return compPoLine.getLocations().stream()
+    } else if (piece.getFormat() == Piece.Format.ELECTRONIC && PoLine.OrderFormat.ELECTRONIC_RESOURCE == poLine.getOrderFormat()) {
+      return poLine.getLocations().stream()
         .filter(loc -> Objects.nonNull(loc.getQuantityElectronic()))
         .filter(loc -> isLocationMatch(piece, loc)).collect(Collectors.toList());
     }
-    return compPoLine.getLocations().stream()
+    return poLine.getLocations().stream()
       .filter(loc -> Objects.nonNull(loc.getQuantityPhysical()))
       .filter(loc -> isLocationMatch(piece, loc))
       .collect(Collectors.toList());
   }
 
-  public static Map<Piece.Format, Integer> calculatePiecesQuantityWithoutLocation(CompositePoLine compPOL) {
+  public static Map<Piece.Format, Integer> calculatePiecesQuantityWithoutLocation(PoLine poLine) {
     EnumMap<Piece.Format, Integer> quantities = new EnumMap<>(Piece.Format.class);
 
-    if (compPOL.getOrderFormat() == OTHER && (compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.NONE ||
-      compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.INSTANCE)) {
-      Physical.CreateInventory physicalCreateInventory = compPOL.getPhysical().getCreateInventory();
+    if (poLine.getOrderFormat() == OTHER && (poLine.getPhysical().getCreateInventory() == Physical.CreateInventory.NONE ||
+      poLine.getPhysical().getCreateInventory() == Physical.CreateInventory.INSTANCE)) {
+      Physical.CreateInventory physicalCreateInventory = poLine.getPhysical().getCreateInventory();
       if (physicalCreateInventory == Physical.CreateInventory.NONE || physicalCreateInventory == Physical.CreateInventory.INSTANCE) {
-        quantities.put(Piece.Format.OTHER, PoLineCommonUtil.getPhysicalCostQuantity(compPOL));
+        quantities.put(Piece.Format.OTHER, PoLineCommonUtil.getPhysicalCostQuantity(poLine));
       }
     } else {
-      quantities.putAll(calculatePhysicalPiecesQuantityWithoutLocation(compPOL));
-      quantities.putAll(calculateElectronicPiecesQuantityWithoutLocation(compPOL));
+      quantities.putAll(calculatePhysicalPiecesQuantityWithoutLocation(poLine));
+      quantities.putAll(calculateElectronicPiecesQuantityWithoutLocation(poLine));
     }
     return quantities;
   }
 
-  private static EnumMap<Piece.Format, Integer> calculatePhysicalPiecesQuantityWithoutLocation(CompositePoLine compPOL) {
+  private static EnumMap<Piece.Format, Integer> calculatePhysicalPiecesQuantityWithoutLocation(PoLine poLine) {
     EnumMap<Piece.Format, Integer> quantities = new EnumMap<>(Piece.Format.class);
-    Physical.CreateInventory physicalCreateInventory = Optional.ofNullable(compPOL.getPhysical()).map(Physical::getCreateInventory).orElse(null);
+    Physical.CreateInventory physicalCreateInventory = Optional.ofNullable(poLine.getPhysical()).map(Physical::getCreateInventory).orElse(null);
     if (physicalCreateInventory == Physical.CreateInventory.NONE || physicalCreateInventory == Physical.CreateInventory.INSTANCE) {
-      quantities.put(Piece.Format.PHYSICAL, PoLineCommonUtil.getPhysicalCostQuantity(compPOL));
+      quantities.put(Piece.Format.PHYSICAL, PoLineCommonUtil.getPhysicalCostQuantity(poLine));
     }
     return quantities;
   }
 
-  private static EnumMap<Piece.Format, Integer> calculateElectronicPiecesQuantityWithoutLocation(CompositePoLine compPOL) {
+  private static EnumMap<Piece.Format, Integer> calculateElectronicPiecesQuantityWithoutLocation(PoLine poLine) {
     EnumMap<Piece.Format, Integer> quantities = new EnumMap<>(Piece.Format.class);
-    Eresource.CreateInventory eresourceCreateInventory = Optional.ofNullable(compPOL.getEresource()).map(Eresource::getCreateInventory).orElse(null);
+    Eresource.CreateInventory eresourceCreateInventory = Optional.ofNullable(poLine.getEresource()).map(Eresource::getCreateInventory).orElse(null);
     if (eresourceCreateInventory == Eresource.CreateInventory.NONE || eresourceCreateInventory == Eresource.CreateInventory.INSTANCE) {
-      quantities.put(Piece.Format.ELECTRONIC, PoLineCommonUtil.getElectronicCostQuantity(compPOL));
+      quantities.put(Piece.Format.ELECTRONIC, PoLineCommonUtil.getElectronicCostQuantity(poLine));
     }
     return quantities;
   }

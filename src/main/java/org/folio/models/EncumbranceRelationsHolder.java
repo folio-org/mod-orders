@@ -6,14 +6,14 @@ import javax.money.convert.CurrencyConversion;
 
 import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.Transaction;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Ongoing;
 
 public class EncumbranceRelationsHolder {
   private CompositePurchaseOrder purchaseOrder;
-  private CompositePoLine poLine;
+  private PoLine poLine;
   private FundDistribution fundDistribution;
   private Transaction newEncumbrance;
   private Budget budget;
@@ -34,7 +34,7 @@ public class EncumbranceRelationsHolder {
     return newEncumbrance;
   }
 
-  public CompositePoLine getPoLine() {
+  public PoLine getPoLine() {
     return poLine;
   }
 
@@ -76,7 +76,7 @@ public class EncumbranceRelationsHolder {
     return this;
   }
 
-  public EncumbranceRelationsHolder withPoLine(CompositePoLine poLine) {
+  public EncumbranceRelationsHolder withPoLine(PoLine poLine) {
     this.poLine = poLine;
     return this;
   }

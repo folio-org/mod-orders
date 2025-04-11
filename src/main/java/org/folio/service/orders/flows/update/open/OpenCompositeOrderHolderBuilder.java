@@ -11,10 +11,10 @@ import static org.folio.orders.utils.PoLineCommonUtil.isItemsUpdateRequiredForEr
 import static org.folio.orders.utils.PoLineCommonUtil.isItemsUpdateRequiredForPhysical;
 import static org.folio.orders.utils.PoLineCommonUtil.mapHoldingIdsToTenantIds;
 import static org.folio.orders.utils.PoLineCommonUtil.mapLocationIdsToTenantIds;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.PHYSICAL_RESOURCE;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
+import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.ELECTRONIC_RESOURCE;
+import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.OTHER;
+import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.PHYSICAL_RESOURCE;
+import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.P_E_MIX;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -30,7 +30,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.models.pieces.OpenOrderPieceHolder;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.pieces.PieceStorageService;
@@ -47,35 +47,35 @@ public class OpenCompositeOrderHolderBuilder {
     this.pieceStorageService = pieceStorageService;
   }
 
-  public Future<OpenOrderPieceHolder> buildHolder(CompositePoLine compPOL, String titleId, List<Piece> expectedPiecesWithItem,
+  public Future<OpenOrderPieceHolder> buildHolder(PoLine poLine, String titleId, List<Piece> expectedPiecesWithItem,
                                                   RequestContext requestContext) {
-    return pieceStorageService.getPiecesByPoLineId(compPOL, requestContext)
+    return pieceStorageService.getPiecesByPoLineId(poLine, requestContext)
       .map(pieces -> new OpenOrderPieceHolder(titleId).withExistingPieces(pieces))
       .map(holder -> holder
-        .withPiecesWithLocationToProcess(buildPiecesByLocationId(compPOL, expectedPiecesWithItem, holder.getExistingPieces()))
-        .withPiecesWithHoldingToProcess(buildPiecesByHoldingId(compPOL, expectedPiecesWithItem, holder.getExistingPieces()))
-        .withPiecesWithChangedLocation(getPiecesWithChangedLocation(compPOL, holder.getPiecesWithLocationToProcess(), holder.getExistingPieces()))
-        .withPiecesWithoutLocationId(createPiecesWithoutLocationId(compPOL, holder.getExistingPieces())));
+        .withPiecesWithLocationToProcess(buildPiecesByLocationId(poLine, expectedPiecesWithItem, holder.getExistingPieces()))
+        .withPiecesWithHoldingToProcess(buildPiecesByHoldingId(poLine, expectedPiecesWithItem, holder.getExistingPieces()))
+        .withPiecesWithChangedLocation(getPiecesWithChangedLocation(poLine, holder.getPiecesWithLocationToProcess(), holder.getExistingPieces()))
+        .withPiecesWithoutLocationId(createPiecesWithoutLocationId(poLine, holder.getExistingPieces())));
   }
 
-  private List<Piece> buildPiecesByLocationId(CompositePoLine compPOL, List<Piece> expectedPiecesWithItem, List<Piece> existingPieces) {
+  private List<Piece> buildPiecesByLocationId(PoLine poLine, List<Piece> expectedPiecesWithItem, List<Piece> existingPieces) {
     List<Piece> piecesToCreate = new ArrayList<>();
     // For each location collect pieces that need to be created.
-    groupLocationsByLocationId(compPOL)
+    groupLocationsByLocationId(poLine)
       .forEach((lineLocationId, lineLocations) -> {
-        var tenantId = mapLocationIdsToTenantIds(compPOL).get(lineLocationId);
+        var tenantId = mapLocationIdsToTenantIds(poLine).get(lineLocationId);
         var filteredExistingPieces = filterByLocationId(existingPieces, lineLocationId);
         var filteredExpectedPiecesWithItem = filterByLocationId(expectedPiecesWithItem, lineLocationId);
         piecesToCreate.addAll(collectMissingPiecesWithItem(filteredExpectedPiecesWithItem, filteredExistingPieces));
-        piecesToCreate.addAll(processPiecesWithoutItemAndLocationId(compPOL, filteredExistingPieces, lineLocationId, tenantId, lineLocations));
+        piecesToCreate.addAll(processPiecesWithoutItemAndLocationId(poLine, filteredExistingPieces, lineLocationId, tenantId, lineLocations));
       });
     return piecesToCreate;
   }
 
-  private List<Piece> getPiecesWithChangedLocation(CompositePoLine compPOL, List<Piece> needProcessPieces, List<Piece> existingPieces) {
-    Map<String, Map<Piece.Format, Integer>> existingPieceMap = numOfPiecesByFormatAndLocationId(existingPieces, compPOL.getId());
-    Map<String, Map<Piece.Format, Integer>> needProcessPiecesMap = numOfPiecesByFormatAndLocationId(needProcessPieces, compPOL.getId());
-    Map<String, String> locationToTenantId = mapLocationIdsToTenantIds(compPOL);
+  private List<Piece> getPiecesWithChangedLocation(PoLine poLine, List<Piece> needProcessPieces, List<Piece> existingPieces) {
+    Map<String, Map<Piece.Format, Integer>> existingPieceMap = numOfPiecesByFormatAndLocationId(existingPieces, poLine.getId());
+    Map<String, Map<Piece.Format, Integer>> needProcessPiecesMap = numOfPiecesByFormatAndLocationId(needProcessPieces, poLine.getId());
+    Map<String, String> locationToTenantId = mapLocationIdsToTenantIds(poLine);
 
     List<Piece> piecesForLocationUpdate = new ArrayList<>();
     existingPieceMap.forEach((existingPieceLocationId, existingPieceQtyMap) -> {
@@ -98,17 +98,17 @@ public class OpenCompositeOrderHolderBuilder {
     return piecesForLocationUpdate;
   }
 
-  private List<Piece> createPiecesWithoutLocationId(CompositePoLine compPOL, List<Piece> existingPieces) {
-    if (CollectionUtils.isNotEmpty(compPOL.getLocations())) {
+  private List<Piece> createPiecesWithoutLocationId(PoLine poLine, List<Piece> existingPieces) {
+    if (CollectionUtils.isNotEmpty(poLine.getLocations())) {
       return Collections.emptyList();
     }
     List<Piece> piecesToCreate = new ArrayList<>();
-    Map<Piece.Format, Integer> expectedQuantitiesWithoutLocation = PieceUtil.calculatePiecesQuantityWithoutLocation(compPOL);
+    Map<Piece.Format, Integer> expectedQuantitiesWithoutLocation = PieceUtil.calculatePiecesQuantityWithoutLocation(poLine);
     Map<Piece.Format, Integer> existingPiecesQuantities = calculateQuantityOfExistingPiecesWithoutLocation(existingPieces);
     expectedQuantitiesWithoutLocation.forEach((format, expectedQty) -> {
       int remainingPiecesQuantity = expectedQty - existingPiecesQuantities.getOrDefault(format, 0);
       for (int i = 0; i < remainingPiecesQuantity; i++) {
-        piecesToCreate.add(new Piece().withFormat(format).withPoLineId(compPOL.getId()));
+        piecesToCreate.add(new Piece().withFormat(format).withPoLineId(poLine.getId()));
       }
     });
     return piecesToCreate;
@@ -120,16 +120,16 @@ public class OpenCompositeOrderHolderBuilder {
       .groupingBy(Piece::getFormat, collectingAndThen(toList(), List::size));
   }
 
-  private List<Piece> buildPiecesByHoldingId(CompositePoLine compPOL, List<Piece> expectedPiecesWithItem, List<Piece> existingPieces) {
+  private List<Piece> buildPiecesByHoldingId(PoLine poLine, List<Piece> expectedPiecesWithItem, List<Piece> existingPieces) {
     List<Piece> piecesToCreate = new ArrayList<>();
     // For each location collect pieces that need to be created.
-    groupLocationsByHoldingId(compPOL)
+    groupLocationsByHoldingId(poLine)
       .forEach((existingPieceHoldingId, existingPieceLocations) -> {
-        var tenantId = mapHoldingIdsToTenantIds(compPOL).get(existingPieceHoldingId);
+        var tenantId = mapHoldingIdsToTenantIds(poLine).get(existingPieceHoldingId);
         var filteredExistingPieces = filterByHoldingId(existingPieces, existingPieceHoldingId);
         var filteredExpectedPiecesWithItem = filterByHoldingId(expectedPiecesWithItem, existingPieceHoldingId);
         piecesToCreate.addAll(collectMissingPiecesWithItem(filteredExpectedPiecesWithItem, filteredExistingPieces));
-        piecesToCreate.addAll(processPiecesWithoutItemAndHoldingId(compPOL, filteredExistingPieces, existingPieceHoldingId, tenantId, existingPieceLocations));
+        piecesToCreate.addAll(processPiecesWithoutItemAndHoldingId(poLine, filteredExistingPieces, existingPieceHoldingId, tenantId, existingPieceLocations));
       });
     return piecesToCreate;
   }
@@ -164,28 +164,28 @@ public class OpenCompositeOrderHolderBuilder {
   }
 
 
-  private List<Piece> processPiecesWithoutItemAndLocationId(CompositePoLine compPOL, List<Piece> existedPieces, String existingPieceLocationId,
+  private List<Piece> processPiecesWithoutItemAndLocationId(PoLine poLine, List<Piece> existedPieces, String existingPieceLocationId,
                                                             String tenantId, List<Location> existingPieceLocations) {
-    return processPiecesWithoutItemAndLocationIdOrHoldingId(compPOL, existedPieces, existingPieceLocations, tenantId,
+    return processPiecesWithoutItemAndLocationIdOrHoldingId(poLine, existedPieces, existingPieceLocations, tenantId,
       () -> new Piece().withLocationId(existingPieceLocationId));
   }
 
-  private List<Piece> processPiecesWithoutItemAndHoldingId(CompositePoLine compPOL, List<Piece> existedPieces, String existingPieceHoldingId,
+  private List<Piece> processPiecesWithoutItemAndHoldingId(PoLine poLine, List<Piece> existedPieces, String existingPieceHoldingId,
                                                            String tenantId, List<Location> existingPieceLocations) {
-    return processPiecesWithoutItemAndLocationIdOrHoldingId(compPOL, existedPieces, existingPieceLocations, tenantId,
+    return processPiecesWithoutItemAndLocationIdOrHoldingId(poLine, existedPieces, existingPieceLocations, tenantId,
       () -> new Piece().withHoldingId(existingPieceHoldingId));
   }
 
-  private List<Piece> processPiecesWithoutItemAndLocationIdOrHoldingId(CompositePoLine compPOL, List<Piece> existedPieces, List<Location> existingPieceLocations,
+  private List<Piece> processPiecesWithoutItemAndLocationIdOrHoldingId(PoLine poLine, List<Piece> existedPieces, List<Location> existingPieceLocations,
                                                                        String receivingTenantId, Supplier<Piece> pieceSupplier) {
-    Map<Piece.Format, Integer> expectedQuantitiesWithoutItem = calculatePiecesWithoutItemIdQuantity(compPOL, existingPieceLocations);
+    Map<Piece.Format, Integer> expectedQuantitiesWithoutItem = calculatePiecesWithoutItemIdQuantity(poLine, existingPieceLocations);
     Map<Piece.Format, Integer> existedQuantityWithoutItem = calculateQuantityOfExistingPiecesWithoutItem(existedPieces);
 
     List<Piece> piecesToCreate = new ArrayList<Piece>();
     expectedQuantitiesWithoutItem.forEach((format, expectedQty) -> {
       int remainingPiecesQuantity = expectedQty - existedQuantityWithoutItem.getOrDefault(format, 0);
       for (int i = 0; i < remainingPiecesQuantity; i++) {
-        piecesToCreate.add(pieceSupplier.get().withFormat(format).withPoLineId(compPOL.getId()).withReceivingTenantId(receivingTenantId));
+        piecesToCreate.add(pieceSupplier.get().withFormat(format).withPoLineId(poLine.getId()).withReceivingTenantId(receivingTenantId));
       }
     });
     return piecesToCreate;
@@ -209,25 +209,25 @@ public class OpenCompositeOrderHolderBuilder {
   /**
    * Calculates pieces quantity for list of locations and return map where piece format is a key and corresponding quantity of pieces as value.
    *
-   * @param compPOL   composite PO Line
+   * @param poLine   composite PO Line
    * @param locations list of locations to calculate quantity for
    * @return quantity of pieces per piece format either not required Inventory item for PO Line
    */
-  private Map<Piece.Format, Integer> calculatePiecesWithoutItemIdQuantity(CompositePoLine compPOL, List<Location> locations) {
+  private Map<Piece.Format, Integer> calculatePiecesWithoutItemIdQuantity(PoLine poLine, List<Location> locations) {
     // Piece records are not going to be created for PO Line which is going to be checked-in
-    if (Boolean.TRUE.equals(compPOL.getCheckinItems())) {
+    if (Boolean.TRUE.equals(poLine.getCheckinItems())) {
       return Collections.emptyMap();
     }
 
     var quantities = new EnumMap<Piece.Format, Integer>(Piece.Format.class);
-    var orderFormat = compPOL.getOrderFormat();
-    if ((orderFormat == P_E_MIX || orderFormat == PHYSICAL_RESOURCE) && !isItemsUpdateRequiredForPhysical(compPOL)) {
+    var orderFormat = poLine.getOrderFormat();
+    if ((orderFormat == P_E_MIX || orderFormat == PHYSICAL_RESOURCE) && !isItemsUpdateRequiredForPhysical(poLine)) {
       quantities.put(Piece.Format.PHYSICAL, calculatePiecesQuantity(Piece.Format.PHYSICAL, locations));
     }
-    if ((orderFormat == P_E_MIX || orderFormat == ELECTRONIC_RESOURCE) && !isItemsUpdateRequiredForEresource(compPOL)) {
+    if ((orderFormat == P_E_MIX || orderFormat == ELECTRONIC_RESOURCE) && !isItemsUpdateRequiredForEresource(poLine)) {
       quantities.put(Piece.Format.ELECTRONIC, calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations));
     }
-    if (orderFormat == OTHER && !isItemsUpdateRequiredForPhysical(compPOL)) {
+    if (orderFormat == OTHER && !isItemsUpdateRequiredForPhysical(poLine)) {
       quantities.put(Piece.Format.OTHER, calculatePiecesQuantity(Piece.Format.OTHER, locations));
     }
     return quantities;

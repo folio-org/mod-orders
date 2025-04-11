@@ -13,7 +13,7 @@ import org.folio.rest.acq.model.finance.Ledger;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Error;
@@ -84,21 +84,21 @@ public class FinanceHoldersBuilderTest {
 
     FundDistribution distribution1 = new FundDistribution().withFundId(UUID.randomUUID().toString()).withCode("FUND1");
 
-    CompositePoLine line1 = new CompositePoLine().withId(UUID.randomUUID().toString())
+    PoLine line1 = new PoLine().withId(UUID.randomUUID().toString())
       .withPoLineNumber("1")
       .withCost(new Cost().withCurrency("USD"))
       .withFundDistribution(Collections.singletonList(distribution1));
 
     FundDistribution distribution2 = new FundDistribution().withFundId(UUID.randomUUID().toString()).withCode("FUND2");
 
-    CompositePoLine line2 = new CompositePoLine().withId(UUID.randomUUID().toString())
+    PoLine line2 = new PoLine().withId(UUID.randomUUID().toString())
       .withPoLineNumber("2")
       .withCost(new Cost().withCurrency("USD"))
       .withFundDistribution(Collections.singletonList(distribution2));
 
     FundDistribution distribution3 = new FundDistribution().withFundId(UUID.randomUUID().toString());
 
-    CompositePoLine line3 = new CompositePoLine().withId(UUID.randomUUID().toString())
+    PoLine line3 = new PoLine().withId(UUID.randomUUID().toString())
       .withCost(new Cost().withCurrency("EUR"))
       .withFundDistribution(Collections.singletonList(distribution3));
 

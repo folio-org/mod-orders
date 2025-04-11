@@ -75,7 +75,7 @@ import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
@@ -314,7 +314,7 @@ public class InventoryManagerTest {
   @Test
   void testShouldNotHandleItemRecordsIfCheckinItemsIsTrue() {
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
+    PoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(PoLine.class);
     String poLineId = "c0d08448-347b-418a-8c2f-5fb50248d67e";
     reqData.setId(poLineId);
     reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
@@ -352,7 +352,7 @@ public class InventoryManagerTest {
   @Test
   void testShouldBuildInstanceWithPublishedDateFromTitle() {
     //given
-    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    PoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(PoLine.class);
     Title title = spy(getMockAsJson(TILES_PATH,"title").mapTo(Title.class));
     title.setContributors(line.getContributors());
     title.setPublishedDate(line.getPublicationDate());
@@ -373,7 +373,7 @@ public class InventoryManagerTest {
   @Test
   void testShouldBuildInstanceWithPublisherFromTitle() {
     //given
-    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    PoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(PoLine.class);
     Title title = spy(getMockAsJson(TILES_PATH,"title").mapTo(Title.class));
     title.setContributors(line.getContributors());
     title.setPublishedDate(null);
@@ -394,7 +394,7 @@ public class InventoryManagerTest {
   @Test
   void testShouldBuildInstanceWithFieldFromTitles() {
     //given
-    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    PoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(PoLine.class);
     Title title = spy(getMockAsJson(TILES_PATH,"title").mapTo(Title.class));
     title.setContributors(line.getContributors());
     title.setPublishedDate(line.getPublicationDate());
@@ -531,22 +531,22 @@ public class InventoryManagerTest {
   @Test
   void testShouldCreateItemRecordForEresources()  {
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    PoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(PoLine.class);
     Eresource eresource = new Eresource().withMaterialType(line.getPhysical().getMaterialType())
       .withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
     line.setPhysical(null);
     line.setEresource(eresource);
-    line.setOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE);
+    line.setOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE);
     String expItemId = UUID.randomUUID().toString();
 
     doReturn(succeededFuture(Collections.singletonList(expItemId)))
-      .when(inventoryItemManager).createMissingElectronicItems(any(CompositePurchaseOrder.class), any(CompositePoLine.class),
+      .when(inventoryItemManager).createMissingElectronicItems(any(CompositePurchaseOrder.class), any(PoLine.class),
         any(Piece.class), eq(1), eq(requestContext));
 
     Future<String> result = inventoryItemManager.openOrderCreateItemRecord(order, line, HOLDING_ID, requestContext);
     String actItemId = result.result();
 
-    verify(inventoryItemManager).createMissingElectronicItems(any(CompositePurchaseOrder.class), any(CompositePoLine.class), any(Piece.class), eq(1), eq(requestContext));
+    verify(inventoryItemManager).createMissingElectronicItems(any(CompositePurchaseOrder.class), any(PoLine.class), any(Piece.class), eq(1), eq(requestContext));
     assertEquals(expItemId, actItemId);
   }
 
@@ -554,7 +554,7 @@ public class InventoryManagerTest {
   void testShouldProvideCorrectErrorCodeWhenItemCreatingFailed() {
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     order.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.CLOSED);
-    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    PoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(PoLine.class);
     line.setPurchaseOrderId(order.getId());
     Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
 
@@ -574,7 +574,7 @@ public class InventoryManagerTest {
   void testShouldProvideCorrectBarcodeNotUniqueErrorCode() {
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     order.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.CLOSED);
-    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    PoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(PoLine.class);
     line.setPurchaseOrderId(order.getId());
     Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
 
@@ -595,7 +595,7 @@ public class InventoryManagerTest {
   void testShouldCreateItemWithClosedStatusWhenOrderClosed() {
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     order.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.CLOSED);
-    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    PoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(PoLine.class);
     line.setPurchaseOrderId(order.getId());
     Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
     JsonObject itemRecord = getMockAsJson(ITEM_RECORD_PATH);
@@ -614,7 +614,7 @@ public class InventoryManagerTest {
   void testShouldCreateItemWithOnOrderStatusWhenOrderNotFoundInMemberTenant() {
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     order.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.CLOSED);
-    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    PoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(PoLine.class);
     line.setPurchaseOrderId(order.getId());
     Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
     JsonObject itemRecord = getMockAsJson(ITEM_RECORD_PATH);
@@ -633,16 +633,16 @@ public class InventoryManagerTest {
   void testShouldCreateItemRecordForPhysical()  {
     //given
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    PoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(PoLine.class);
     String expItemId = UUID.randomUUID().toString();
 
     doReturn(succeededFuture(Collections.singletonList(expItemId)))
-      .when(inventoryItemManager).createMissingPhysicalItems(any(CompositePurchaseOrder.class), any(CompositePoLine.class), any(Piece.class), eq(1), eq(requestContext));
+      .when(inventoryItemManager).createMissingPhysicalItems(any(CompositePurchaseOrder.class), any(PoLine.class), any(Piece.class), eq(1), eq(requestContext));
 
     Future<String> result = inventoryItemManager.openOrderCreateItemRecord(order, line, HOLDING_ID, requestContext);
     String actItemId = result.result();
 
-    verify(inventoryItemManager).createMissingPhysicalItems(any(CompositePurchaseOrder.class), any(CompositePoLine.class), any(Piece.class), eq(1), eq(requestContext));
+    verify(inventoryItemManager).createMissingPhysicalItems(any(CompositePurchaseOrder.class), any(PoLine.class), any(Piece.class), eq(1), eq(requestContext));
     assertEquals(expItemId, actItemId);
   }
 
@@ -706,7 +706,7 @@ public class InventoryManagerTest {
   @Test
   void shouldReturnHoldingsByLocationTenants(VertxTestContext vertxTestContext) {
     // given
-    CompositePoLine poLine = new CompositePoLine()
+    PoLine poLine = new PoLine()
       .withId("ID")
       .withPoLineNumber("number")
       .withLocations(List.of(

@@ -18,7 +18,7 @@ import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.invoice.Invoice;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.service.finance.FiscalYearService;
 import org.folio.service.finance.transaction.TransactionService;
@@ -65,9 +65,9 @@ public class CompositeOrderTotalFieldsPopulateServiceTest {
   @Test
   void shouldPopulateTotalFieldsWhenInvoicesInvoiceLinesAndTransactionsExist() {
     String fiscalYearId = UUID.randomUUID().toString();
-    CompositePoLine poLine1 = new CompositePoLine().withId(UUID.randomUUID().toString());
-    CompositePoLine poLine2 = new CompositePoLine().withId(UUID.randomUUID().toString());
-    CompositePoLine poLine3 = new CompositePoLine().withId(UUID.randomUUID().toString());
+    PoLine poLine1 = new PoLine().withId(UUID.randomUUID().toString());
+    PoLine poLine2 = new PoLine().withId(UUID.randomUUID().toString());
+    PoLine poLine3 = new PoLine().withId(UUID.randomUUID().toString());
     Invoice invoice1 = new Invoice()
       .withId(UUID.randomUUID().toString())
       .withCurrency("USD")
@@ -97,7 +97,7 @@ public class CompositeOrderTotalFieldsPopulateServiceTest {
     List<Transaction> transactions = List.of(transaction1, transaction2);
     CompositePurchaseOrder order = new CompositePurchaseOrder()
       .withId(UUID.randomUUID().toString())
-      .withCompositePoLines(List.of(poLine1, poLine2, poLine3));
+      .withPoLines(List.of(poLine1, poLine2, poLine3));
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order)
       .withFiscalYear(new FiscalYear().withId(fiscalYearId));
 
@@ -156,8 +156,8 @@ public class CompositeOrderTotalFieldsPopulateServiceTest {
   @Test
   void shouldHandleNullFiscalYearWithInvoicesInvoiceLinesAndNoTransactions() {
     String fiscalYearId = UUID.randomUUID().toString();
-    CompositePoLine poLine1 = new CompositePoLine().withId(UUID.randomUUID().toString());
-    CompositePoLine poLine2 = new CompositePoLine().withId(UUID.randomUUID().toString());
+    PoLine poLine1 = new PoLine().withId(UUID.randomUUID().toString());
+    PoLine poLine2 = new PoLine().withId(UUID.randomUUID().toString());
     Invoice invoice1 = new Invoice()
       .withId(UUID.randomUUID().toString())
       .withCurrency("USD")
@@ -179,7 +179,7 @@ public class CompositeOrderTotalFieldsPopulateServiceTest {
     List<Invoice> invoices = List.of(invoice1, invoice2);
     CompositePurchaseOrder order = new CompositePurchaseOrder()
       .withId(UUID.randomUUID().toString())
-      .withCompositePoLines(List.of(poLine1, poLine2));
+      .withPoLines(List.of(poLine1, poLine2));
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order);
 
     when(invoiceService.getInvoicesByOrderId(anyString(), any()))
@@ -203,8 +203,8 @@ public class CompositeOrderTotalFieldsPopulateServiceTest {
   @Test
   void shouldNotUseUnrelatedInvoiceLinesToCalculateOrderExpendedAmount() {
     String fiscalYearId = UUID.randomUUID().toString();
-    CompositePoLine poLine1 = new CompositePoLine().withId(UUID.randomUUID().toString());
-    CompositePoLine poLine2 = new CompositePoLine().withId(UUID.randomUUID().toString());
+    PoLine poLine1 = new PoLine().withId(UUID.randomUUID().toString());
+    PoLine poLine2 = new PoLine().withId(UUID.randomUUID().toString());
     Invoice invoice1 = new Invoice()
       .withId(UUID.randomUUID().toString())
       .withCurrency("USD")
@@ -235,7 +235,7 @@ public class CompositeOrderTotalFieldsPopulateServiceTest {
     List<Invoice> invoices = List.of(invoice1, invoice2);
     CompositePurchaseOrder order = new CompositePurchaseOrder()
       .withId(UUID.randomUUID().toString())
-      .withCompositePoLines(List.of(poLine1, poLine2));
+      .withPoLines(List.of(poLine1, poLine2));
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order);
 
     when(invoiceService.getInvoicesByOrderId(anyString(), any()))

@@ -5,7 +5,7 @@
   "orderType": "One-Time",
   "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
   "workflowStatus": "Closed",
-  "compositePoLines": [
+  "poLines": [
     {
       "id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1",
       "purchaseOrderId": "477f9ca8-b295-11eb-8529-0242ac130003",

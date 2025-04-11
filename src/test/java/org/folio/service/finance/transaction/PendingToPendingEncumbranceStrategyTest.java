@@ -28,7 +28,7 @@ import org.folio.rest.acq.model.finance.Metadata;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
@@ -92,7 +92,7 @@ public class PendingToPendingEncumbranceStrategyTest {
     String newExpenseClassId = "d9328814-eba1-4083-98ca-026eb269a4a8";
     CompositePurchaseOrder order = getMockAsJson(ORDER_2_FD_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePurchaseOrder orderFromStorage = JsonObject.mapFrom(order).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine poLine = order.getCompositePoLines().get(0);
+    PoLine poLine = order.getPoLines().get(0);
     FundDistribution fd1 = poLine.getFundDistribution().get(0);
     FundDistribution fd2 = poLine.getFundDistribution().get(1);
 
@@ -166,7 +166,7 @@ public class PendingToPendingEncumbranceStrategyTest {
     // Given
     CompositePurchaseOrder order = getMockAsJson(ORDER_1_FD_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePurchaseOrder orderFromStorage = JsonObject.mapFrom(order).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine poLine = order.getCompositePoLines().get(0);
+    PoLine poLine = order.getPoLines().get(0);
     FundDistribution fd = poLine.getFundDistribution().get(0);
     String encumbranceId = fd.getEncumbrance();
     String fundId = fd.getFundId();
@@ -247,7 +247,7 @@ public class PendingToPendingEncumbranceStrategyTest {
     // Given
     CompositePurchaseOrder order = getMockAsJson(ORDER_1_FD_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePurchaseOrder orderFromStorage = JsonObject.mapFrom(order).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine poLine = order.getCompositePoLines().get(0);
+    PoLine poLine = order.getPoLines().get(0);
     FundDistribution fd = poLine.getFundDistribution().get(0);
     String encumbranceId = fd.getEncumbrance();
     String fundId = fd.getFundId();

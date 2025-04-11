@@ -27,7 +27,7 @@ import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
@@ -102,10 +102,10 @@ public class OrganizationService {
    * Checks if access providers in exist and have status Active. If any false, adds corresponding error to {@link Errors} object.
    * @param poLines list of composite purchase order lines
    * @return CompletableFuture with {@link Errors} object
-   */public Future<Errors> validateAccessProviders(List<CompositePoLine> poLines, RequestContext requestContext) {
+   */public Future<Errors> validateAccessProviders(List<PoLine> poLines, RequestContext requestContext) {
     Promise<Errors> promise = Promise.promise();
 
-    Map<String, List<CompositePoLine>> poLinesMap =
+    Map<String, List<PoLine>> poLinesMap =
       poLines.stream()
         .filter(p -> (p.getEresource() != null && p.getEresource().getAccessProvider() != null))
         .collect(Collectors.groupingBy(p -> p.getEresource().getAccessProvider()));
@@ -200,7 +200,7 @@ public class OrganizationService {
    * @param poLines list of composite PoLines
    * @return {@link Error} with id of failed vendor/access provider
    */
-  private Error createErrorWithId(ErrorCodes errorCodes, String id, List<CompositePoLine> poLines) {
+  private Error createErrorWithId(ErrorCodes errorCodes, String id, List<PoLine> poLines) {
     Error error = createErrorWithId(errorCodes, id);
     poLines.stream()
       .filter(p -> p.getPoLineNumber() != null)

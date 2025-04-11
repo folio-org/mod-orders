@@ -42,7 +42,7 @@ import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.service.TagService;
@@ -51,7 +51,7 @@ import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.inventory.InventoryItemStatusSyncService;
 import org.folio.service.invoice.InvoiceLineService;
 import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
-import org.folio.service.orders.CompositePoLineValidationService;
+import org.folio.service.orders.PoLineValidationService;
 import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderValidationService;
 import org.folio.service.orders.PurchaseOrderLineService;
@@ -107,7 +107,7 @@ public class PurchaseOrderHelperTest {
   @Mock
   OrderValidationService orderValidationService;
   @Mock
-  CompositePoLineValidationService compositePoLineValidationService;
+  PoLineValidationService poLineValidationService;
 
   @BeforeEach
   void beforeEach() {
@@ -142,10 +142,10 @@ public class PurchaseOrderHelperTest {
       PurchaseOrder po = invocation.getArgument(0);
       return succeededFuture(po);
     }).when(purchaseOrderStorageService).createPurchaseOrder(any(PurchaseOrder.class), eq(requestContext));
-    doAnswer((Answer<Future<CompositePoLine>>) invocation -> {
-      CompositePoLine poLine = invocation.getArgument(0);
+    doAnswer((Answer<Future<PoLine>>) invocation -> {
+      PoLine poLine = invocation.getArgument(0);
       return succeededFuture(poLine);
-    }).when(purchaseOrderLineHelper).createPoLineWithOrder(any(CompositePoLine.class), any(CompositePurchaseOrder.class),
+    }).when(purchaseOrderLineHelper).createPoLineWithOrder(any(PoLine.class), any(CompositePurchaseOrder.class),
       eq(requestContext));
     doReturn(succeededFuture(null))
       .when(orderValidationService).checkOrderApprovalRequired(any(CompositePurchaseOrder.class), eq(requestContext));
@@ -183,9 +183,9 @@ public class PurchaseOrderHelperTest {
     CompositePurchaseOrder compPO = order.mapTo(CompositePurchaseOrder.class);
     prepareOrderForPostRequest(compPO);
     compPO.setId(UUID.randomUUID().toString());
-    compPO.getCompositePoLines().forEach(line -> line.withId(UUID.randomUUID().toString()));
+    compPO.getPoLines().forEach(line -> line.withId(UUID.randomUUID().toString()));
     CompositePurchaseOrder poFromStorage = JsonObject.mapFrom(compPO).mapTo(CompositePurchaseOrder.class);
-    poFromStorage.setCompositePoLines(List.of(getMinimalContentCompositePoLine(order.getString("id"))));
+    poFromStorage.setPoLines(List.of(getMinimalContentCompositePoLine(order.getString("id"))));
 
     boolean deleteHoldings = false;
 
@@ -206,9 +206,9 @@ public class PurchaseOrderHelperTest {
     doReturn(succeededFuture(null))
       .when(encumbranceService).updateEncumbrancesOrderStatusAndReleaseIfClosed(any(CompositePurchaseOrder.class), eq(requestContext));
     doReturn(succeededFuture(null))
-      .when(compositePoLineValidationService).validatePurchaseOrderHasPoLines(any());
+      .when(poLineValidationService).validatePurchaseOrderHasPoLines(any());
     doReturn(succeededFuture(null))
-      .when(compositePoLineValidationService).validateUserUnaffiliatedLocations(anyString(), any(), eq(requestContext));
+      .when(poLineValidationService).validateUserUnaffiliatedLocations(anyString(), any(), eq(requestContext));
 
     // When
     Future<Void> future = purchaseOrderHelper.putCompositeOrderById(compPO.getId(), deleteHoldings, compPO, requestContext);
@@ -224,9 +224,9 @@ public class PurchaseOrderHelperTest {
     CompositePurchaseOrder compPO = order.mapTo(CompositePurchaseOrder.class);
     prepareOrderForPostRequest(compPO);
     compPO.setId(UUID.randomUUID().toString());
-    compPO.getCompositePoLines().forEach(line -> line.withId(UUID.randomUUID().toString()));
+    compPO.getPoLines().forEach(line -> line.withId(UUID.randomUUID().toString()));
     CompositePurchaseOrder poFromStorage = JsonObject.mapFrom(compPO).mapTo(CompositePurchaseOrder.class);
-    poFromStorage.setCompositePoLines(List.of(getMinimalContentCompositePoLine(order.getString("id"))));
+    poFromStorage.setPoLines(List.of(getMinimalContentCompositePoLine(order.getString("id"))));
 
     boolean deleteHoldings = false;
 
@@ -237,7 +237,7 @@ public class PurchaseOrderHelperTest {
     doReturn(succeededFuture(poFromStorage))
       .when(purchaseOrderLineService).populateOrderLines(any(CompositePurchaseOrder.class), eq(requestContext));
     doReturn(failedFuture("error"))
-      .when(compositePoLineValidationService).validateUserUnaffiliatedLocations(anyString(), any(), eq(requestContext));
+      .when(poLineValidationService).validateUserUnaffiliatedLocations(anyString(), any(), eq(requestContext));
 
     // When
     Future<Void> future = purchaseOrderHelper.putCompositeOrderById(compPO.getId(), deleteHoldings, compPO, requestContext);
@@ -254,14 +254,14 @@ public class PurchaseOrderHelperTest {
     // Note: RMB schema validation is not reliable in unit tests with MockServer (it does not always return the same code),
     // but we can check the same validation using a Validator.
     CompositePurchaseOrder compPO = getMinimalContentCompositePurchaseOrder();
-    CompositePoLine poLine = getMinimalContentCompositePoLine();
+    PoLine poLine = getMinimalContentCompositePoLine();
     poLine.setSource(null);
-    compPO.getCompositePoLines().add(poLine);
+    compPO.getPoLines().add(poLine);
     try (ValidatorFactory factory = Validation.buildDefaultValidatorFactory()) {
       Validator schemaValidator = factory.getValidator();
       Set<ConstraintViolation<CompositePurchaseOrder>> violations = schemaValidator.validate(compPO);
       assertThat(violations, hasSize(1));
-      assertEquals("compositePoLines[0].source", violations.iterator().next().getPropertyPath().toString());
+      assertEquals("poLines[0].source", violations.iterator().next().getPropertyPath().toString());
     }
   }
 
@@ -293,7 +293,7 @@ public class PurchaseOrderHelperTest {
   }
 
   private void removeAllEncumbranceLinks(CompositePurchaseOrder reqData) {
-    reqData.getCompositePoLines().forEach(poLine ->
+    reqData.getPoLines().forEach(poLine ->
       poLine.getFundDistribution().forEach(fundDistribution -> fundDistribution.setEncumbrance(null))
     );
   }
