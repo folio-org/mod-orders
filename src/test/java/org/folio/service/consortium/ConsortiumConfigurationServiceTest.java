@@ -11,12 +11,8 @@ import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.service.settings.SettingsRetriever;
 import org.folio.service.settings.util.SettingKey;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 
 import java.util.List;
 import java.util.Map;
@@ -24,34 +20,24 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-
 public class ConsortiumConfigurationServiceTest {
-  private AutoCloseable mockitoMocks;
 
-  @InjectMocks
+  private RequestContext requestContext;
+  private RestClient restClient;
+  private SettingsRetriever settingsRetriever;
   private ConsortiumConfigurationService consortiumConfigurationService;
 
-  @Mock
-  private RestClient restClient;
-
-  @Mock
-  private RequestContext requestContext;
-
-  @Mock
-  private SettingsRetriever settingsRetriever;
-
   @BeforeEach
-  public void initMocks(){
-    mockitoMocks = MockitoAnnotations.openMocks(this);
-  }
-
-  @AfterEach
-  void afterEach() throws Exception {
-    mockitoMocks.close();
+  public void initMocks() {
+    requestContext = mock(RequestContext.class);
+    restClient = mock(RestClient.class);
+    settingsRetriever = mock(SettingsRetriever.class);
+    consortiumConfigurationService = new ConsortiumConfigurationService(restClient, settingsRetriever, 1L);
   }
 
   @Test
@@ -158,5 +144,4 @@ public class ConsortiumConfigurationServiceTest {
     verify(restClient).getAsJsonObject(any(RequestEntry.class), any());
     verify(settingsRetriever).getSettingByKey(any(SettingKey.class), any(RequestContext.class));
   }
-
 }

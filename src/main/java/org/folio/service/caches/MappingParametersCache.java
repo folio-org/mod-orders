@@ -35,7 +35,6 @@ import org.folio.rest.util.OkapiConnectionParams;
 import org.folio.rest.util.RestUtil;
 import org.folio.service.AcquisitionMethodsService;
 import org.folio.service.AcquisitionsUnitsService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -60,6 +59,7 @@ import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
  */
 @Component
 public class MappingParametersCache {
+
   private static final Logger LOGGER = LogManager.getLogger();
 
   private static final String ORGANIZATIONS = "/organizations/organizations";
@@ -76,26 +76,23 @@ public class MappingParametersCache {
   private static final String VALUE_RESPONSE = "value";
   public static final String ERROR_LOADING_CACHE_MESSAGE = "Error loading cache for mapping parameter: '%s', tenantId: '%s', status code: %s, response message: %s";
 
-  @Value("${orders.cache.mapping.parameters.settings.limit:5000}")
-  private int settingsLimit;
-
-  @Value("${orders.cache.mapping.parameters.expiration.seconds:3600}")
-  private long cacheExpirationTime;
-
-  private final AsyncCache<String, MappingParameters> cache;
+  private final int settingsLimit;
   private final RestClient restClient;
   private final AcquisitionsUnitsService acquisitionsUnitsService;
   private final AcquisitionMethodsService acquisitionMethodsService;
+  private final AsyncCache<String, MappingParameters> asyncCache;
 
-  @Autowired
   public MappingParametersCache(Vertx vertx, RestClient restClient,
                                 AcquisitionsUnitsService acquisitionsUnitsService,
-                                AcquisitionMethodsService acquisitionMethodsService) {
-    LOGGER.info("MappingParametersCache:: settings limit: '{}'", settingsLimit);
-    cache = buildAsyncCache(vertx, cacheExpirationTime);
+                                AcquisitionMethodsService acquisitionMethodsService,
+                                @Value("${orders.cache.mapping.parameters.settings.limit:5000}") int settingsLimit,
+                                @Value("${orders.cache.mapping.parameters.expiration.seconds:3600}") long cacheExpirationTime) {
+    this.settingsLimit = settingsLimit;
     this.restClient = restClient;
     this.acquisitionsUnitsService = acquisitionsUnitsService;
     this.acquisitionMethodsService = acquisitionMethodsService;
+    this.asyncCache = buildAsyncCache(vertx, cacheExpirationTime);
+    LOGGER.info("MappingParametersCache:: settings limit: '{}'", settingsLimit);
   }
 
   /**
@@ -106,7 +103,7 @@ public class MappingParametersCache {
    */
   public Future<MappingParameters> get(OkapiConnectionParams params) {
     try {
-      return Future.fromCompletionStage(cache.get(params.getTenantId(), (key, executor) ->
+      return Future.fromCompletionStage(asyncCache.get(params.getTenantId(), (key, executor) ->
         loadMappingParameters(params).toCompletionStage().toCompletableFuture()));
     } catch (Exception e) {
       LOGGER.warn("get:: Error loading organizations from cache, tenantId: '{}'", params.getTenantId(), e);

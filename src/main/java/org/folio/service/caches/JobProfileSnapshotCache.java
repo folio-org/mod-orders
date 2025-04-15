@@ -9,7 +9,6 @@ import org.apache.logging.log4j.Logger;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.util.OkapiConnectionParams;
 import org.folio.rest.util.RestUtil;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -28,18 +27,15 @@ public class JobProfileSnapshotCache {
   private static final Logger LOGGER = LogManager.getLogger();
   public static final String DATA_IMPORT_PROFILES_JOB_PROFILE_SNAPSHOTS = "/data-import-profiles/jobProfileSnapshots/";
 
-  @Value("${orders.cache.jobprofile.expiration.seconds:3600}")
-  private long cacheExpirationTime;
-  private AsyncCache<String, Optional<ProfileSnapshotWrapper>> cache;
+  private final AsyncCache<String, Optional<ProfileSnapshotWrapper>> asyncCache;
 
-  @Autowired
-  public JobProfileSnapshotCache(Vertx vertx) {
-    cache = buildAsyncCache(vertx, cacheExpirationTime);
+  public JobProfileSnapshotCache(Vertx vertx, @Value("${orders.cache.jobprofile.expiration.seconds:3600}") long cacheExpirationTime) {
+    this.asyncCache = buildAsyncCache(vertx, cacheExpirationTime);
   }
 
   public Future<Optional<ProfileSnapshotWrapper>> get(String profileSnapshotId, OkapiConnectionParams params) {
     try {
-      return Future.fromCompletionStage(cache.get(profileSnapshotId, (key, executor) -> loadJobProfileSnapshot(key, params)));
+      return Future.fromCompletionStage(asyncCache.get(profileSnapshotId, (key, executor) -> loadJobProfileSnapshot(key, params)));
     } catch (Exception e) {
       LOGGER.warn("Error loading ProfileSnapshotWrapper by id: '{}'", profileSnapshotId, e);
       return Future.failedFuture(e);
@@ -67,5 +63,4 @@ public class JobProfileSnapshotCache {
         }
       });
   }
-
 }

@@ -9,7 +9,6 @@ import org.apache.logging.log4j.Logger;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
-import org.springframework.beans.factory.annotation.Value;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -32,16 +31,12 @@ public class ConsortiumUserTenantsRetriever {
   private static final String CONSORTIA_USER_TENANTS_ENDPOINT = resourcesPath(CONSORTIA_USER_TENANTS);
   private static final String USER_TENANTS_CACHE_KEY_TEMPLATE = "%s.%s";
 
-  @Value("${orders.cache.consortium-user-tenants.expiration.time.seconds:60}")
-  private long cacheExpirationTime;
-
   private final RestClient restClient;
   private final AsyncCache<String, List<String>> asyncCache;
 
-  public ConsortiumUserTenantsRetriever(RestClient restClient) {
+  public ConsortiumUserTenantsRetriever(RestClient restClient, long cacheExpirationTime) {
     this.restClient = restClient;
-    var context = Vertx.currentContext();
-    asyncCache = buildAsyncCache(context, cacheExpirationTime);
+    this.asyncCache = buildAsyncCache(Vertx.currentContext(), cacheExpirationTime);
   }
 
   public Future<List<String>> getUserTenants(String consortiumId, String centralTenantId, RequestContext requestContext) {
@@ -74,5 +69,4 @@ public class ConsortiumUserTenantsRetriever {
       .map(userTenant -> userTenant.getString(TENANT_ID.getValue()))
       .collect(Collectors.toList());
   }
-
 }

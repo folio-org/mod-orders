@@ -12,7 +12,6 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.settings.util.SettingKey;
-import org.springframework.beans.factory.annotation.Value;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -28,15 +27,12 @@ public class SettingsRetriever {
   private static final String SETTINGS_BY_KEY_QUERY = "key==%s";
   private static final String SETTINGS_CACHE_KEY = "%s.%s";
 
-  @Value("${orders.cache.orders-settings.expiration.time.seconds:300}")
-  private long cacheExpirationTime;
-
-  private final AsyncCache<String, Optional<Setting>> asyncCache;
   private final RestClient restClient;
+  private final AsyncCache<String, Optional<Setting>> asyncCache;
 
-  public SettingsRetriever(RestClient restClient) {
+  public SettingsRetriever(RestClient restClient, long cacheExpirationTime) {
     this.restClient = restClient;
-    asyncCache = buildAsyncCache(Vertx.currentContext(), cacheExpirationTime);
+    this.asyncCache = buildAsyncCache(Vertx.currentContext(), cacheExpirationTime);
   }
 
   public Future<Optional<Setting>> getSettingByKey(SettingKey settingKey, RequestContext requestContext) {
@@ -56,9 +52,8 @@ public class SettingsRetriever {
       .map(settings -> settings.mapTo(SettingCollection.class))
       .map(settings -> settings.getTotalRecords() == null || settings.getTotalRecords() != 1 || CollectionUtils.isEmpty(settings.getSettings())
         ? Optional.<Setting>empty()
-        : Optional.of(settings.getSettings().get(0)))
+        : Optional.of(settings.getSettings().getFirst()))
       .toCompletionStage()
       .toCompletableFuture();
   }
-
 }

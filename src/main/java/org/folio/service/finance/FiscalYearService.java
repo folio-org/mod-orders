@@ -29,7 +29,6 @@ import org.folio.rest.jaxrs.model.Parameter;
 import io.vertx.core.Future;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.caches.ConfigurationEntriesCache;
-import org.springframework.beans.factory.annotation.Value;
 
 @Log4j2
 public class FiscalYearService {
@@ -40,23 +39,20 @@ public class FiscalYearService {
   private static final String FISCAL_YEAR_BY_SERIES_QUERY = "series==\"%s\" AND periodEnd>=%s sortBy periodStart";
   private static final String CACHE_KEY_TEMPLATE = "%s.%s";
 
-  @Value("${orders.cache.fiscal-years.expiration.time.seconds:300}")
-  private long cacheExpirationTime;
-  private final AsyncCache<String, String> currentFiscalYearCacheBySeries;
-  private final AsyncCache<String, String> seriesCacheByFiscalYearId;
-
   private final RestClient restClient;
   private final FundService fundService;
   private final ConfigurationEntriesCache configurationEntriesCache;
+  private final AsyncCache<String, String> currentFiscalYearCacheBySeries;
+  private final AsyncCache<String, String> seriesCacheByFiscalYearId;
 
-
-  public FiscalYearService(RestClient restClient, FundService fundService, ConfigurationEntriesCache configurationEntriesCache) {
+  public FiscalYearService(RestClient restClient, FundService fundService, ConfigurationEntriesCache configurationEntriesCache, long cacheExpirationTime) {
     this.restClient = restClient;
     this.fundService = fundService;
     this.configurationEntriesCache = configurationEntriesCache;
+
     var context = Vertx.currentContext();
-    currentFiscalYearCacheBySeries = buildAsyncCache(context, cacheExpirationTime);
-    seriesCacheByFiscalYearId = buildAsyncCache(context, cacheExpirationTime);
+    this.currentFiscalYearCacheBySeries = buildAsyncCache(context, cacheExpirationTime);
+    this.seriesCacheByFiscalYearId = buildAsyncCache(context, cacheExpirationTime);
   }
 
   public Future<FiscalYear> getCurrentFiscalYear(String ledgerId, RequestContext requestContext) {
@@ -123,7 +119,7 @@ public class FiscalYearService {
       return null;
     }
     if (fiscalYears.size() == 1) {
-      return fiscalYears.get(0).getId();
+      return fiscalYears.getFirst().getId();
     }
     var now = new Date();
     var firstYear = fiscalYears.get(0);
@@ -139,5 +135,4 @@ public class FiscalYearService {
   private boolean isFiscalYearNotFound(Throwable t) {
     return t instanceof HttpException && ((HttpException) t).getCode() == 404;
   }
-
 }

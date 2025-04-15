@@ -14,8 +14,6 @@ import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.UserService;
 import org.folio.service.configuration.ConfigurationEntriesService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
@@ -28,22 +26,18 @@ import io.vertx.core.json.JsonObject;
 public class ConfigurationEntriesCache {
 
   private static final String UNIQUE_CACHE_KEY_PATTERN = "%s_%s_%s";
-  @Value("${orders.cache.configuration-entries.expiration.time.seconds:30}")
-  private long cacheExpirationTime;
 
   private final AsyncCache<String, JsonObject> configsCache;
   private final AsyncCache<String, String> systemCurrencyCache;
   private final AsyncCache<String, String> systemTimezoneCache;
   private final ConfigurationEntriesService configurationEntriesService;
 
-
-  @Autowired
-  public ConfigurationEntriesCache(ConfigurationEntriesService configurationEntriesService) {
-    this.configurationEntriesService = configurationEntriesService;
+  public ConfigurationEntriesCache(ConfigurationEntriesService configurationEntriesService, long cacheExpirationTime) {
     var context = Vertx.currentContext();
-    configsCache = buildAsyncCache(context, cacheExpirationTime);
-    systemCurrencyCache = buildAsyncCache(context, cacheExpirationTime);
-    systemTimezoneCache = buildAsyncCache(context, cacheExpirationTime);
+    this.configsCache = buildAsyncCache(context, cacheExpirationTime);
+    this.systemCurrencyCache = buildAsyncCache(context, cacheExpirationTime);
+    this.systemTimezoneCache = buildAsyncCache(context, cacheExpirationTime);
+    this.configurationEntriesService = configurationEntriesService;
   }
 
   /**
@@ -82,5 +76,4 @@ public class ConfigurationEntriesCache {
     var userId = UserService.getCurrentUserId(requestContext.getHeaders());
     return String.format(UNIQUE_CACHE_KEY_PATTERN, tenantId, userId, endpoint);
   }
-
 }

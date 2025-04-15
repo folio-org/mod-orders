@@ -2,8 +2,6 @@ package org.folio.service.orders.lines.update;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestConfig.autowireDependencies;
-import static org.folio.TestConfig.getFirstContextFromVertx;
-import static org.folio.TestConfig.getVertx;
 import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestConfig.mockPort;
@@ -51,6 +49,7 @@ import org.folio.service.orders.lines.update.instance.WithHoldingOrderLineUpdate
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.settings.SettingsRetriever;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -65,6 +64,9 @@ import io.vertx.core.Context;
 import io.vertx.core.Vertx;
 
 public class OrderLineUpdateInstanceHandlerTest {
+
+  private static boolean runningOnOwn;
+
   @Autowired
   private OrderLinePatchOperationService orderLinePatchOperationService;
 
@@ -73,24 +75,28 @@ public class OrderLineUpdateInstanceHandlerTest {
   @Mock
   private PieceStorageService pieceStorageService;
 
-  private Context ctxMock = getFirstContextFromVertx(getVertx());
-
   private RequestContext requestContext;
-  private static boolean runningOnOwn;
+  private AutoCloseable openMocks;
 
   @BeforeEach
   public void initMocks() {
-    MockitoAnnotations.openMocks(this);
-    ctxMock = Vertx.vertx().getOrCreateContext();
+    openMocks = MockitoAnnotations.openMocks(this);
+    Context ctxMock = Vertx.vertx().getOrCreateContext();
     okapiHeadersMock = new HashMap<>();
     okapiHeadersMock.put(OKAPI_URL, "http://localhost:" + mockPort);
     okapiHeadersMock.put(X_OKAPI_TOKEN.getName(), X_OKAPI_TOKEN.getValue());
     okapiHeadersMock.put("x-okapi-tenant", X_OKAPI_TENANT.getValue());
     okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
-    String okapiURL = okapiHeadersMock.getOrDefault(OKAPI_URL, "");
     requestContext = new RequestContext(ctxMock, okapiHeadersMock);
     autowireDependencies(this);
     doReturn(succeededFuture(Lists.newArrayList())).when(pieceStorageService).getPiecesByPoLineId(any(), any());
+  }
+
+  @AfterEach
+  public void resetMocks() throws Exception {
+    if (openMocks != null) {
+      openMocks.close();
+    }
   }
 
   @BeforeAll
@@ -240,12 +246,12 @@ public class OrderLineUpdateInstanceHandlerTest {
 
     @Bean
     ConsortiumConfigurationService consortiumConfigurationService(RestClient restClient, SettingsRetriever settingsRetriever) {
-      return new ConsortiumConfigurationService(restClient, settingsRetriever);
+      return new ConsortiumConfigurationService(restClient, settingsRetriever, 1L);
     }
 
     @Bean
     ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever(RestClient restClient) {
-      return new ConsortiumUserTenantsRetriever(restClient);
+      return new ConsortiumUserTenantsRetriever(restClient, 1L);
     }
 
     @Bean PurchaseOrderStorageService purchaseOrderStorageService () {
@@ -293,7 +299,7 @@ public class OrderLineUpdateInstanceHandlerTest {
 
     @Bean
     ConfigurationEntriesCache configurationEntriesCache(ConfigurationEntriesService configurationEntriesService) {
-      return new ConfigurationEntriesCache(configurationEntriesService);
+      return new ConfigurationEntriesCache(configurationEntriesService, 1L);
     }
 
     @Bean OrderLinePatchOperationService orderLinePatchOperationService(
@@ -326,8 +332,7 @@ public class OrderLineUpdateInstanceHandlerTest {
 
     @Bean
     SettingsRetriever settingsRetriever(RestClient restClient) {
-      return new SettingsRetriever(restClient);
+      return new SettingsRetriever(restClient, 1L);
     }
-
   }
 }

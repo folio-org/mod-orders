@@ -9,7 +9,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.rest.util.OkapiConnectionParams;
 import org.folio.rest.util.RestUtil;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -32,13 +31,10 @@ public class JobExecutionTotalRecordsCache {
   private static final String JOB_PROGRESS_FIELD = "progress";
   private static final String JOB_TOTAL_RECORDS_FIELD = "total";
 
-  @Value("${orders.cache.job.records.amount.expiration.seconds:3600}")
-  private long cacheExpirationTime;
-  private AsyncCache<String, Integer> cache;
+  private final AsyncCache<String, Integer> asyncCache;
 
-  @Autowired
-  public JobExecutionTotalRecordsCache(Vertx vertx) {
-    cache = buildAsyncCache(vertx, cacheExpirationTime);
+  public JobExecutionTotalRecordsCache(Vertx vertx, @Value("${orders.cache.job.records.amount.expiration.seconds:3600}") long cacheExpirationTime) {
+    this.asyncCache = buildAsyncCache(vertx, cacheExpirationTime);
   }
 
   /**
@@ -50,7 +46,7 @@ public class JobExecutionTotalRecordsCache {
    */
   public Future<Integer> get(String jobExecutionId, OkapiConnectionParams params) {
     try {
-      return Future.fromCompletionStage(cache.get(jobExecutionId, (key, executor) -> loadJobExecutionRecordsAmount(key, params)));
+      return Future.fromCompletionStage(asyncCache.get(jobExecutionId, (key, executor) -> loadJobExecutionRecordsAmount(key, params)));
     } catch (Exception e) {
       LOGGER.warn("Error loading total records amount for jobExecution by id: '{}'", jobExecutionId, e);
       return Future.failedFuture(e);
@@ -76,5 +72,4 @@ public class JobExecutionTotalRecordsCache {
         }
       });
   }
-
 }

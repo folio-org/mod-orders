@@ -75,6 +75,7 @@ public class CirculationRequestsRetrieverTest {
     "05a95f03-eb00-4248-9f2e-2bd05957ff05",
     "05a95f03-eb00-4248-9f2e-2bd05957ff06"
   );
+  private static boolean runningOnOwn;
 
   @Autowired
   RestClient restClient;
@@ -85,10 +86,7 @@ public class CirculationRequestsRetrieverTest {
   @Autowired
   CirculationRequestsRetriever circulationRequestsRetriever;
 
-  private Map<String, String> okapiHeadersMock;
-  private Context ctxMock;
   private RequestContext requestContext;
-  private static boolean runningOnOwn;
   private AutoCloseable mockitoClosable;
 
   @BeforeAll
@@ -112,8 +110,8 @@ public class CirculationRequestsRetrieverTest {
   void beforeEach() {
     mockitoClosable = MockitoAnnotations.openMocks(this);
     autowireDependencies(this);
-    ctxMock = getFirstContextFromVertx(getVertx());
-    okapiHeadersMock = new HashMap<>();
+    Context ctxMock = getFirstContextFromVertx(getVertx());
+    Map<String, String> okapiHeadersMock = new HashMap<>();
     okapiHeadersMock.put(OKAPI_URL, "http://localhost:" + mockPort);
     okapiHeadersMock.put(X_OKAPI_TOKEN.getName(), X_OKAPI_TOKEN.getValue());
     okapiHeadersMock.put(X_OKAPI_TENANT.getName(), X_OKAPI_TENANT.getValue());
@@ -226,7 +224,6 @@ public class CirculationRequestsRetrieverTest {
     });
   }
 
-
   /**
    * Define unit test specific beans to override actual ones
    */
@@ -252,20 +249,18 @@ public class CirculationRequestsRetrieverTest {
 
     @Bean
     ConsortiumConfigurationService consortiumConfigurationService(RestClient restClient, SettingsRetriever settingsRetriever) {
-      return new ConsortiumConfigurationService(restClient, settingsRetriever);
+      return new ConsortiumConfigurationService(restClient, settingsRetriever, 1L);
     }
 
     @Bean
     ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever(RestClient restClient) {
-      return new ConsortiumUserTenantsRetriever(restClient);
+      return new ConsortiumUserTenantsRetriever(restClient, 1L);
     }
 
     @Bean
     SettingsRetriever settingsRetriever(RestClient restClient) {
-      return new SettingsRetriever(restClient);
+      return new SettingsRetriever(restClient, 1L);
     }
-
   }
-
 }
 
