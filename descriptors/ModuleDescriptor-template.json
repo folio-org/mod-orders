@@ -957,6 +957,7 @@
             "orders-storage.titles.item.delete",
             "orders-storage.pieces.collection.get",
             "orders-storage.pieces.collection.delete",
+            "orders-storage.pieces.item.delete",
             "orders-storage.po-lines.item.get",
             "inventory-storage.holdings.item.delete",
             "inventory-storage.items.collection.get",

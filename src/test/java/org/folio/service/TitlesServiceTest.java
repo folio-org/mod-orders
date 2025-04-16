@@ -243,11 +243,15 @@ public class TitlesServiceTest {
     doReturn(Future.succeededFuture(title)).when(titlesService).getTitleById(eq(TITLE_ID), any(RequestContext.class));
     when(purchaseOrderLineService.getOrderLineById(eq(POLINE_ID), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture(poLine));
-    doReturn(Future.succeededFuture()).when(restClient).delete(eq(DELETE_TITLE_ENDPOINT), any(RequestContext.class));
-    when(inventoryItemManager.getItemsByHoldingId(eq(HOLDING_ID_1), any(RequestContext.class)))
-      .thenReturn(Future.succeededFuture(List.of(item)));
     when(pieceStorageService.getPiecesByLineIdAndTitleId(eq(POLINE_ID), eq(TITLE_ID), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture(pieces));
+    when(inventoryItemManager.getItemsByHoldingId(eq(HOLDING_ID_1), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(List.of(item)));
+    when(inventoryItemManager.deleteItems(eq(Collections.singletonList(ITEM_ID_1)), eq(true), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(Collections.emptyList()));
+    when(pieceStorageService.deletePiecesByIds(eq(Collections.singletonList(PIECE_ID_1)), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture());
+    doReturn(Future.succeededFuture()).when(restClient).delete(eq(DELETE_TITLE_ENDPOINT), any(RequestContext.class));
     when(consortiumConfigurationService.isCentralOrderingEnabled(any(RequestContext.class)))
       .thenReturn(Future.succeededFuture(false));
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
@@ -257,8 +261,8 @@ public class TitlesServiceTest {
     result.onComplete(ar -> {
       assertTrue(ar.succeeded());
       verify(inventoryHoldingManager, never()).deleteHoldingById(anyString(), anyBoolean(), any(RequestContext.class));
-      verify(inventoryItemManager, never()).deleteItems(anyList(), anyBoolean(), any(RequestContext.class));
-      verify(pieceStorageService, never()).deletePiecesByIds(anyList(), any(RequestContext.class));
+      verify(inventoryItemManager).deleteItems(anyList(), anyBoolean(), any(RequestContext.class));
+      verify(pieceStorageService).deletePiecesByIds(anyList(), any(RequestContext.class));
       verify(restClient).delete(eq(DELETE_TITLE_ENDPOINT), any(RequestContext.class));
     });
   }
