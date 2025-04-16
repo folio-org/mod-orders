@@ -4,11 +4,13 @@ import com.github.benmanes.caffeine.cache.AsyncCache;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import jakarta.annotation.PostConstruct;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -32,10 +34,17 @@ public class ConsortiumUserTenantsRetriever {
   private static final String USER_TENANTS_CACHE_KEY_TEMPLATE = "%s.%s";
 
   private final RestClient restClient;
-  private final AsyncCache<String, List<String>> asyncCache;
+  private AsyncCache<String, List<String>> asyncCache;
 
-  public ConsortiumUserTenantsRetriever(RestClient restClient, long cacheExpirationTime) {
+  @Value("${orders.cache.consortium-user-tenants.expiration.time.seconds:60}")
+  private long cacheExpirationTime;
+
+  public ConsortiumUserTenantsRetriever(RestClient restClient) {
     this.restClient = restClient;
+  }
+
+  @PostConstruct
+  void init() {
     this.asyncCache = buildAsyncCache(Vertx.currentContext(), cacheExpirationTime);
   }
 

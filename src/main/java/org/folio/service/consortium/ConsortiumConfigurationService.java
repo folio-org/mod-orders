@@ -3,6 +3,7 @@ package org.folio.service.consortium;
 import com.github.benmanes.caffeine.cache.AsyncCache;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import jakarta.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -15,6 +16,7 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.settings.SettingsRetriever;
 import org.folio.service.settings.util.SettingKey;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -32,13 +34,19 @@ public class ConsortiumConfigurationService {
   private static final String USER_TENANTS_ENDPOINT = "/user-tenants";
 
   private final RestClient restClient;
-  private final AsyncCache<String, Optional<ConsortiumConfiguration>> asyncCache;
-
+  private AsyncCache<String, Optional<ConsortiumConfiguration>> asyncCache;
   private final SettingsRetriever settingsRetriever;
 
-  public ConsortiumConfigurationService(RestClient restClient, SettingsRetriever settingsRetriever, long cacheExpirationTime) {
+  @Value("${orders.cache.consortium-data.expiration.time.seconds:300}")
+  private long cacheExpirationTime;
+
+  public ConsortiumConfigurationService(RestClient restClient, SettingsRetriever settingsRetriever) {
     this.restClient = restClient;
     this.settingsRetriever = settingsRetriever;
+  }
+
+  @PostConstruct
+  void init() {
     this.asyncCache = buildAsyncCache(Vertx.currentContext(), cacheExpirationTime);
   }
 

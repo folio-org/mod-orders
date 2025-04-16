@@ -4,6 +4,7 @@ import com.github.benmanes.caffeine.cache.AsyncCache;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpMethod;
+import jakarta.annotation.PostConstruct;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -31,10 +32,14 @@ public class JobExecutionTotalRecordsCache {
   private static final String JOB_PROGRESS_FIELD = "progress";
   private static final String JOB_TOTAL_RECORDS_FIELD = "total";
 
-  private final AsyncCache<String, Integer> asyncCache;
+  private AsyncCache<String, Integer> asyncCache;
 
-  public JobExecutionTotalRecordsCache(Vertx vertx, @Value("${orders.cache.job.records.amount.expiration.seconds:3600}") long cacheExpirationTime) {
-    this.asyncCache = buildAsyncCache(vertx, cacheExpirationTime);
+  @Value("${orders.cache.job.records.amount.expiration.seconds:3600}")
+  private long cacheExpirationTime;
+
+  @PostConstruct
+  void init() {
+    this.asyncCache = buildAsyncCache(Vertx.currentContext(), cacheExpirationTime);
   }
 
   /**

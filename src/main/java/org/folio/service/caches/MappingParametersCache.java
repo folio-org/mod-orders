@@ -7,6 +7,7 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import jakarta.annotation.PostConstruct;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -76,22 +77,28 @@ public class MappingParametersCache {
   private static final String VALUE_RESPONSE = "value";
   public static final String ERROR_LOADING_CACHE_MESSAGE = "Error loading cache for mapping parameter: '%s', tenantId: '%s', status code: %s, response message: %s";
 
-  private final int settingsLimit;
   private final RestClient restClient;
   private final AcquisitionsUnitsService acquisitionsUnitsService;
   private final AcquisitionMethodsService acquisitionMethodsService;
-  private final AsyncCache<String, MappingParameters> asyncCache;
+  private AsyncCache<String, MappingParameters> asyncCache;
 
-  public MappingParametersCache(Vertx vertx, RestClient restClient,
+  @Value("${orders.cache.mapping.parameters.settings.limit:5000}")
+  private int settingsLimit;
+
+  @Value("${orders.cache.mapping.parameters.expiration.seconds:3600}")
+  private long cacheExpirationTime;
+
+  public MappingParametersCache(RestClient restClient,
                                 AcquisitionsUnitsService acquisitionsUnitsService,
-                                AcquisitionMethodsService acquisitionMethodsService,
-                                @Value("${orders.cache.mapping.parameters.settings.limit:5000}") int settingsLimit,
-                                @Value("${orders.cache.mapping.parameters.expiration.seconds:3600}") long cacheExpirationTime) {
-    this.settingsLimit = settingsLimit;
+                                AcquisitionMethodsService acquisitionMethodsService) {
     this.restClient = restClient;
     this.acquisitionsUnitsService = acquisitionsUnitsService;
     this.acquisitionMethodsService = acquisitionMethodsService;
-    this.asyncCache = buildAsyncCache(vertx, cacheExpirationTime);
+  }
+
+  @PostConstruct
+  void init() {
+    this.asyncCache = buildAsyncCache(Vertx.currentContext(), cacheExpirationTime);
     LOGGER.info("MappingParametersCache:: settings limit: '{}'", settingsLimit);
   }
 

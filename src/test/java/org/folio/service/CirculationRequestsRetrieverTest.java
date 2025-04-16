@@ -249,17 +249,17 @@ public class CirculationRequestsRetrieverTest {
 
     @Bean
     ConsortiumConfigurationService consortiumConfigurationService(RestClient restClient, SettingsRetriever settingsRetriever) {
-      return new ConsortiumConfigurationService(restClient, settingsRetriever, 1L);
+      return new ConsortiumConfigurationService(restClient, settingsRetriever);
     }
 
     @Bean
     ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever(RestClient restClient) {
-      return new ConsortiumUserTenantsRetriever(restClient, 1L);
+      return new ConsortiumUserTenantsRetriever(restClient);
     }
 
     @Bean
     SettingsRetriever settingsRetriever(RestClient restClient) {
-      return new SettingsRetriever(restClient, 1L);
+      return new SettingsRetriever(restClient);
     }
   }
 }

@@ -51,9 +51,10 @@ public class FiscalYearServiceTest {
     var fundService = mock(FundService.class);
     requestContext = mock(RequestContext.class);
     var configurationEntriesCache = mock(ConfigurationEntriesCache.class);
-    fiscalYearService = new FiscalYearService(restClient, fundService, configurationEntriesCache, 1L);
+    fiscalYearService = new FiscalYearService(restClient, fundService, configurationEntriesCache);
     doReturn(Future.succeededFuture("UTC"))
       .when(configurationEntriesCache).getSystemTimeZone(any(RequestContext.class));
+    fiscalYearService.init();
   }
 
   @Test

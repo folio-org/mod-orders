@@ -3,6 +3,7 @@ package org.folio.service.settings;
 import com.github.benmanes.caffeine.cache.AsyncCache;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.rest.acq.model.Setting;
@@ -12,6 +13,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.settings.util.SettingKey;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -28,10 +30,17 @@ public class SettingsRetriever {
   private static final String SETTINGS_CACHE_KEY = "%s.%s";
 
   private final RestClient restClient;
-  private final AsyncCache<String, Optional<Setting>> asyncCache;
+  private AsyncCache<String, Optional<Setting>> asyncCache;
 
-  public SettingsRetriever(RestClient restClient, long cacheExpirationTime) {
+  @Value("${orders.cache.orders-settings.expiration.time.seconds:300}")
+  private long cacheExpirationTime;
+
+  public SettingsRetriever(RestClient restClient) {
     this.restClient = restClient;
+  }
+
+  @PostConstruct
+  void init() {
     this.asyncCache = buildAsyncCache(Vertx.currentContext(), cacheExpirationTime);
   }
 

@@ -15,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -36,13 +37,16 @@ public class SettingsRetrieverTest {
   @Mock
   private RequestContext requestContext;
 
+  @InjectMocks
   private SettingsRetriever settingsRetriever;
+
   private AutoCloseable openMocks;
 
   @BeforeEach
   void setUp() {
     openMocks = MockitoAnnotations.openMocks(this);
-    settingsRetriever = new SettingsRetriever(restClientMock, 1L);
+    settingsRetriever = new SettingsRetriever(restClientMock);
+    settingsRetriever.init();
   }
 
   @AfterEach

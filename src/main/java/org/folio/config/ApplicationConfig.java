@@ -205,9 +205,8 @@ public class ApplicationConfig {
   }
 
   @Bean
-  ConfigurationEntriesCache configurationEntriesCache (ConfigurationEntriesService configurationEntriesService,
-                                                       @Value("${orders.cache.configuration-entries.expiration.time.seconds:30}") long cacheExpirationTime) {
-    return new ConfigurationEntriesCache(configurationEntriesService, cacheExpirationTime);
+  ConfigurationEntriesCache configurationEntriesCache (ConfigurationEntriesService configurationEntriesService) {
+    return new ConfigurationEntriesCache(configurationEntriesService);
   }
 
   @Bean
@@ -273,9 +272,8 @@ public class ApplicationConfig {
   }
 
   @Bean
-  FiscalYearService fiscalYearService(RestClient restClient, FundService fundService, ConfigurationEntriesCache configurationEntriesCache,
-                                      @Value("${orders.cache.fiscal-years.expiration.time.seconds:300}") long cacheExpirationTime) {
-    return new FiscalYearService(restClient, fundService, configurationEntriesCache, cacheExpirationTime);
+  FiscalYearService fiscalYearService(RestClient restClient, FundService fundService, ConfigurationEntriesCache configurationEntriesCache) {
+    return new FiscalYearService(restClient, fundService, configurationEntriesCache);
   }
 
   @Bean
@@ -862,15 +860,13 @@ public class ApplicationConfig {
   }
 
   @Bean
-  ConsortiumConfigurationService consortiumConfigurationService(RestClient restClient, SettingsRetriever settingsRetriever,
-                                                                @Value("${orders.cache.consortium-data.expiration.time.seconds:300}") long cacheExpirationTime) {
-    return new ConsortiumConfigurationService(restClient, settingsRetriever, cacheExpirationTime);
+  ConsortiumConfigurationService consortiumConfigurationService(RestClient restClient, SettingsRetriever settingsRetriever) {
+    return new ConsortiumConfigurationService(restClient, settingsRetriever);
   }
 
   @Bean
-  ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever(RestClient restClient,
-                                                                @Value("${orders.cache.consortium-user-tenants.expiration.time.seconds:60}") long cacheExpirationTime) {
-    return new ConsortiumUserTenantsRetriever(restClient, cacheExpirationTime);
+  ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever(RestClient restClient) {
+    return new ConsortiumUserTenantsRetriever(restClient);
   }
 
   @Bean
@@ -889,8 +885,7 @@ public class ApplicationConfig {
   }
 
   @Bean
-  SettingsRetriever settingsRetriever(RestClient restClient,
-                                      @Value("${orders.cache.orders-settings.expiration.time.seconds:300}") long cacheExpirationTime) {
-    return new SettingsRetriever(restClient, cacheExpirationTime);
+  SettingsRetriever settingsRetriever(RestClient restClient) {
+    return new SettingsRetriever(restClient);
   }
 }

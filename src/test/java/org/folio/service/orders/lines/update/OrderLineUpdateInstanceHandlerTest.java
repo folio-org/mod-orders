@@ -246,12 +246,12 @@ public class OrderLineUpdateInstanceHandlerTest {
 
     @Bean
     ConsortiumConfigurationService consortiumConfigurationService(RestClient restClient, SettingsRetriever settingsRetriever) {
-      return new ConsortiumConfigurationService(restClient, settingsRetriever, 1L);
+      return new ConsortiumConfigurationService(restClient, settingsRetriever);
     }
 
     @Bean
     ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever(RestClient restClient) {
-      return new ConsortiumUserTenantsRetriever(restClient, 1L);
+      return new ConsortiumUserTenantsRetriever(restClient);
     }
 
     @Bean PurchaseOrderStorageService purchaseOrderStorageService () {
@@ -299,7 +299,7 @@ public class OrderLineUpdateInstanceHandlerTest {
 
     @Bean
     ConfigurationEntriesCache configurationEntriesCache(ConfigurationEntriesService configurationEntriesService) {
-      return new ConfigurationEntriesCache(configurationEntriesService, 1L);
+      return new ConfigurationEntriesCache(configurationEntriesService);
     }
 
     @Bean OrderLinePatchOperationService orderLinePatchOperationService(
@@ -332,7 +332,7 @@ public class OrderLineUpdateInstanceHandlerTest {
 
     @Bean
     SettingsRetriever settingsRetriever(RestClient restClient) {
-      return new SettingsRetriever(restClient, 1L);
+      return new SettingsRetriever(restClient);
     }
   }
 }

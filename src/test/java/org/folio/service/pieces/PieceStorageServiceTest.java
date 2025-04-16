@@ -270,17 +270,17 @@ public class PieceStorageServiceTest {
 
     @Bean
     ConsortiumConfigurationService consortiumConfigurationService(RestClient restClient, SettingsRetriever settingsRetriever) {
-      return spy(new ConsortiumConfigurationService(restClient, settingsRetriever, 1L));
+      return spy(new ConsortiumConfigurationService(restClient, settingsRetriever));
     }
 
     @Bean
     ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever(RestClient restClient) {
-      return spy(new ConsortiumUserTenantsRetriever(restClient, 1L));
+      return spy(new ConsortiumUserTenantsRetriever(restClient));
     }
 
     @Bean
     SettingsRetriever settingsRetriever(RestClient restClient) {
-      return spy(new SettingsRetriever(restClient, 1L));
+      return spy(new SettingsRetriever(restClient));
     }
   }
 }

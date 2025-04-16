@@ -3,6 +3,7 @@ package org.folio.service.caches;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import jakarta.annotation.PostConstruct;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -27,10 +28,14 @@ public class JobProfileSnapshotCache {
   private static final Logger LOGGER = LogManager.getLogger();
   public static final String DATA_IMPORT_PROFILES_JOB_PROFILE_SNAPSHOTS = "/data-import-profiles/jobProfileSnapshots/";
 
-  private final AsyncCache<String, Optional<ProfileSnapshotWrapper>> asyncCache;
+  private AsyncCache<String, Optional<ProfileSnapshotWrapper>> asyncCache;
 
-  public JobProfileSnapshotCache(Vertx vertx, @Value("${orders.cache.jobprofile.expiration.seconds:3600}") long cacheExpirationTime) {
-    this.asyncCache = buildAsyncCache(vertx, cacheExpirationTime);
+  @Value("${orders.cache.jobprofile.expiration.seconds:3600}")
+  private long cacheExpirationTime;
+
+  @PostConstruct
+  void init() {
+    this.asyncCache = buildAsyncCache(Vertx.currentContext(), cacheExpirationTime);
   }
 
   public Future<Optional<ProfileSnapshotWrapper>> get(String profileSnapshotId, OkapiConnectionParams params) {

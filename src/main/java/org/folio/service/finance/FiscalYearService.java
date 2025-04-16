@@ -17,6 +17,7 @@ import java.util.concurrent.CompletionException;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
 import io.vertx.core.Vertx;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.log4j.Log4j2;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.FiscalYearCollection;
@@ -29,6 +30,7 @@ import org.folio.rest.jaxrs.model.Parameter;
 import io.vertx.core.Future;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.caches.ConfigurationEntriesCache;
+import org.springframework.beans.factory.annotation.Value;
 
 @Log4j2
 public class FiscalYearService {
@@ -42,14 +44,20 @@ public class FiscalYearService {
   private final RestClient restClient;
   private final FundService fundService;
   private final ConfigurationEntriesCache configurationEntriesCache;
-  private final AsyncCache<String, String> currentFiscalYearCacheBySeries;
-  private final AsyncCache<String, String> seriesCacheByFiscalYearId;
+  private AsyncCache<String, String> currentFiscalYearCacheBySeries;
+  private AsyncCache<String, String> seriesCacheByFiscalYearId;
 
-  public FiscalYearService(RestClient restClient, FundService fundService, ConfigurationEntriesCache configurationEntriesCache, long cacheExpirationTime) {
+  @Value("${orders.cache.fiscal-years.expiration.time.seconds:300}")
+  private long cacheExpirationTime;
+
+  public FiscalYearService(RestClient restClient, FundService fundService, ConfigurationEntriesCache configurationEntriesCache) {
     this.restClient = restClient;
     this.fundService = fundService;
     this.configurationEntriesCache = configurationEntriesCache;
+  }
 
+  @PostConstruct
+  void init() {
     var context = Vertx.currentContext();
     this.currentFiscalYearCacheBySeries = buildAsyncCache(context, cacheExpirationTime);
     this.seriesCacheByFiscalYearId = buildAsyncCache(context, cacheExpirationTime);
@@ -78,7 +86,7 @@ public class FiscalYearService {
   /**
    * Retrieves the current fiscal year ID for the series related to the fiscal year corresponding to the given ID.
    *
-   * @param fiscalYearId fiscal year ID
+   * @param fiscalYearId   fiscal year ID
    * @param requestContext {@link RequestContext} to be used for the request
    * @return future with the current fiscal year ID
    */
