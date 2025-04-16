@@ -14,19 +14,23 @@ import org.javamoney.moneta.function.MonetaryOperators;
 import org.javamoney.moneta.spi.AbstractCurrencyConversion;
 
 public class ManualCurrencyConversion extends AbstractCurrencyConversion {
+
+  private static final String EXCHANGE_RATE_SCALE = "exchangeRateScale";
+
   private final ExchangeRateProvider rateProvider;
   private final ConversionQuery conversionQuery;
   private final OperationMode operationMode;
 
-  public ManualCurrencyConversion(ConversionQuery conversionQuery, ExchangeRateProvider rateProvider, ConversionContext conversionContext) {
+  public ManualCurrencyConversion(ConversionQuery conversionQuery, ExchangeRateProvider rateProvider,
+                                  ConversionContext conversionContext) {
     super(conversionQuery.getCurrency(), conversionContext);
     this.conversionQuery = conversionQuery;
     this.rateProvider = rateProvider;
     this.operationMode = OperationMode.MULTIPLY;
   }
 
-  public ManualCurrencyConversion(ConversionQuery conversionQuery, ExchangeRateProvider rateProvider, ConversionContext conversionContext,
-                                  OperationMode operationMode) {
+  public ManualCurrencyConversion(ConversionQuery conversionQuery, ExchangeRateProvider rateProvider,
+                                  ConversionContext conversionContext, OperationMode operationMode) {
     super(conversionQuery.getCurrency(), conversionContext);
     this.conversionQuery = conversionQuery;
     this.rateProvider = rateProvider;
@@ -77,7 +81,7 @@ public class ManualCurrencyConversion extends AbstractCurrencyConversion {
         throw new CurrencyConversionException(amount.getCurrency(), super.getCurrency(), null);
       }
       var factor = this.roundFactor(amount, rate.getFactor());
-      var scale = rate.getContext().get("exchangeRateScale", Integer.class);
+      var scale = rate.getContext().get(EXCHANGE_RATE_SCALE, Integer.class);
       amount = amount.divide(factor).getFactory().setCurrency(rate.getCurrency()).create();
       return Objects.nonNull(scale) && scale >= 0 ? amount.with(MonetaryOperators.rounding(scale)) : amount;
     }
@@ -85,7 +89,11 @@ public class ManualCurrencyConversion extends AbstractCurrencyConversion {
 
   @Override
   public String toString() {
-    return "CurrencyConversion [MonetaryAmount -> MonetaryAmount; provider=" + this.rateProvider + ", context=" + this.getContext() + ", termCurrency=" + this.getCurrency() + ']';
+    return "CurrencyConversion [MonetaryAmount -> MonetaryAmount"
+      + "; provider=" + this.rateProvider
+      + ", context=" + this.getContext()
+      + ", baseCurrency=" + this.conversionQuery.getBaseCurrency()
+      + ", termCurrency=" + this.getCurrency()
+      + ']';
   }
-
 }

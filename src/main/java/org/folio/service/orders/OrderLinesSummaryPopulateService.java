@@ -1,37 +1,42 @@
 package org.folio.service.orders;
 
-import static org.folio.orders.utils.HelperUtils.getConversionQuery;
-
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
-import javax.money.convert.ConversionQuery;
-
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.CompositeOrderRetrieveHolder;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.acq.model.finance.ExchangeRate;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.service.caches.ConfigurationEntriesCache;
-import org.folio.service.exchange.ExchangeRateProviderResolver;
+import org.folio.service.exchange.CacheableExchangeRateService;
+import org.folio.service.exchange.CustomExchangeRateProvider;
 import org.javamoney.moneta.Money;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 
+import static org.folio.orders.utils.HelperUtils.buildConversionQuery;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+
 public class OrderLinesSummaryPopulateService implements CompositeOrderDynamicDataPopulateService {
+
   protected final Logger logger = LogManager.getLogger(OrderLinesSummaryPopulateService.class);
 
   private final ConfigurationEntriesCache configurationEntriesCache;
-  private final ExchangeRateProviderResolver exchangeRateProviderResolver;
+  private final CacheableExchangeRateService cacheableExchangeRateService;
 
   public OrderLinesSummaryPopulateService(ConfigurationEntriesCache configurationEntriesCache,
-      ExchangeRateProviderResolver exchangeRateProviderResolver) {
+                                          CacheableExchangeRateService cacheableExchangeRateService) {
     this.configurationEntriesCache = configurationEntriesCache;
-    this.exchangeRateProviderResolver = exchangeRateProviderResolver;
+    this.cacheableExchangeRateService = cacheableExchangeRateService;
   }
 
   @Override
@@ -56,31 +61,48 @@ public class OrderLinesSummaryPopulateService implements CompositeOrderDynamicDa
   public Future<Double> calculateTotalEstimatedPrice(List<CompositePoLine> compositePoLines,
       RequestContext requestContext) {
     return configurationEntriesCache.getSystemCurrency(requestContext)
-      .compose(toCurrency -> getCollect(compositePoLines, requestContext, toCurrency)
-        .map(amounts -> amounts.stream()
-        .reduce(Money.of(0, toCurrency), Money::add)
-        .getNumber()
-        .doubleValue()));
+      .compose(toCurrency -> getExchangeRatesPerPoLine(compositePoLines, toCurrency, requestContext)
+      .compose(poLineExchangeRate -> Future.succeededFuture(Pair.of(toCurrency, poLineExchangeRate)))
+      .compose(toCurrencyPolExcRates -> Future.succeededFuture(convertEstimatedPrice(compositePoLines, toCurrencyPolExcRates))));
   }
 
-  private Future<List<Money>> getCollect(List<CompositePoLine> compositePoLines, RequestContext requestContext, String toCurrency) {
-    var futures = compositePoLines.stream()
-      .map(CompositePoLine::getCost)
-      .map(cost -> requestContext.getContext().<Money>executeBlocking(blockingFuture -> {
-        Money money = Money.of(cost.getPoLineEstimatedPrice(), cost.getCurrency());
-        if (money.getCurrency().getCurrencyCode().equals(toCurrency)) {
-          blockingFuture.complete(money);
+  private Future<Map<String, ExchangeRate>> getExchangeRatesPerPoLine(List<CompositePoLine> poLines, String toCurrency, RequestContext requestContext) {
+    var poLineExchangeRateFutures = new ArrayList<Future<Map<String, ExchangeRate>>>();
+    poLines.forEach(poLine -> {
+      var cost = poLine.getCost();
+      poLineExchangeRateFutures.add(cacheableExchangeRateService.getExchangeRate(cost.getCurrency(), toCurrency, cost.getExchangeRate(), requestContext)
+        .compose(exchangeRate -> Future.succeededFuture(Map.of(poLine.getId(), exchangeRate))));
+    });
+    return collectResultsOnSuccess(poLineExchangeRateFutures)
+      .map(OrderLinesSummaryPopulateService::transformToSingleMap);
+  }
+
+  private static Map<String, ExchangeRate> transformToSingleMap(List<Map<String, ExchangeRate>> polExcRatePairList) {
+    return polExcRatePairList.stream()
+      .map(Map::entrySet).flatMap(Collection::stream)
+      .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+  }
+
+  private Double convertEstimatedPrice(List<CompositePoLine> compositePoLines,
+                                       Pair<String, Map<String, ExchangeRate>> toCurrencyPoLineExchangeRates) {
+    var toCurrency = toCurrencyPoLineExchangeRates.getLeft();
+    var poLineExchangeRates = toCurrencyPoLineExchangeRates.getRight();
+    return compositePoLines.stream()
+      .map(poLine -> {
+        var exchangeRate = poLineExchangeRates.get(poLine.getId());
+        var amount = Money.of(poLine.getCost().getPoLineEstimatedPrice(), poLine.getCost().getCurrency());
+        if (StringUtils.equals(exchangeRate.getFrom(), exchangeRate.getTo())) {
+          return amount;
         } else {
-          Double exchangeRate = cost.getExchangeRate();
-          ConversionQuery conversionQuery = getConversionQuery(exchangeRate, cost.getCurrency(), toCurrency);
-          var exchangeRateProvider = exchangeRateProviderResolver.resolve(conversionQuery, requestContext);
-          var conversion = exchangeRateProvider.getCurrencyConversion(conversionQuery);
-          blockingFuture.complete(money.with(conversion));
+          var provider = new CustomExchangeRateProvider();
+          var query = buildConversionQuery(poLine.getCost().getCurrency(), toCurrency, exchangeRate.getExchangeRate());
+          var conversion = provider.getCurrencyConversion(query);
+          return amount.with(conversion);
         }
-      }))
-      .collect(Collectors.toList());
-    return GenericCompositeFuture.join(futures)
-      .map(CompositeFuture::list);
+      })
+      .reduce(Money.of(0, toCurrency), Money::add)
+      .getNumber()
+      .doubleValue();
   }
 
   private int calculateTotalItemsQuantity(List<CompositePoLine> poLines) {

@@ -33,8 +33,7 @@ import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
 import org.folio.service.consortium.SharingInstanceService;
-import org.folio.service.exchange.ExchangeRateProviderResolver;
-import org.folio.service.exchange.FinanceExchangeRateService;
+import org.folio.service.exchange.CacheableExchangeRateService;
 import org.folio.service.finance.FiscalYearService;
 import org.folio.service.finance.FundService;
 import org.folio.service.finance.LedgerService;
@@ -168,16 +167,6 @@ public class ApplicationConfig {
     return new RestClient();
   }
 
-  @Bean
-  ExchangeRateProviderResolver exchangeRateProviderResolver() {
-    return new ExchangeRateProviderResolver();
-  }
-
-  @Bean
-  FinanceExchangeRateService financeExchangeRateService(RestClient restClient) {
-    return new FinanceExchangeRateService(restClient);
-  }
-
   @Bean PurchaseOrderStorageService purchaseOrderService(RestClient restClient, PurchaseOrderLineService purchaseOrderLineService) {
     return new PurchaseOrderStorageService(restClient, purchaseOrderLineService);
   }
@@ -211,12 +200,11 @@ public class ApplicationConfig {
 
   @Bean
   OrderRolloverService rolloverOrderService(FundService fundService, PurchaseOrderLineService purchaseOrderLineService, TransactionService transactionService,
-                                            ConfigurationEntriesCache configurationEntriesCache, ExchangeRateProviderResolver exchangeRateProviderResolver,
-                                            LedgerRolloverProgressService ledgerRolloverProgressService, LedgerRolloverErrorService ledgerRolloverErrorService,
-                                            FailedLedgerRolloverPoLineDao failedLedgerRolloverPoLineDao) {
-    return new OrderRolloverService(fundService, purchaseOrderLineService, transactionService,
-                                    configurationEntriesCache, exchangeRateProviderResolver,
-                                    ledgerRolloverProgressService, ledgerRolloverErrorService, failedLedgerRolloverPoLineDao);
+                                            ConfigurationEntriesCache configurationEntriesCache, LedgerRolloverProgressService ledgerRolloverProgressService,
+                                            LedgerRolloverErrorService ledgerRolloverErrorService, FailedLedgerRolloverPoLineDao failedLedgerRolloverPoLineDao,
+                                            CacheableExchangeRateService cacheableExchangeRateService) {
+    return new OrderRolloverService(fundService, purchaseOrderLineService, transactionService, configurationEntriesCache,
+      ledgerRolloverProgressService, ledgerRolloverErrorService, failedLedgerRolloverPoLineDao, cacheableExchangeRateService);
   }
 
   @Bean
@@ -305,11 +293,10 @@ public class ApplicationConfig {
   @Bean EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder(EncumbranceService encumbranceService,
                                                                               FundService fundService,
                                                                               FiscalYearService fiscalYearService,
-                                                                              ExchangeRateProviderResolver exchangeRateProviderResolver,
                                                                               BudgetService budgetService,
-                                                                              LedgerService ledgerService) {
-    return new EncumbranceRelationsHoldersBuilder(encumbranceService, fundService, fiscalYearService, exchangeRateProviderResolver, budgetService,
-                                                  ledgerService);
+                                                                              LedgerService ledgerService,
+                                                                              CacheableExchangeRateService cacheableExchangeRateService) {
+    return new EncumbranceRelationsHoldersBuilder(encumbranceService, fundService, fiscalYearService, budgetService, ledgerService, cacheableExchangeRateService);
   }
 
   @Bean
@@ -347,18 +334,13 @@ public class ApplicationConfig {
   ReEncumbranceHoldersBuilder reEncumbranceHoldersBuilder(BudgetService budgetService,
                                                           LedgerService ledgerService,
                                                           FundService fundService,
-                                                          ExchangeRateProviderResolver exchangeRateProviderResolver,
                                                           FiscalYearService fiscalYearService,
                                                           LedgerRolloverService ledgerRolloverService,
                                                           TransactionService transactionService,
-                                                          FundsDistributionService fundsDistributionService) {
-    return new ReEncumbranceHoldersBuilder(budgetService,
-                                           ledgerService,
-                                           fundService,
-                                           exchangeRateProviderResolver,
-                                           fiscalYearService,
-                                           ledgerRolloverService,
-                                           transactionService, fundsDistributionService);
+                                                          FundsDistributionService fundsDistributionService,
+                                                          CacheableExchangeRateService cacheableExchangeRateService) {
+    return new ReEncumbranceHoldersBuilder(budgetService, ledgerService, fundService, fiscalYearService, ledgerRolloverService,
+      transactionService, fundsDistributionService, cacheableExchangeRateService);
   }
 
   @Bean
@@ -432,8 +414,8 @@ public class ApplicationConfig {
 
   @Bean("orderLinesSummaryPopulateService")
   CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService(ConfigurationEntriesCache configurationEntriesCache,
-                                                                            ExchangeRateProviderResolver exchangeRateProviderResolver) {
-    return new OrderLinesSummaryPopulateService(configurationEntriesCache, exchangeRateProviderResolver);
+                                                                            CacheableExchangeRateService cacheableExchangeRateService) {
+    return new OrderLinesSummaryPopulateService(configurationEntriesCache, cacheableExchangeRateService);
   }
 
   @Bean

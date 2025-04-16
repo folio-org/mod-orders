@@ -12,6 +12,7 @@ import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Ongoing;
 
 public class EncumbranceRelationsHolder {
+
   private CompositePurchaseOrder purchaseOrder;
   private CompositePoLine poLine;
   private FundDistribution fundDistribution;
@@ -23,7 +24,6 @@ public class EncumbranceRelationsHolder {
   private Transaction oldEncumbrance;
   private String ledgerId;
   private boolean restrictEncumbrance;
-
 
   public EncumbranceRelationsHolder withNewEncumbrance(Transaction transaction) {
     this.newEncumbrance = transaction;
