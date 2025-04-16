@@ -283,6 +283,23 @@ public class HelperUtils {
   }
 
   /**
+   * Executes a collection of futures and fails if any of them fail.
+   * Returns a Void future that completes when all futures complete successfully.
+   *
+   * @param <T> The type of result in the futures
+   * @param futures Collection of futures to be joined
+   * @return A future that succeeds with void if all futures succeed, or fails if any future fails
+   */
+  public static <T> Future<Void> executeAllFailFast(Collection<Future<T>> futures) {
+    if (futures.isEmpty()) {
+      return Future.succeededFuture();
+    }
+
+    return Future.all(new ArrayList<>(futures))
+      .mapEmpty();
+  }
+
+  /**
    * The method allows to compose any elements with the same action in sequence.
    *
    * @param  list    elements to be executed in sequence

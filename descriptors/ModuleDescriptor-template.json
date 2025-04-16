@@ -957,11 +957,13 @@
             "orders-storage.titles.item.delete",
             "orders-storage.pieces.collection.get",
             "orders-storage.pieces.collection.delete",
+            "orders-storage.pieces.item.delete",
             "orders-storage.po-lines.item.get",
             "inventory-storage.holdings.item.delete",
             "inventory-storage.items.collection.get",
             "inventory-storage.items.collection.delete",
             "configuration.entries.collection.get",
+            "orders-storage.settings.collection.get",
             "user-tenants.collection.get",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get"
