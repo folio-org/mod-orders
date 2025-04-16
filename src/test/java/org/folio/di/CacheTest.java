@@ -69,10 +69,8 @@ public class CacheTest {
   @Before
   public void setUp() {
     Vertx vertx = rule.vertx();
-    jobProfileSnapshotCache = new JobProfileSnapshotCache();
-    jobProfileSnapshotCache.init();
-    mappingParametersCache = new MappingParametersCache(new RestClient(), acquisitionsUnitsService, acquisitionMethodsService);
-    mappingParametersCache.init();
+    jobProfileSnapshotCache = new JobProfileSnapshotCache(vertx);
+    mappingParametersCache = new MappingParametersCache(vertx, new RestClient(), acquisitionsUnitsService, acquisitionMethodsService);
 
     HashMap<String, String> headers = new HashMap<>();
     headers.put(OKAPI_URL_HEADER, "http://localhost:" + snapshotMockServer.port());

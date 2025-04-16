@@ -7,7 +7,6 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import jakarta.annotation.PostConstruct;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -36,6 +35,7 @@ import org.folio.rest.util.OkapiConnectionParams;
 import org.folio.rest.util.RestUtil;
 import org.folio.service.AcquisitionMethodsService;
 import org.folio.service.AcquisitionsUnitsService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -60,7 +60,6 @@ import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
  */
 @Component
 public class MappingParametersCache {
-
   private static final Logger LOGGER = LogManager.getLogger();
 
   private static final String ORGANIZATIONS = "/organizations/organizations";
@@ -77,29 +76,26 @@ public class MappingParametersCache {
   private static final String VALUE_RESPONSE = "value";
   public static final String ERROR_LOADING_CACHE_MESSAGE = "Error loading cache for mapping parameter: '%s', tenantId: '%s', status code: %s, response message: %s";
 
-  private final RestClient restClient;
-  private final AcquisitionsUnitsService acquisitionsUnitsService;
-  private final AcquisitionMethodsService acquisitionMethodsService;
-  private AsyncCache<String, MappingParameters> asyncCache;
-
   @Value("${orders.cache.mapping.parameters.settings.limit:5000}")
   private int settingsLimit;
 
   @Value("${orders.cache.mapping.parameters.expiration.seconds:3600}")
   private long cacheExpirationTime;
 
-  public MappingParametersCache(RestClient restClient,
+  private final AsyncCache<String, MappingParameters> cache;
+  private final RestClient restClient;
+  private final AcquisitionsUnitsService acquisitionsUnitsService;
+  private final AcquisitionMethodsService acquisitionMethodsService;
+
+  @Autowired
+  public MappingParametersCache(Vertx vertx, RestClient restClient,
                                 AcquisitionsUnitsService acquisitionsUnitsService,
                                 AcquisitionMethodsService acquisitionMethodsService) {
+    LOGGER.info("MappingParametersCache:: settings limit: '{}'", settingsLimit);
+    cache = buildAsyncCache(vertx, cacheExpirationTime);
     this.restClient = restClient;
     this.acquisitionsUnitsService = acquisitionsUnitsService;
     this.acquisitionMethodsService = acquisitionMethodsService;
-  }
-
-  @PostConstruct
-  public void init() {
-    this.asyncCache = buildAsyncCache(Vertx.currentContext(), cacheExpirationTime);
-    LOGGER.info("MappingParametersCache:: settings limit: '{}'", settingsLimit);
   }
 
   /**
@@ -110,7 +106,7 @@ public class MappingParametersCache {
    */
   public Future<MappingParameters> get(OkapiConnectionParams params) {
     try {
-      return Future.fromCompletionStage(asyncCache.get(params.getTenantId(), (key, executor) ->
+      return Future.fromCompletionStage(cache.get(params.getTenantId(), (key, executor) ->
         loadMappingParameters(params).toCompletionStage().toCompletableFuture()));
     } catch (Exception e) {
       LOGGER.warn("get:: Error loading organizations from cache, tenantId: '{}'", params.getTenantId(), e);
@@ -141,8 +137,8 @@ public class MappingParametersCache {
     var tenantConfigurationAddressesFuture = getTenantConfigurationAddresses(params);
 
     return GenericCompositeFuture.join(Arrays.asList(locationsFuture, materialTypesFuture, contributorNameTypesFuture,
-      organizationsFuture, fundsFuture, identifierTypesFuture, expenseClassesFuture, acquisitionsUnitsFuture,
-      acquisitionsMethodsFuture, tenantConfigurationAddressesFuture))
+        organizationsFuture, fundsFuture, identifierTypesFuture, expenseClassesFuture, acquisitionsUnitsFuture,
+        acquisitionsMethodsFuture, tenantConfigurationAddressesFuture))
       .map(v -> new MappingParameters()
         .withLocations(locationsFuture.result())
         .withMaterialTypes(materialTypesFuture.result())
@@ -181,7 +177,7 @@ public class MappingParametersCache {
   }
 
   private Future<List<Organization>> getRemainingOrganizations(OkapiConnectionParams params,
-                                                              OrganizationCollection organizationCollection) {
+                                                               OrganizationCollection organizationCollection) {
     return collectResultsOnSuccess(getOrganizationCollectionFutures(params.getHeaders(), organizationCollection.getTotalRecords()))
       .map(orgCollections -> orgCollections.stream()
         .flatMap(orgCollection -> orgCollection.getOrganizations().stream())

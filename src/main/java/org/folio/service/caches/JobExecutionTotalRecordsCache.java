@@ -4,12 +4,12 @@ import com.github.benmanes.caffeine.cache.AsyncCache;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpMethod;
-import jakarta.annotation.PostConstruct;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.rest.util.OkapiConnectionParams;
 import org.folio.rest.util.RestUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -32,14 +32,13 @@ public class JobExecutionTotalRecordsCache {
   private static final String JOB_PROGRESS_FIELD = "progress";
   private static final String JOB_TOTAL_RECORDS_FIELD = "total";
 
-  private AsyncCache<String, Integer> asyncCache;
-
   @Value("${orders.cache.job.records.amount.expiration.seconds:3600}")
   private long cacheExpirationTime;
+  private AsyncCache<String, Integer> cache;
 
-  @PostConstruct
-  void init() {
-    this.asyncCache = buildAsyncCache(Vertx.currentContext(), cacheExpirationTime);
+  @Autowired
+  public JobExecutionTotalRecordsCache(Vertx vertx) {
+    cache = buildAsyncCache(vertx, cacheExpirationTime);
   }
 
   /**
@@ -51,7 +50,7 @@ public class JobExecutionTotalRecordsCache {
    */
   public Future<Integer> get(String jobExecutionId, OkapiConnectionParams params) {
     try {
-      return Future.fromCompletionStage(asyncCache.get(jobExecutionId, (key, executor) -> loadJobExecutionRecordsAmount(key, params)));
+      return Future.fromCompletionStage(cache.get(jobExecutionId, (key, executor) -> loadJobExecutionRecordsAmount(key, params)));
     } catch (Exception e) {
       LOGGER.warn("Error loading total records amount for jobExecution by id: '{}'", jobExecutionId, e);
       return Future.failedFuture(e);
@@ -77,4 +76,5 @@ public class JobExecutionTotalRecordsCache {
         }
       });
   }
+
 }
