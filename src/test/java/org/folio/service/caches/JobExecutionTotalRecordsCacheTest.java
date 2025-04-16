@@ -48,6 +48,7 @@ public class JobExecutionTotalRecordsCacheTest {
   public void setUp() {
     Vertx vertx = Vertx.vertx();
     jobExecutionTotalRecordsCache = new JobExecutionTotalRecordsCache();
+    jobExecutionTotalRecordsCache.init();
     this.okapiConnectionParams = new OkapiConnectionParams(new HashMap<>(Map.of(
       RestUtil.OKAPI_URL_HEADER, mockServer.baseUrl(),
       RestUtil.OKAPI_TENANT_HEADER, TENANT_ID,

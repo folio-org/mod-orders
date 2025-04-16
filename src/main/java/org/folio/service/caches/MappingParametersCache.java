@@ -97,7 +97,7 @@ public class MappingParametersCache {
   }
 
   @PostConstruct
-  void init() {
+  public void init() {
     this.asyncCache = buildAsyncCache(Vertx.currentContext(), cacheExpirationTime);
     LOGGER.info("MappingParametersCache:: settings limit: '{}'", settingsLimit);
   }

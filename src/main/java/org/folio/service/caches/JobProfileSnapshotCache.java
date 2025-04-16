@@ -34,7 +34,7 @@ public class JobProfileSnapshotCache {
   private long cacheExpirationTime;
 
   @PostConstruct
-  void init() {
+  public void init() {
     this.asyncCache = buildAsyncCache(Vertx.currentContext(), cacheExpirationTime);
   }
 
