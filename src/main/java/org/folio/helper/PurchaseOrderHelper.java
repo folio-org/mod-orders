@@ -493,7 +493,7 @@ public class PurchaseOrderHelper {
       compPO.getPoLines()
             .stream()
             .map(poLine -> purchaseOrderLineHelper.createPoLineWithOrder(poLine, compPO, requestContext))
-            .collect(Collectors.toList());
+            .toList();
     return collectResultsOnSuccess(futures);
   }
 

@@ -1,6 +1,5 @@
 package org.folio.service.orders;
 
-import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
@@ -140,7 +139,7 @@ public class PoLineValidationService extends BaseValidationService {
         .map(this::checkMaterialAvailability)
         .filter(Optional::isPresent)
         .map(Optional::get)
-        .collect(toList());
+        .toList();
     }
     return Collections.emptyList();
   }
@@ -278,7 +277,7 @@ public class PoLineValidationService extends BaseValidationService {
   private List<Error> convertErrorCodesToErrors(PoLine poLine, List<ErrorCodes> errors) {
     return errors.stream()
       .map(error -> convertErrorCodesToError(poLine, error))
-      .collect(toList());
+      .toList();
   }
 
   /**

@@ -8,7 +8,6 @@ import org.folio.models.ItemFields;
 import org.folio.models.pieces.BindPiecesHolder;
 import org.folio.models.pieces.PiecesHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
-import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.RestConstants;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;

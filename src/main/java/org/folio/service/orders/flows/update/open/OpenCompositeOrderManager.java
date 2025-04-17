@@ -1,6 +1,5 @@
 package org.folio.service.orders.flows.update.open;
 
-import static java.util.stream.Collectors.toList;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 
 import java.util.Date;
@@ -85,7 +84,7 @@ public class OpenCompositeOrderManager {
     return GenericCompositeFuture.join(poLines.stream()
       .map(this::removeLocationId)
       .map(line -> purchaseOrderLineService.saveOrderLine(line, requestContext))
-      .collect(toList()))
+      .toList())
       .mapEmpty();
   }
 
@@ -139,7 +138,7 @@ public class OpenCompositeOrderManager {
   }
 
   private List<PoLine> getNonPackageLines(List<PoLine> poLines) {
-    return poLines.stream().filter(line -> !line.getIsPackage()).collect(toList());
+    return poLines.stream().filter(line -> !line.getIsPackage()).toList();
   }
 
   private Future<Void> finishProcessingEncumbrancesForOpenOrder(CompositePurchaseOrder compPO,
