@@ -1,7 +1,6 @@
 package org.folio.service.finance.transaction;
 
 import static java.util.Objects.requireNonNullElse;
-import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_IS_INACTIVE;
 import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
@@ -211,11 +210,11 @@ public class EncumbranceService {
         .stream()
         .filter(poLines -> CollectionUtils.isNotEmpty(poLines.getFundDistribution()))
         .map(poLine -> getPoLineEncumbrancesToUnrelease(compPO.getOrderType(), poLine, mapFiscalYearWithPoLines, requestContext))
-        .collect(toList());
+        .toList();
     return collectResultsOnSuccess(futures)
       .map(listOfLists -> listOfLists.stream()
         .flatMap(List::stream)
-        .collect(toList()));
+        .toList());
   }
 
   public Future<List<Transaction>> getPoLineEncumbrances(String poLineId, RequestContext requestContext) {
@@ -250,15 +249,15 @@ public class EncumbranceService {
 
   public Future<List<Transaction>> getCurrentPoLinesEncumbrances(List<PoLine> poLines, String fiscalYearId, RequestContext requestContext) {
     String searchCriteria = "fiscalYearId==" + fiscalYearId;
-    List<String> poLineIds = poLines.stream().map(PoLine::getId).collect(toList());
+    List<String> poLineIds = poLines.stream().map(PoLine::getId).toList();
     return transactionService.getTransactionsByPoLinesIds(poLineIds, searchCriteria, requestContext);
   }
 
   public Future<List<Transaction>> getEncumbrancesByPoLinesFromCurrentFy(Map<String, List<PoLine>> poLinesByFy, RequestContext requestContext) {
     return collectResultsOnSuccess(poLinesByFy.entrySet().stream()
       .map(entry -> getCurrentPoLinesEncumbrances(entry.getValue(), entry.getKey(), requestContext))
-      .collect(toList()))
-      .map(encumbrances -> encumbrances.stream().flatMap(Collection::stream).collect(toList()));
+      .toList())
+      .map(encumbrances -> encumbrances.stream().flatMap(Collection::stream).toList());
   }
 
   public Future<Void> releaseEncumbrances(List<Transaction> encumbrances, RequestContext requestContext) {
@@ -311,8 +310,8 @@ public class EncumbranceService {
         List<String> poLineIds = transactions.stream()
           .map(tr -> tr.getEncumbrance().getSourcePoLineId())
           .distinct()
-          .collect(toList());
-        List<String> transactionIds = transactions.stream().map(Transaction::getId).collect(toList());
+          .toList();
+        List<String> transactionIds = transactions.stream().map(Transaction::getId).toList();
         return invoiceLineService.getInvoiceLinesByOrderLineIds(poLineIds, requestContext)
           .compose(invoiceLines -> invoiceLineService.removeEncumbranceLinks(invoiceLines, transactionIds, requestContext));
       })

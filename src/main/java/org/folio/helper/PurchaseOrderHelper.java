@@ -1,6 +1,5 @@
 package org.folio.helper;
 
-import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 import static org.folio.orders.utils.HelperUtils.PO_LINES;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
@@ -537,7 +536,7 @@ public class PurchaseOrderHelper {
           .stream()
           .filter(StringUtils::isNotBlank)
           .map(tag -> StringUtils.deleteWhitespace(tag).toLowerCase())
-          .collect(toList());
+          .toList();
 
         line.getTags().setTagList(processedTagList);
       }
@@ -561,7 +560,7 @@ public class PurchaseOrderHelper {
       List<PoLine> clonedLines = poFromStorage.getPoLines()
         .stream()
         .map(line -> JsonObject.mapFrom(line).mapTo(PoLine.class))
-        .collect(toList());
+        .toList();
       clonedCompPO.setPoLines(clonedLines);
     }
     if (compPO.getCloseReason() != null && REASON_CANCELLED.equals(compPO.getCloseReason().getReason())) {
@@ -575,7 +574,7 @@ public class PurchaseOrderHelper {
       List<PoLine> clonedLines = poFromStorage.getPoLines()
         .stream()
         .map(line -> JsonObject.mapFrom(line).mapTo(PoLine.class))
-        .collect(toList());
+        .toList();
       compPO.setPoLines(clonedLines);
     }
     compPO.getPoLines().forEach(line -> {
@@ -600,7 +599,7 @@ public class PurchaseOrderHelper {
 
 
   private List<PoLine> getNonPackageLines(List<PoLine> poLines) {
-    return poLines.stream().filter(line -> !line.getIsPackage()).collect(toList());
+    return poLines.stream().filter(line -> !line.getIsPackage()).toList();
   }
 
 }
