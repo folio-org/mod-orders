@@ -888,5 +888,4 @@ public class ApplicationConfig {
   SettingsRetriever settingsRetriever(RestClient restClient) {
     return new SettingsRetriever(restClient);
   }
-
 }

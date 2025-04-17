@@ -3,6 +3,7 @@ package org.folio.service.settings;
 import com.github.benmanes.caffeine.cache.AsyncCache;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.rest.acq.model.Setting;
@@ -28,15 +29,19 @@ public class SettingsRetriever {
   private static final String SETTINGS_BY_KEY_QUERY = "key==%s";
   private static final String SETTINGS_CACHE_KEY = "%s.%s";
 
+  private final RestClient restClient;
+  private AsyncCache<String, Optional<Setting>> asyncCache;
+
   @Value("${orders.cache.orders-settings.expiration.time.seconds:300}")
   private long cacheExpirationTime;
 
-  private final AsyncCache<String, Optional<Setting>> asyncCache;
-  private final RestClient restClient;
-
   public SettingsRetriever(RestClient restClient) {
     this.restClient = restClient;
-    asyncCache = buildAsyncCache(Vertx.currentContext(), cacheExpirationTime);
+  }
+
+  @PostConstruct
+  void init() {
+    this.asyncCache = buildAsyncCache(Vertx.currentContext(), cacheExpirationTime);
   }
 
   public Future<Optional<Setting>> getSettingByKey(SettingKey settingKey, RequestContext requestContext) {
@@ -56,9 +61,8 @@ public class SettingsRetriever {
       .map(settings -> settings.mapTo(SettingCollection.class))
       .map(settings -> settings.getTotalRecords() == null || settings.getTotalRecords() != 1 || CollectionUtils.isEmpty(settings.getSettings())
         ? Optional.<Setting>empty()
-        : Optional.of(settings.getSettings().get(0)))
+        : Optional.of(settings.getSettings().getFirst()))
       .toCompletionStage()
       .toCompletableFuture();
   }
-
 }
