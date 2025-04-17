@@ -9,11 +9,13 @@ import org.folio.rest.acq.model.SettingCollection;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.service.settings.util.SettingKey;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -35,19 +37,30 @@ public class SettingsRetrieverTest {
   @Mock
   private RequestContext requestContext;
 
+  @InjectMocks
   private SettingsRetriever settingsRetriever;
+
+  private AutoCloseable openMocks;
 
   @BeforeEach
   void setUp() {
-    MockitoAnnotations.openMocks(this);
+    openMocks = MockitoAnnotations.openMocks(this);
     settingsRetriever = new SettingsRetriever(restClientMock);
+    settingsRetriever.init();
+  }
+
+  @AfterEach
+  void tearDown() throws Exception {
+    if (openMocks != null) {
+      openMocks.close();
+    }
   }
 
   @ParameterizedTest
   @MethodSource("testGetSettingByKeyParamProvider")
   void testGetSettingByKey(SettingCollection settingCollection, VertxTestContext vertxTestContext) {
     var settings = settingCollection.getSettings();
-    var setting = settings.isEmpty() ? null : settings.get(0);
+    var setting = settings.isEmpty() ? null : settings.getFirst();
     doReturn(Future.succeededFuture(JsonObject.mapFrom(settingCollection)))
       .when(restClientMock).getAsJsonObject(any(), eq(requestContext));
 
@@ -63,17 +76,16 @@ public class SettingsRetrieverTest {
 
   private static Stream<Arguments> testGetSettingByKeyParamProvider() {
     return Stream.of(
-      Arguments.of(createSettingCollection(SettingKey.CENTRAL_ORDERING_ENABLED, "true")),
-      Arguments.of(createSettingCollection(SettingKey.CENTRAL_ORDERING_ENABLED, "false")),
-      Arguments.of(createSettingCollection(SettingKey.CENTRAL_ORDERING_ENABLED, null)),
+      Arguments.of(createSettingCollection("true")),
+      Arguments.of(createSettingCollection("false")),
+      Arguments.of(createSettingCollection(null)),
       Arguments.of(new SettingCollection().withSettings(List.of()).withTotalRecords(0))
     );
   }
 
-  private static SettingCollection createSettingCollection(SettingKey settingKey, String value) {
+  private static SettingCollection createSettingCollection(String value) {
     return new SettingCollection()
-      .withSettings(List.of(new Setting().withKey(settingKey.getName()).withValue(value)))
+      .withSettings(List.of(new Setting().withKey(SettingKey.CENTRAL_ORDERING_ENABLED.getName()).withValue(value)))
       .withTotalRecords(1);
   }
-
 }

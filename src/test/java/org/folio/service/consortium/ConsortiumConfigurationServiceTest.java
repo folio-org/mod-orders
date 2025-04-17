@@ -28,9 +28,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-
 public class ConsortiumConfigurationServiceTest {
-  private AutoCloseable mockitoMocks;
 
   @InjectMocks
   private ConsortiumConfigurationService consortiumConfigurationService;
@@ -44,9 +42,12 @@ public class ConsortiumConfigurationServiceTest {
   @Mock
   private SettingsRetriever settingsRetriever;
 
+  private AutoCloseable mockitoMocks;
+
   @BeforeEach
   public void initMocks(){
     mockitoMocks = MockitoAnnotations.openMocks(this);
+    consortiumConfigurationService.init();
   }
 
   @AfterEach
@@ -71,7 +72,6 @@ public class ConsortiumConfigurationServiceTest {
     // then
     assertEquals("tenantId", future.result().getHeaders().get(XOkapiHeaders.TENANT));
     verify(restClient).getAsJsonObject(any(RequestEntry.class), any());
-
   }
 
   @Test
@@ -158,5 +158,4 @@ public class ConsortiumConfigurationServiceTest {
     verify(restClient).getAsJsonObject(any(RequestEntry.class), any());
     verify(settingsRetriever).getSettingByKey(any(SettingKey.class), any(RequestContext.class));
   }
-
 }
