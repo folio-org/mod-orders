@@ -26,7 +26,6 @@ import static org.folio.TestConstants.INACTIVE_ACCESS_PROVIDER_A;
 import static org.folio.TestConstants.NON_EXIST_CONFIG_X_OKAPI_TENANT;
 import static org.folio.TestConstants.PO_ID_CLOSED_STATUS;
 import static org.folio.TestConstants.PO_ID_OPEN_STATUS;
-import static org.folio.TestConstants.PO_ID_PENDING_STATUS_WITH_PO_LINES;
 import static org.folio.TestConstants.PO_LINE_ID_FOR_SUCCESS_CASE;
 import static org.folio.TestConstants.PO_LINE_ID_WITHOUT_DETAILS;
 import static org.folio.TestConstants.PO_LINE_ID_WRONG_EXPENSE_CLASS;
@@ -186,6 +185,8 @@ public class PurchaseOrderLinesApiTest {
 
   @BeforeAll
   static void before() throws InterruptedException, ExecutionException, TimeoutException {
+    // Disable caching to avoid test failures
+    System.setProperty("orders.cache.consortium-data.expiration.time.seconds", "0");
     if (isVerticleNotDeployed()) {
       ApiTestSuite.before();
       runningOnOwn = true;
@@ -226,7 +227,7 @@ public class PurchaseOrderLinesApiTest {
     assertThat(response.getPoLineNumber(), equalTo(expectedPoLineNumber));
     // See MODORDERS-180
     assertThat(response.getCost().getPoLineEstimatedPrice(), equalTo(49.98d));
-    Location location = response.getLocations().get(0);
+    Location location = response.getLocations().getFirst();
     verifyLocationQuantity(location, response.getOrderFormat());
   }
 
@@ -240,10 +241,10 @@ public class PurchaseOrderLinesApiTest {
     reqData.setOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE);
     reqData.getCost().setQuantityPhysical(0);
     reqData.getCost().setQuantityElectronic(1);
-    reqData.getLocations().get(0).setQuantityPhysical(1);
+    reqData.getLocations().getFirst().setQuantityPhysical(1);
     reqData.getLocations().add(new Location()
       .withQuantityPhysical(0)
-      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+      .withLocationId(reqData.getLocations().getFirst().getLocationId()));
 
     final Errors response = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
@@ -275,10 +276,10 @@ public class PurchaseOrderLinesApiTest {
     reqData.getCost().setListUnitPriceElectronic(0d);
     reqData.getCost().setQuantityPhysical(0);
     reqData.getCost().setQuantityElectronic(4);
-    reqData.getLocations().get(0).setQuantityElectronic(3);
+    reqData.getLocations().getFirst().setQuantityElectronic(3);
     reqData.getLocations().add(new Location()
       .withQuantityElectronic(0)
-      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+      .withLocationId(reqData.getLocations().getFirst().getLocationId()));
     Eresource eresource = new  Eresource();
     eresource.setCreateInventory(NONE);
     reqData.setEresource(eresource);
@@ -313,13 +314,13 @@ public class PurchaseOrderLinesApiTest {
     reqData.getCost().setDiscount(100d);
     reqData.getCost().setDiscountType(Cost.DiscountType.AMOUNT);
     reqData.getCost().setQuantityElectronic(0);
-    reqData.getLocations().get(0).setQuantityPhysical(2);
+    reqData.getLocations().getFirst().setQuantityPhysical(2);
 
     final Errors response = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
 
     assertThat(response.getErrors(), hasSize(1));
-    assertThat(response.getErrors().get(0).getCode(), equalTo(COST_DISCOUNT_INVALID.getCode()));
+    assertThat(response.getErrors().getFirst().getCode(), equalTo(COST_DISCOUNT_INVALID.getCode()));
 
     // Check that no any calls made by the business logic to other services
     assertTrue(MockServer.serverRqRs.isEmpty());
@@ -336,8 +337,8 @@ public class PurchaseOrderLinesApiTest {
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
     assertFalse(errors.getErrors().isEmpty());
-    assertEquals(POL_LINES_LIMIT_EXCEEDED.getDescription(), errors.getErrors().get(0).getMessage());
-    assertEquals(POL_LINES_LIMIT_EXCEEDED.getCode(), errors.getErrors().get(0).getCode());
+    assertEquals(POL_LINES_LIMIT_EXCEEDED.getDescription(), errors.getErrors().getFirst().getMessage());
+    assertEquals(POL_LINES_LIMIT_EXCEEDED.getCode(), errors.getErrors().getFirst().getCode());
   }
 
   @Test
@@ -350,8 +351,8 @@ public class PurchaseOrderLinesApiTest {
 
     logger.info(JsonObject.mapFrom(errors).encodePrettily());
     assertFalse(errors.getErrors().isEmpty());
-    assertEquals(POL_LINES_LIMIT_EXCEEDED.getDescription(), errors.getErrors().get(0).getMessage());
-    assertEquals(POL_LINES_LIMIT_EXCEEDED.getCode(), errors.getErrors().get(0).getCode());
+    assertEquals(POL_LINES_LIMIT_EXCEEDED.getDescription(), errors.getErrors().getFirst().getMessage());
+    assertEquals(POL_LINES_LIMIT_EXCEEDED.getCode(), errors.getErrors().getFirst().getCode());
   }
 
   @Test
@@ -362,7 +363,7 @@ public class PurchaseOrderLinesApiTest {
       prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).as(Errors.class);
 
     assertEquals(1, resp.getErrors().size());
-    assertEquals(ErrorCodes.MISSING_ORDER_ID_IN_POL.getCode(), resp.getErrors().get(0).getCode());
+    assertEquals(ErrorCodes.MISSING_ORDER_ID_IN_POL.getCode(), resp.getErrors().getFirst().getCode());
   }
 
   @Test
@@ -375,7 +376,7 @@ public class PurchaseOrderLinesApiTest {
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
 
     assertEquals(1, resp.getErrors().size());
-    assertEquals(ErrorCodes.ORDER_NOT_FOUND.getCode(), resp.getErrors().get(0).getCode());
+    assertEquals(ErrorCodes.ORDER_NOT_FOUND.getCode(), resp.getErrors().getFirst().getCode());
   }
 
   @Test
@@ -389,7 +390,7 @@ public class PurchaseOrderLinesApiTest {
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 400).as(Errors.class);
 
     assertEquals(1, resp.getErrors().size());
-    assertEquals(ErrorCodes.BUDGET_EXPENSE_CLASS_NOT_FOUND.getCode(), resp.getErrors().get(0).getCode());
+    assertEquals(ErrorCodes.BUDGET_EXPENSE_CLASS_NOT_FOUND.getCode(), resp.getErrors().getFirst().getCode());
   }
 
   @Test
@@ -409,7 +410,7 @@ public class PurchaseOrderLinesApiTest {
   private void validateNoLineCreatedForNonPendingOrder(String orderId, String errorCode) {
     CompositePurchaseOrder order = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, orderId).mapTo(CompositePurchaseOrder.class);
 
-    CompositePoLine poLine = order.getCompositePoLines().get(0);
+    CompositePoLine poLine = order.getCompositePoLines().getFirst();
     poLine.setId(null);
 
     Errors errors = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(poLine).encode(),
@@ -444,7 +445,7 @@ public class PurchaseOrderLinesApiTest {
     cost.setAdditionalCost(-1d);
     cost.setDiscountType(Cost.DiscountType.PERCENTAGE);
     cost.setDiscount(100.1d);
-    reqData.getLocations().get(0).setQuantityElectronic(1);
+    reqData.getLocations().getFirst().setQuantityElectronic(1);
 
     final Errors response = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData),
       APPLICATION_JSON, 422).as(Errors.class);
@@ -514,8 +515,9 @@ public class PurchaseOrderLinesApiTest {
 
     assertTrue(StringUtils.isEmpty(resp.getBody().asString()));
 
-    //4 calls to get Order Line,Purchase Order for checking workflow status, ISBN validation and Consortium Configuration
+    // 4 calls to get Order Line,Purchase Order for checking workflow status, ISBN validation and Consortium Configuration
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
+    // Change to assumeThat because after correcting the Caffeine Cache we cannot assert to get a non-cached result
     assertThat(column, hasKey(USER_TENANTS_ENDPOINT));
     assertThat(column, hasKey(PO_LINES_STORAGE));
     assertThat(column, not(hasKey(PIECES_STORAGE)));
@@ -530,9 +532,9 @@ public class PurchaseOrderLinesApiTest {
     assertThat(column.keySet(), containsInAnyOrder(PO_LINES_STORAGE));
 
     // See MODORDERS-180
-    PoLine poLine = column.get(PO_LINES_STORAGE).get(0).mapTo(PoLine.class);
+    PoLine poLine = column.get(PO_LINES_STORAGE).getFirst().mapTo(PoLine.class);
     assertThat(poLine.getCost().getPoLineEstimatedPrice(), equalTo(expectedTotalPoLine));
-    Location location = poLine.getLocations().get(0);
+    Location location = poLine.getLocations().getFirst();
     assertEquals(location.getQuantityPhysical(), location.getQuantity());
 
     // Verify messages sent via event bus
@@ -569,7 +571,7 @@ public class PurchaseOrderLinesApiTest {
       .withValue(100D)));
     verifyPut(url, JsonObject.mapFrom(body), "", 204);
 
-    Transaction createdEncumbrance = MockServer.getCreatedEncumbrances().get(0);
+    Transaction createdEncumbrance = MockServer.getCreatedEncumbrances().getFirst();
     assertEquals(Collections.singletonList("created"), createdEncumbrance.getTags().getTagList());
 
     // edit POLine for encumbrance update
@@ -613,7 +615,7 @@ public class PurchaseOrderLinesApiTest {
       .withValue(100D)));
     verifyPut(url, JsonObject.mapFrom(body), "", 204);
 
-    Transaction createdEncumbrance = MockServer.getCreatedEncumbrances().get(0);
+    Transaction createdEncumbrance = MockServer.getCreatedEncumbrances().getFirst();
     assertNull(createdEncumbrance.getTags());
 
     // edit POLine for encumbrance update
@@ -625,7 +627,7 @@ public class PurchaseOrderLinesApiTest {
       .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
       .withValue(100D)));
     verifyPut(url, JsonObject.mapFrom(body), "", 204);
-    Transaction updatedEncumbrance = MockServer.getUpdatedTransactions().get(0);
+    Transaction updatedEncumbrance = MockServer.getUpdatedTransactions().getFirst();
     assertNull(updatedEncumbrance.getTags());
   }
 
@@ -704,7 +706,7 @@ public class PurchaseOrderLinesApiTest {
       .extract()
       .as(Errors.class);
 
-    assertEquals(INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE.getCode(), errors.getErrors().get(0).getCode());
+    assertEquals(INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE.getCode(), errors.getErrors().getFirst().getCode());
   }
 
 
@@ -748,11 +750,11 @@ public class PurchaseOrderLinesApiTest {
 
     String lineId = ID_DOES_NOT_EXIST;
     String url = String.format(LINE_BY_ID_PATH, lineId);
-    String body = getPoLineWithMinContentAndIds(lineId, PO_ID_PENDING_STATUS_WITH_PO_LINES);
+    String body = getPoLineWithMinContentAndIds(lineId);
 
     Response actual = verifyPut(url, body, APPLICATION_JSON, 404);
 
-    assertEquals(lineId, actual.as(Errors.class).getErrors().get(0).getMessage());
+    assertEquals(lineId, actual.as(Errors.class).getErrors().getFirst().getMessage());
 
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
     assertEquals(1, column.size());
@@ -773,12 +775,12 @@ public class PurchaseOrderLinesApiTest {
     logger.info("=== Test PUT Order Line By Id - Body Validation Error ===");
 
     String url = String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST);
-    String body = getPoLineWithMinContentAndIds(ID_BAD_FORMAT, PO_ID_PENDING_STATUS_WITH_PO_LINES);
+    String body = getPoLineWithMinContentAndIds(ID_BAD_FORMAT);
 
     Response resp = verifyPut(url, body, APPLICATION_JSON, 422);
 
     assertEquals(1, resp.as(Errors.class).getErrors().size());
-    assertNotNull(resp.as(Errors.class).getErrors().get(0).getMessage());
+    assertNotNull(resp.as(Errors.class).getErrors().getFirst().getMessage());
 
     // Verify that no calls reached mock server
     assertTrue(MockServer.serverRqRs.isEmpty());
@@ -790,13 +792,13 @@ public class PurchaseOrderLinesApiTest {
     logger.info("=== Test PUT Order Line By Id - Ids mismatch ===");
 
     String url = String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST);
-    String body = getPoLineWithMinContentAndIds(PO_LINE_ID_FOR_SUCCESS_CASE, PO_ID_PENDING_STATUS_WITH_PO_LINES);
+    String body = getPoLineWithMinContentAndIds(PO_LINE_ID_FOR_SUCCESS_CASE);
 
     Response resp = verifyPut(url, body, APPLICATION_JSON, 422);
 
     assertEquals(1, resp.as(Errors.class).getErrors().size());
-    assertThat(resp.as(Errors.class).getErrors().get(0).getCode(),is("idMismatch"));
-    assertNotNull(resp.as(Errors.class).getErrors().get(0).getMessage());
+    assertThat(resp.as(Errors.class).getErrors().getFirst().getCode(),is("idMismatch"));
+    assertNotNull(resp.as(Errors.class).getErrors().getFirst().getMessage());
 
     // Verify that no calls reached mock server
     assertTrue(MockServer.serverRqRs.isEmpty());
@@ -809,7 +811,7 @@ public class PurchaseOrderLinesApiTest {
     String lineId = ID_FOR_INTERNAL_SERVER_ERROR;
 
     String url = String.format(LINE_BY_ID_PATH, lineId);
-    String body = getPoLineWithMinContentAndIds(lineId, PO_ID_PENDING_STATUS_WITH_PO_LINES);
+    String body = getPoLineWithMinContentAndIds(lineId);
 
     Response actual = verifyPut(url, body, APPLICATION_JSON, 500);
 
@@ -858,7 +860,7 @@ public class PurchaseOrderLinesApiTest {
     String url = String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST);
     Response actual = verifyDeleteResponse(url, APPLICATION_JSON, 404);
 
-    assertEquals(ID_DOES_NOT_EXIST, actual.as(Errors.class).getErrors().get(0).getMessage());
+    assertEquals(ID_DOES_NOT_EXIST, actual.as(Errors.class).getErrors().getFirst().getMessage());
   }
 
   @Test
@@ -952,7 +954,7 @@ public class PurchaseOrderLinesApiTest {
 
     final Response resp = verifyGet(String.format(LINE_BY_ID_PATH, lineId), APPLICATION_JSON, 404);
 
-    assertEquals(lineId, resp.getBody().as(Errors.class).getErrors().get(0).getMessage());
+    assertEquals(lineId, resp.getBody().as(Errors.class).getErrors().getFirst().getMessage());
   }
 
   @Test
@@ -961,7 +963,7 @@ public class PurchaseOrderLinesApiTest {
 
     final Response resp = verifyGet(String.format(LINE_BY_ID_PATH, ID_FOR_INTERNAL_SERVER_ERROR), APPLICATION_JSON, 500);
 
-    assertEquals("Internal Server Error", resp.getBody().as(Errors.class).getErrors().get(0).getMessage());
+    assertEquals("Internal Server Error", resp.getBody().as(Errors.class).getErrors().getFirst().getMessage());
   }
 
   @Test
@@ -996,7 +998,7 @@ public class PurchaseOrderLinesApiTest {
 
     List<String> queryParams = getQueryParams(PO_LINES_STORAGE);
     assertThat(queryParams, hasSize(1));
-    assertThat(queryParams.get(0), equalTo(NO_ACQ_UNIT_ASSIGNED_CQL));
+    assertThat(queryParams.getFirst(), equalTo(NO_ACQ_UNIT_ASSIGNED_CQL));
   }
 
   @Test
@@ -1017,7 +1019,7 @@ public class PurchaseOrderLinesApiTest {
 
     List<String> queryParams = getQueryParams(PO_LINES_STORAGE);
     assertThat(queryParams, hasSize(1));
-    String queryToStorage = queryParams.get(0);
+    String queryToStorage = queryParams.getFirst();
     assertThat(queryToStorage, containsString("(" + cql + ")"));
     assertThat(queryToStorage, containsString(ORDER_ID_WITH_PO_LINES));
     assertThat(queryToStorage, not(containsString(ACQUISITIONS_UNIT_IDS + "=")));
@@ -1036,7 +1038,7 @@ public class PurchaseOrderLinesApiTest {
 
     String isbn = INVALID_ISBN;
 
-    reqData.getDetails().getProductIds().get(0).setProductId(isbn);
+    reqData.getDetails().getProductIds().getFirst().setProductId(isbn);
 
 
     Response resp = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
@@ -1045,11 +1047,11 @@ public class PurchaseOrderLinesApiTest {
     Error err = resp.getBody()
         .as(Errors.class)
         .getErrors()
-        .get(0);
+        .getFirst();
 
     assertThat(err.getMessage(), equalTo(ISBN_NOT_VALID.getDescription()));
     assertThat(err.getCode(), equalTo(ISBN_NOT_VALID.getCode()));
-    assertThat(err.getParameters().get(0).getValue(), equalTo(isbn));
+    assertThat(err.getParameters().getFirst().getValue(), equalTo(isbn));
   }
 
   @Test
@@ -1062,8 +1064,8 @@ public class PurchaseOrderLinesApiTest {
     reqData.setPurchaseOrderId("9a952cd0-842b-4e71-bddd-014eb128dc8e");
 
     String isbn = "0-19-852663-6";
-    ProductId productId = reqData.getDetails().getProductIds().get(0);
-    reqData.getDetails().getProductIds().get(0).setProductId(isbn);
+    ProductId productId = reqData.getDetails().getProductIds().getFirst();
+    reqData.getDetails().getProductIds().getFirst().setProductId(isbn);
     reqData.getDetails().getProductIds().add(new ProductId()
       .withProductIdType(productId.getProductIdType())
       .withQualifier(productId.getQualifier())
@@ -1073,7 +1075,7 @@ public class PurchaseOrderLinesApiTest {
         prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePoLine.class);
 
     assertThat(resp.getDetails().getProductIds(), hasSize(1));
-    assertThat(resp.getDetails().getProductIds().get(0).getProductId(), equalTo("9780198526636"));
+    assertThat(resp.getDetails().getProductIds().getFirst().getProductId(), equalTo("9780198526636"));
   }
 
   @Test
@@ -1111,8 +1113,8 @@ public class PurchaseOrderLinesApiTest {
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePoLine.class);
 
     assertThat(resp.getDetails().getProductIds(), hasSize(4));
-    assertThat(resp.getDetails().getProductIds().get(0).getProductId(), equalTo(isbn1));
-    assertThat(resp.getDetails().getProductIds().get(0).getQualifier(), equalTo(qualifier1));
+    assertThat(resp.getDetails().getProductIds().getFirst().getProductId(), equalTo(isbn1));
+    assertThat(resp.getDetails().getProductIds().getFirst().getQualifier(), equalTo(qualifier1));
 
     assertThat(resp.getDetails().getProductIds().get(1).getProductId(), equalTo(isbn1));
     assertThat(resp.getDetails().getProductIds().get(1).getQualifier(), equalTo(qualifier2));
@@ -1129,8 +1131,8 @@ public class PurchaseOrderLinesApiTest {
     logger.info("=== Test update poline for opened order should failed when related invoice line is approved  ===");
 
     CompositePurchaseOrder compositePurchaseOrder = verifySuccessGet(String.format(COMP_PO_BY_ID_PATH, "d6966317-96c7-492f-8df6-dc6c19554452"), CompositePurchaseOrder.class);
-    CompositePoLine reqData = compositePurchaseOrder.getCompositePoLines().get(0);
-    reqData.getFundDistribution().get(0).setFundId("a89eccf0-57a6-495e-898d-32b9b2210f2f");
+    CompositePoLine reqData = compositePurchaseOrder.getCompositePoLines().getFirst();
+    reqData.getFundDistribution().getFirst().setFundId("a89eccf0-57a6-495e-898d-32b9b2210f2f");
 
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 403);
@@ -1147,10 +1149,9 @@ public class PurchaseOrderLinesApiTest {
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE)
       .mapTo(CompositePoLine.class);
     reqData.setId(ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE);
-    reqData.getLocations().get(0).setQuantity(2);
-    String isbn = INVALID_ISBN;
+    reqData.getLocations().getFirst().setQuantity(2);
 
-    reqData.getDetails().getProductIds().get(0).setProductId(isbn);
+    reqData.getDetails().getProductIds().getFirst().setProductId(INVALID_ISBN);
 
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
@@ -1166,14 +1167,14 @@ public class PurchaseOrderLinesApiTest {
 
     addMockEntry(PIECES_STORAGE, new Piece()
       .withPoLineId(reqData.getId())
-      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+      .withLocationId(reqData.getLocations().getFirst().getLocationId()));
 
     addMockEntry(PO_LINES_STORAGE, reqData);
 
     Errors errors = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 422).as(Errors.class);
     assertEquals(1, errors.getErrors().size());
-    assertEquals(POL_ACCESS_PROVIDER_IS_INACTIVE.getCode(), errors.getErrors().get(0).getCode());
+    assertEquals(POL_ACCESS_PROVIDER_IS_INACTIVE.getCode(), errors.getErrors().getFirst().getCode());
   }
 
   @Test
@@ -1186,14 +1187,14 @@ public class PurchaseOrderLinesApiTest {
 
     addMockEntry(PIECES_STORAGE, new Piece()
       .withPoLineId(reqData.getId())
-      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+      .withLocationId(reqData.getLocations().getFirst().getLocationId()));
 
     addMockEntry(PO_LINES_STORAGE, reqData);
 
     double newCost = 12.09d;
     reqData.getCost().setListUnitPriceElectronic(newCost);
-    reqData.getFundDistribution().get(0).setDistributionType(FundDistribution.DistributionType.AMOUNT);
-    reqData.getFundDistribution().get(0).setValue(newCost);
+    reqData.getFundDistribution().getFirst().setDistributionType(FundDistribution.DistributionType.AMOUNT);
+    reqData.getFundDistribution().getFirst().setValue(newCost);
 
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
@@ -1212,11 +1213,11 @@ public class PurchaseOrderLinesApiTest {
 
     addMockEntry(PIECES_STORAGE, new Piece()
       .withPoLineId(reqData.getId())
-      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+      .withLocationId(reqData.getLocations().getFirst().getLocationId()));
 
     addMockEntry(PO_LINES_STORAGE, reqData);
 
-    reqData.getFundDistribution().get(0).setExpenseClassId(INACTIVE_EXPENSE_CLASS_ID);
+    reqData.getFundDistribution().getFirst().setExpenseClassId(INACTIVE_EXPENSE_CLASS_ID);
 
     Errors errors = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData)
       .encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 400)
@@ -1236,12 +1237,12 @@ public class PurchaseOrderLinesApiTest {
 
     addMockEntry(PIECES_STORAGE, new Piece()
       .withPoLineId(reqData.getId())
-      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+      .withLocationId(reqData.getLocations().getFirst().getLocationId()));
 
     addMockEntry(PO_LINES_STORAGE, reqData);
 
-    reqData.getFundDistribution().get(0).setDistributionType(FundDistribution.DistributionType.AMOUNT);
-    reqData.getFundDistribution().get(0).setValue(reqData.getCost().getPoLineEstimatedPrice());
+    reqData.getFundDistribution().getFirst().setDistributionType(FundDistribution.DistributionType.AMOUNT);
+    reqData.getFundDistribution().getFirst().setValue(reqData.getCost().getPoLineEstimatedPrice());
 
 
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
@@ -1258,7 +1259,7 @@ public class PurchaseOrderLinesApiTest {
 
     addMockEntry(PIECES_STORAGE, new Piece()
       .withPoLineId(reqData.getId())
-      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+      .withLocationId(reqData.getLocations().getFirst().getLocationId()));
 
     addMockEntry(PO_LINES_STORAGE, reqData);
     Cost cost = reqData.getCost();
@@ -1285,7 +1286,7 @@ public class PurchaseOrderLinesApiTest {
 
     addMockEntry(PIECES_STORAGE, new Piece()
       .withPoLineId(reqData.getId())
-      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+      .withLocationId(reqData.getLocations().getFirst().getLocationId()));
 
     addMockEntry(PO_LINES_STORAGE, reqData);
 
@@ -1295,9 +1296,9 @@ public class PurchaseOrderLinesApiTest {
       MockServer.getRqRsEntries(HttpMethod.POST, FINANCE_BATCH_TRANSACTIONS).isEmpty());
 
     // double check with updating status only (When only status updated via request from mod-invoices)
-    CompositePoLine updatedLine = getRqRsEntries(HttpMethod.PUT, PO_LINES_STORAGE).get(0).mapTo(CompositePoLine.class);
+    CompositePoLine updatedLine = getRqRsEntries(HttpMethod.PUT, PO_LINES_STORAGE).getFirst().mapTo(CompositePoLine.class);
     updatedLine.setPaymentStatus(CompositePoLine.PaymentStatus.FULLY_PAID);
-    updatedLine.getDetails().getProductIds().iterator().next().setQualifier(null);
+    updatedLine.getDetails().getProductIds().getFirst().setQualifier(null);
 
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(updatedLine).encodePrettily(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
@@ -1315,16 +1316,16 @@ public class PurchaseOrderLinesApiTest {
     reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
     reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
     reqData.getEresource().setCreateInventory(INSTANCE_HOLDING_ITEM);
-    reqData.getLocations().get(0).setLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
+    reqData.getLocations().getFirst().setLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
 
     addMockEntry(PIECES_STORAGE, new Piece()
       .withPoLineId(reqData.getId())
-      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+      .withLocationId(reqData.getLocations().getFirst().getLocationId()));
 
     addMockEntry(PO_LINES_STORAGE, reqData);
 
     String newLocationId = "fcd64ce1-6995-48f0-840e-89ffa2288371";
-    reqData.getLocations().get(0).setLocationId(newLocationId);
+    reqData.getLocations().getFirst().setLocationId(newLocationId);
 
     Errors response = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 400).as(Errors.class);
@@ -1348,15 +1349,15 @@ public class PurchaseOrderLinesApiTest {
     reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
     reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
     reqData.getEresource().setCreateInventory(INSTANCE_HOLDING_ITEM);
-    reqData.getLocations().get(0).setLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
+    reqData.getLocations().getFirst().setLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
 
     addMockEntry(PIECES_STORAGE, new Piece()
       .withPoLineId(reqData.getId())
-      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+      .withLocationId(reqData.getLocations().getFirst().getLocationId()));
 
     addMockEntry(PO_LINES_STORAGE, reqData);
 
-    reqData.getLocations().get(0).setQuantityElectronic(3);
+    reqData.getLocations().getFirst().setQuantityElectronic(3);
     reqData.getCost().setQuantityElectronic(3);
 
     Errors response = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
@@ -1384,15 +1385,15 @@ public class PurchaseOrderLinesApiTest {
     reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
     reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
     reqData.getEresource().setCreateInventory(INSTANCE_HOLDING_ITEM);
-    reqData.getLocations().get(0).setLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
+    reqData.getLocations().getFirst().setLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
 
     addMockEntry(PIECES_STORAGE, new Piece()
       .withPoLineId(reqData.getId())
-      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+      .withLocationId(reqData.getLocations().getFirst().getLocationId()));
 
     addMockEntry(PO_LINES_STORAGE, reqData);
 
-    reqData.getLocations().get(0).setQuantityElectronic(3);
+    reqData.getLocations().getFirst().setQuantityElectronic(3);
     reqData.getCost().setQuantityElectronic(3);
 
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
@@ -1416,7 +1417,7 @@ public class PurchaseOrderLinesApiTest {
 
     addMockEntry(PIECES_STORAGE, new Piece()
       .withPoLineId(reqData.getId())
-      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+      .withLocationId(reqData.getLocations().getFirst().getLocationId()));
 
     addMockEntry(PO_LINES_STORAGE, lineFromStorage);
     addMockEntry(FUNDS, fund);
@@ -1447,7 +1448,7 @@ public class PurchaseOrderLinesApiTest {
 
     addMockEntry(PIECES_STORAGE, new Piece()
       .withPoLineId(reqData.getId())
-      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+      .withLocationId(reqData.getLocations().getFirst().getLocationId()));
 
     addMockEntry(PO_LINES_STORAGE, firstLineFromStorage);
     addMockEntry(PO_LINES_STORAGE, secondLineFromStorage);
@@ -1478,7 +1479,7 @@ public class PurchaseOrderLinesApiTest {
 
     addMockEntry(PIECES_STORAGE, new Piece()
       .withPoLineId(reqData.getId())
-      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+      .withLocationId(reqData.getLocations().getFirst().getLocationId()));
 
     addMockEntry(PO_LINES_STORAGE, lineFromStorage);
     addMockEntry(FUNDS, fund);
@@ -1499,13 +1500,13 @@ public class PurchaseOrderLinesApiTest {
     addMockEntry(PIECES_STORAGE, new Piece()
       .withFormat(Piece.Format.ELECTRONIC)
       .withPoLineId(reqData.getId())
-      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+      .withLocationId(reqData.getLocations().getFirst().getLocationId()));
 
     addMockEntry(PO_LINES_STORAGE, reqData);
 
     int expQtyElectronic = 3;
-    reqData.getLocations().get(0).setQuantityElectronic(expQtyElectronic);
-    reqData.getLocations().get(0).setQuantity(expQtyElectronic);
+    reqData.getLocations().getFirst().setQuantityElectronic(expQtyElectronic);
+    reqData.getLocations().getFirst().setQuantity(expQtyElectronic);
     reqData.getCost().setQuantityElectronic(expQtyElectronic);
     Errors response = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 400).as(Errors.class);
@@ -1530,17 +1531,17 @@ public class PurchaseOrderLinesApiTest {
     reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
     reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
     reqData.getEresource().setCreateInventory(INSTANCE_HOLDING);
-    reqData.getLocations().get(0).setLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
+    reqData.getLocations().getFirst().setLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
 
     addMockEntry(PIECES_STORAGE, new Piece()
       .withFormat(Piece.Format.ELECTRONIC)
       .withPoLineId(reqData.getId())
-      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+      .withLocationId(reqData.getLocations().getFirst().getLocationId()));
 
     addMockEntry(PO_LINES_STORAGE, reqData);
 
     String newLocationId = "fcd64ce1-6995-48f0-840e-89ffa2288371";
-    reqData.getLocations().get(0).setLocationId(newLocationId);
+    reqData.getLocations().getFirst().setLocationId(newLocationId);
 
     Errors response = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 400).as(Errors.class);
@@ -1607,7 +1608,7 @@ public class PurchaseOrderLinesApiTest {
 
     Response actual = verifyPatch(url, JsonObject.mapFrom(body).encode(), "", 404);
 
-    assertEquals(ID_DOES_NOT_EXIST, actual.as(Errors.class).getErrors().get(0).getMessage());
+    assertEquals(ID_DOES_NOT_EXIST, actual.as(Errors.class).getErrors().getFirst().getMessage());
   }
 
   @Test
@@ -1635,9 +1636,9 @@ public class PurchaseOrderLinesApiTest {
 
     Response actual = verifyPut(PO_LINE_VALIDATE_FUND_DISTRIBUTIONS_PATH, JsonObject.mapFrom(request).encode(), "", 422);
 
-    Error error = actual.as(Errors.class).getErrors().get(0);
+    Error error = actual.as(Errors.class).getErrors().getFirst();
     assertEquals("must not be null", error.getMessage());
-    assertEquals("cost.currency", error.getParameters().get(0).getKey());
+    assertEquals("cost.currency", error.getParameters().getFirst().getKey());
   }
 
   @Test
@@ -1653,10 +1654,10 @@ public class PurchaseOrderLinesApiTest {
 
     Response actual = verifyPut(PO_LINE_VALIDATE_FUND_DISTRIBUTIONS_PATH, JsonObject.mapFrom(request).encode(), "", 422);
 
-    Error error = actual.as(Errors.class).getErrors().get(0);
+    Error error = actual.as(Errors.class).getErrors().getFirst();
     assertEquals(ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL.getDescription(), error.getMessage());
     assertEquals(ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL.getCode(), error.getCode());
-    Parameter remainingAmountParam = error.getParameters().get(0);
+    Parameter remainingAmountParam = error.getParameters().getFirst();
     assertEquals(FundDistributionUtils.REMAINING_AMOUNT_FIELD, remainingAmountParam.getKey());
     assertEquals(0.01d, Double.parseDouble(remainingAmountParam.getValue()));
   }
@@ -1673,7 +1674,7 @@ public class PurchaseOrderLinesApiTest {
 
     Response actual = verifyPut(PO_LINE_VALIDATE_FUND_DISTRIBUTIONS_PATH, JsonObject.mapFrom(request).encode(), "", 422);
 
-    Error error = actual.as(Errors.class).getErrors().get(0);
+    Error error = actual.as(Errors.class).getErrors().getFirst();
     assertEquals(ErrorCodes.CANNOT_MIX_TYPES_FOR_ZERO_PRICE.getDescription(), error.getMessage());
     assertEquals(ErrorCodes.CANNOT_MIX_TYPES_FOR_ZERO_PRICE.getCode(), error.getCode());
   }
@@ -1697,7 +1698,7 @@ public class PurchaseOrderLinesApiTest {
 
     assertThat(errors.getErrors(), hasSize(1));
 
-    Error error = errors.getErrors().get(0);
+    Error error = errors.getErrors().getFirst();
     assertThat(error.getCode(), equalTo(PROHIBITED_FIELD_CHANGING.getCode()));
 
     Object[] failedFieldNames = getModifiedProtectedFields(error);
@@ -1715,7 +1716,7 @@ public class PurchaseOrderLinesApiTest {
 
   @ParameterizedTest
   @EnumSource(value = CompositePoLine.OrderFormat.class, names = {"ELECTRONIC_RESOURCE"}, mode = EnumSource.Mode.INCLUDE)
-  void testPutElecOrderLineByIdWhenSpecificElementIsPresentAndProtectedFieldsChanged(CompositePoLine.OrderFormat orderFormat) {
+  void testPutElecOrderLineByIdWhenSpecificElementIsPresentAndProtectedFieldsChanged() {
     logger.info("=== Test PUT Order Line By Id - Protected fields changed ===");
 
     String lineId = "0009662b-8b80-4001-b704-ca10971f222d";
@@ -1730,7 +1731,7 @@ public class PurchaseOrderLinesApiTest {
 
     assertThat(errors.getErrors(), hasSize(1));
 
-    Error error = errors.getErrors().get(0);
+    Error error = errors.getErrors().getFirst();
     assertThat(error.getCode(), equalTo(PROHIBITED_FIELD_CHANGING.getCode()));
 
     Object[] failedFieldNames = getModifiedProtectedFields(error);
@@ -1748,7 +1749,7 @@ public class PurchaseOrderLinesApiTest {
 
   @ParameterizedTest
   @EnumSource(value = CompositePoLine.OrderFormat.class, names = {"P_E_MIX"}, mode = EnumSource.Mode.INCLUDE)
-  void testPutMixedOrderLineByIdWhenSpecificElementIsPresentAndProtectedFieldsChanged(CompositePoLine.OrderFormat orderFormat) {
+  void testPutMixedOrderLineByIdWhenSpecificElementIsPresentAndProtectedFieldsChanged() {
     logger.info("=== Test PUT Order Line By Id - Protected fields changed ===");
 
     String lineId = "0009662b-8b80-4001-b704-ca10971f222d";
@@ -1762,7 +1763,7 @@ public class PurchaseOrderLinesApiTest {
 
     assertThat(errors.getErrors(), hasSize(1));
 
-    Error error = errors.getErrors().get(0);
+    Error error = errors.getErrors().getFirst();
     assertThat(error.getCode(), equalTo(PROHIBITED_FIELD_CHANGING.getCode()));
 
     Object[] failedFieldNames = getModifiedProtectedFields(error);
@@ -1778,10 +1779,10 @@ public class PurchaseOrderLinesApiTest {
     HandlersTestHelper.verifyOrderStatusUpdateEvent(0);
   }
 
-  private String getPoLineWithMinContentAndIds(String lineId, String orderId) throws IOException {
+  private String getPoLineWithMinContentAndIds(String lineId) throws IOException {
     CompositePoLine poLine = new JsonObject(getMockData(PO_LINE_MIN_CONTENT_PATH)).mapTo(CompositePoLine.class);
     poLine.setId(lineId);
-    poLine.setPurchaseOrderId(orderId);
+    poLine.setPurchaseOrderId(org.folio.TestConstants.PO_ID_PENDING_STATUS_WITH_PO_LINES);
     return JsonObject.mapFrom(poLine).encode();
   }
 

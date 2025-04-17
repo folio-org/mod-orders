@@ -3,12 +3,12 @@ package org.folio.service.consortium;
 import com.github.benmanes.caffeine.cache.AsyncCache;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import jakarta.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.consortium.ConsortiumConfiguration;
 import org.folio.orders.utils.RequestContextUtil;
-import org.folio.rest.acq.model.Setting;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
@@ -25,6 +25,7 @@ import static org.folio.orders.utils.CacheUtils.buildAsyncCache;
 import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
 
 public class ConsortiumConfigurationService {
+
   private static final Logger logger = LogManager.getLogger(ConsortiumConfigurationService.class);
 
   private static final String CONSORTIUM_ID_FIELD = "consortiumId";
@@ -32,18 +33,21 @@ public class ConsortiumConfigurationService {
   private static final String USER_TENANTS_ARRAY_IDENTIFIER = "userTenants";
   private static final String USER_TENANTS_ENDPOINT = "/user-tenants";
 
+  private final RestClient restClient;
+  private AsyncCache<String, Optional<ConsortiumConfiguration>> asyncCache;
+  private final SettingsRetriever settingsRetriever;
+
   @Value("${orders.cache.consortium-data.expiration.time.seconds:300}")
   private long cacheExpirationTime;
-
-  private final RestClient restClient;
-  private final AsyncCache<String, Optional<ConsortiumConfiguration>> asyncCache;
-
-  private SettingsRetriever settingsRetriever;
 
   public ConsortiumConfigurationService(RestClient restClient, SettingsRetriever settingsRetriever) {
     this.restClient = restClient;
     this.settingsRetriever = settingsRetriever;
-    asyncCache = buildAsyncCache(Vertx.currentContext(), cacheExpirationTime);
+  }
+
+  @PostConstruct
+  void init() {
+    this.asyncCache = buildAsyncCache(Vertx.currentContext(), cacheExpirationTime);
   }
 
   public Future<Optional<ConsortiumConfiguration>> getConsortiumConfiguration(RequestContext requestContext) {
