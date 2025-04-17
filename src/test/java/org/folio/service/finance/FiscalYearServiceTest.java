@@ -10,8 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
 import java.time.Instant;
@@ -31,30 +29,45 @@ import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.service.caches.ConfigurationEntriesCache;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.mockito.Spy;
 
 @CopilotGenerated(partiallyGenerated = true)
 @ExtendWith(VertxExtension.class)
 public class FiscalYearServiceTest {
 
-  private RequestContext requestContext;
-  private RestClient restClient;
+  @InjectMocks
   private FiscalYearService fiscalYearService;
+  @Spy
+  private RestClient restClientMock;
+  @Mock
+  private RequestContext requestContextMock;
+  @Mock
+  private ConfigurationEntriesCache configurationEntriesCacheMock;
+
+  private AutoCloseable openMocks;
 
   @BeforeEach
   public void initMocks() {
-    restClient = spy(RestClient.class);
-    var fundService = mock(FundService.class);
-    requestContext = mock(RequestContext.class);
-    var configurationEntriesCache = mock(ConfigurationEntriesCache.class);
-    fiscalYearService = new FiscalYearService(restClient, fundService, configurationEntriesCache);
+    openMocks = MockitoAnnotations.openMocks(this);
     doReturn(Future.succeededFuture("UTC"))
-      .when(configurationEntriesCache).getSystemTimeZone(any(RequestContext.class));
+      .when(configurationEntriesCacheMock).getSystemTimeZone(any(RequestContext.class));
     fiscalYearService.init();
+  }
+
+  @AfterEach
+  public void closeMocks() throws Exception {
+    if (openMocks != null) {
+      openMocks.close();
+    }
   }
 
   @Test
@@ -62,10 +75,10 @@ public class FiscalYearServiceTest {
     String ledgerId = UUID.randomUUID().toString();
 
     doReturn(succeededFuture(new FiscalYear()))
-      .when(restClient)
+      .when(restClientMock)
       .get(any(RequestEntry.class), eq(FiscalYear.class), any(RequestContext.class));
 
-    FiscalYear fy = fiscalYearService.getCurrentFiscalYear(ledgerId, requestContext).result();
+    FiscalYear fy = fiscalYearService.getCurrentFiscalYear(ledgerId, requestContextMock).result();
 
     assertNotNull(fy);
   }
@@ -73,17 +86,17 @@ public class FiscalYearServiceTest {
   @Test
   void testShouldThrowHttpException(VertxTestContext vertxTestContext) {
     doReturn(failedFuture(new HttpException(404, "Fiscal year not found")))
-      .when(restClient)
+      .when(restClientMock)
       .get(any(RequestEntry.class), eq(FiscalYear.class), any(RequestContext.class));
 
-    Future<FiscalYear> result = fiscalYearService.getCurrentFiscalYear(ID_DOES_NOT_EXIST, requestContext);
+    Future<FiscalYear> result = fiscalYearService.getCurrentFiscalYear(ID_DOES_NOT_EXIST, requestContextMock);
 
     vertxTestContext.assertFailure(result)
       .onComplete(expectedException -> {
         HttpException httpException = (HttpException) expectedException.cause();
         assertEquals(404, httpException.getCode());
         assertEquals(result.cause().getMessage(), httpException.getMessage());
-        verify(restClient).get(any(RequestEntry.class), eq(FiscalYear.class), any(RequestContext.class));
+        verify(restClientMock).get(any(RequestEntry.class), eq(FiscalYear.class), any(RequestContext.class));
         vertxTestContext.completeNow();
       });
   }
@@ -102,11 +115,11 @@ public class FiscalYearServiceTest {
     FiscalYearCollection fiscalYearCollection = new FiscalYearCollection().withFiscalYears(List.of(fiscalYear, currentFiscalYear));
 
     doReturn(Future.succeededFuture(fiscalYear))
-      .when(restClient).get(any(RequestEntry.class), eq(FiscalYear.class), any(RequestContext.class));
+      .when(restClientMock).get(any(RequestEntry.class), eq(FiscalYear.class), any(RequestContext.class));
     doReturn(Future.succeededFuture(fiscalYearCollection))
-      .when(restClient).get(any(RequestEntry.class), eq(FiscalYearCollection.class), any(RequestContext.class));
+      .when(restClientMock).get(any(RequestEntry.class), eq(FiscalYearCollection.class), any(RequestContext.class));
 
-    Future<String> result = fiscalYearService.getCurrentFYForSeriesByFYId(fiscalYearId, requestContext);
+    Future<String> result = fiscalYearService.getCurrentFYForSeriesByFYId(fiscalYearId, requestContextMock);
 
     assertEquals(currentFiscalYearId, result.result());
   }
@@ -121,11 +134,11 @@ public class FiscalYearServiceTest {
     FiscalYearCollection fiscalYearCollection = new FiscalYearCollection().withFiscalYears(List.of(fiscalYear));
 
     doReturn(Future.succeededFuture(fiscalYear))
-      .when(restClient).get(any(RequestEntry.class), eq(FiscalYear.class), any(RequestContext.class));
+      .when(restClientMock).get(any(RequestEntry.class), eq(FiscalYear.class), any(RequestContext.class));
     doReturn(Future.succeededFuture(fiscalYearCollection))
-      .when(restClient).get(any(RequestEntry.class), eq(FiscalYearCollection.class), any(RequestContext.class));
+      .when(restClientMock).get(any(RequestEntry.class), eq(FiscalYearCollection.class), any(RequestContext.class));
 
-    Future<String> result = fiscalYearService.getCurrentFYForSeriesByFYId(fiscalYearId, requestContext);
+    Future<String> result = fiscalYearService.getCurrentFYForSeriesByFYId(fiscalYearId, requestContextMock);
 
     assertEquals(fiscalYearId, result.result());
   }
@@ -140,11 +153,11 @@ public class FiscalYearServiceTest {
     FiscalYearCollection fiscalYearCollection = new FiscalYearCollection();
 
     doReturn(Future.succeededFuture(fiscalYear))
-      .when(restClient).get(any(RequestEntry.class), eq(FiscalYear.class), any(RequestContext.class));
+      .when(restClientMock).get(any(RequestEntry.class), eq(FiscalYear.class), any(RequestContext.class));
     doReturn(Future.succeededFuture(fiscalYearCollection))
-      .when(restClient).get(any(RequestEntry.class), eq(FiscalYearCollection.class), any(RequestContext.class));
+      .when(restClientMock).get(any(RequestEntry.class), eq(FiscalYearCollection.class), any(RequestContext.class));
 
-    Future<String> result = fiscalYearService.getCurrentFYForSeriesByFYId(fiscalYearId, requestContext);
+    Future<String> result = fiscalYearService.getCurrentFYForSeriesByFYId(fiscalYearId, requestContextMock);
 
     assertNull(result.result());
   }
@@ -154,9 +167,9 @@ public class FiscalYearServiceTest {
     String fiscalYearId = UUID.randomUUID().toString();
 
     doReturn(Future.failedFuture(new HttpException(404, "Fiscal year not found")))
-      .when(restClient).get(any(RequestEntry.class), eq(FiscalYear.class), any(RequestContext.class));
+      .when(restClientMock).get(any(RequestEntry.class), eq(FiscalYear.class), any(RequestContext.class));
 
-    Future<String> result = fiscalYearService.getCurrentFYForSeriesByFYId(fiscalYearId, requestContext);
+    Future<String> result = fiscalYearService.getCurrentFYForSeriesByFYId(fiscalYearId, requestContextMock);
 
     assertTrue(result.failed());
     assertEquals(HttpException.class, result.cause().getClass());
@@ -170,11 +183,11 @@ public class FiscalYearServiceTest {
     FiscalYear fiscalYear = new FiscalYear().withId(fiscalYearId).withSeries(series);
 
     doReturn(Future.succeededFuture(fiscalYear))
-      .when(restClient).get(any(RequestEntry.class), eq(FiscalYear.class), any(RequestContext.class));
+      .when(restClientMock).get(any(RequestEntry.class), eq(FiscalYear.class), any(RequestContext.class));
     doReturn(Future.failedFuture(new HttpException(404, "Fiscal year not found")))
-      .when(restClient).get(any(RequestEntry.class), eq(FiscalYearCollection.class), any(RequestContext.class));
+      .when(restClientMock).get(any(RequestEntry.class), eq(FiscalYearCollection.class), any(RequestContext.class));
 
-    Future<String> result = fiscalYearService.getCurrentFYForSeriesByFYId(fiscalYearId, requestContext);
+    Future<String> result = fiscalYearService.getCurrentFYForSeriesByFYId(fiscalYearId, requestContextMock);
 
     assertTrue(result.failed());
     assertEquals(HttpException.class, result.cause().getClass());
