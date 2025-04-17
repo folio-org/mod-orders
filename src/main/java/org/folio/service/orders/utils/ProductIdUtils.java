@@ -21,7 +21,7 @@ public class ProductIdUtils {
 
   private ProductIdUtils() {}
 
-  public static Set<String> buildSetOfProductIdsFromCompositePoLines(List<PoLine> poLines, String isbnTypeId) {
+  public static Set<String> buildSetOfProductIdsFromPoLines(List<PoLine> poLines, String isbnTypeId) {
     List<ProductId> productIds = poLines.stream()
       .flatMap(pol -> pol.getDetails().getProductIds().stream())
       .toList();

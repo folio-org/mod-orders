@@ -50,7 +50,7 @@ public class OrderLinesSummaryPopulateService implements CompositeOrderDynamicDa
    * Calculates PO's estimated price by summing the Estimated Price of the associated PO Lines. See MODORDERS-181 for more details.
    * At the moment assumption is that all prices could be in the different currency.
    *
-   * @param poLines list of composite PO Lines
+   * @param poLines list of PO Lines
    * @return estimated purchase order's total price
    */
   public Future<Double> calculateTotalEstimatedPrice(List<PoLine> poLines,

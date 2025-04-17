@@ -2,7 +2,7 @@ package org.folio.helper;
 
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
-import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
+import static org.folio.orders.utils.HelperUtils.PO_LINES;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.REASON_CANCELLED;
 import static org.folio.orders.utils.HelperUtils.WORKFLOW_STATUS;
@@ -524,7 +524,7 @@ public class PurchaseOrderHelper {
     compPO.setTotalCredited(null);
     compPO.setNeedReEncumber(null);
     JsonObject purchaseOrder = JsonObject.mapFrom(compPO);
-    purchaseOrder.remove(COMPOSITE_PO_LINES);
+    purchaseOrder.remove(PO_LINES);
     return purchaseOrder.mapTo(PurchaseOrder.class);
   }
 

@@ -271,7 +271,7 @@ public class PoLineValidationService extends BaseValidationService {
    * The method converts {@link ErrorCodes} elements to {@link Error} adding additionally {@link Parameter} with PO Line number is
    * presents
    *
-   * @param poLine Composite PO Line
+   * @param poLine PO Line
    * @param errors  list of errors{@link ErrorCodes}
    * @return List of {@link Error} elements
    */
@@ -285,7 +285,7 @@ public class PoLineValidationService extends BaseValidationService {
    * The method converts {@link ErrorCodes} elements to {@link Error} adding additionally {@link Parameter} with PO Line number is
    * presents
    *
-   * @param poLine   Composite PO Line
+   * @param poLine   PO Line
    * @param errorCode Error Code{@link ErrorCodes}
    * @return List of {@link Error} elements
    */

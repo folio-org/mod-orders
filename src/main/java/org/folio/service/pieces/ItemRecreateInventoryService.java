@@ -32,7 +32,7 @@ public class ItemRecreateInventoryService {
    * 3. Then delete the item in member tenant 1 by item id
    *
    * @param compOrder Composite PO
-   * @param poLine Composite POL
+   * @param poLine POL
    * @param piece Piece
    * @param srcLocCtx Source location context
    * @param dstLocCtx Destination location context

@@ -85,7 +85,7 @@ public class PoLineAPI extends BaseApi implements OrdersOrderLines {
   public void getOrdersOrderLinesById(String lineId, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.debug("Started Invocation of POLine Request with id = {}", lineId);
-    helper.getCompositePoLine(lineId, new RequestContext(vertxContext, okapiHeaders))
+    helper.getPoLine(lineId, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(poLine -> asyncResultHandler.handle(succeededFuture(buildOkResponse(poLine))))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }

@@ -7,7 +7,7 @@ import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
-import static org.folio.service.orders.utils.ProductIdUtils.buildSetOfProductIdsFromCompositePoLines;
+import static org.folio.service.orders.utils.ProductIdUtils.buildSetOfProductIdsFromPoLines;
 import static org.folio.service.orders.utils.ProductIdUtils.isISBN;
 import static org.folio.service.orders.utils.ProductIdUtils.extractQualifier;
 import static org.folio.service.orders.utils.ProductIdUtils.removeISBNDuplicates;
@@ -326,7 +326,7 @@ public class PurchaseOrderLineService {
 
     return inventoryCache.getISBNProductTypeId(requestContext)
       .compose(isbnTypeId -> {
-        var setOfProductIds = buildSetOfProductIdsFromCompositePoLines(filteredCompLines, isbnTypeId);
+        var setOfProductIds = buildSetOfProductIdsFromPoLines(filteredCompLines, isbnTypeId);
         return HelperUtils.executeWithSemaphores(setOfProductIds,
           productId -> inventoryCache.convertToISBN13(productIdUnaryOperator.apply(productId), requestContext)
             .map(normalizedId -> Map.entry(productId, normalizedId))

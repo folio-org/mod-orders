@@ -50,7 +50,7 @@ import static org.folio.TestUtils.getMinimalOrder;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
 import static org.folio.TestUtils.getTitle;
-import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
+import static org.folio.orders.utils.HelperUtils.PO_LINES;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.FUND_ID;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
@@ -1699,7 +1699,7 @@ public class MockServer {
             }
             JsonObject compPO = new JsonObject(getMockData(filePath));
             // Build PoLineCollection to make sure content is valid
-            poLineCollection = buildPoLineCollection(tenant, compPO.getJsonArray(COMPOSITE_PO_LINES), poId);
+            poLineCollection = buildPoLineCollection(tenant, compPO.getJsonArray(PO_LINES), poId);
           }
         } else {
           // Attempt to find POLine in mock server memory
@@ -1759,7 +1759,7 @@ public class MockServer {
     if (lines == null || lines.isEmpty()) {
       result.setTotalRecords(0);
     } else {
-      // Transform composite PO Lines to storage representation
+      // Transform PO Lines to storage representation
       List<PoLine> poLines = lines
         .stream()
         .map(JsonObject::mapFrom)
@@ -2174,7 +2174,7 @@ public class MockServer {
           filePath = String.format("%s%s.json", COMP_ORDER_MOCK_DATA_PATH, id);
         }
         po = new JsonObject(getMockData(filePath));
-        po.remove(COMPOSITE_PO_LINES);
+        po.remove(PO_LINES);
         po.remove("totalEstimatedPrice");
         po.remove("totalItems");
         // Validate the content against schema
@@ -2185,7 +2185,7 @@ public class MockServer {
       if (po.getString("orderType") == null) {
         po.put("orderType", org.folio.rest.acq.model.PurchaseOrder.OrderType.ONE_TIME.value());
       }
-      po.remove(COMPOSITE_PO_LINES);
+      po.remove(PO_LINES);
       po.remove("totalEstimatedPrice");
       po.remove("totalItems");
       addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER_STORAGE, po);
@@ -2211,12 +2211,12 @@ public class MockServer {
       orderCollection
         .withPurchaseOrders(
           postedOrders.stream()
-            .peek(order -> order.remove(COMPOSITE_PO_LINES))
+            .peek(order -> order.remove(PO_LINES))
             .map(order -> order.mapTo(PurchaseOrder.class))
             .collect(Collectors.toList()))
         .withTotalRecords(orderCollection.getPurchaseOrders().size());
       po = JsonObject.mapFrom(orderCollection);
-      po.remove(COMPOSITE_PO_LINES);
+      po.remove(PO_LINES);
       po.remove("totalEstimatedPrice");
       po.remove("totalItems");
 

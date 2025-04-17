@@ -33,7 +33,7 @@ import static org.folio.helper.InventoryInteractionTestHelper.verifyItemsCreated
 import static org.folio.helper.InventoryInteractionTestHelper.verifyOpenOrderPiecesCreated;
 import static org.folio.helper.InventoryInteractionTestHelper.verifyPiecesCreated;
 import static org.folio.helper.InventoryInteractionTestHelper.verifyPiecesQuantityForSuccessCase;
-import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
+import static org.folio.orders.utils.HelperUtils.PO_LINES;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
 import static org.folio.orders.utils.PermissionsUtil.OKAPI_HEADER_PERMISSIONS;
@@ -325,7 +325,7 @@ public class PurchaseOrdersApiTest {
 
     assertNotNull(poId);
     assertNotNull(poNumber);
-    assertEquals(reqData.getJsonArray(COMPOSITE_PO_LINES).size(), resp.getPoLines().size());
+    assertEquals(reqData.getJsonArray(PO_LINES).size(), resp.getPoLines().size());
 
     for (int i = 0; i < resp.getPoLines().size(); i++) {
       PoLine line = resp.getPoLines().get(i);
@@ -678,8 +678,8 @@ public class PurchaseOrdersApiTest {
   }
 
   private void verifyPoWithPoLinesUpdate(JsonObject reqData, JsonObject storageData) {
-    JsonArray poLinesFromRequest = reqData.getJsonArray(COMPOSITE_PO_LINES);
-    JsonArray poLinesFromStorage = storageData.getJsonArray(COMPOSITE_PO_LINES);
+    JsonArray poLinesFromRequest = reqData.getJsonArray(PO_LINES);
+    JsonArray poLinesFromStorage = storageData.getJsonArray(PO_LINES);
     int sameLinesCount = 0;
     for (int i = 0; i < poLinesFromRequest.size(); i++) {
       JsonObject lineFromRequest = poLinesFromRequest.getJsonObject(i);
@@ -756,7 +756,7 @@ public class PurchaseOrdersApiTest {
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id), reqData, "", 204);
 
     assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER_STORAGE, HttpMethod.PUT));
-    assertEquals(MockServer.getPoLineUpdates().size(), storedData.getJsonArray(COMPOSITE_PO_LINES).size());
+    assertEquals(MockServer.getPoLineUpdates().size(), storedData.getJsonArray(PO_LINES).size());
     MockServer.getPoLineUpdates().forEach(poLine -> {
       Matcher matcher = poLinePattern.matcher(poLine.getString(PO_LINE_NUMBER));
       assertTrue(matcher.find());
@@ -775,7 +775,7 @@ public class PurchaseOrdersApiTest {
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id), reqData, "", 204);
 
     assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER_STORAGE, HttpMethod.PUT));
-    assertEquals(MockServer.getPoLineUpdates().size(), storedData.getJsonArray(COMPOSITE_PO_LINES).size());
+    assertEquals(MockServer.getPoLineUpdates().size(), storedData.getJsonArray(PO_LINES).size());
     MockServer.getPoLineUpdates().forEach(poLine -> {
     });
     assertNull(MockServer.serverRqRs.get(PO_LINES_STORAGE, HttpMethod.DELETE));
@@ -795,7 +795,7 @@ public class PurchaseOrdersApiTest {
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id), reqData, "", 204);
 
     assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER_STORAGE, HttpMethod.PUT));
-    assertEquals(MockServer.getPoLineUpdates().size(), storedData.getJsonArray(COMPOSITE_PO_LINES).size());
+    assertEquals(MockServer.getPoLineUpdates().size(), storedData.getJsonArray(PO_LINES).size());
     MockServer.getPoLineUpdates().forEach(poLine -> {
       Matcher matcher = poLinePattern.matcher(poLine.getString(PO_LINE_NUMBER));
       assertTrue(matcher.find());
@@ -818,7 +818,7 @@ public class PurchaseOrdersApiTest {
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id), reqData, "", 204);
 
     assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER_STORAGE, HttpMethod.PUT));
-    assertEquals(MockServer.getPoLineUpdates().size(), storedData.getJsonArray(COMPOSITE_PO_LINES).size());
+    assertEquals(MockServer.getPoLineUpdates().size(), storedData.getJsonArray(PO_LINES).size());
     assertNull(MockServer.serverRqRs.get(PO_LINES_STORAGE, HttpMethod.DELETE));
   }
 
@@ -1088,7 +1088,7 @@ public class PurchaseOrdersApiTest {
     line.getPhysical().setMaterialType(UUID.randomUUID().toString());
 
     JsonObject storedJson = JsonObject.mapFrom(reqData);
-    storedJson.remove(COMPOSITE_PO_LINES);
+    storedJson.remove(PO_LINES);
     storedJson.remove("totalEstimatedPrice");
     storedJson.remove("totalItems");
 
@@ -1695,7 +1695,7 @@ public class PurchaseOrdersApiTest {
     assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER_STORAGE, HttpMethod.PUT));
     List<JsonObject> createdPoLines = MockServer.serverRqRs.get(PO_LINES_STORAGE, HttpMethod.POST);
     assertNotNull(createdPoLines);
-    assertEquals(createdPoLines.size(), reqData.getJsonArray(COMPOSITE_PO_LINES).size());
+    assertEquals(createdPoLines.size(), reqData.getJsonArray(PO_LINES).size());
     createdPoLines.forEach(poLine -> assertEquals(poNumber + "-" + PO_LINE_NUMBER_VALUE, poLine.getString(PO_LINE_NUMBER)));
     assertThat(getPurchaseOrderUpdates().get(0).mapTo(PurchaseOrder.class).getWorkflowStatus(), is(PurchaseOrder.WorkflowStatus.PENDING));
   }

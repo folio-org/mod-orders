@@ -57,7 +57,7 @@ public class HelperUtils {
 
   public static final String ID = "id";
   public static final String FUND_ID = "fundId";
-  public static final String COMPOSITE_PO_LINES = "poLines";
+  public static final String PO_LINES = "poLines";
   public static final String CONFIGS = "configs";
   public static final String CONFIG_NAME = "configName";
   public static final String CONFIG_VALUE = "value";
@@ -113,7 +113,7 @@ public class HelperUtils {
    * If format = Electronic and Create Inventory = Instance,Holding,Item, the associated electronic quantities will result in item records being created in inventory<br/>
    * If format = Electronic and Create Item = False, the associated electronic quantities will NOT result in item records being created in inventory
    *
-   * @param poLine composite PO Line
+   * @param poLine PO Line
    * @return quantity of items expected in the inventory for PO Line
    */
   public static int calculateInventoryItemsQuantity(PoLine poLine) {
@@ -123,7 +123,7 @@ public class HelperUtils {
   /**
    * Calculates items quantity for specified locations.
    *
-   * @param poLine   composite PO Line
+   * @param poLine   PO Line
    * @param locations list of locations to calculate quantity for
    * @return quantity of items expected in the inventory for PO Line
    * @see #calculateInventoryItemsQuantity(PoLine)
@@ -135,7 +135,7 @@ public class HelperUtils {
   /**
    * Calculates pieces quantity for list of locations and return map where piece format is a key and corresponding quantity of pieces as value.
    *
-   * @param poLine   composite PO Line
+   * @param poLine   PO Line
    * @param locations list of locations to calculate quantity for
    * @return quantity of pieces per piece format either required Inventory item for PO Line
    */
@@ -346,7 +346,7 @@ public class HelperUtils {
    * Check the number of titles per po line.
    *
    * @param lineIdTitles Map po line id -> list of titles
-   * @param poLineById   Map po line id -> composite po line
+   * @param poLineById   Map po line id -> po line
    */
   public static void verifyTitles(Map<String, List<Title>> lineIdTitles, Map<String, PoLine> poLineById) {
     verifyAllTitlesExist(lineIdTitles, poLineById);

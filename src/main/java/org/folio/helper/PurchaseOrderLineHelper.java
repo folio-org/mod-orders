@@ -228,7 +228,7 @@ public class PurchaseOrderLineHelper {
     };
   }
 
-  public Future<PoLine> getCompositePoLine(String poLineId, RequestContext requestContext) {
+  public Future<PoLine> getPoLine(String poLineId, RequestContext requestContext) {
     return purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
       .compose(line -> getCompositePurchaseOrder(line.getPurchaseOrderId(), requestContext)
         .compose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.READ, requestContext))
@@ -304,7 +304,7 @@ public class PurchaseOrderLineHelper {
   public Future<Void> updateOrderLineInStorage(PoLine poLine, RequestContext requestContext) {
     return purchaseOrderLineService.updateSearchLocations(poLine, requestContext)
       .compose(v -> restClient.put(resourceByIdPath(PO_LINES_STORAGE, poLine.getId()), poLine, requestContext))
-      .onFailure(throwable -> logger.error("Error saving poLine with id - '{}'", poLine.getId()));
+      .onFailure(t -> logger.error("Error saving poLine with id - '{}'", poLine.getId(), t));
   }
 
   public String buildNewPoLineNumber(PoLine poLineFromStorage, String poNumber) {

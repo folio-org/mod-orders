@@ -209,7 +209,7 @@ public class OpenCompositeOrderHolderBuilder {
   /**
    * Calculates pieces quantity for list of locations and return map where piece format is a key and corresponding quantity of pieces as value.
    *
-   * @param poLine   composite PO Line
+   * @param poLine   PO Line
    * @param locations list of locations to calculate quantity for
    * @return quantity of pieces per piece format either not required Inventory item for PO Line
    */

@@ -330,7 +330,7 @@ public class OrderValidationService {
       List<Error> combinedErrors = new ArrayList<>();
       return organizationService.validateVendor(compPO.getVendor(), requestContext)
         .map(aErrors -> combinedErrors.addAll(aErrors.getErrors()))
-        .compose(errors -> fetchCompositePoLines(compPO, requestContext)
+        .compose(errors -> fetchPoLines(compPO, requestContext)
           .compose(poLines -> organizationService.validateAccessProviders(poLines, requestContext))
           .map(aErrors -> combinedErrors.addAll(aErrors.getErrors()))
           .map(v -> combinedErrors));
@@ -357,7 +357,7 @@ public class OrderValidationService {
     return Collections.emptyList();
   }
 
-  private Future<List<PoLine>> fetchCompositePoLines(CompositePurchaseOrder compPO, RequestContext requestContext) {
+  private Future<List<PoLine>> fetchPoLines(CompositePurchaseOrder compPO, RequestContext requestContext) {
     if (CollectionUtils.isEmpty(compPO.getPoLines())) {
       return purchaseOrderLineService.getPoLinesByOrderId(compPO.getId(), requestContext)
         .map(poLines -> {

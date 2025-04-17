@@ -164,7 +164,7 @@ public class OpenCompositeOrderPieceService {
   /**
    * Creates Inventory records associated with given PO line and updates PO line with corresponding links.
    *
-   * @param poLine Composite PO line to update Inventory for
+   * @param poLine PO line to update Inventory for
    * @return CompletableFuture with void.
    */
   public Future<Void> openOrderUpdateInventory(CompositePurchaseOrder compPO, PoLine poLine,

@@ -598,7 +598,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
    *
    * @param poLineIds      List of po lines ids
    * @param requestContext Used to initiate more requests
-   * @return An object with 2 maps: poLineById (with composite po lines) and titleById
+   * @return An object with 2 maps: poLineById (with po lines) and titleById
    */
   private Future<PoLineAndTitleById> getPoLineAndTitleById(List<String> poLineIds, RequestContext requestContext) {
     return getPoLines(poLineIds, requestContext)

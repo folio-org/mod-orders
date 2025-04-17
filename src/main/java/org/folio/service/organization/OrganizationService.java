@@ -197,7 +197,7 @@ public class OrganizationService {
    *
    * @param id vendor's/access provider's identifier
    * @param errorCodes error code
-   * @param poLines list of composite PoLines
+   * @param poLines list of PoLines
    * @return {@link Error} with id of failed vendor/access provider
    */
   private Error createErrorWithId(ErrorCodes errorCodes, String id, List<PoLine> poLines) {
