@@ -29,10 +29,10 @@ public class ConfigurationEntriesCache {
 
   private static final String UNIQUE_CACHE_KEY_PATTERN = "%s_%s_%s";
 
+  private final ConfigurationEntriesService configurationEntriesService;
   private AsyncCache<String, JsonObject> configsCache;
   private AsyncCache<String, String> systemCurrencyCache;
   private AsyncCache<String, String> systemTimezoneCache;
-  private final ConfigurationEntriesService configurationEntriesService;
 
   @Value("${orders.cache.configuration-entries.expiration.time.seconds:30}")
   private long cacheExpirationTime;

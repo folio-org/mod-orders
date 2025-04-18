@@ -9,7 +9,6 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.oneOf;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -31,6 +30,7 @@ import javax.money.convert.ConversionQuery;
 import javax.money.convert.CurrencyConversion;
 import javax.money.convert.ExchangeRate;
 
+import org.folio.models.EncumbranceConversionHolder;
 import org.folio.models.ReEncumbranceHolder;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.FiscalYear;
@@ -45,14 +45,15 @@ import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
 import org.folio.rest.jaxrs.model.Ongoing;
 import org.folio.service.FundsDistributionService;
-import org.folio.service.exchange.ExchangeRateProviderResolver;
+import org.folio.service.exchange.CacheableExchangeRateService;
 import org.folio.service.exchange.ManualCurrencyConversion;
-import org.folio.service.exchange.ManualExchangeRateProvider;
+import org.folio.service.exchange.CustomExchangeRateProvider;
 import org.folio.service.finance.rollover.LedgerRolloverService;
 import org.folio.service.finance.transaction.TransactionService;
 import org.javamoney.moneta.Money;
 import org.javamoney.moneta.spi.DefaultNumberValue;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -66,27 +67,25 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.mockito.Spy;
 
-
 @ExtendWith(VertxExtension.class)
 public class ReEncumbranceHoldersBuilderTest {
 
   @InjectMocks
   private ReEncumbranceHoldersBuilder reEncumbranceHoldersBuilder;
-
   @Mock
   private LedgerRolloverService ledgerRolloverService;
   @Mock
-  private ExchangeRateProviderResolver exchangeRateProviderResolver;
-  @Mock
-  private ManualExchangeRateProvider exchangeRateProvider;
+  private CustomExchangeRateProvider exchangeRateProvider;
   @Mock
   private TransactionService transactionService;
   @Spy
   private FundsDistributionService fundsDistributionService;
-  private AutoCloseable mockitoMocks;
-
+  @Mock
+  private CacheableExchangeRateService cacheableExchangeRateService;
   @Mock
   private RequestContext requestContext;
+
+  private AutoCloseable mockitoMocks;
 
   @BeforeEach
   public void initMocks() {
@@ -197,23 +196,21 @@ public class ReEncumbranceHoldersBuilderTest {
 
   @Test
   void shouldPopulateReEncumbranceHoldersWithConversionWhenHoldersContainsCurrency(VertxTestContext vertxTestContext) {
-
     FiscalYear fiscalYear = new FiscalYear().withCurrency("USD");
     CompositePoLine line1 = new CompositePoLine().withCost(new Cost().withCurrency("EUR"));
     CompositePoLine line2 = new CompositePoLine().withCost(new Cost().withCurrency("EUR"));
     double exchangeEurToUsdRate = 1.1d;
 
     ReEncumbranceHolder holder1 = new ReEncumbranceHolder()
-        .withCurrency(fiscalYear.getCurrency()).withPoLine(line1);
+      .withCurrency(fiscalYear.getCurrency()).withPoLine(line1);
     ReEncumbranceHolder holder2 = new ReEncumbranceHolder()
-        .withCurrency(fiscalYear.getCurrency()).withPoLine(line2);
+      .withCurrency(fiscalYear.getCurrency()).withPoLine(line2);
 
     CurrencyConversion poLineToFyConversion = mock(ManualCurrencyConversion.class, withSettings().name("poLineToFyConversion"));
     CurrencyConversion poFyToPoLineConversion = mock(ManualCurrencyConversion.class, withSettings().name("poFyToPoLineConversion"));
     ExchangeRate exchangeRate = mock(ExchangeRate.class);
 
     List<ReEncumbranceHolder> holders = Arrays.asList(holder1, holder2);
-    when(exchangeRateProviderResolver.resolve(any(), any())).thenReturn(exchangeRateProvider);
     when(exchangeRateProvider.getCurrencyConversion(any(ConversionQuery.class))).thenReturn(poLineToFyConversion, poFyToPoLineConversion);
 
     when(exchangeRate.getFactor()).thenReturn(new DefaultNumberValue(exchangeEurToUsdRate));
@@ -222,27 +219,26 @@ public class ReEncumbranceHoldersBuilderTest {
     when(poFyToPoLineConversion.getCurrency()).thenReturn(Monetary.getCurrency("USD"));
     when(requestContext.getContext()).thenReturn(Vertx.vertx().getOrCreateContext());
 
-    var future = reEncumbranceHoldersBuilder.withConversion(holders, requestContext);
+    List<EncumbranceConversionHolder> encumbranceConversionHolder = List.of(new EncumbranceConversionHolder().withHolders(holders).withConversion(poLineToFyConversion).withReverseConversion(poFyToPoLineConversion));
+
+    var future = reEncumbranceHoldersBuilder.withConversion(encumbranceConversionHolder);
     vertxTestContext.assertComplete(future)
       .onComplete(result -> {
-        assertEquals(holders.get(0).getPoLineToFyConversion().getCurrency(), poLineToFyConversion.getCurrency());
-        assertEquals(holders.get(1).getPoLineToFyConversion().getCurrency(), poLineToFyConversion.getCurrency());
-        assertEquals(holders.get(0).getFyToPoLineConversion().getCurrency(), poFyToPoLineConversion.getCurrency());
-        assertEquals(holders.get(1).getFyToPoLineConversion().getCurrency(), poFyToPoLineConversion.getCurrency());
+        Assertions.assertEquals(holders.get(0).getPoLineToFyConversion().getCurrency(), poLineToFyConversion.getCurrency());
+        Assertions.assertEquals(holders.get(1).getPoLineToFyConversion().getCurrency(), poLineToFyConversion.getCurrency());
+        Assertions.assertEquals(holders.get(0).getFyToPoLineConversion().getCurrency(), poFyToPoLineConversion.getCurrency());
+        Assertions.assertEquals(holders.get(1).getFyToPoLineConversion().getCurrency(), poFyToPoLineConversion.getCurrency());
         vertxTestContext.completeNow();
       });
-
   }
 
   @Test
   void shouldNotResolveExchangeRateProviderWhenReEncumbranceHoldersNotContainsCurrentFiscalYear() {
-
     List<ReEncumbranceHolder> holders = Arrays.asList(new ReEncumbranceHolder(), new ReEncumbranceHolder());
 
-    reEncumbranceHoldersBuilder.withConversion(holders, requestContext).result();
+    reEncumbranceHoldersBuilder.getExchangeRatesPerCurrencyHolder(holders, requestContext).result();
 
-    verify(exchangeRateProviderResolver, never()).resolve(any(), any());
-
+    verify(cacheableExchangeRateService, never()).getExchangeRate(any(), any(), any(), any());
   }
 
   @Test
@@ -643,7 +639,6 @@ public class ReEncumbranceHoldersBuilderTest {
       return Money.of(amount.getNumber(), "USD").multiply(exchangeEurToUsdRate);
     } );
     when(poFyToPoLineConversion.getCurrency()).thenReturn(Monetary.getCurrency("USD"));
-    when(exchangeRateProviderResolver.resolve(any(), any())).thenReturn(exchangeRateProvider);
 
     List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withToEncumbrances(holders, requestContext).result();
 
