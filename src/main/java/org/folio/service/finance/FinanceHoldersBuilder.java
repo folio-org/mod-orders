@@ -4,9 +4,9 @@ import static io.vertx.core.Future.succeededFuture;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toMap;
 import static one.util.streamex.StreamEx.ofSubLists;
+import static org.folio.orders.utils.HelperUtils.buildConversionQuery;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.QueryUtils.convertFieldListToCqlQuery;
-import static org.folio.orders.utils.HelperUtils.getConversionQuery;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_NOT_FOUND_FOR_FISCAL_YEAR;
 import static org.folio.rest.core.exceptions.ErrorCodes.MULTIPLE_FISCAL_YEARS;
@@ -19,12 +19,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 
-import javax.money.convert.ConversionQuery;
-import javax.money.convert.CurrencyConversion;
-import javax.money.convert.ExchangeRateProvider;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.models.EncumbranceConversionHolder;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.FiscalYear;
@@ -35,28 +32,30 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Parameter;
-import org.folio.service.exchange.ExchangeRateProviderResolver;
+import org.folio.service.exchange.CacheableExchangeRateService;
+import org.folio.service.exchange.CustomExchangeRateProvider;
 import org.folio.service.finance.budget.BudgetService;
 
 import io.vertx.core.Future;
 
 public class FinanceHoldersBuilder {
+
   protected final Logger logger = LogManager.getLogger();
 
   private final FundService fundService;
   private final FiscalYearService fiscalYearService;
-  protected final ExchangeRateProviderResolver exchangeRateProviderResolver;
   private final BudgetService budgetService;
   private final LedgerService ledgerService;
+  protected final CacheableExchangeRateService cacheableExchangeRateService;
 
   public FinanceHoldersBuilder(FundService fundService, FiscalYearService fiscalYearService,
-      ExchangeRateProviderResolver exchangeRateProviderResolver, BudgetService budgetService,
-      LedgerService ledgerService) {
+                               BudgetService budgetService, LedgerService ledgerService,
+                               CacheableExchangeRateService cacheableExchangeRateService) {
     this.fundService = fundService;
     this.fiscalYearService = fiscalYearService;
-    this.exchangeRateProviderResolver = exchangeRateProviderResolver;
     this.budgetService = budgetService;
     this.ledgerService = ledgerService;
+    this.cacheableExchangeRateService = cacheableExchangeRateService;
   }
 
   /**
@@ -64,7 +63,7 @@ public class FinanceHoldersBuilder {
    * ledger ids, ledgers, fiscal year, budgets, currency conversion.
    */
   public Future<Void> withFinances(List<? extends EncumbranceRelationsHolder> encumbranceHolders,
-      RequestContext requestContext) {
+                                   RequestContext requestContext) {
     if (encumbranceHolders.stream().noneMatch(h -> h.getFundDistribution() != null && h.getFundId() != null)) {
       return succeededFuture();
     }
@@ -72,7 +71,8 @@ public class FinanceHoldersBuilder {
       .compose(ledgerIds -> getLedgers(ledgerIds, encumbranceHolders, requestContext))
       .compose(ledgers -> getFiscalYear(ledgers, encumbranceHolders, requestContext))
       .compose(fiscalYear -> getBudgets(fiscalYear, encumbranceHolders, requestContext))
-      .compose(v -> withConversion(encumbranceHolders, requestContext))
+      .compose(v -> getExchangeRatesPerCurrencyHolder(encumbranceHolders, requestContext))
+      .compose(this::withConversion)
       .onSuccess(v -> logger.info("withFinances :: success retrieving finance data"))
       .onFailure(t -> logger.error("withFinances :: error retrieving finance data", t));
   }
@@ -81,7 +81,7 @@ public class FinanceHoldersBuilder {
    * Populate the ledger ids in the encumbrance holders based on the fund ids in the holders.
    */
   public Future<List<String>> getLedgerIds(List<? extends EncumbranceRelationsHolder> encumbranceHolders,
-      RequestContext requestContext) {
+                                           RequestContext requestContext) {
     List<String> fundIds = encumbranceHolders.stream()
       .map(EncumbranceRelationsHolder::getFundId)
       .filter(Objects::nonNull)
@@ -102,41 +102,60 @@ public class FinanceHoldersBuilder {
       .onFailure(t -> logger.error("getLedgerIds :: error - fundIds: {}", fundIds, t));
   }
 
-  protected Future<Void> withConversion(List<? extends EncumbranceRelationsHolder> encumbranceHolders,
-      RequestContext requestContext) {
-    String fyCurrency = encumbranceHolders.stream()
-      .map(EncumbranceRelationsHolder::getCurrency)
+  protected Future<List<EncumbranceConversionHolder>> getExchangeRatesPerCurrencyHolder(List<? extends EncumbranceRelationsHolder> encumbranceHolders,
+                                                                                        RequestContext requestContext) {
+    var fyCurrency = getFyCurrency(encumbranceHolders);
+    if (fyCurrency.isEmpty()) {
+      return succeededFuture();
+    }
+    var currencyHoldersMap = encumbranceHolders.stream()
+      .filter(holder -> Objects.nonNull(holder.getPoLine()))
+      .collect(groupingBy(holder -> holder.getPoLine().getCost().getCurrency()));
+    var encumbranceConversionHolderFutures = new ArrayList<Future<EncumbranceConversionHolder>>();
+    currencyHoldersMap.forEach((poLineCurrency, holders) -> {
+      var fixedExchangeRate = getFirstFixedPoLineExchangeRateFromCost(holders);
+      logger.info("getExchangeRatesPerCurrencyHolder:: Preparing to retrieve exchange rate for encumbrance, {} -> {}, fixed exchange rate: {}",
+        poLineCurrency, fyCurrency.get(), fixedExchangeRate);
+      encumbranceConversionHolderFutures.add(cacheableExchangeRateService.getExchangeRate(poLineCurrency, fyCurrency.get(), fixedExchangeRate, requestContext)
+        .compose(exchangeRate -> {
+          var provider = new CustomExchangeRateProvider();
+          var query = buildConversionQuery(poLineCurrency, fyCurrency.get(), exchangeRate.getExchangeRate());
+          var conversion = provider.getCurrencyConversion(query);
+          return Future.succeededFuture(new EncumbranceConversionHolder().withHolders(holders).withConversion(conversion));
+        }));
+    });
+
+    return collectResultsOnSuccess(encumbranceConversionHolderFutures);
+  }
+
+  protected Double getFirstFixedPoLineExchangeRateFromCost(List<? extends EncumbranceRelationsHolder> holders) {
+    return holders.stream()
+      .map(EncumbranceRelationsHolder::getPoLine)
+      .map(CompositePoLine::getCost)
+      .map(Cost::getExchangeRate)
       .filter(Objects::nonNull)
       .findFirst()
       .orElse(null);
-    if (fyCurrency == null) {
-      return succeededFuture();
-    }
-    return requestContext.getContext().executeBlocking(() -> {
-      Map<String, List<EncumbranceRelationsHolder>> currencyHolderMap = encumbranceHolders.stream()
-        .filter(holder -> Objects.nonNull(holder.getPoLine()))
-        .collect(groupingBy(holder -> holder.getPoLine().getCost().getCurrency()));
-
-      currencyHolderMap.forEach((poLineCurrency, encumbranceRelationsHolders) -> {
-        Double exchangeRate = encumbranceRelationsHolders.stream()
-          .map(EncumbranceRelationsHolder::getPoLine)
-          .map(CompositePoLine::getCost)
-          .map(Cost::getExchangeRate)
-          .filter(Objects::nonNull)
-          .findFirst()
-          .orElse(null);
-
-        ConversionQuery conversionQuery = getConversionQuery(exchangeRate, poLineCurrency, fyCurrency);
-        ExchangeRateProvider exchangeRateProvider = exchangeRateProviderResolver.resolve(conversionQuery, requestContext);
-        CurrencyConversion conversion = exchangeRateProvider.getCurrencyConversion(conversionQuery);
-        encumbranceRelationsHolders.forEach(holder -> holder.withPoLineToFyConversion(conversion));
-      });
-      return null;
-    })
-    .mapEmpty();
   }
 
-  private void populateLedgerIds(List<Fund> funds, List<? extends EncumbranceRelationsHolder> encumbranceHolders) {
+  protected Optional<String> getFyCurrency(List<? extends EncumbranceRelationsHolder> encumbranceHolders) {
+    return encumbranceHolders.stream()
+      .map(EncumbranceRelationsHolder::getCurrency)
+      .filter(Objects::nonNull)
+      .findFirst();
+  }
+
+  protected Future<Void> withConversion(List<EncumbranceConversionHolder> encumbranceConversionHolders) {
+    encumbranceConversionHolders.forEach(encumbranceConversionHolder -> {
+      var encumbranceRelationsHolders = encumbranceConversionHolder.getEncumbranceRelationsHolders();
+      encumbranceRelationsHolders.forEach(holder ->
+        holder.withPoLineToFyConversion(encumbranceConversionHolder.getConversion()));
+    });
+    return Future.succeededFuture();
+  }
+
+  private void populateLedgerIds(List<Fund> funds,
+                                 List<? extends EncumbranceRelationsHolder> encumbranceHolders) {
     Map<String, String> idFundMap = funds.stream()
       .collect(toMap(Fund::getId, Fund::getLedgerId));
     encumbranceHolders.stream()
@@ -145,7 +164,7 @@ public class FinanceHoldersBuilder {
   }
 
   private Future<List<Ledger>> getLedgers(List<String> ledgerIds,
-      List<? extends EncumbranceRelationsHolder> encumbranceHolders, RequestContext requestContext) {
+                                          List<? extends EncumbranceRelationsHolder> encumbranceHolders, RequestContext requestContext) {
     return ledgerService.getLedgersByIds(ledgerIds, requestContext)
       .map(ledgers -> {
         mapRestrictEncumbranceToHolders(ledgers, encumbranceHolders);
@@ -154,7 +173,7 @@ public class FinanceHoldersBuilder {
   }
 
   private Future<FiscalYear> getFiscalYear(List<Ledger> ledgers,
-      List<? extends EncumbranceRelationsHolder> encumbranceHolders, RequestContext requestContext) {
+                                           List<? extends EncumbranceRelationsHolder> encumbranceHolders, RequestContext requestContext) {
     List<String> fiscalYearIds = ledgers.stream()
       .map(Ledger::getFiscalYearOneId)
       .distinct()
@@ -162,11 +181,11 @@ public class FinanceHoldersBuilder {
     if (fiscalYearIds.size() > 1) {
       List<Parameter> parameters = List.of(
         new Parameter().withKey("fiscalYearIds").withValue(fiscalYearIds.toString()),
-        new Parameter().withKey("poId").withValue(encumbranceHolders.get(0).getPurchaseOrder().getId())
+        new Parameter().withKey("poId").withValue(encumbranceHolders.getFirst().getPurchaseOrder().getId())
       );
       throw new HttpException(422, MULTIPLE_FISCAL_YEARS.toError().withParameters(parameters));
     }
-    return fiscalYearService.getCurrentFiscalYear(ledgers.get(0).getId(), requestContext)
+    return fiscalYearService.getCurrentFiscalYear(ledgers.getFirst().getId(), requestContext)
       .map(fiscalYear -> {
         encumbranceHolders.forEach(holder -> holder.withCurrentFiscalYearId(fiscalYear.getId())
           .withCurrency(fiscalYear.getCurrency()));
@@ -175,7 +194,7 @@ public class FinanceHoldersBuilder {
   }
 
   private Future<Void> getBudgets(FiscalYear fiscalYear, List<? extends EncumbranceRelationsHolder> encumbranceHolders,
-      RequestContext requestContext) {
+                                  RequestContext requestContext) {
     List<String> fundIds = encumbranceHolders.stream()
       .map(EncumbranceRelationsHolder::getFundId)
       .filter(Objects::nonNull)
@@ -230,7 +249,7 @@ public class FinanceHoldersBuilder {
   }
 
   private void mapRestrictEncumbranceToHolders(List<Ledger> ledgers,
-      List<? extends EncumbranceRelationsHolder> encumbranceHolders) {
+                                               List<? extends EncumbranceRelationsHolder> encumbranceHolders) {
     Map<String, Ledger> idLedgerMap = ledgers.stream()
       .collect(toMap(Ledger::getId, Function.identity()));
     encumbranceHolders.stream()
@@ -248,5 +267,4 @@ public class FinanceHoldersBuilder {
       .collect(toMap(Budget::getFundId, Function.identity()));
     encumbranceHolders.forEach(holder -> holder.withBudget(fundIdBudgetMap.get(holder.getFundId())));
   }
-
 }

@@ -23,4 +23,6 @@ public @interface CopilotGenerated {
   @AliasFor("value")
   boolean partiallyGenerated() default false;
 
+  @AliasFor("model")
+  String model() default "";
 }

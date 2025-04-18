@@ -141,6 +141,6 @@ public class FiscalYearService {
   }
 
   private boolean isFiscalYearNotFound(Throwable t) {
-    return t instanceof HttpException && ((HttpException) t).getCode() == 404;
+    return t instanceof HttpException ht && ht.getCode() == 404;
   }
 }
