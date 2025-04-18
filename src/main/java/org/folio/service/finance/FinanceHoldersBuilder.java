@@ -131,7 +131,7 @@ public class FinanceHoldersBuilder {
   protected Double getFirstFixedPoLineExchangeRateFromCost(List<? extends EncumbranceRelationsHolder> holders) {
     return holders.stream()
       .map(EncumbranceRelationsHolder::getPoLine)
-      .map(CompositePoLine::getCost)
+      .map(PoLine::getCost)
       .map(Cost::getExchangeRate)
       .filter(Objects::nonNull)
       .findFirst()
