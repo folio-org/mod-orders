@@ -62,8 +62,8 @@ public class OrderLinesSummaryPopulateService implements CompositeOrderDynamicDa
       RequestContext requestContext) {
     return configurationEntriesCache.getSystemCurrency(requestContext)
       .compose(toCurrency -> getExchangeRatesPerPoLine(compositePoLines, toCurrency, requestContext)
-      .compose(poLineExchangeRate -> Future.succeededFuture(Pair.of(toCurrency, poLineExchangeRate)))
-      .compose(toCurrencyPolExcRates -> Future.succeededFuture(convertEstimatedPrice(compositePoLines, toCurrencyPolExcRates))));
+      .map(poLineExchangeRate -> Pair.of(toCurrency, poLineExchangeRate))
+      .map(toCurrencyPolExcRates -> convertEstimatedPrice(compositePoLines, toCurrencyPolExcRates)));
   }
 
   private Future<Map<String, ExchangeRate>> getExchangeRatesPerPoLine(List<CompositePoLine> poLines, String toCurrency, RequestContext requestContext) {
@@ -71,7 +71,7 @@ public class OrderLinesSummaryPopulateService implements CompositeOrderDynamicDa
     poLines.forEach(poLine -> {
       var cost = poLine.getCost();
       poLineExchangeRateFutures.add(cacheableExchangeRateService.getExchangeRate(cost.getCurrency(), toCurrency, cost.getExchangeRate(), requestContext)
-        .compose(exchangeRate -> Future.succeededFuture(Map.of(poLine.getId(), exchangeRate))));
+        .map(exchangeRate -> Map.of(poLine.getId(), exchangeRate)));
     });
     return collectResultsOnSuccess(poLineExchangeRateFutures)
       .map(OrderLinesSummaryPopulateService::transformToSingleMap);

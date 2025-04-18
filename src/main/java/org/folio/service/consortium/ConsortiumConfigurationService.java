@@ -34,8 +34,8 @@ public class ConsortiumConfigurationService {
   private static final String USER_TENANTS_ENDPOINT = "/user-tenants";
 
   private final RestClient restClient;
-  private AsyncCache<String, Optional<ConsortiumConfiguration>> asyncCache;
   private final SettingsRetriever settingsRetriever;
+  private AsyncCache<String, Optional<ConsortiumConfiguration>> asyncCache;
 
   @Value("${orders.cache.consortium-data.expiration.time.seconds:300}")
   private long cacheExpirationTime;
@@ -100,7 +100,8 @@ public class ConsortiumConfigurationService {
         }
         RequestContext centralContext = createContextWithNewTenantId(requestContext, configuration.centralTenantId());
         return isCentralOrderingEnabled(centralContext)
-          .compose(isCentralOrderingEnabled -> Future.succeededFuture(isCentralOrderingEnabled ? centralContext : requestContext));
+          .compose(isCentralOrderingEnabled -> Future.succeededFuture(Boolean.TRUE.equals(isCentralOrderingEnabled)
+            ? centralContext : requestContext));
       });
   }
 
