@@ -25,13 +25,13 @@ public class PoLineCommonUtilTest {
   void testOnlyInstanceUpdateNeededForPhysicalIfCreateInventoryInstance() {
     //given
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    order.getCompositePoLines().forEach(line -> {
-      line.setPaymentStatus(CompositePoLine.PaymentStatus.FULLY_PAID);
-      line.setReceiptStatus(CompositePoLine.ReceiptStatus.FULLY_RECEIVED);
+    order.getPoLines().forEach(line -> {
+      line.setPaymentStatus(PoLine.PaymentStatus.FULLY_PAID);
+      line.setReceiptStatus(PoLine.ReceiptStatus.FULLY_RECEIVED);
       line.getPhysical().setCreateInventory(Physical.CreateInventory.INSTANCE);
     });
     //When
-    boolean actCheck = PoLineCommonUtil.isOnlyInstanceUpdateRequired(order.getCompositePoLines().get(0));
+    boolean actCheck = PoLineCommonUtil.isOnlyInstanceUpdateRequired(order.getPoLines().get(0));
     //Then
     assertTrue(actCheck);
   }
@@ -40,15 +40,15 @@ public class PoLineCommonUtilTest {
   void testOnlyInstanceUpdateNeededForElectronicalIfCreateInventoryInstance() {
     //given
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    order.getCompositePoLines().forEach(line -> {
-      line.setOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE);
-      line.setPaymentStatus(CompositePoLine.PaymentStatus.FULLY_PAID);
-      line.setReceiptStatus(CompositePoLine.ReceiptStatus.FULLY_RECEIVED);
+    order.getPoLines().forEach(line -> {
+      line.setOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE);
+      line.setPaymentStatus(PoLine.PaymentStatus.FULLY_PAID);
+      line.setReceiptStatus(PoLine.ReceiptStatus.FULLY_RECEIVED);
       line.setPhysical(null);
       line.setEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE));
     });
     //When
-    boolean actCheck = PoLineCommonUtil.isOnlyInstanceUpdateRequired(order.getCompositePoLines().get(0));
+    boolean actCheck = PoLineCommonUtil.isOnlyInstanceUpdateRequired(order.getPoLines().get(0));
     //Then
     assertTrue(actCheck);
   }
@@ -57,13 +57,13 @@ public class PoLineCommonUtilTest {
   void testOnlyInstanceUpdateNeededIfCreateInventoryIsNotInstance() {
     //given
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    order.getCompositePoLines().forEach(line -> {
-      line.setPaymentStatus(CompositePoLine.PaymentStatus.FULLY_PAID);
-      line.setReceiptStatus(CompositePoLine.ReceiptStatus.FULLY_RECEIVED);
+    order.getPoLines().forEach(line -> {
+      line.setPaymentStatus(PoLine.PaymentStatus.FULLY_PAID);
+      line.setReceiptStatus(PoLine.ReceiptStatus.FULLY_RECEIVED);
       line.getPhysical().setCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING);
     });
     //When
-    boolean actCheck = PoLineCommonUtil.isOnlyInstanceUpdateRequired(order.getCompositePoLines().get(0));
+    boolean actCheck = PoLineCommonUtil.isOnlyInstanceUpdateRequired(order.getPoLines().get(0));
     //Then
     assertFalse(actCheck);
   }
@@ -83,7 +83,7 @@ public class PoLineCommonUtilTest {
     PoLine lineFromStorage = new PoLine()
       .withId(UUID.randomUUID().toString())
       .withDetails(new Details().withProductIds(List.of(firstProductId, secondProductId)));
-    CompositePoLine requestObject = new CompositePoLine()
+    PoLine requestObject = new PoLine()
       .withId(UUID.randomUUID().toString())
       .withDetails(new Details().withProductIds(List.of(secondProductId, firstProductId)));
 
@@ -102,7 +102,7 @@ public class PoLineCommonUtilTest {
     PoLine lineFromStorage = new PoLine()
       .withId(UUID.randomUUID().toString())
       .withDetails(null);
-    CompositePoLine requestObject = new CompositePoLine()
+    PoLine requestObject = new PoLine()
       .withId(UUID.randomUUID().toString())
       .withDetails(new Details().withProductIds(List.of()));
     JsonObject lineFromStorageJson = JsonObject.mapFrom(lineFromStorage);
@@ -122,7 +122,7 @@ public class PoLineCommonUtilTest {
     PoLine lineFromStorage = new PoLine()
       .withId(UUID.randomUUID().toString())
       .withDetails(new Details().withProductIds(List.of()));
-    CompositePoLine requestObject = new CompositePoLine()
+    PoLine requestObject = new PoLine()
       .withId(UUID.randomUUID().toString())
       .withDetails(null);
     JsonObject lineFromStorageJson = JsonObject.mapFrom(lineFromStorage);
@@ -155,7 +155,7 @@ public class PoLineCommonUtilTest {
     PoLine lineFromStorage = new PoLine()
       .withId(UUID.randomUUID().toString())
       .withDetails(new Details().withProductIds(List.of(firstProductId, secondProductId)));
-    CompositePoLine requestObject = new CompositePoLine()
+    PoLine requestObject = new PoLine()
       .withId(UUID.randomUUID().toString())
       .withDetails(new Details().withProductIds(List.of(secondProductId, firstProductId, thirdProductId)));
 
@@ -184,14 +184,14 @@ public class PoLineCommonUtilTest {
   }, delimiter = ':')
   void testIsInventoryUpdateNotRequired(Boolean withPhysical, Boolean withEResource, String orderFormat,
       String physicalCreateInventory, String eresourceCreateInventory, Boolean updateNotRequired) {
-    CompositePoLine poLine = new CompositePoLine();
+    PoLine poLine = new PoLine();
     if (withPhysical) {
       poLine.setPhysical(new Physical());
     }
     if (withEResource) {
       poLine.setEresource(new Eresource());
     }
-    poLine.setOrderFormat(CompositePoLine.OrderFormat.fromValue(orderFormat));
+    poLine.setOrderFormat(PoLine.OrderFormat.fromValue(orderFormat));
     if (physicalCreateInventory != null) {
       poLine.getPhysical().setCreateInventory(Physical.CreateInventory.fromValue(physicalCreateInventory));
     }

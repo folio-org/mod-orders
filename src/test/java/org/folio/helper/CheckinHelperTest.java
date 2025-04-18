@@ -43,7 +43,7 @@ import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CheckinCollection;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Piece;
@@ -227,7 +227,7 @@ public class CheckinHelperTest {
     String poLineId = UUID.randomUUID().toString();
     String pieceId = UUID.randomUUID().toString();
     CompositePurchaseOrder purchaseOrder = new CompositePurchaseOrder().withId(purchaseOrderId).withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-    CompositePoLine poLine = new CompositePoLine().withId(poLineId).withPurchaseOrderId(purchaseOrderId);
+    PoLine poLine = new PoLine().withId(poLineId).withPurchaseOrderId(purchaseOrderId);
     PiecesHolder pieceHolder = new PiecesHolder().withPurchaseOrderPoLinePair(Pair.of(purchaseOrder, poLine));
     CheckinCollection checkinCollection = getCheckinCollection(poLineId, pieceId);
     when(inventoryItemManager.updateItem(any(JsonObject.class), any(RequestContext.class))).thenReturn(Future.succeededFuture());
@@ -248,7 +248,7 @@ public class CheckinHelperTest {
     String poLineId = UUID.randomUUID().toString();
     String pieceId = UUID.randomUUID().toString();
     CompositePurchaseOrder purchaseOrder = new CompositePurchaseOrder().withId(purchaseOrderId).withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-    CompositePoLine poLine = new CompositePoLine().withId(poLineId).withPurchaseOrderId(purchaseOrderId);
+    PoLine poLine = new PoLine().withId(poLineId).withPurchaseOrderId(purchaseOrderId);
     PiecesHolder pieceHolder = new PiecesHolder().withPurchaseOrderPoLinePair(Pair.of(purchaseOrder, poLine));
     CheckinCollection checkinCollection = getCheckinCollection(poLineId, pieceId);
     when(inventoryItemManager.updateItem(any(JsonObject.class), any(RequestContext.class)))
@@ -273,7 +273,7 @@ public class CheckinHelperTest {
     String poLineId = UUID.randomUUID().toString();
     String pieceId = UUID.randomUUID().toString();
     CompositePurchaseOrder purchaseOrder = new CompositePurchaseOrder().withId(purchaseOrderId).withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-    CompositePoLine poLine = new CompositePoLine().withId(poLineId).withPurchaseOrderId(purchaseOrderId);
+    PoLine poLine = new PoLine().withId(poLineId).withPurchaseOrderId(purchaseOrderId);
     PiecesHolder pieceHolder = new PiecesHolder().withPurchaseOrderPoLinePair(Pair.of(purchaseOrder, poLine));
     CheckinCollection checkinCollection = getCheckinCollection(poLineId, pieceId);
     when(inventoryItemManager.updateItem(any(JsonObject.class), any(RequestContext.class)))

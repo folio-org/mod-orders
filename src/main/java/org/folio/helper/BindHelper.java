@@ -8,7 +8,6 @@ import org.folio.models.ItemFields;
 import org.folio.models.pieces.BindPiecesHolder;
 import org.folio.models.pieces.PiecesHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
-import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.RestConstants;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
@@ -16,7 +15,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.BindItem;
 import org.folio.rest.jaxrs.model.BindPiecesCollection;
 import org.folio.rest.jaxrs.model.BindPiecesResult;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.ReceivedItem;
 import org.folio.rest.jaxrs.model.Title;
@@ -224,8 +223,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
     var bindItem = bindPiecesCollection.getBindItem();
     logger.debug("createItemForPiece:: Trying to get poLine by id '{}'", poLineId);
     return purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
-      .map(PoLineCommonUtil::convertToCompositePoLine)
-      .compose(compPOL -> createInventoryObjects(compPOL, bindPiecesCollection.getInstanceId(), bindItem, requestContext))
+      .compose(poLine -> createInventoryObjects(poLine, bindPiecesCollection.getInstanceId(), bindItem, requestContext))
       .map(newItemId -> {
         // Move requests if requestsAction is TRANSFER, otherwise do nothing
         if (TRANSFER.equals(bindPiecesCollection.getRequestsAction())) {
@@ -238,14 +236,14 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
       });
   }
 
-  private Future<String> createInventoryObjects(CompositePoLine compPOL, String instanceId, BindItem bindItem, RequestContext requestContext) {
-    if (!Boolean.TRUE.equals(compPOL.getIsPackage())) {
-      instanceId = compPOL.getInstanceId();
+  private Future<String> createInventoryObjects(PoLine poLine, String instanceId, BindItem bindItem, RequestContext requestContext) {
+    if (!Boolean.TRUE.equals(poLine.getIsPackage())) {
+      instanceId = poLine.getInstanceId();
     }
     var locationContext = createContextWithNewTenantId(requestContext, bindItem.getTenantId());
     return handleInstance(instanceId, bindItem.getTenantId(), locationContext, requestContext)
       .compose(instId -> handleHolding(bindItem, instId, locationContext))
-      .compose(holdingId -> inventoryItemManager.createBindItem(compPOL, holdingId, bindItem, locationContext));
+      .compose(holdingId -> inventoryItemManager.createBindItem(poLine, holdingId, bindItem, locationContext));
   }
 
   private Future<String> handleInstance(String instanceId, String targetTenantId,

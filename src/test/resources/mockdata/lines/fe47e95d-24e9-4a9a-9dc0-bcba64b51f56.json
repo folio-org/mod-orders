@@ -1,7 +1,6 @@
 {
   "id" : "fe47e95d-24e9-4a9a-9dc0-bcba64b51f56",
   "acquisitionMethod" : "Purchase At Vendor System",
-  "alerts" : [ ],
   "cancellationRestriction" : false,
   "cancellationRestrictionNote" : "ABCDEFGHIJKLMNOPQRSTUVW",
   "claims": [
@@ -77,7 +76,6 @@
   "purchaseOrderId" : "00000000-1111-2222-8888-999999999999",
   "receiptDate" : "2018-10-09T00:00:00.000+0000",
   "receiptStatus" : "Fully Received",
-  "reportingCodes" : [ ],
   "requester" : "Leo Bulero",
   "rush" : true,
   "selector" : "ABCD",

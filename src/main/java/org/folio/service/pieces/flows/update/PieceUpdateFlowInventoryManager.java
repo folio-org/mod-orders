@@ -13,7 +13,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.models.pieces.PieceUpdateHolder;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.inventory.InventoryHoldingManager;
@@ -68,7 +68,7 @@ public class PieceUpdateFlowInventoryManager {
   }
 
   private Future<String> updateInventoryForPoLine(PieceUpdateHolder holder, RequestContext locationContext, RequestContext requestContext) {
-    CompositePoLine poLineToSave = holder.getPoLineToSave();
+    PoLine poLineToSave = holder.getPoLineToSave();
     Piece pieceToUpdate = holder.getPieceToUpdate();
     if (!Boolean.TRUE.equals(poLineToSave.getIsPackage())) {
       return Optional.ofNullable(getPoLineInstanceId(poLineToSave))
@@ -78,9 +78,9 @@ public class PieceUpdateFlowInventoryManager {
     return titlesService.updateTitleWithInstance(pieceToUpdate.getTitleId(), locationContext, requestContext);
   }
 
-  private Future<String> getPoLineInstanceId(CompositePoLine compPOL) {
-    return compPOL.getInstanceId() != null || PoLineCommonUtil.isInventoryUpdateNotRequired(compPOL)
-      ? Future.succeededFuture(compPOL.getInstanceId())
+  private Future<String> getPoLineInstanceId(PoLine poLine) {
+    return poLine.getInstanceId() != null || PoLineCommonUtil.isInventoryUpdateNotRequired(poLine)
+      ? Future.succeededFuture(poLine.getInstanceId())
       : null;
   }
 
@@ -143,10 +143,10 @@ public class PieceUpdateFlowInventoryManager {
       });
   }
 
-  private void updateItemWithFields(JsonObject item, CompositePoLine compPOL, Piece piece) {
+  private void updateItemWithFields(JsonObject item, PoLine poLine, Piece piece) {
     if (piece.getHoldingId() != null) {
       item.put(ITEM_HOLDINGS_RECORD_ID, piece.getHoldingId());
     }
-    item.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, compPOL.getId());
+    item.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLine.getId());
   }
 }

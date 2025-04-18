@@ -11,7 +11,7 @@ import java.util.List;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.rest.core.exceptions.HttpException;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
@@ -29,8 +29,8 @@ public final class FundDistributionUtils {
 
   }
 
-  public static void validateFundDistributionTotal(List<CompositePoLine> compositePoLines) {
-    for (CompositePoLine cPoLine : compositePoLines) {
+  public static void validateFundDistributionTotal(List<PoLine> poLines) {
+    for (PoLine cPoLine : poLines) {
       validateFundDistributionForPoLine(cPoLine.getCost(), cPoLine.getFundDistribution());
     }
   }
@@ -79,8 +79,8 @@ public final class FundDistributionUtils {
     }
   }
 
-  public static boolean isFundDistributionsPresent(List<CompositePoLine> compositePoLines) {
-    return compositePoLines.stream().mapToLong(compositePoLine -> compositePoLine.getFundDistribution().size()).sum() >= 1;
+  public static boolean isFundDistributionsPresent(List<PoLine> poLines) {
+    return poLines.stream().mapToLong(poLine -> poLine.getFundDistribution().size()).sum() >= 1;
   }
 
   private static void checkRemainingPercentMatchesToZero(BigDecimal remainingPercent, Double poLineEstimatedPrice) {

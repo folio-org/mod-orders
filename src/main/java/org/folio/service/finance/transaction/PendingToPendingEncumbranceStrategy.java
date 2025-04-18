@@ -39,7 +39,7 @@ public class PendingToPendingEncumbranceStrategy implements EncumbranceWorkflowS
   public Future<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
       RequestContext requestContext) {
 
-    validateFundDistributionTotal(compPO.getCompositePoLines());
+    validateFundDistributionTotal(compPO.getPoLines());
     List<EncumbranceRelationsHolder> encumbranceRelationsHolders = encumbranceRelationsHoldersBuilder.buildBaseHolders(compPO);
     return encumbranceRelationsHoldersBuilder.withExistingTransactions(encumbranceRelationsHolders, poAndLinesFromStorage, requestContext)
       .compose(v -> distributeHoldersByOperation(encumbranceRelationsHolders, requestContext))

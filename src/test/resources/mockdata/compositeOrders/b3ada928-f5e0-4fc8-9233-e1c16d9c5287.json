@@ -12,7 +12,7 @@
     "createdDate": "2018-06-29T00:00:00.000",
     "createdByUserId": "28d0f99c-d137-11e8-a8d5-f2801f1b9fd1"
   },
-  "compositePoLines": [
+  "poLines": [
     {
       "id": "bb8b9683-70d6-4eff-94c8-175ac297d2f8",
       "checkinItems": false,
@@ -64,7 +64,6 @@
       "poLineNumber": "10001-1",
       "purchaseOrderId": "b3ada928-f5e0-4fc8-9233-e1c16d9c5287",
       "receiptStatus": "Pending",
-      "reportingCodes": [],
       "source": "User",
       "titleOrPackage": "test",
       "vendorDetail": {

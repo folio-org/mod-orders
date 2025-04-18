@@ -16,7 +16,7 @@ import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.invoice.Invoice;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.service.finance.FiscalYearService;
 import org.folio.service.finance.transaction.TransactionService;
 import org.folio.service.invoice.InvoiceLineService;
@@ -55,7 +55,7 @@ public class CompositeOrderTotalFieldsPopulateService implements CompositeOrderD
     return invoiceService.getInvoicesByOrderId(holder.getOrderId(), requestContext)
       .compose(invoices -> getCurrentFiscalYearIds(invoices, holder.getFiscalYear(), requestContext)
         .compose(fiscalYears -> getInvoiceLinesByInvoiceIds(invoices, fiscalYears, requestContext))
-        .map(invoiceLines -> filterInvoiceLinesWithPoLines(invoiceLines, holder.getOrder().getCompositePoLines()))
+        .map(invoiceLines -> filterInvoiceLinesWithPoLines(invoiceLines, holder.getOrder().getPoLines()))
         .map(invoiceLines -> groupInvoiceLinesByInvoices(invoices, invoiceLines))
         .compose(invoiceToInvoiceLinesMap -> transactionService.getTransactions(query, requestContext)
           .map(transactions -> populateTotalFields(holder, invoiceToInvoiceLinesMap, transactions))))
@@ -81,8 +81,8 @@ public class CompositeOrderTotalFieldsPopulateService implements CompositeOrderD
       .map(invoiceLinesLists -> invoiceLinesLists.stream().flatMap(List::stream).toList());
   }
 
-  private List<InvoiceLine> filterInvoiceLinesWithPoLines(List<InvoiceLine> invoiceLines, List<CompositePoLine> poLines) {
-    Set<String> poLineIds = poLines.stream().map(CompositePoLine::getId).collect(Collectors.toCollection(HashSet::new));
+  private List<InvoiceLine> filterInvoiceLinesWithPoLines(List<InvoiceLine> invoiceLines, List<PoLine> poLines) {
+    Set<String> poLineIds = poLines.stream().map(PoLine::getId).collect(Collectors.toCollection(HashSet::new));
     return invoiceLines.stream().filter(invoiceLine -> poLineIds.contains(invoiceLine.getPoLineId())).toList();
   }
 

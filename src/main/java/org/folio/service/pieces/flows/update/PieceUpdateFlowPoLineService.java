@@ -7,7 +7,7 @@ import org.folio.models.pieces.PieceCreationHolder;
 import org.folio.models.pieces.PieceDeletionHolder;
 import org.folio.models.pieces.PieceUpdateHolder;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
@@ -49,7 +49,7 @@ public class PieceUpdateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
 
   @Override
   public boolean poLineUpdateQuantity(PieceUpdateHolder pieceUpdateHolder) {
-    CompositePoLine lineToSave = pieceUpdateHolder.getPoLineToSave();
+    PoLine lineToSave = pieceUpdateHolder.getPoLineToSave();
     Piece pieceToUpdate = pieceUpdateHolder.getPieceToUpdate();
     Piece pieceFromStorage = pieceUpdateHolder.getPieceFromStorage();
     List<Location> locationsToUpdate = PieceUtil.findOrderPieceLineLocation(pieceFromStorage, lineToSave);

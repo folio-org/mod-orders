@@ -7,7 +7,7 @@ import org.folio.ApiTestSuite;
 import org.folio.HttpStatus;
 import org.folio.Organization;
 import org.folio.config.ApplicationConfig;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.WrapperPiece;
 import org.folio.rest.jaxrs.model.WrapperPieceCollection;
@@ -73,7 +73,7 @@ public class WrapperPiecesAPITest {
     var poLine = getMockAsJson(PO_LINES_COLLECTION)
       .getJsonArray(PO_LINES_KEY)
       .getJsonObject(PO_LINE_IDX)
-      .mapTo(CompositePoLine.class);
+      .mapTo(PoLine.class);
     var purchaseOrder = getMinimalOrder(poLine)
       .withVendor(EXPECTED_VENDOR_ID);
     var piece = getMockAsJson(PIECES_COLLECTION)

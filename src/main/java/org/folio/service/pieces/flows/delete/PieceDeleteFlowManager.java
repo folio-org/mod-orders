@@ -94,8 +94,8 @@ public class PieceDeleteFlowManager {
   }
 
   protected Future<Void> updatePoLine(PieceDeletionHolder holder, RequestContext requestContext) {
-    var comPOL = holder.getOriginPoLine();
-    return Boolean.TRUE.equals(comPOL.getIsPackage()) || Boolean.TRUE.equals(comPOL.getCheckinItems())
+    var poLine = holder.getOriginPoLine();
+    return Boolean.TRUE.equals(poLine.getIsPackage()) || Boolean.TRUE.equals(poLine.getCheckinItems())
       ? Future.succeededFuture()
       : pieceDeleteFlowPoLineService.updatePoLine(holder, requestContext);
   }

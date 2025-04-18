@@ -4,7 +4,7 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import org.folio.helper.PurchaseOrderLineHelper;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Ongoing;
@@ -17,25 +17,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.io.IOException;
 import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
-import static org.folio.TestUtils.getMockData;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
-import static org.folio.rest.core.exceptions.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
-import static org.folio.rest.core.exceptions.ErrorCodes.COST_UNIT_PRICE_INVALID;
-import static org.folio.rest.core.exceptions.ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_ONGOING;
-import static org.folio.rest.core.exceptions.ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY;
 import static org.folio.rest.core.exceptions.ErrorCodes.ONGOING_NOT_ALLOWED;
-import static org.folio.rest.core.exceptions.ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH;
-import static org.folio.rest.core.exceptions.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
-import static org.folio.rest.core.exceptions.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.OrderType.ONE_TIME;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.OrderType.ONGOING;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -54,7 +42,7 @@ public class OrderValidationServiceTest {
   @InjectMocks
   private OrderValidationService orderValidationService;
   @Mock
-  private CompositePoLineValidationService compositePoLineValidationService;
+  private PoLineValidationService poLineValidationService;
   @Mock
   private PurchaseOrderLineHelper purchaseOrderLineHelper;
   @Mock
@@ -70,9 +58,9 @@ public class OrderValidationServiceTest {
     mockitoMocks = MockitoAnnotations.openMocks(this);
 
     doReturn(succeededFuture(null))
-      .when(purchaseOrderLineHelper).setTenantDefaultCreateInventoryValues(any(CompositePoLine.class), any(JsonObject.class));
+      .when(purchaseOrderLineHelper).setTenantDefaultCreateInventoryValues(any(PoLine.class), any(JsonObject.class));
     doReturn(succeededFuture(List.of()))
-      .when(compositePoLineValidationService).validatePoLine(any(CompositePoLine.class), eq(requestContext));
+      .when(poLineValidationService).validatePoLine(any(PoLine.class), eq(requestContext));
     doReturn(succeededFuture(null))
       .when(purchaseOrderLineService).validateAndNormalizeISBN(anyList(), eq(requestContext));
   }

@@ -14,7 +14,7 @@ import org.folio.models.orders.flows.update.reopen.ReOpenCompositeOrderHolder;
 import org.folio.rest.acq.model.invoice.Invoice;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
@@ -53,12 +53,12 @@ public class ReOpenCompositeOrderManager {
   }
 
   private void addPoLinesIfNeeded(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage) {
-    if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
-      List<CompositePoLine> clonedLines = poFromStorage.getCompositePoLines()
+    if (CollectionUtils.isEmpty(compPO.getPoLines())) {
+      List<PoLine> clonedLines = poFromStorage.getPoLines()
         .stream()
-        .map(line -> JsonObject.mapFrom(line).mapTo(CompositePoLine.class))
+        .map(line -> JsonObject.mapFrom(line).mapTo(PoLine.class))
         .collect(toList());
-      compPO.setCompositePoLines(clonedLines);
+      compPO.setPoLines(clonedLines);
     }
   }
 
@@ -70,9 +70,9 @@ public class ReOpenCompositeOrderManager {
 
   private Future<Void> updatePoLineStatuses(CompositePurchaseOrder compPO, RequestContext requestContext) {
     if (CompositePurchaseOrder.OrderType.ONE_TIME == compPO.getOrderType()) {
-      return oneTimeUpdatePoLineStatuses(compPO.getId(), compPO.getCompositePoLines(), requestContext);
+      return oneTimeUpdatePoLineStatuses(compPO.getId(), compPO.getPoLines(), requestContext);
     } else if (CompositePurchaseOrder.OrderType.ONGOING == compPO.getOrderType()) {
-      return ongoingUpdatePoLineStatuses(compPO.getCompositePoLines());
+      return ongoingUpdatePoLineStatuses(compPO.getPoLines());
     }
     return Future.succeededFuture();
   }
@@ -83,15 +83,15 @@ public class ReOpenCompositeOrderManager {
    * @param poLines
    * @return
    */
-  private Future<Void> ongoingUpdatePoLineStatuses(List<CompositePoLine> poLines) {
+  private Future<Void> ongoingUpdatePoLineStatuses(List<PoLine> poLines) {
     poLines.forEach(poLine -> {
-      poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.ONGOING);
-      poLine.setPaymentStatus(CompositePoLine.PaymentStatus.ONGOING);
+      poLine.setReceiptStatus(PoLine.ReceiptStatus.ONGOING);
+      poLine.setPaymentStatus(PoLine.PaymentStatus.ONGOING);
     });
     return Future.succeededFuture();
   }
 
-  private Future<Void> oneTimeUpdatePoLineStatuses(String orderId, List<CompositePoLine> poLines, RequestContext requestContext) {
+  private Future<Void> oneTimeUpdatePoLineStatuses(String orderId, List<PoLine> poLines, RequestContext requestContext) {
     return buildHolder(orderId, poLines, requestContext).map(holder -> {
       poLines.forEach(poLine -> {
         updatePoLineReceiptStatus(poLine, holder);
@@ -101,7 +101,7 @@ public class ReOpenCompositeOrderManager {
     });
   }
 
-  private void updatePoLinePaymentStatus(CompositePoLine poLine, ReOpenCompositeOrderHolder holder) {
+  private void updatePoLinePaymentStatus(PoLine poLine, ReOpenCompositeOrderHolder holder) {
     var poLineInvoicesMap = getInvoicesByPoLineId(holder.getOrderInvoices(), holder.getOrderLineInvoiceLines());
     var poLineInvoiceLinesMap = holder.getOrderLineInvoiceLines().stream().collect(groupingBy(InvoiceLine::getPoLineId));
 
@@ -109,12 +109,12 @@ public class ReOpenCompositeOrderManager {
     if (CollectionUtils.isNotEmpty(poLineInvoices) && isAnyInvoicePaid(poLineInvoices)) {
       var invoiceLines = poLineInvoiceLinesMap.get(poLine.getId());
       if (isAnyInvoiceLineReleaseEncumbrance(invoiceLines)) {
-        poLine.setPaymentStatus(CompositePoLine.PaymentStatus.FULLY_PAID);
+        poLine.setPaymentStatus(PoLine.PaymentStatus.FULLY_PAID);
       } else {
-        poLine.setPaymentStatus(CompositePoLine.PaymentStatus.PARTIALLY_PAID);
+        poLine.setPaymentStatus(PoLine.PaymentStatus.PARTIALLY_PAID);
       }
     } else {
-      poLine.setPaymentStatus(CompositePoLine.PaymentStatus.AWAITING_PAYMENT);
+      poLine.setPaymentStatus(PoLine.PaymentStatus.AWAITING_PAYMENT);
     }
   }
 
@@ -126,21 +126,21 @@ public class ReOpenCompositeOrderManager {
     return poLineInvoices.stream().anyMatch(invoice -> Invoice.Status.PAID.equals(invoice.getStatus()));
   }
 
-  private void updatePoLineReceiptStatus(CompositePoLine poLine, ReOpenCompositeOrderHolder holder) {
+  private void updatePoLineReceiptStatus(PoLine poLine, ReOpenCompositeOrderHolder holder) {
     Map<String, List<Piece>> orderLineIdPieceMap = groupPiecesByOrderId(holder.getOrderLinePieces());
     List<Piece> pieces = orderLineIdPieceMap.get(poLine.getId());
     if (CollectionUtils.isNotEmpty(pieces) && isReceivedPiecePresent(pieces)) {
-      poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.PARTIALLY_RECEIVED);
+      poLine.setReceiptStatus(PoLine.ReceiptStatus.PARTIALLY_RECEIVED);
     } else {
-      poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
+      poLine.setReceiptStatus(PoLine.ReceiptStatus.AWAITING_RECEIPT);
     }
   }
 
-  private Future<ReOpenCompositeOrderHolder> buildHolder(String orderId, List<CompositePoLine> poLines, RequestContext requestContext) {
+  private Future<ReOpenCompositeOrderHolder> buildHolder(String orderId, List<PoLine> poLines, RequestContext requestContext) {
     ReOpenCompositeOrderHolder holder = new ReOpenCompositeOrderHolder(orderId);
     return getPieces(poLines, requestContext)
               .map(holder::withPieces)
-              .map(aHolder -> poLines.stream().map(CompositePoLine::getId).distinct().collect(toList()))
+              .map(aHolder -> poLines.stream().map(PoLine::getId).distinct().collect(toList()))
               .compose(poLineIds -> invoiceLineService.getInvoiceLinesByOrderLineIds(poLineIds, requestContext))
               .map(holder::withInvoiceLines)
               .compose(aHolder -> invoiceService.getInvoicesByOrderId(orderId, requestContext))
@@ -148,8 +148,8 @@ public class ReOpenCompositeOrderManager {
               .map(v -> holder);
   }
 
-  private Future<List<Piece>> getPieces(List<CompositePoLine> poLines, RequestContext requestContext) {
-    List<String> poLineIds = poLines.stream().map(CompositePoLine::getId).distinct().collect(toList());
+  private Future<List<Piece>> getPieces(List<PoLine> poLines, RequestContext requestContext) {
+    List<String> poLineIds = poLines.stream().map(PoLine::getId).distinct().collect(toList());
     return pieceStorageService.getPiecesByLineIdsByChunks(poLineIds, requestContext);
   }
 

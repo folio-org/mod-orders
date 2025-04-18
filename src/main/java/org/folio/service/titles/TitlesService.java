@@ -39,7 +39,7 @@ import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Piece;
@@ -152,12 +152,12 @@ public class TitlesService {
 
   public Future<Map<String, List<Title>>> fetchNonPackageTitles(CompositePurchaseOrder compPO,
                                                                 RequestContext requestContext) {
-    List<String> lineIds = getNonPackageLineIds(compPO.getCompositePoLines());
+    List<String> lineIds = getNonPackageLineIds(compPO.getPoLines());
     return getTitlesByPoLineIds(lineIds, requestContext);
   }
 
-  private List<String> getNonPackageLineIds(List<CompositePoLine> compositePoLines) {
-    return compositePoLines.stream().filter(line -> !line.getIsPackage()).map(CompositePoLine::getId).collect(toList());
+  private List<String> getNonPackageLineIds(List<PoLine> poLines) {
+    return poLines.stream().filter(line -> !line.getIsPackage()).map(PoLine::getId).collect(toList());
   }
 
   public Future<String> updateTitleWithInstance(String titleId, RequestContext locationContext,

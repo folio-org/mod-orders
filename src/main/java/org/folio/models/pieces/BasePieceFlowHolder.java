@@ -3,7 +3,7 @@ package org.folio.models.pieces;
 import java.util.List;
 
 import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
@@ -13,7 +13,7 @@ public abstract class BasePieceFlowHolder {
   private CompositePurchaseOrder originPurchaseOrder;
   private CompositePurchaseOrder purchaseOrderToSave;
 
-  private CompositePoLine compositePoLineToSave;
+  private PoLine compositePoLineToSave;
   private Title title;
 
   public BasePieceFlowHolder() {
@@ -32,7 +32,7 @@ public abstract class BasePieceFlowHolder {
     return this;
   }
 
-  public BasePieceFlowHolder withPoLineOnly(CompositePoLine compositePoLineToSave) {
+  public BasePieceFlowHolder withPoLineOnly(PoLine compositePoLineToSave) {
     this.compositePoLineToSave = compositePoLineToSave;
     return this;
   }
@@ -50,15 +50,15 @@ public abstract class BasePieceFlowHolder {
     return purchaseOrderToSave;
   }
 
-  public CompositePoLine getOriginPoLine() {
-    return originPurchaseOrder.getCompositePoLines().get(0);
+  public PoLine getOriginPoLine() {
+    return originPurchaseOrder.getPoLines().get(0);
   }
 
-  public CompositePoLine getPoLineToSave() {
+  public PoLine getPoLineToSave() {
     if (this.compositePoLineToSave != null) {
       return this.compositePoLineToSave;
     }
-    return purchaseOrderToSave.getCompositePoLines().get(0);
+    return purchaseOrderToSave.getPoLines().get(0);
   }
 
   public abstract String getOrderLineId();

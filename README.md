@@ -65,13 +65,6 @@ Upon receiving a request to update a PO Line, it does the following:
 * Validate PO Line content (interrelated fields, acquisition units based validation and etc.); then
 * Retrieve PO Line data from storage; then
 * Validate that PO id of the PO Line from storage corresponds to order id in the path; then
-* Depending on the content in the storage the sub-object updates are following:
-  * In case the sub-object is available in the storage and the updated PO Line data also contains this, the `PUT` request is being sent to the storage to corresponding endpoint.  
-    For example, to update existing `reportingCode` sub-object `PUT` request should be sent to [/orders-storage/reporting-codes/{id}](https://s3.amazonaws.com/foliodocs/api/mod-orders-storage/reporting-code.html#orders_storage_reporting_codes__id__put) endpoint.
-  * In case the sub-object is available in the storage but the updated PO Line data does not contain this anymore, the `DELETE` request is being sent to the storage to corresponding endpoint.  
-    For example, to remove existing `reportingCode` sub-object `DELETE` request should be sent to [/orders-storage/reporting-codes/{id}](https://s3.amazonaws.com/foliodocs/api/mod-orders-storage/reporting-code.html#orders_storage_reporting_codes__id__delete) endpoint.
-  * In case the sub-object is not available in the storage but the updated PO Line data contains this, the `POST` request is being sent to the storage to corresponding endpoint.  
-    For example, to add `reportingCode` sub-object `POST` request should be sent to [/orders-storage/reporting-codes](https://s3.amazonaws.com/foliodocs/api/mod-orders-storage/reporting-code.html#orders_storage_reporting-codess_post) endpoint.
 * Final step is to store the updated PO Line content with references to the created/updated sub-objects. The `PUT` request is being sent to [/orders-storage/po-lines/{id}](https://s3.amazonaws.com/foliodocs/api/mod-orders-storage/po-line.html#orders_storage_po_lines__id__put) endpoint.
 
 Note: the PO Line update might lead to Order's workflow status update (see [MODORDERS-218](https://issues.folio.org/browse/MODORDERS-218) for more details)

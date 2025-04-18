@@ -10,18 +10,16 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
-import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.acq.model.StoragePatchOrderLineRequest;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.inventory.InventoryHoldingManager;
@@ -84,8 +82,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
   private Future<Void> moveHoldings(OrderLineUpdateInstanceHolder holder, String newInstanceId, RequestContext requestContext) {
     PoLine poLine = holder.getStoragePoLine();
     logger.info("moveHoldings:: start processing for poLineId: {} and new instanceId: {}", poLine.getId(), newInstanceId);
-    CompositePoLine compPOL = PoLineCommonUtil.convertToCompositePoLine(poLine);
-    return pieceStorageService.getPiecesByPoLineId(compPOL, requestContext)
+    return pieceStorageService.getPiecesByPoLineId(poLine, requestContext)
       .map(pieces -> getHoldingsByTenants(holder, pieces, requestContext))
       .compose(holdingsByTenant -> {
           var updateHoldings = holdingsByTenant.entrySet()
@@ -209,7 +206,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
   }
 
   private Future<Map<String, List<Location>>> retrieveUniqueLocations(PoLine poLine, RequestContext requestContext) {
-    return pieceStorageService.getPiecesByPoLineId(PoLineCommonUtil.convertToCompositePoLine(poLine), requestContext)
+    return pieceStorageService.getPiecesByPoLineId(poLine, requestContext)
       .map(pieces -> {
         List<Location> pieceHoldingIds = pieces
           .stream()

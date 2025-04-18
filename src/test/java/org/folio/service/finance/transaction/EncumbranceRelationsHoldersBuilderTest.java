@@ -37,7 +37,7 @@ import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Metadata;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.FundDistribution;
@@ -64,9 +64,9 @@ public class EncumbranceRelationsHoldersBuilderTest {
   private RequestContext requestContextMock;
 
   CompositePurchaseOrder order;
-  CompositePoLine line1;
-  CompositePoLine line2;
-  CompositePoLine line3;
+  PoLine line1;
+  PoLine line2;
+  PoLine line3;
   FundDistribution distribution1;
   FundDistribution distribution2;
   FundDistribution distribution3;
@@ -93,7 +93,7 @@ public class EncumbranceRelationsHoldersBuilderTest {
         .withValue(100d)
         .withEncumbrance(UUID.randomUUID().toString());
 
-    line1 = new CompositePoLine().withId(UUID.randomUUID().toString())
+    line1 = new PoLine().withId(UUID.randomUUID().toString())
         .withCost(new Cost().withCurrency("USD").withListUnitPrice(68d).withQuantityPhysical(1))
         .withPurchaseOrderId(order.getId())
         .withFundDistribution(Collections.singletonList(distribution1));
@@ -103,7 +103,7 @@ public class EncumbranceRelationsHoldersBuilderTest {
         .withValue(100d)
         .withEncumbrance(UUID.randomUUID().toString());
 
-    line2 = new CompositePoLine().withId(UUID.randomUUID().toString())
+    line2 = new PoLine().withId(UUID.randomUUID().toString())
         .withCost(new Cost().withCurrency("USD").withListUnitPrice(34.95).withQuantityPhysical(1))
         .withPurchaseOrderId(order.getId())
         .withFundDistribution(Collections.singletonList(distribution2));
@@ -114,12 +114,12 @@ public class EncumbranceRelationsHoldersBuilderTest {
         .withValue(100d)
         .withEncumbrance(UUID.randomUUID().toString());
 
-    line3 = new CompositePoLine().withId(UUID.randomUUID().toString())
+    line3 = new PoLine().withId(UUID.randomUUID().toString())
         .withCost(new Cost().withCurrency("EUR").withListUnitPrice(24.99).withQuantityPhysical(1))
         .withPurchaseOrderId(order.getId())
         .withFundDistribution(Collections.singletonList(distribution3));
 
-    order.setCompositePoLines(List.of(line1, line2, line3));
+    order.setPoLines(List.of(line1, line2, line3));
 
     newEncumbrance1 = new Transaction()
         .withFromFundId(distribution1.getFundId())
@@ -223,7 +223,7 @@ public class EncumbranceRelationsHoldersBuilderTest {
   @Test
   void testShouldReturnEmptyCollectionWhenOrdersNotContainsFundDistribution() {
     //given
-    order.getCompositePoLines().forEach(poLine -> poLine.setFundDistribution(emptyList()));
+    order.getPoLines().forEach(poLine -> poLine.setFundDistribution(emptyList()));
     //When
     List<EncumbranceRelationsHolder> resultHolders = encumbranceRelationsHoldersBuilder.buildBaseHolders(order);
     //Then
@@ -341,7 +341,7 @@ public class EncumbranceRelationsHoldersBuilderTest {
   }
 
   @Test
-  void testRetrieveMapFiscalYearsWithCompPOLines(VertxTestContext vertxTestContext) {
+  void testRetrieveMapFiscalYearsWithPoLines(VertxTestContext vertxTestContext) {
     String fiscalYearId1 = UUID.randomUUID().toString();
     String fiscalYearId2 = UUID.randomUUID().toString();
 
@@ -358,7 +358,7 @@ public class EncumbranceRelationsHoldersBuilderTest {
     doReturn(succeededFuture(holders))
       .when(encumbranceRelationsHoldersBuilder).prepareEncumbranceRelationsHolder(any(), any(), any());
 
-    var future = encumbranceRelationsHoldersBuilder.retrieveMapFiscalYearsWithCompPOLines(order, order, requestContextMock);
+    var future = encumbranceRelationsHoldersBuilder.retrieveMapFiscalYearsWithPoLines(order, order, requestContextMock);
     vertxTestContext.assertComplete(future)
       .onSuccess(result -> {
         assertThat(result.keySet(), hasSize(2));
@@ -376,13 +376,13 @@ public class EncumbranceRelationsHoldersBuilderTest {
   }
 
   @Test
-  void testRetrieveMapFiscalYearsWithCompPOLinesEmpty(VertxTestContext vertxTestContext) {
+  void testRetrieveMapFiscalYearsWithPoLinesEmpty(VertxTestContext vertxTestContext) {
     List<EncumbranceRelationsHolder> holders = List.of(holder1, holder2, holder3);
 
     doReturn(succeededFuture(holders))
       .when(encumbranceRelationsHoldersBuilder).prepareEncumbranceRelationsHolder(any(), any(), any());
 
-    var future = encumbranceRelationsHoldersBuilder.retrieveMapFiscalYearsWithCompPOLines(order, order, requestContextMock);
+    var future = encumbranceRelationsHoldersBuilder.retrieveMapFiscalYearsWithPoLines(order, order, requestContextMock);
     vertxTestContext.assertComplete(future)
       .onSuccess(result -> {
         //Then

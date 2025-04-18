@@ -1,7 +1,6 @@
 {
   "id": "c2755a78-2f8d-47d0-a218-059a9b7391b4",
   "acquisitionMethod": "df26d81b-9d63-4ff8-bf41-49bf75cfa70e",
-  "alerts": [],
   "cancellationRestriction": false,
   "cancellationRestrictionNote": "",
   "claims": [
@@ -76,7 +75,6 @@
   "purchaseOrderId": "3419ed01-a339-4448-9539-9815f231d405",
   "receiptDate": null,
   "receiptStatus": "Fully Received",
-  "reportingCodes": [],
   "requester": "",
   "rush": false,
   "selector": "Woods",

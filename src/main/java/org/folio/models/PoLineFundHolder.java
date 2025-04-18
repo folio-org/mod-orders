@@ -2,15 +2,15 @@ package org.folio.models;
 
 import java.util.Objects;
 
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.FundDistribution;
 
 public class PoLineFundHolder {
   private final LineFundId id;
-  private final CompositePoLine poLine;
+  private final PoLine poLine;
   private final FundDistribution fundDistribution;
 
-  public PoLineFundHolder(CompositePoLine poLine, FundDistribution fundDistribution) {
+  public PoLineFundHolder(PoLine poLine, FundDistribution fundDistribution) {
     this.poLine = poLine;
     this.fundDistribution = fundDistribution;
     this.id = new LineFundId(poLine.getId(), fundDistribution.getFundId());
@@ -20,7 +20,7 @@ public class PoLineFundHolder {
     return id;
   }
 
-  public CompositePoLine getPoLine() {
+  public PoLine getPoLine() {
     return poLine;
   }
 

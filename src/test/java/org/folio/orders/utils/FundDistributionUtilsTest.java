@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.folio.rest.core.exceptions.HttpException;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.FundDistribution.DistributionType;
@@ -53,16 +53,16 @@ public class FundDistributionUtilsTest {
     if (fd2Value != null)
       fdList.add(new FundDistribution().withDistributionType(DistributionType.fromValue(fd2Type)).withValue(fd2Value));
 
-    CompositePoLine poLine = new CompositePoLine()
+    PoLine poLine = new PoLine()
       .withCost(cost)
       .withFundDistribution(fdList);
-    List<CompositePoLine> compositePoLines = singletonList(poLine);
+    List<PoLine> poLines = singletonList(poLine);
 
     if (errorCode == null) {
-      assertDoesNotThrow(() -> FundDistributionUtils.validateFundDistributionTotal(compositePoLines));
+      assertDoesNotThrow(() -> FundDistributionUtils.validateFundDistributionTotal(poLines));
     } else {
       HttpException exception = assertThrows(HttpException.class, () ->
-        FundDistributionUtils.validateFundDistributionTotal(compositePoLines));
+        FundDistributionUtils.validateFundDistributionTotal(poLines));
       assertEquals(exception.getError().getCode(), errorCode);
       if (exception.getError().getCode().equals(INCORRECT_FUND_DISTRIBUTION_TOTAL.getCode())) {
         assertEquals(remainingAmount, exception.getError().getParameters().get(0).getValue());

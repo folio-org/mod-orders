@@ -13,7 +13,7 @@ import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CheckInPiece;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Contributor;
 import org.folio.rest.jaxrs.model.Error;
@@ -292,10 +292,10 @@ public class InventoryUtils {
     return isPurchaseOrderClosedOrPoLineCancelled(purchaseOrder, poLine);
   }
 
-  public static boolean isPurchaseOrderClosedOrPoLineCancelled(CompositePurchaseOrder purchaseOrder, CompositePoLine poLine) {
+  public static boolean isPurchaseOrderClosedOrPoLineCancelled(CompositePurchaseOrder purchaseOrder, PoLine poLine) {
     return purchaseOrder.getWorkflowStatus().equals(CompositePurchaseOrder.WorkflowStatus.CLOSED)
-      || (poLine.getReceiptStatus().equals(CompositePoLine.ReceiptStatus.CANCELLED)
-      && poLine.getPaymentStatus().equals(CompositePoLine.PaymentStatus.CANCELLED));
+      || (poLine.getReceiptStatus().equals(PoLine.ReceiptStatus.CANCELLED)
+      && poLine.getPaymentStatus().equals(PoLine.PaymentStatus.CANCELLED));
   }
 
   public static ItemRecreateConfig constructItemRecreateConfig(String receivingTenantId, RequestContext requestContext, boolean reuseInitialRequestContext) {

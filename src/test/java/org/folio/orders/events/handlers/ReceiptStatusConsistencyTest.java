@@ -27,12 +27,11 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
 import org.folio.config.ApplicationConfig;
-import org.folio.rest.acq.model.Piece;
-import org.folio.rest.acq.model.Piece.ReceivingStatus;
-import org.folio.rest.acq.model.PoLine;
-import org.folio.rest.acq.model.PoLine.ReceiptStatus;
 import org.folio.rest.impl.MockServer;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.Piece.ReceivingStatus;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.spring.SpringContextUtil;
@@ -129,8 +128,8 @@ public class ReceiptStatusConsistencyTest {
   void testSuccessPartiallyReceivedStatusWhenAtleastOneSuccessfullyReceivedPiece(VertxTestContext context) throws Throwable {
     logger.info("=== Test case to verify partially received status when at least one successfully received piece ===");
 
-    CompositePoLine compositePoLine = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(5).mapTo(CompositePoLine.class);
-    MockServer.addMockOrderData(Collections.singletonList(compositePoLine));
+    PoLine poLine1 = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(5).mapTo(PoLine.class);
+    MockServer.addMockOrderData(Collections.singletonList(poLine1));
 
     sendEvent(createBody(POLINE_UUID_TIED_TO_PIECE_PARTIALLY_RECEIVED), context.succeeding(result -> {
       logger.info("getPoLineSearches()--->" + getPoLineSearches());
@@ -149,8 +148,8 @@ public class ReceiptStatusConsistencyTest {
       assertEquals(ReceivingStatus.EXPECTED, piece3.getReceivingStatus());
       assertEquals(ReceivingStatus.EXPECTED, piece4.getReceivingStatus());
 
-      PoLine poLine = getPoLineUpdates().get(0).mapTo(PoLine.class);
-      assertEquals(ReceiptStatus.PARTIALLY_RECEIVED, poLine.getReceiptStatus());
+      PoLine poLine2 = getPoLineUpdates().get(0).mapTo(PoLine.class);
+      assertEquals(ReceiptStatus.PARTIALLY_RECEIVED, poLine2.getReceiptStatus());
 
       assertEquals(result.body(), Response.Status.OK.getReasonPhrase());
       context.completeNow();
@@ -162,8 +161,8 @@ public class ReceiptStatusConsistencyTest {
   void testSuccessFullyReceivedStatusWhenAllPiecesSuccessfullyReceived(VertxTestContext context) throws Throwable {
     logger.info("=== Test case to verify fully received status when all pieces successfully received ===");
 
-    CompositePoLine compositePoLine = getMockAsJson(PO_LINES_MOCK_DATA_PATH, POLINE_UUID_TIED_TO_PIECE_FULLY_RECEIVED).mapTo(CompositePoLine.class);
-    MockServer.addMockOrderData(Collections.singletonList(compositePoLine));
+    PoLine poLine1 = getMockAsJson(PO_LINES_MOCK_DATA_PATH, POLINE_UUID_TIED_TO_PIECE_FULLY_RECEIVED).mapTo(PoLine.class);
+    MockServer.addMockOrderData(Collections.singletonList(poLine1));
 
     sendEvent(createBody(POLINE_UUID_TIED_TO_PIECE_FULLY_RECEIVED), context.succeeding(result -> {
       logger.info("getPoLineSearches()--->" + getPoLineSearches());
@@ -182,8 +181,8 @@ public class ReceiptStatusConsistencyTest {
       assertEquals(ReceivingStatus.RECEIVED, piece3.getReceivingStatus());
       assertEquals(ReceivingStatus.RECEIVED, piece4.getReceivingStatus());
 
-      PoLine poLine = getPoLineUpdates().get(0).mapTo(PoLine.class);
-      assertEquals(ReceiptStatus.FULLY_RECEIVED, poLine.getReceiptStatus());
+      PoLine poLine2 = getPoLineUpdates().get(0).mapTo(PoLine.class);
+      assertEquals(ReceiptStatus.FULLY_RECEIVED, poLine2.getReceiptStatus());
 
       assertEquals(result.body(), Response.Status.OK.getReasonPhrase());
       context.completeNow();

@@ -2,8 +2,6 @@ package org.folio.service.orders;
 
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
-import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
-import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.rest.core.exceptions.ErrorCodes.ROLLOVER_NOT_COMPLETED;
 import static org.folio.rest.core.exceptions.ErrorCodes.ENCUMBRANCES_FOR_RE_ENCUMBER_NOT_FOUND;
 
@@ -33,13 +31,10 @@ import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverProgress;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.Alert;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.EncumbranceRollover;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.ReportingCode;
 import org.folio.rest.jaxrs.model.RolloverStatus;
 import org.folio.service.finance.budget.BudgetRestrictionService;
 import org.folio.service.finance.rollover.LedgerRolloverErrorService;
@@ -50,7 +45,6 @@ import org.javamoney.moneta.Money;
 import org.javamoney.moneta.function.MonetaryOperators;
 
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
 
 public class OrderReEncumberService implements CompositeOrderDynamicDataPopulateService {
 
@@ -199,14 +193,7 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
   }
 
   private Future<Void> updatePoLines(List<ReEncumbranceHolder> holders, RequestContext requestContext) {
-    List<PoLine> lines = holders.stream().map(ReEncumbranceHolder::getPoLine).map(poLine -> {
-      List<String> alertIds = poLine.getAlerts().stream().map(Alert::getId).toList();
-      List<String> codeIds = poLine.getReportingCodes().stream().map(ReportingCode::getId).toList();
-      JsonObject jsonPoLine = JsonObject.mapFrom(poLine);
-      jsonPoLine.remove(ALERTS);
-      jsonPoLine.remove(REPORTING_CODES);
-      return jsonPoLine.mapTo(PoLine.class).withAlerts(alertIds).withReportingCodes(codeIds);
-    }).toList();
+    List<PoLine> lines = holders.stream().map(ReEncumbranceHolder::getPoLine).toList();
     return purchaseOrderLineService.saveOrderLinesWithoutSearchLocationsUpdate(lines, requestContext);
   }
 
@@ -217,13 +204,13 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
 
 
   private List<ReEncumbranceHolder> adjustPoLinesCost(List<ReEncumbranceHolder> reEncumbranceHolders) {
-    Map<CompositePoLine, List<ReEncumbranceHolder>> poLineHoldersMap = reEncumbranceHolders.stream()
+    Map<PoLine, List<ReEncumbranceHolder>> poLineHoldersMap = reEncumbranceHolders.stream()
       .collect(groupingBy(ReEncumbranceHolder::getPoLine));
       poLineHoldersMap.forEach(this::adjustPoLineCost);
     return reEncumbranceHolders;
   }
 
-  private void adjustPoLineCost(CompositePoLine poLine, List<ReEncumbranceHolder> holders) {
+  private void adjustPoLineCost(PoLine poLine, List<ReEncumbranceHolder> holders) {
     MonetaryAmount poLineEstimatedPriceAfterRollover = Money.zero(Monetary.getCurrency(poLine.getCost().getCurrency()));
     for (ReEncumbranceHolder holder : holders) {
       if (holder.getEncumbranceRollover() != null && holder.getPoLineToFyConversion() != null) {

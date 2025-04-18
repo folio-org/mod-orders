@@ -13,11 +13,10 @@
     "createdDate": "2014-07-06T00:00:00.000",
     "createdByUserId": "28d10cfc-d137-11e8-a8d5-f2801f1b9fd1"
   },
-  "compositePoLines": [
+  "poLines": [
     {
       "id": "50fb63b0-cdf1-11e8-a8d5-f2801f1b9fd1",
       "acquisitionMethod": "df26d81b-9d63-4ff8-bf41-49bf75cfa70e",
-      "alerts": [],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "",
       "claims": [
@@ -99,7 +98,6 @@
       "purchaseOrderId": "96a07b68-3cb5-4452-b957-f55479005e69",
       "receiptDate": null,
       "receiptStatus": "Fully Received",
-      "reportingCodes": [],
       "requester": "",
       "rush": false,
       "selector": "Woods",

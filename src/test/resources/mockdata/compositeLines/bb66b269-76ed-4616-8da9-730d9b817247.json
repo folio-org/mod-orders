@@ -1,7 +1,6 @@
 {
   "id": "bb66b269-76ed-4616-8da9-730d9b817247",
   "acquisitionMethod": "df26d81b-9d63-4ff8-bf41-49bf75cfa70e",
-  "alerts": [],
   "cancellationRestriction": false,
   "cancellationRestrictionNote": "",
   "claims": [
@@ -71,23 +70,6 @@
   "purchaseOrderId": "00000000-1111-2222-8888-999999999999",
   "receiptDate": null,
   "receiptStatus": "Awaiting Receipt",
-  "reportingCodes": [
-    {
-      "code": "CODE1",
-      "id": "5926dcd7-85f5-4504-8283-712595ebc38b",
-      "description": "ABCDEF"
-    },
-    {
-      "code": "CODE2",
-      "id": "fa316c04-8101-4e72-8aaf-01281bac718f",
-      "description": "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    },
-    {
-      "code": "CODE3",
-      "id": "ea68b696-3125-4940-bf91-1d128323473e",
-      "description": "ABCDE"
-    }
-  ],
   "requester": "",
   "rush": false,
   "selector": "Stevens",

@@ -1,7 +1,6 @@
 {
   "id": "0009662b-8b80-4001-b704-ca10971f175d",
   "acquisitionMethod": "df26d81b-9d63-4ff8-bf41-49bf75cfa70e",
-  "alerts": [],
   "cancellationRestriction": false,
   "cancellationRestrictionNote": "",
   "claims": [
@@ -69,7 +68,6 @@
   "purchaseOrderId": "11111111-dddd-4444-9999-ffffffffffff",
   "receiptDate": null,
   "receiptStatus": "Pending",
-  "reportingCodes": [],
   "requester": "",
   "rush": false,
   "selector": "",

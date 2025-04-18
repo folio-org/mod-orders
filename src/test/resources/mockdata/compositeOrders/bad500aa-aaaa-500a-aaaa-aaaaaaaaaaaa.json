@@ -8,11 +8,10 @@
   "reEncumber": false,
   "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
   "workflowStatus": "Pending",
-  "compositePoLines": [
+  "poLines": [
     {
       "id": "c2755a78-2f8d-47d0-a218-059a9b7391b4",
       "acquisitionMethod": "df26d81b-9d63-4ff8-bf41-49bf75cfa70e",
-      "alerts": [],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "",
       "claims": [
@@ -88,13 +87,6 @@
       "purchaseOrderId": "bad500aa-aaaa-500a-aaaa-aaaaaaaaaaaa",
       "receiptDate": null,
       "receiptStatus": "Fully Received",
-      "reportingCodes": [
-        {
-          "code": "CODE1",
-          "id": "168f8a86-d26c-406e-813f-c7527f241ac3",
-          "description": "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        }
-      ],
       "requester": "",
       "rush": false,
       "selector": "Woods",

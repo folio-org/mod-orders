@@ -43,14 +43,14 @@ public class ClosedToOpenEncumbranceStrategy implements EncumbranceWorkflowStrat
   public Future<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
       RequestContext requestContext) {
 
-    if (isFundDistributionsPresent(compPO.getCompositePoLines())) {
+    if (isFundDistributionsPresent(compPO.getPoLines())) {
       // get the encumbrances to unrelease
-      return encumbranceRelationsHoldersBuilder.retrieveMapFiscalYearsWithCompPOLines(compPO, poAndLinesFromStorage, requestContext)
-        .compose(mapFiscalYearIdsWithCompPOLines -> encumbranceService.getOrderEncumbrancesToUnrelease(compPO, mapFiscalYearIdsWithCompPOLines, requestContext))
+      return encumbranceRelationsHoldersBuilder.retrieveMapFiscalYearsWithPoLines(compPO, poAndLinesFromStorage, requestContext)
+        .compose(mapFiscalYearIdsWithPoLines -> encumbranceService.getOrderEncumbrancesToUnrelease(compPO, mapFiscalYearIdsWithPoLines, requestContext))
         .compose(transactions -> {
           // stop if nothing needs to be done
 
-          if (transactions.isEmpty() && compPO.getCompositePoLines().stream().noneMatch(
+          if (transactions.isEmpty() && compPO.getPoLines().stream().noneMatch(
               pol -> pol.getFundDistribution().stream().anyMatch(f -> f.getEncumbrance() == null))) {
             return Future.succeededFuture();
           }

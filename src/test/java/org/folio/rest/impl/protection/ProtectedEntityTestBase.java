@@ -23,7 +23,7 @@ import java.util.List;
 
 import org.folio.rest.impl.MockServer;
 import org.folio.rest.jaxrs.model.AcquisitionsUnit;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Title;
@@ -68,10 +68,10 @@ public abstract class ProtectedEntityTestBase {
     return po;
   }
 
-  public CompositePoLine preparePoLine(List<String> acqUnitsIds,
+  public PoLine preparePoLine(List<String> acqUnitsIds,
                           CompositePurchaseOrder.WorkflowStatus workflowStatus) {
     CompositePurchaseOrder order = prepareOrder(acqUnitsIds, workflowStatus);
-    CompositePoLine poLine = getMinimalContentCompositePoLine(order.getId());
+    PoLine poLine = getMinimalContentCompositePoLine(order.getId());
     addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
     return poLine;
   }
@@ -84,7 +84,7 @@ public abstract class ProtectedEntityTestBase {
   }
 
   public Piece preparePiece(List<String> acqUnitsIds) {
-    CompositePoLine poLine = preparePoLine(new ArrayList<>(), CompositePurchaseOrder.WorkflowStatus.OPEN);
+    PoLine poLine = preparePoLine(new ArrayList<>(), CompositePurchaseOrder.WorkflowStatus.OPEN);
     Title title = prepareTitle(acqUnitsIds);
     Piece piece = getMinimalContentPiece(poLine.getId());
     piece.setTitleId(title.getId());

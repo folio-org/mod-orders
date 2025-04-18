@@ -49,8 +49,8 @@ public class PurchaseOrderStorageService {
 
   public Future<CompositePurchaseOrder> getCompositeOrderById(String orderId, RequestContext requestContext) {
     return getPurchaseOrderById(orderId, requestContext)
-      .compose(purchaseOrder -> purchaseOrderLineService.getCompositePoLinesByOrderId(orderId, requestContext)
-        .map(poLines -> convertToCompositePurchaseOrder(JsonObject.mapFrom(purchaseOrder)).withCompositePoLines(poLines)));
+      .compose(purchaseOrder -> purchaseOrderLineService.getPoLinesByOrderId(orderId, requestContext)
+        .map(poLines -> convertToCompositePurchaseOrder(JsonObject.mapFrom(purchaseOrder)).withPoLines(poLines)));
   }
 
   public Future<PurchaseOrderCollection> getPurchaseOrders(String query, int limit, int offset, RequestContext requestContext) {

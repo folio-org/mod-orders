@@ -22,7 +22,7 @@ import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.exceptions.InventoryException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceCollection;
@@ -68,23 +68,23 @@ public class OpenCompositeOrderPieceService {
   /**
    * Creates pieces that are not yet in storage
    *
-   * @param compPOL PO line to create Pieces Records for
+   * @param poLine PO line to create Pieces Records for
    * @param expectedPiecesWithItem expected Pieces to create with created associated Items records
    * @return void future
    */
-  public Future<List<Piece>> handlePieces(CompositePoLine compPOL, String titleId, List<Piece> expectedPiecesWithItem,
+  public Future<List<Piece>> handlePieces(PoLine poLine, String titleId, List<Piece> expectedPiecesWithItem,
                                           boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    logger.debug("handlePieces:: Get pieces by poLine ID - {}", compPOL.getId());
-    return openCompositeOrderHolderBuilder.buildHolder(compPOL, titleId, expectedPiecesWithItem, requestContext)
+    logger.debug("handlePieces:: Get pieces by poLine ID - {}", poLine.getId());
+    return openCompositeOrderHolderBuilder.buildHolder(poLine, titleId, expectedPiecesWithItem, requestContext)
       .compose(holder -> {
         var piecesWithChangedLocation = holder.getPiecesWithChangedLocation();
         if (CollectionUtils.isEmpty(piecesWithChangedLocation) || piecesWithChangedLocation.size() != holder.getPiecesWithLocationToProcess().size()) {
-          return purchaseOrderStorageService.getCompositeOrderById(compPOL.getPurchaseOrderId(), requestContext)
+          return purchaseOrderStorageService.getCompositeOrderById(poLine.getPurchaseOrderId(), requestContext)
             .compose(order -> createPieces(holder, order, isInstanceMatchingDisabled, requestContext));
         }
         return updatePieces(holder, requestContext);
       })
-      .map(pieces -> validateItemsCreationForPieces(pieces, compPOL, expectedPiecesWithItem.size()));
+      .map(pieces -> validateItemsCreationForPieces(pieces, poLine, expectedPiecesWithItem.size()));
   }
 
   private Future<List<Piece>> updatePieces(OpenOrderPieceHolder holder, RequestContext requestContext) {
@@ -134,7 +134,7 @@ public class OpenCompositeOrderPieceService {
         protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
       )
       .compose(v ->
-        openOrderUpdateInventory(order, order.getCompositePoLines().get(0), piece, isInstanceMatchingDisabled, requestContext)
+        openOrderUpdateInventory(order, order.getPoLines().get(0), piece, isInstanceMatchingDisabled, requestContext)
       )
       .map(v -> piece);
   }
@@ -164,44 +164,44 @@ public class OpenCompositeOrderPieceService {
   /**
    * Creates Inventory records associated with given PO line and updates PO line with corresponding links.
    *
-   * @param compPOL Composite PO line to update Inventory for
+   * @param poLine PO line to update Inventory for
    * @return CompletableFuture with void.
    */
-  public Future<Void> openOrderUpdateInventory(CompositePurchaseOrder compPO, CompositePoLine compPOL,
+  public Future<Void> openOrderUpdateInventory(CompositePurchaseOrder compPO, PoLine poLine,
                                                Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    if (!Boolean.TRUE.equals(compPOL.getIsPackage())) {
+    if (!Boolean.TRUE.equals(poLine.getIsPackage())) {
       return inventoryItemManager.updateItemWithPieceFields(piece, requestContext);
     }
     var locationContext = createContextWithNewTenantId(requestContext, piece.getReceivingTenantId());
     return titlesService.getTitleById(piece.getTitleId(), requestContext)
       .compose(title -> titlesService.updateTitleWithInstance(title, isInstanceMatchingDisabled, locationContext, requestContext).map(title::withInstanceId))
-      .compose(title -> getOrCreateHolding(compPOL, piece, title, locationContext))
-      .compose(holdingId -> updateItemsIfNeeded(compPO, compPOL, holdingId, locationContext))
+      .compose(title -> getOrCreateHolding(poLine, piece, title, locationContext))
+      .compose(holdingId -> updateItemsIfNeeded(compPO, poLine, holdingId, locationContext))
       .map(itemId -> Optional.ofNullable(itemId).map(piece::withItemId))
       .mapEmpty();
   }
 
-  private Future<String> getOrCreateHolding(CompositePoLine compPOL, Piece piece, Title title, RequestContext locationContext) {
-    if (piece.getHoldingId() != null || !PoLineCommonUtil.isHoldingsUpdateRequired(compPOL)) {
+  private Future<String> getOrCreateHolding(PoLine poLine, Piece piece, Title title, RequestContext locationContext) {
+    if (piece.getHoldingId() != null || !PoLineCommonUtil.isHoldingsUpdateRequired(poLine)) {
       return Future.succeededFuture(piece.getHoldingId());
     }
     return inventoryHoldingManager.createHoldingAndReturnId(title.getInstanceId(), piece.getLocationId(), locationContext)
       .map(holdingId -> piece.withLocationId(null).withHoldingId(holdingId).getHoldingId());
   }
 
-  private Future<String> updateItemsIfNeeded(CompositePurchaseOrder compPO, CompositePoLine compPOL,
+  private Future<String> updateItemsIfNeeded(CompositePurchaseOrder compPO, PoLine poLine,
                                              String holdingId, RequestContext locationContext) {
-    return PoLineCommonUtil.isItemsUpdateRequired(compPOL)
-      ? inventoryItemManager.openOrderCreateItemRecord(compPO, compPOL, holdingId, locationContext)
+    return PoLineCommonUtil.isItemsUpdateRequired(poLine)
+      ? inventoryItemManager.openOrderCreateItemRecord(compPO, poLine, holdingId, locationContext)
       : Future.succeededFuture();
   }
 
-  private List<Piece> validateItemsCreationForPieces(List<Piece> pieces, CompositePoLine compPOL, int itemsSize) {
-    int expectedItemsQuantity = calculateInventoryItemsQuantity(compPOL);
+  private List<Piece> validateItemsCreationForPieces(List<Piece> pieces, PoLine poLine, int itemsSize) {
+    int expectedItemsQuantity = calculateInventoryItemsQuantity(poLine);
     if (itemsSize == expectedItemsQuantity) {
       return pieces;
     }
     throw new InventoryException(String.format("Error creating items for PO Line with '%s' id. Expected %d but %d created",
-      compPOL.getId(), expectedItemsQuantity, itemsSize));
+      poLine.getId(), expectedItemsQuantity, itemsSize));
   }
 }

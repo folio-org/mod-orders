@@ -27,7 +27,7 @@ import java.util.concurrent.TimeoutException;
 import org.folio.ApiTestSuite;
 import org.folio.models.pieces.PieceDeletionHolder;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Location;
@@ -129,7 +129,7 @@ public class PieceDeleteFlowPoLineServiceTest {
     //When
     pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
     //Then
-    CompositePoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
+    PoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityElectronic());
     assertEquals(1, poLineToSave.getCost().getQuantityPhysical());
     assertEquals(1, poLineToSave.getLocations().size());
@@ -169,7 +169,7 @@ public class PieceDeleteFlowPoLineServiceTest {
     //When
     pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
     //Then
-    CompositePoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
+    PoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityElectronic());
     assertEquals(1, poLineToSave.getCost().getQuantityPhysical());
     assertEquals(1, poLineToSave.getLocations().size());
@@ -209,7 +209,7 @@ public class PieceDeleteFlowPoLineServiceTest {
     //When
     pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
     //Then
-    CompositePoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
+    PoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityPhysical());
     assertEquals(1, poLineToSave.getCost().getQuantityElectronic());
     assertEquals(1, poLineToSave.getLocations().size());
@@ -249,7 +249,7 @@ public class PieceDeleteFlowPoLineServiceTest {
     //When
     pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
     //Then
-    CompositePoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
+    PoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityElectronic());
     assertEquals(0, poLineToSave.getCost().getQuantityPhysical());
     assertEquals(Collections.emptyList(), poLineToSave.getLocations());
@@ -286,7 +286,7 @@ public class PieceDeleteFlowPoLineServiceTest {
     //When
     pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
     //Then
-    CompositePoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
+    PoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityPhysical());
     assertEquals(0, poLineToSave.getCost().getQuantityElectronic());
     assertEquals(Collections.emptyList(), poLineToSave.getLocations());
@@ -323,7 +323,7 @@ public class PieceDeleteFlowPoLineServiceTest {
     //When
     pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
     //Then
-    CompositePoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
+    PoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityPhysical());
     assertEquals(1, poLineToSave.getCost().getQuantityElectronic());
     assertEquals(1, poLineToSave.getLocations().size());
@@ -368,7 +368,7 @@ public class PieceDeleteFlowPoLineServiceTest {
     //When
     pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
     //Then
-    CompositePoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
+    PoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityPhysical());
     assertEquals(expQty, poLineToSave.getCost().getQuantityElectronic());
     assertEquals(0, poLineToSave.getLocations().size());
@@ -412,7 +412,7 @@ public class PieceDeleteFlowPoLineServiceTest {
     //When
     pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
     //Then
-    CompositePoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
+    PoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityElectronic());
     assertEquals(expQty, poLineToSave.getCost().getQuantityPhysical());
     assertEquals(0, poLineToSave.getLocations().size());

@@ -40,10 +40,10 @@ import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.service.FundsDistributionService;
 import org.folio.service.exchange.CacheableExchangeRateService;
 import org.folio.service.finance.FiscalYearService;
@@ -118,7 +118,7 @@ public class PendingToOpenEncumbranceStrategyTest {
   void testUpdatingAReleasedEncumbranceWithACancelledInvoice(VertxTestContext vertxTestContext) {
     // Given
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine poLine = order.getCompositePoLines().getFirst();
+    PoLine poLine = order.getPoLines().getFirst();
     FundDistribution fd1 = poLine.getFundDistribution().getFirst();
     String fundId1 = fd1.getFundId();
     String fundId2 = "1b6d3338-186e-4e35-9e75-1b886b0da53e";
@@ -209,7 +209,7 @@ public class PendingToOpenEncumbranceStrategyTest {
   void testDeletingAnEncumbranceWithAPendingPayment(VertxTestContext vertxTestContext) {
     // Given
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine poLine = order.getCompositePoLines().getFirst();
+    PoLine poLine = order.getPoLines().getFirst();
     FundDistribution fd = poLine.getFundDistribution().getFirst();
     String fundId = fd.getFundId();
     String encumbranceId = fd.getEncumbrance();
@@ -307,7 +307,7 @@ public class PendingToOpenEncumbranceStrategyTest {
   void testDeletingAnEncumbranceWithExpendedAmountGreaterThanZero(VertxTestContext vertxTestContext) {
     // Given
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine poLine = order.getCompositePoLines().getFirst();
+    PoLine poLine = order.getPoLines().getFirst();
     FundDistribution fd = poLine.getFundDistribution().getFirst();
     String fundId = fd.getFundId();
     String encumbranceId = fd.getEncumbrance();

@@ -6,7 +6,7 @@ import org.folio.models.consortium.SharingInstanceCollection;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.caches.ConfigurationEntriesCache;
@@ -68,12 +68,12 @@ public class InventoryInstanceManagerTest {
   @Test
   void shouldNoShareInstanceWhenNonEcsMode() {
     String instanceId = UUID.randomUUID().toString();
-    CompositePoLine compositePoLine = getPoLine(instanceId, List.of(
+    PoLine poLine = getPoLine(instanceId, List.of(
       new Location().withTenantId(MEMBER_TENANT_1),
       new Location().withTenantId(CENTRAL_TENANT)));
     doReturn(succeededFuture(Optional.empty())).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
 
-    inventoryInstanceManager.openOrderHandleInstance(compositePoLine, false, requestContext).result();
+    inventoryInstanceManager.openOrderHandleInstance(poLine, false, requestContext).result();
 
     verifyNoInteractions(sharingInstanceService);
   }
@@ -81,7 +81,7 @@ public class InventoryInstanceManagerTest {
   @Test
   void shouldNotShareInstanceAmongTenantsWhenInstancesAlreadyShared() {
     String instanceId = UUID.randomUUID().toString();
-    CompositePoLine compositePoLine = getPoLine(instanceId, List.of(
+    PoLine poLine = getPoLine(instanceId, List.of(
       new Location().withTenantId(MEMBER_TENANT_1),
       new Location().withTenantId(CENTRAL_TENANT)));
     Optional<ConsortiumConfiguration> configuration = Optional.of(new ConsortiumConfiguration(CENTRAL_TENANT, UUID.randomUUID().toString()));
@@ -90,7 +90,7 @@ public class InventoryInstanceManagerTest {
     SharingInstanceCollection collection = getSharingInstanceCollection(instanceId, MEMBER_TENANT_1, CENTRAL_TENANT);
     doReturn(succeededFuture(collection)).when(sharingInstanceService).getSharingInstances(instanceId, configuration.get(), requestContext);
 
-    inventoryInstanceManager.openOrderHandleInstance(compositePoLine, false, requestContext).result();
+    inventoryInstanceManager.openOrderHandleInstance(poLine, false, requestContext).result();
 
     verify(sharingInstanceService, never()).createShadowInstance(anyString(), any(ConsortiumConfiguration.class), any(RequestContext.class));
   }
@@ -98,7 +98,7 @@ public class InventoryInstanceManagerTest {
   @Test
   void shouldShareInstance() {
     String instanceId = UUID.randomUUID().toString();
-    CompositePoLine compositePoLine = getPoLine(instanceId, List.of(
+    PoLine poLine = getPoLine(instanceId, List.of(
       new Location().withTenantId(MEMBER_TENANT_1),
       new Location().withTenantId(MEMBER_TENANT_2)));
     Optional<ConsortiumConfiguration> configuration = Optional.of(new ConsortiumConfiguration(CENTRAL_TENANT, UUID.randomUUID().toString()));
@@ -113,7 +113,7 @@ public class InventoryInstanceManagerTest {
 
     ArgumentCaptor<RequestContext> requestContextCaptor = ArgumentCaptor.forClass(RequestContext.class);
 
-    inventoryInstanceManager.openOrderHandleInstance(compositePoLine, false, requestContext).result();
+    inventoryInstanceManager.openOrderHandleInstance(poLine, false, requestContext).result();
 
     verify(sharingInstanceService, times(1)).createShadowInstance(eq(instanceId), eq(configuration.get()), requestContextCaptor.capture());
 
@@ -122,8 +122,8 @@ public class InventoryInstanceManagerTest {
     assertEquals(MEMBER_TENANT_2, tenantId);
   }
 
-  private CompositePoLine getPoLine(String instanceId, List<Location> locations) {
-    CompositePoLine result = getMockAsJson(PO_LINE_MIN_CONTENT_PATH).mapTo(CompositePoLine.class);
+  private PoLine getPoLine(String instanceId, List<Location> locations) {
+    PoLine result = getMockAsJson(PO_LINE_MIN_CONTENT_PATH).mapTo(PoLine.class);
     result.setInstanceId(instanceId);
     result.setLocations(locations);
     return result;

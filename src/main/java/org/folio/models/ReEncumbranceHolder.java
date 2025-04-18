@@ -4,7 +4,7 @@ import javax.money.convert.CurrencyConversion;
 
 import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.Transaction;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.EncumbranceRollover;
 import org.folio.rest.jaxrs.model.FundDistribution;
@@ -24,7 +24,7 @@ public class ReEncumbranceHolder extends EncumbranceRelationsHolder {
     }
 
     @Override
-    public ReEncumbranceHolder withPoLine(CompositePoLine poLine) {
+    public ReEncumbranceHolder withPoLine(PoLine poLine) {
         return (ReEncumbranceHolder) super.withPoLine(poLine);
     }
 

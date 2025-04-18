@@ -20,7 +20,7 @@ import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.OrderType;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Location;
@@ -138,11 +138,11 @@ public class PieceUpdateFlowManager {
     var pieceIds = piecesToUpdate.stream().map(Piece::getId).toList();
     return pieceStorageService.getPiecesByLineId(originPoLine.getId(), requestContext)
       .compose(pieces -> {
-        if (PoLineCommonUtil.isCancelledOrOngoingStatus(PoLineCommonUtil.convertToPoLine(poLineToSave))) {
+        if (PoLineCommonUtil.isCancelledOrOngoingStatus(poLineToSave)) {
           log.info("updatePoLine:: Skip updating PoLine: '{}' with status: '{}'", poLineToSave.getId(), poLineToSave.getReceiptStatus());
         } else {
           var newStatus = calculatePoLineReceiptStatus(poLineToSave.getId(), pieces, piecesToUpdate);
-          poLineToSave.setReceiptStatus(CompositePoLine.ReceiptStatus.fromValue(newStatus.value()));
+          poLineToSave.setReceiptStatus(PoLine.ReceiptStatus.fromValue(newStatus.value()));
         }
         var locations = getPieceLocations(piecesToUpdate, poLineToSave);
         return purchaseOrderLineService.saveOrderLine(poLineToSave, locations, requestContext);
@@ -181,7 +181,7 @@ public class PieceUpdateFlowManager {
       .compose(v -> asFuture(() -> pieceService.receiptConsistencyPiecePoLine(holder.getOrderLineId(), requestContext)));
   }
 
-  private List<Location> getPieceLocations(List<Piece> pieces, CompositePoLine poLine) {
+  private List<Location> getPieceLocations(List<Piece> pieces, PoLine poLine) {
     return pieces.stream()
       .flatMap(pieceToUpdate -> PieceUtil.findOrderPieceLineLocation(pieceToUpdate, poLine).stream())
       .toList();

@@ -8,7 +8,6 @@
     "listUnitPriceElectronic": 1
   },
   "rush": false,
-  "alerts": [],
   "claims": [],
   "source": "User",
   "details": {
@@ -54,7 +53,6 @@
   "paymentStatus": "Awaiting Payment",
   "receiptStatus": "Awaiting Receipt",
   "claimingActive": false,
-  "reportingCodes": [],
   "titleOrPackage": "Test 2",
   "automaticExport": false,
   "purchaseOrderId": "01c8d44a-dc73-4bca-a4d1-ef28bdfb9275",

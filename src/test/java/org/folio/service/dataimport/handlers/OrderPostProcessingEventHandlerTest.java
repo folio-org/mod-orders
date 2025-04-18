@@ -19,7 +19,7 @@ import org.folio.TestConfig;
 import org.folio.di.DiAbstractRestTest;
 import org.folio.rest.RestConstants;
 import org.folio.rest.impl.MockServer;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Cost;
@@ -122,7 +122,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     .withExistingRecordType(ORDER);
 
   private CompositePurchaseOrder order;
-  private CompositePoLine poLine;
+  private PoLine poLine;
 
   @BeforeClass
   public static void setupClass() throws ExecutionException, InterruptedException, TimeoutException {
@@ -141,13 +141,13 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
       .withId(UUID.randomUUID().toString())
       .withPoNumber("10000");
 
-    poLine = new CompositePoLine()
+    poLine = new PoLine()
       .withId(UUID.randomUUID().toString())
       .withTitleOrPackage("poLine for data-import")
       .withPurchaseOrderId(order.getId())
       .withPoLineNumber("10000-1")
-      .withSource(CompositePoLine.Source.MARC)
-      .withOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE)
+      .withSource(PoLine.Source.MARC)
+      .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE)
       .withEresource(new Eresource()
         .withMaterialType(ELECTRONIC_RESOURCE_MATERIAL_TYPE_ID)
         .withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM))
@@ -170,7 +170,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
       .put(ITEM_MATERIAL_TYPE_ID, poLine.getEresource().getMaterialType());
 
     JsonObject instanceJson = new JsonObject().put(ID_FIELD, INSTANCE_ID);
-    CompositePoLine mockPoLine = JsonObject.mapFrom(poLine).mapTo(CompositePoLine.class);
+    PoLine mockPoLine = JsonObject.mapFrom(poLine).mapTo(PoLine.class);
     mockPoLine.setInstanceId(instanceJson.getString(ID_FIELD));
 
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
@@ -212,7 +212,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
 
     // verifies that request was performed to update po line with instance id
     List<JsonObject> updatedPoLines = MockServer.getRqRsEntries(HttpMethod.PUT, PO_LINES_STORAGE);
-    CompositePoLine updatedPoLine = updatedPoLines.get(0).mapTo(CompositePoLine.class);
+    PoLine updatedPoLine = updatedPoLines.get(0).mapTo(PoLine.class);
     assertEquals(instanceJson.getString(ID_FIELD), updatedPoLine.getInstanceId());
 
     assertNull(getCreatedInstances());
@@ -231,7 +231,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     assertEquals(order.getId(), openedOrder.getId());
     assertEquals(WorkflowStatus.OPEN, openedOrder.getWorkflowStatus());
 
-    verifyEncumbrancesOnPoUpdate(order.withCompositePoLines(List.of(poLine)));
+    verifyEncumbrancesOnPoUpdate(order.withPoLines(List.of(poLine)));
   }
 
   @Test
@@ -278,7 +278,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     // given
     poLine.setInstanceId(null);
     poLine.getEresource().setCreateInventory(Eresource.CreateInventory.NONE);
-    CompositePoLine mockPoLine = JsonObject.mapFrom(poLine).mapTo(CompositePoLine.class);
+    PoLine mockPoLine = JsonObject.mapFrom(poLine).mapTo(PoLine.class);
 
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
@@ -316,7 +316,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     verifyPoLine(eventPayload);
 
     List<JsonObject> updatedPoLines = MockServer.getRqRsEntries(HttpMethod.PUT, PO_LINES_STORAGE);
-    CompositePoLine updatedPoLine = updatedPoLines.get(0).mapTo(CompositePoLine.class);
+    PoLine updatedPoLine = updatedPoLines.get(0).mapTo(PoLine.class);
     assertNull(updatedPoLine.getInstanceId());
 
     assertNull(getCreatedInstances());
@@ -329,7 +329,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     assertEquals(order.getId(), openedOrder.getId());
     assertEquals(WorkflowStatus.OPEN, openedOrder.getWorkflowStatus());
 
-    verifyEncumbrancesOnPoUpdate(order.withCompositePoLines(List.of(poLine)));
+    verifyEncumbrancesOnPoUpdate(order.withPoLines(List.of(poLine)));
   }
 
   @Test
@@ -338,7 +338,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     Async async = context.async();
     poLine.setInstanceId(null);
     poLine.getEresource().setCreateInventory(Eresource.CreateInventory.NONE);
-    CompositePoLine mockPoLine = JsonObject.mapFrom(poLine).mapTo(CompositePoLine.class);
+    PoLine mockPoLine = JsonObject.mapFrom(poLine).mapTo(PoLine.class);
 
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
@@ -523,13 +523,13 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
 
   private void verifyPoLine(DataImportEventPayload eventPayload) {
     assertNotNull(eventPayload.getContext().get(PO_LINE_KEY));
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getId());
     assertNotNull(poLine.getTitleOrPackage());
     assertNotNull(poLine.getPurchaseOrderId());
   }
 
-  private void createPieceAndTitle(CompositePoLine poLine) {
+  private void createPieceAndTitle(PoLine poLine) {
     Title title = new Title().withId(SAMPLE_TITLE_ID)
       .withTitle(poLine.getTitleOrPackage()).withPoLineId(poLine.getId())
       .withPoLineNumber(poLine.getPoLineNumber())

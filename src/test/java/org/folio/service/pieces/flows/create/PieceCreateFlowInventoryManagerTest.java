@@ -8,7 +8,7 @@ import static org.folio.TestConfig.getFirstContextFromVertx;
 import static org.folio.TestConfig.getVertx;
 import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
+import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.ELECTRONIC_RESOURCE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.eq;
@@ -26,7 +26,7 @@ import java.util.concurrent.TimeoutException;
 import org.folio.ApiTestSuite;
 import org.folio.models.pieces.PieceCreationHolder;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
@@ -121,16 +121,16 @@ public class PieceCreateFlowInventoryManagerTest {
       .withListUnitPrice(1d).withExchangeRate(1d).withCurrency("USD")
       .withPoLineEstimatedPrice(1d);
 
-    CompositePoLine compPOL = new CompositePoLine().withIsPackage(true).withPurchaseOrderId(orderId)
+    PoLine poLine = new PoLine().withIsPackage(true).withPurchaseOrderId(orderId)
                                     .withOrderFormat(ELECTRONIC_RESOURCE).withId(lineId)
                                     .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM))
                                     .withLocations(List.of(loc)).withCost(cost);
-    CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(orderId).withCompositePoLines(List.of(compPOL));
+    CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(orderId).withPoLines(List.of(poLine));
 
     doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(pieceId, requestContext);
     doReturn(succeededFuture(List.of(piece))).when(pieceStorageService).getPiecesByHoldingId(piece.getId(), requestContext);
     doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title.getId()), eq(requestContext), eq(requestContext));
-    doReturn(succeededFuture(itemId)).when(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(piece, compositePurchaseOrder, compPOL, requestContext);
+    doReturn(succeededFuture(itemId)).when(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(piece, compositePurchaseOrder, poLine, requestContext);
     doReturn(succeededFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(piece, requestContext);
 
     PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
@@ -144,7 +144,7 @@ public class PieceCreateFlowInventoryManagerTest {
     assertEquals(holdingId, piece.getHoldingId());
     verify(titlesService).updateTitleWithInstance(piece.getTitleId(), requestContext, requestContext);
 
-    verify(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(piece, compositePurchaseOrder, compPOL, requestContext);
+    verify(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(piece, compositePurchaseOrder, poLine, requestContext);
   }
 
   @Test
@@ -163,12 +163,12 @@ public class PieceCreateFlowInventoryManagerTest {
       .withListUnitPrice(1d).withExchangeRate(1d).withCurrency("USD")
       .withPoLineEstimatedPrice(1d);
 
-    CompositePoLine compPOL = new CompositePoLine().withIsPackage(true).withPurchaseOrderId(orderId)
+    PoLine poLine = new PoLine().withIsPackage(true).withPurchaseOrderId(orderId)
       .withOrderFormat(ELECTRONIC_RESOURCE).withId(lineId)
       .withCheckinItems(false)
       .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE))
       .withLocations(List.of(loc)).withCost(cost);
-    CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(orderId).withCompositePoLines(List.of(compPOL));
+    CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(orderId).withPoLines(List.of(poLine));
     doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(pieceId, requestContext);
     doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title.getId()), eq(requestContext), eq(requestContext));
 
@@ -184,7 +184,7 @@ public class PieceCreateFlowInventoryManagerTest {
     assertEquals(locationId, piece.getLocationId());
     verify(titlesService).updateTitleWithInstance(piece.getTitleId(), requestContext, requestContext);
 
-    verify(pieceUpdateInventoryService, times(0)).manualPieceFlowCreateItemRecord(piece, compositePurchaseOrder, compPOL, requestContext);
+    verify(pieceUpdateInventoryService, times(0)).manualPieceFlowCreateItemRecord(piece, compositePurchaseOrder, poLine, requestContext);
   }
 
 
@@ -204,11 +204,11 @@ public class PieceCreateFlowInventoryManagerTest {
       .withListUnitPrice(1d).withExchangeRate(1d).withCurrency("USD")
       .withPoLineEstimatedPrice(1d);
 
-    CompositePoLine compPOL = new CompositePoLine().withIsPackage(false).withPurchaseOrderId(orderId)
+    PoLine poLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId)
       .withOrderFormat(ELECTRONIC_RESOURCE).withId(lineId)
       .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE))
       .withLocations(List.of(loc)).withCost(cost);
-    CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(orderId).withCompositePoLines(List.of(compPOL));
+    CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(orderId).withPoLines(List.of(poLine));
     doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(pieceId, requestContext);
     doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title.getId()), eq(requestContext), eq(requestContext));
 
@@ -224,7 +224,7 @@ public class PieceCreateFlowInventoryManagerTest {
     assertEquals(locationId, piece.getLocationId());
     verify(titlesService).updateTitleWithInstance(piece.getTitleId(), requestContext, requestContext);
 
-    verify(pieceUpdateInventoryService, times(0)).manualPieceFlowCreateItemRecord(piece, compositePurchaseOrder, compPOL, requestContext);
+    verify(pieceUpdateInventoryService, times(0)).manualPieceFlowCreateItemRecord(piece, compositePurchaseOrder, poLine, requestContext);
   }
 
   private static class ContextConfiguration {

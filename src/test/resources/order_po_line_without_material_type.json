@@ -15,15 +15,9 @@
     "createdDate": "2010-10-08T03:53:00.000",
     "createdByUserId": "ab18897b-0e40-4f31-896b-9c9adc979a88"
   },
-  "compositePoLines": [
+  "poLines": [
     {
       "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
-      "alerts": [
-        {
-          "alert": "Receipt overdue",
-          "id": "9a665b22-9fe5-4c95-b4ee-837a5433c95d"
-        }
-      ],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "ABCDEFGHIJKLMNOPQRSTUVW",
       "claims": [
@@ -92,23 +86,6 @@
       "publisher": "Schiffer Publishing",
       "receiptDate": "2018-10-09T00:00:00.000Z",
       "receiptStatus": "Awaiting Receipt",
-      "reportingCodes": [
-        {
-          "code": "CODE1",
-          "id": "5926dcd7-85f5-4504-8283-712595ebc38b",
-          "description": "ABCDEF"
-        },
-        {
-          "code": "CODE2",
-          "id": "fa316c04-8101-4e72-8aaf-01281bac718f",
-          "description": "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        },
-        {
-          "code": "CODE3",
-          "id": "ea68b696-3125-4940-bf91-1d128323473e",
-          "description": "ABCDE"
-        }
-      ],
       "requester": "Leo Bulero",
       "rush": true,
       "selector": "ABCD",

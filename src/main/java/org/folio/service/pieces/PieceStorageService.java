@@ -23,7 +23,7 @@ import org.folio.rest.acq.model.Setting;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceCollection;
 
@@ -57,8 +57,8 @@ public class PieceStorageService {
     this.restClient = restClient;
   }
 
-  public Future<List<Piece>> getPiecesByPoLineId(CompositePoLine compPOL, RequestContext requestContext) {
-    return getPiecesByLineId(compPOL.getId(), requestContext);
+  public Future<List<Piece>> getPiecesByPoLineId(PoLine poLine, RequestContext requestContext) {
+    return getPiecesByLineId(poLine.getId(), requestContext);
   }
 
   /**

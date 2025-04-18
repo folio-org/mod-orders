@@ -48,7 +48,7 @@ public class OpenToPendingEncumbranceStrategy implements EncumbranceWorkflowStra
   public Future<List<Transaction>> getOrderEncumbrances(CompositePurchaseOrder compPo,
       CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
 
-    return encumbranceRelationsHoldersBuilder.retrieveMapFiscalYearsWithCompPOLines(compPo, poFromStorage, requestContext)
+    return encumbranceRelationsHoldersBuilder.retrieveMapFiscalYearsWithPoLines(compPo, poFromStorage, requestContext)
       .compose(poLinesByCurrentFy -> encumbranceService.getEncumbrancesByPoLinesFromCurrentFy(poLinesByCurrentFy, requestContext));
   }
 }

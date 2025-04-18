@@ -14,7 +14,7 @@ import java.util.List;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
@@ -32,22 +32,22 @@ public class ProcessInventoryMixedStrategy extends ProcessInventoryStrategy {
   }
 
   public Future<List<Piece>> handleHoldingsAndItemsRecords(CompositePurchaseOrder compPO,
-                                                           CompositePoLine compPOL,
+                                                           PoLine poLine,
                                                            InventoryItemManager inventoryItemManager,
                                                            InventoryHoldingManager inventoryHoldingManager,
                                                            RestClient restClient,
                                                            RequestContext requestContext) {
-    List<Future<JsonObject>> itemsPerHolding = updateMixedHolding(compPOL, inventoryHoldingManager, restClient, requestContext);
+    List<Future<JsonObject>> itemsPerHolding = updateMixedHolding(poLine, inventoryHoldingManager, restClient, requestContext);
     return collectResultsOnSuccess(itemsPerHolding)
       .map(aVoid -> {
-        updateLocations(compPOL);
+        updateLocations(poLine);
         return null;
       })
       .compose(aVoid -> {
           List<Future<List<Piece>>> pieceFutures = new ArrayList<>();
-          if (PoLineCommonUtil.isItemsUpdateRequired(compPOL)) {
-            for (Location location : compPOL.getLocations()) {
-              pieceFutures.add(inventoryItemManager.handleItemRecords(compPO, compPOL, location, requestContext));
+          if (PoLineCommonUtil.isItemsUpdateRequired(poLine)) {
+            for (Location location : poLine.getLocations()) {
+              pieceFutures.add(inventoryItemManager.handleItemRecords(compPO, poLine, location, requestContext));
             }
           } else {
             pieceFutures.add(Future.succeededFuture(Collections.emptyList()));
@@ -61,13 +61,13 @@ public class ProcessInventoryMixedStrategy extends ProcessInventoryStrategy {
       );
   }
 
-  private List<Future<JsonObject>> updateMixedHolding(CompositePoLine compPOL, InventoryHoldingManager inventoryHoldingManager,
+  private List<Future<JsonObject>> updateMixedHolding(PoLine poLine, InventoryHoldingManager inventoryHoldingManager,
                                                       RestClient restClient, RequestContext requestContext) {
     List<Future<JsonObject>> itemsPerHolding = new ArrayList<>();
-    compPOL.getLocations().forEach(location -> itemsPerHolding.add(
-      findHoldingsId(compPOL, location, restClient, requestContext)
+    poLine.getLocations().forEach(location -> itemsPerHolding.add(
+      findHoldingsId(poLine, location, restClient, requestContext)
         .compose(aVoid -> consortiumConfigurationService.cloneRequestContextIfNeeded(requestContext, location))
-        .compose(updatedRequestContext -> inventoryHoldingManager.getOrCreateHoldingsJsonRecord(compPOL.getEresource(), compPOL.getInstanceId(), location, updatedRequestContext)
+        .compose(updatedRequestContext -> inventoryHoldingManager.getOrCreateHoldingsJsonRecord(poLine.getEresource(), poLine.getInstanceId(), location, updatedRequestContext)
           .map(holding -> {
             updateLocationWithHoldingInfo(holding, location);
             return null;
@@ -85,13 +85,13 @@ public class ProcessInventoryMixedStrategy extends ProcessInventoryStrategy {
     }
   }
 
-  private void updateLocations(CompositePoLine compPOL) {
+  private void updateLocations(PoLine poLine) {
     List<Location> locations = new ArrayList<>();
-    for (Location location : compPOL.getLocations()) {
+    for (Location location : poLine.getLocations()) {
       boolean physicalResource = location.getQuantityPhysical() != null && location.getQuantityPhysical() > 0;
       boolean electronicResource = location.getQuantityElectronic() != null && location.getQuantityElectronic() > 0;
-      boolean physicalHolding = physicalResource && isHoldingUpdateRequiredForPhysical(compPOL);
-      boolean electronicHolding = electronicResource && isHoldingUpdateRequiredForEresource(compPOL);
+      boolean physicalHolding = physicalResource && isHoldingUpdateRequiredForPhysical(poLine);
+      boolean electronicHolding = electronicResource && isHoldingUpdateRequiredForEresource(poLine);
       Location newLocation = JsonObject.mapFrom(location).mapTo(Location.class);
       // Physical/electronic locations have to be merged when they have the same holdingId or locationId,
       // but separate otherwise, and they can't have both holdingId and locationId.
@@ -123,6 +123,6 @@ public class ProcessInventoryMixedStrategy extends ProcessInventoryStrategy {
       }
       locations.add(newLocation);
     }
-    compPOL.setLocations(locations);
+    poLine.setLocations(locations);
   }
 }

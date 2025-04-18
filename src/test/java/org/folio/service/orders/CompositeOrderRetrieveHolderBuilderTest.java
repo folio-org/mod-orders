@@ -15,7 +15,7 @@ import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.service.finance.FiscalYearService;
@@ -49,10 +49,10 @@ public class CompositeOrderRetrieveHolderBuilderTest {
   void shouldNotFailWhenRetrieveFiscalYearReturns404Status() {
     FundDistribution fundDistribution = new FundDistribution().withFundId(UUID.randomUUID()
       .toString());
-    CompositePoLine poLine = new CompositePoLine().withFundDistribution(List.of(fundDistribution));
+    PoLine poLine = new PoLine().withFundDistribution(List.of(fundDistribution));
     CompositePurchaseOrder order = new CompositePurchaseOrder().withId(UUID.randomUUID()
       .toString())
-      .withCompositePoLines(Collections.singletonList(poLine));
+      .withPoLines(Collections.singletonList(poLine));
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order);
     Promise<FiscalYear> failedFuture = Promise.promise();
     failedFuture.fail(new HttpException(404, ErrorCodes.CURRENT_FISCAL_YEAR_NOT_FOUND));
@@ -68,10 +68,10 @@ public class CompositeOrderRetrieveHolderBuilderTest {
   void shouldFailWhenWhenRetrieveFiscalYearReturnsDifferentFrom404Status(VertxTestContext vertxTestContext) {
     FundDistribution fundDistribution = new FundDistribution().withFundId(UUID.randomUUID()
       .toString());
-    CompositePoLine poLine = new CompositePoLine().withFundDistribution(List.of(fundDistribution));
+    PoLine poLine = new PoLine().withFundDistribution(List.of(fundDistribution));
     CompositePurchaseOrder order = new CompositePurchaseOrder().withId(UUID.randomUUID()
       .toString())
-      .withCompositePoLines(Collections.singletonList(poLine));
+      .withPoLines(Collections.singletonList(poLine));
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order);
     Promise<FiscalYear> failedFuture = Promise.promise();
     HttpException thrownException = new HttpException(500, ErrorCodes.GENERIC_ERROR_CODE);

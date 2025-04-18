@@ -5,7 +5,7 @@ import java.util.List;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.models.pieces.PieceDeletionHolder;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
@@ -29,7 +29,7 @@ public class PieceDeleteFlowPoLineService extends BasePieceFlowUpdatePoLineServi
 
   @Override
   public boolean poLineUpdateQuantity(PieceDeletionHolder holder) {
-    CompositePoLine lineToSave = holder.getPoLineToSave();
+    PoLine lineToSave = holder.getPoLineToSave();
     Piece piece = holder.getPieceToDelete();
     final int qty = 1;
     List<Location> locationsToUpdate = PieceUtil.findOrderPieceLineLocation(piece, lineToSave);

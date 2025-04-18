@@ -6,7 +6,7 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.inventory.InventoryItemManager;
@@ -32,13 +32,13 @@ public class ItemRecreateInventoryService {
    * 3. Then delete the item in member tenant 1 by item id
    *
    * @param compOrder Composite PO
-   * @param compPoLine Composite POL
+   * @param poLine POL
    * @param piece Piece
    * @param srcLocCtx Source location context
    * @param dstLocCtx Destination location context
    * @return id of the recreated Item
    */
-  public Future<String> recreateItemInDestinationTenant(CompositePurchaseOrder compOrder, CompositePoLine compPoLine,
+  public Future<String> recreateItemInDestinationTenant(CompositePurchaseOrder compOrder, PoLine poLine,
                                                         Piece piece, RequestContext srcLocCtx, RequestContext dstLocCtx) {
     if (StringUtils.isEmpty(piece.getItemId())) {
       return Future.succeededFuture();
@@ -46,10 +46,10 @@ public class ItemRecreateInventoryService {
     return inventoryItemManager.getItemRecordById(piece.getItemId(), true, srcLocCtx)
       .compose(item -> {
         if (Objects.nonNull(item)) {
-          if (piece.getFormat() == Piece.Format.ELECTRONIC && DefaultPieceFlowsValidator.isCreateItemForElectronicPiecePossible(piece, compPoLine)) {
-            return inventoryItemManager.createMissingElectronicItems(compOrder, compPoLine, piece, ITEM_QUANTITY, dstLocCtx);
-          } else if (DefaultPieceFlowsValidator.isCreateItemForNonElectronicPiecePossible(piece, compPoLine)) {
-            return inventoryItemManager.createMissingPhysicalItems(compOrder, compPoLine, piece, ITEM_QUANTITY,  dstLocCtx);
+          if (piece.getFormat() == Piece.Format.ELECTRONIC && DefaultPieceFlowsValidator.isCreateItemForElectronicPiecePossible(piece, poLine)) {
+            return inventoryItemManager.createMissingElectronicItems(compOrder, poLine, piece, ITEM_QUANTITY, dstLocCtx);
+          } else if (DefaultPieceFlowsValidator.isCreateItemForNonElectronicPiecePossible(piece, poLine)) {
+            return inventoryItemManager.createMissingPhysicalItems(compOrder, poLine, piece, ITEM_QUANTITY,  dstLocCtx);
           }
         }
         return Future.succeededFuture(List.of());

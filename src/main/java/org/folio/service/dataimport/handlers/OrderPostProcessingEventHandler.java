@@ -16,7 +16,7 @@ import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.service.dataimport.PoLineImportProgressService;
@@ -75,7 +75,7 @@ public class OrderPostProcessingEventHandler implements EventHandler {
 
     Map<String, String> okapiHeaders = DataImportUtils.extractOkapiHeaders(dataImportEventPayload);
     RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
-    CompositePoLine poLine = Json.decodeValue(payloadContext.get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(payloadContext.get(PO_LINE_KEY), PoLine.class);
 
     LOGGER.info("handle:: jobExecutionId {}, poLineId {}, orderId {}", dataImportEventPayload.getJobExecutionId(), poLine.getId(), poLine.getPurchaseOrderId());
     ensurePoLineWithInstanceId(poLine, dataImportEventPayload, requestContext)
@@ -95,7 +95,7 @@ public class OrderPostProcessingEventHandler implements EventHandler {
     return future;
   }
 
-  private Future<Void> openOrder(CompositePoLine poLine, RequestContext requestContext, String jobExecutionId) {
+  private Future<Void> openOrder(PoLine poLine, RequestContext requestContext, String jobExecutionId) {
     LOGGER.info("All poLines for order were processed, initializing order opening, orderId: {}, poLineNumber: {}, jobExecutionId: {} ",
       poLine.getPurchaseOrderId(), poLine.getPoLineNumber(), jobExecutionId);
 
@@ -105,7 +105,7 @@ public class OrderPostProcessingEventHandler implements EventHandler {
       .compose(order -> purchaseOrderHelper.updateOrder(order, false, requestContext));
   }
 
-  private Future<Void> ensurePoLineWithInstanceId(CompositePoLine poLine, DataImportEventPayload dataImportEventPayload,
+  private Future<Void> ensurePoLineWithInstanceId(PoLine poLine, DataImportEventPayload dataImportEventPayload,
                                                   RequestContext requestContext) {
     if (PoLineCommonUtil.isInventoryUpdateNotRequired(poLine)) {
       LOGGER.debug("ensurePoLineWithInstanceId:: Skipping instanceId filling because poLine does not require inventory entities creation, jobExecutionId: {}, poLineNumber: {}",

@@ -12,7 +12,7 @@ import javax.money.convert.CurrencyConversion;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.service.FundsDistributionService;
@@ -34,7 +34,7 @@ public class FundsDistributionServiceTest {
     FundDistribution fundDistribution2 = new FundDistribution().withDistributionType(FundDistribution.DistributionType.PERCENTAGE).withValue(30d);
     FundDistribution fundDistribution3 = new FundDistribution().withDistributionType(FundDistribution.DistributionType.PERCENTAGE).withValue(30d);
     FundDistribution fundDistribution4 = new FundDistribution().withDistributionType(FundDistribution.DistributionType.PERCENTAGE).withValue(10d);
-    CompositePoLine poLine = new CompositePoLine()
+    PoLine poLine = new PoLine()
         .withFundDistribution(List.of(fundDistribution1, fundDistribution2, fundDistribution3, fundDistribution4))
         .withCost(new Cost()
                       .withListUnitPrice(1.94)
@@ -86,7 +86,7 @@ public class FundsDistributionServiceTest {
     FundDistribution fundDistribution2 = new FundDistribution().withDistributionType(FundDistribution.DistributionType.PERCENTAGE).withValue(30d);
     FundDistribution fundDistribution3 = new FundDistribution().withDistributionType(FundDistribution.DistributionType.PERCENTAGE).withValue(30d);
     FundDistribution fundDistribution4 = new FundDistribution().withDistributionType(FundDistribution.DistributionType.AMOUNT).withValue(0.39);
-    CompositePoLine poLine = new CompositePoLine()
+    PoLine poLine = new PoLine()
         .withFundDistribution(List.of(fundDistribution1, fundDistribution2, fundDistribution3, fundDistribution4))
         .withCost(new Cost()
                       .withListUnitPrice(1.99)
@@ -136,7 +136,7 @@ public class FundsDistributionServiceTest {
     FundDistribution fundDistribution1 = new FundDistribution().withDistributionType(FundDistribution.DistributionType.PERCENTAGE).withValue(30d);
     FundDistribution fundDistribution2 = new FundDistribution().withDistributionType(FundDistribution.DistributionType.PERCENTAGE).withValue(30d);
     FundDistribution fundDistribution3 = new FundDistribution().withDistributionType(FundDistribution.DistributionType.PERCENTAGE).withValue(40d);
-    CompositePoLine poLine = new CompositePoLine()
+    PoLine poLine = new PoLine()
         .withFundDistribution(List.of(fundDistribution1, fundDistribution2, fundDistribution3))
         .withCost(new Cost()
                       .withListUnitPrice(1d)

@@ -17,7 +17,7 @@ import java.util.function.Function;
 import org.folio.rest.acq.model.finance.BudgetExpenseClass;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
@@ -37,14 +37,14 @@ public class ExpenseClassValidationService {
   }
 
   public Future<Void> validateExpenseClassesForOpenedOrder(CompositePurchaseOrder compOrder,
-      List<CompositePoLine> compositePoLines, RequestContext requestContext) {
+      List<PoLine> poLines, RequestContext requestContext) {
     if (compOrder.getWorkflowStatus() == CompositePurchaseOrder.WorkflowStatus.OPEN) {
-      return validateExpenseClasses(compositePoLines, true, requestContext);
+      return validateExpenseClasses(poLines, true, requestContext);
     }
     return Future.succeededFuture();
   }
 
-  public Future<Void> validateExpenseClasses(List<CompositePoLine> poLines,
+  public Future<Void> validateExpenseClasses(List<PoLine> poLines,
       boolean isActiveExpenseClassCheckRequired, RequestContext requestContext) {
     Map<FundDistribution, String> expenseClassesByFundId = poLines.stream()
       .flatMap(poLine -> poLine.getFundDistribution()

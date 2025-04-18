@@ -11,7 +11,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.inventory.InventoryHoldingManager;
@@ -40,19 +40,19 @@ public class PieceUpdateInventoryService {
    * Return id of created  Item
    */
   public Future<String> manualPieceFlowCreateItemRecord(Piece piece, CompositePurchaseOrder compPO,
-                                                        CompositePoLine compPOL, RequestContext requestContext) {
+                                                        PoLine poLine, RequestContext requestContext) {
     final int ITEM_QUANTITY = 1;
     logger.debug("manualPieceFlowCreateItemRecord:: Handling {} items for PO Line and holdings with id={}, receivingTenantId={}",
       ITEM_QUANTITY, piece.getHoldingId(), piece.getReceivingTenantId());
-    if (piece.getFormat() == Piece.Format.ELECTRONIC && DefaultPieceFlowsValidator.isCreateItemForElectronicPiecePossible(piece, compPOL)) {
-      return inventoryItemManager.createMissingElectronicItems(compPO, compPOL, piece, ITEM_QUANTITY, requestContext)
+    if (piece.getFormat() == Piece.Format.ELECTRONIC && DefaultPieceFlowsValidator.isCreateItemForElectronicPiecePossible(piece, poLine)) {
+      return inventoryItemManager.createMissingElectronicItems(compPO, poLine, piece, ITEM_QUANTITY, requestContext)
         .map(idS -> idS.get(0));
-    } else if (DefaultPieceFlowsValidator.isCreateItemForNonElectronicPiecePossible(piece, compPOL)) {
-      return inventoryItemManager.createMissingPhysicalItems(compPO, compPOL, piece, ITEM_QUANTITY, requestContext)
+    } else if (DefaultPieceFlowsValidator.isCreateItemForNonElectronicPiecePossible(piece, poLine)) {
+      return inventoryItemManager.createMissingPhysicalItems(compPO, poLine, piece, ITEM_QUANTITY, requestContext)
         .map(idS -> idS.get(0));
     } else {
       logger.warn("manualPieceFlowCreateItemRecord:: Creating Item is not possible for piece: {}, poLine: {}",
-        piece.getId(), compPOL.getId());
+        piece.getId(), poLine.getId());
       return Future.succeededFuture();
     }
   }

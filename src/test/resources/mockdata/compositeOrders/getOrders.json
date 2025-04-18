@@ -3,22 +3,22 @@
     "id" : "1ab7ef6a-d1d4-4a4f-90a2-882aed18af14",
     "poNumber" : "268758",
     "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
-    "compositePoLines" : [ ]
+    "poLines": [ ]
   }, {
     "id" : "e5ae4afd-3fa9-494e-a972-f541df9b877e",
     "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
     "poNumber" : "268879",
-    "compositePoLines" : [ ]
+    "poLines": [ ]
   }, {
     "id" : "2ab7ef6a-d1d4-4a4f-90a2-882aed18af14",
     "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
     "poNumber" : "123456",
-    "compositePoLines" : [ ]
+    "poLines": [ ]
   }, {
     "id" : "07f65192-44a4-483d-97aa-b137bbd96390",
     "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
     "poNumber" : "S60402",
-    "compositePoLines" : [ ]
+    "poLines": [ ]
   } ],
   "totalRecords" : 3
 }
