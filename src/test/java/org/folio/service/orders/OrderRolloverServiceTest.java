@@ -47,7 +47,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.RolloverStatus;
 import org.folio.service.caches.ConfigurationEntriesCache;
-import org.folio.service.exchange.ExchangeRateProviderResolver;
+import org.folio.service.exchange.CacheableExchangeRateService;
 import org.folio.service.finance.FundService;
 import org.folio.service.finance.rollover.LedgerRolloverErrorService;
 import org.folio.service.finance.rollover.LedgerRolloverProgressService;
@@ -89,11 +89,11 @@ public class OrderRolloverServiceTest {
   @Mock
   private ConfigurationEntriesCache configurationEntriesCache;
   @Mock
-  private ExchangeRateProviderResolver exchangeRateProviderResolver;
-  @Mock
   private LedgerRolloverProgressService ledgerRolloverProgressService;
   @Mock
   private LedgerRolloverErrorService ledgerRolloverErrorService;
+  @Mock
+  private CacheableExchangeRateService cacheableExchangeRateService;
 
   @Captor
   private ArgumentCaptor<List<PoLine>> argumentCaptor;
@@ -269,8 +269,8 @@ public class OrderRolloverServiceTest {
     List<Transaction> encumbrances = List.of(transactionOneTime, transactionOngoing2, transactionOngoing3);
     doReturn(succeededFuture(encumbrances)).when(transactionService).getTransactions(anyString(), any());
 
-    var conversionHelper = new CurrencyConversionMockHelper(configurationEntriesCache, exchangeRateProviderResolver, requestContext);
-    conversionHelper.mockExchangeRateProviderResolver(CurrencyConversionMockHelper.ExchangeRateProviderMode.FINANCE_API, systemCurrency, systemCurrency, nopExchangeRate);
+    var conversionHelper = new CurrencyConversionMockHelper(configurationEntriesCache, cacheableExchangeRateService, requestContext);
+    conversionHelper.mockExchangeRateProviderResolver(systemCurrency, systemCurrency, nopExchangeRate);
 
     Future<Void> future = orderRolloverService.startRollover(ledgerFiscalYearRollover, progress, requestContext);
     vertxTestContext.assertComplete(future)
@@ -371,8 +371,8 @@ public class OrderRolloverServiceTest {
     List<Transaction> encumbrances = List.of(transactionOneTime);
     doReturn(succeededFuture(encumbrances)).when(transactionService).getTransactions(anyString(), any());
 
-    var conversionHelper = new CurrencyConversionMockHelper(configurationEntriesCache, exchangeRateProviderResolver, requestContext);
-    conversionHelper.mockExchangeRateProviderResolver(CurrencyConversionMockHelper.ExchangeRateProviderMode.FINANCE_API, systemCurrency, systemCurrency, nopExchangeRate);
+    var conversionHelper = new CurrencyConversionMockHelper(configurationEntriesCache, cacheableExchangeRateService, requestContext);
+    conversionHelper.mockExchangeRateProviderResolver(systemCurrency, systemCurrency, nopExchangeRate);
 
     Future<Void> future = orderRolloverService.startRollover(ledgerFiscalYearRollover, progress, requestContext);
     vertxTestContext.assertComplete(future)
@@ -491,8 +491,8 @@ public class OrderRolloverServiceTest {
     List<Transaction> encumbrances = List.of(transactionOneTime, transactionOngoing2, transactionOngoing3);
     doReturn(succeededFuture(encumbrances)).when(transactionService).getTransactions(anyString(), any());
 
-    var conversionHelper = new CurrencyConversionMockHelper(configurationEntriesCache, exchangeRateProviderResolver, requestContext);
-    conversionHelper.mockExchangeRateProviderResolver(CurrencyConversionMockHelper.ExchangeRateProviderMode.FINANCE_API, systemCurrency, polCurrency, exchangeAudToUsdRate);
+    var conversionHelper = new CurrencyConversionMockHelper(configurationEntriesCache, cacheableExchangeRateService, requestContext);
+    conversionHelper.mockExchangeRateProviderResolver(systemCurrency, polCurrency, exchangeAudToUsdRate);
 
     Future<Void> future = orderRolloverService.startRollover(ledgerFiscalYearRollover, progress, requestContext);
     vertxTestContext.assertComplete(future)
@@ -545,10 +545,11 @@ public class OrderRolloverServiceTest {
       .withDistributionType(DistributionType.PERCENTAGE)
       .withEncumbrance(prevEncumbrId);
 
+    String poLineCurrency = "USD";
     Cost cost = new Cost()
       .withListUnitPrice(595d)
       .withQuantityPhysical(1)
-      .withCurrency("USD")
+      .withCurrency(poLineCurrency)
       .withPoLineEstimatedPrice(595d);
     PoLine poLine = new PoLine()
       .withId(poLineId)
@@ -598,15 +599,18 @@ public class OrderRolloverServiceTest {
 
     doReturn(succeededFuture(null)).when(transactionService).batchDelete(anyList(), any());
 
+    var conversionHelper = new CurrencyConversionMockHelper(configurationEntriesCache, cacheableExchangeRateService, requestContext);
+    conversionHelper.mockExchangeRateProviderResolver(systemCurrency, poLineCurrency, 1d);
+
     Future<Void> future = orderRolloverService.startRollover(ledgerFiscalYearRollover, progress, requestContext);
     sleep(3000);
     vertxTestContext.assertComplete(future)
       .onSuccess(result -> {
         verify(transactionService, times(1)).batchDelete(
-          argThat(transactionIds -> transactionIds.size() == 1 && currEncumbrId.equals(transactionIds.get(0))), any());
+          argThat(transactionIds -> transactionIds.size() == 1 && currEncumbrId.equals(transactionIds.getFirst())), any());
 
         verify(purchaseOrderLineService).saveOrderLinesWithoutSearchLocationsUpdate(argumentCaptor.capture(), any(RequestContext.class));
-        assertThat(argumentCaptor.getAllValues().get(0).get(0).getFundDistribution().get(0).getEncumbrance(), equalTo(null));
+        assertThat(argumentCaptor.getAllValues().getFirst().getFirst().getFundDistribution().getFirst().getEncumbrance(), equalTo(null));
 
         vertxTestContext.completeNow();
       })
@@ -665,22 +669,23 @@ public class OrderRolloverServiceTest {
   }
 
   private static Stream<Arguments> shouldConvertTotalAmountUsingCorrectExchangeRateProviderArgs() {
-    // FINANCE_API uses multiplication and 2 ECB/IMF exchanges rates, e.g. USD->AUD using 1.536 and AUD->USD using 0.651
-    // MANUAL uses division and 1 exchange rate (the initial exchange on the POL used to create an Encumbrance Transaction)
+    // customExchangeRate=false uses multiplication and 2 ECB/Custom API exchanges rates, e.g. USD->AUD using 1.536 and AUD->USD using 0.651
+    // customExchangeRate=true uses division and 1 exchange rate (the initial exchange on the POL used to create an Encumbrance Transaction)
     return Stream.of(
-      Arguments.of("USD", "USD", 10d, 10d, 10d, 1d, 100d, CurrencyConversionMockHelper.ExchangeRateProviderMode.FINANCE_API),
-      Arguments.of("USD", "AUD", 10d, 6.51d, 10d, 1.536d, 100d, CurrencyConversionMockHelper.ExchangeRateProviderMode.FINANCE_API),
-      Arguments.of("AUD", "USD", 6.51d, 10d, 6.51d, 0.651d, 100d, CurrencyConversionMockHelper.ExchangeRateProviderMode.FINANCE_API),
-      Arguments.of("USD", "UZS", 10d, 9d, 10d, 0.9d, 100d, CurrencyConversionMockHelper.ExchangeRateProviderMode.MANUAL)
+      Arguments.of("USD", "USD", 10d, 10d, 10d, 1d, 100d, false),
+      Arguments.of("USD", "AUD", 10d, 6.51d, 10d, 1.536d, 100d, false),
+      Arguments.of("AUD", "USD", 6.51d, 10d, 6.51d, 0.651d, 100d, false),
+      Arguments.of("USD", "UZS", 10d, 9d, 10d, 0.9d, 100d, true)
     );
   }
 
   @ParameterizedTest
   @MethodSource("shouldConvertTotalAmountUsingCorrectExchangeRateProviderArgs")
   @DisplayName("Should convert total amount using correct exchange rate provider")
-  void shouldConvertTotalAmountUsingCorrectExchangeRateProviderMode(String fromCurrency, String toCurrency, Double poLineEstimatedPrice, Double initialAmountEncumbered,
-                                                                    Double totalAmount, Double exchangeRateAmount, Double fundAllocation,
-                                                                    CurrencyConversionMockHelper.ExchangeRateProviderMode exchangeRateProviderMode) {
+  void shouldConvertTotalAmountUsingCorrectExchangeRateProviderMode(String fromCurrency, String toCurrency,
+                                                                    Double poLineEstimatedPrice, Double initialAmountEncumbered,
+                                                                    Double totalAmount, Double exchangeRateAmount,
+                                                                    Double fundAllocation, boolean customExchangeRate) {
     var purchaseOrderId = UUID.randomUUID().toString();
     var poLineId = UUID.randomUUID().toString();
     var transactionId = UUID.randomUUID().toString();
@@ -693,10 +698,8 @@ public class OrderRolloverServiceTest {
       .withDistributionType(DistributionType.PERCENTAGE);
     var cost = new Cost()
       .withCurrency(toCurrency)
-      .withPoLineEstimatedPrice(poLineEstimatedPrice);
-    if (exchangeRateProviderMode == CurrencyConversionMockHelper.ExchangeRateProviderMode.MANUAL) {
-      cost.setExchangeRate(exchangeRateAmount);
-    }
+      .withPoLineEstimatedPrice(poLineEstimatedPrice)
+      .withExchangeRate(exchangeRateAmount);
 
     var poLine = new PoLine()
       .withId(encumbranceId)
@@ -716,10 +719,10 @@ public class OrderRolloverServiceTest {
       .withCurrency(fromCurrency)
       .withEncumbrance(encumbrance);
 
-    var conversionHelper = new CurrencyConversionMockHelper(configurationEntriesCache, exchangeRateProviderResolver, requestContext);
-    conversionHelper.mockExchangeRateProviderResolver(exchangeRateProviderMode, fromCurrency, toCurrency, exchangeRateAmount);
+    var conversionHelper = new CurrencyConversionMockHelper(configurationEntriesCache, cacheableExchangeRateService, requestContext);
+    conversionHelper.mockExchangeRateProviderResolver(fromCurrency, toCurrency, exchangeRateAmount);
 
-    var currencyConversion = orderRolloverService.retrieveCurrencyConversion(fromCurrency, poLine.getCost(), requestContext);
+    var currencyConversion = orderRolloverService.retrieveCurrencyConversion(fromCurrency, poLine.getCost().getCurrency(), exchangeRateAmount, customExchangeRate);
 
     var holder = new PoLineEncumbrancesHolder(poLine)
       .withEncumbrances(singletonList(transaction))

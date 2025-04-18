@@ -9,6 +9,7 @@ import static org.folio.rest.jaxrs.model.RolloverStatus.ERROR;
 import static org.folio.rest.jaxrs.model.RolloverStatus.IN_PROGRESS;
 import static org.folio.rest.jaxrs.model.RolloverStatus.NOT_STARTED;
 import static org.folio.rest.jaxrs.model.RolloverStatus.SUCCESS;
+import static org.folio.service.exchange.CustomExchangeRateProvider.RATE_KEY;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
@@ -52,8 +53,7 @@ import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
 import org.folio.rest.jaxrs.model.LedgerFiscalYearRolloverCollection;
 import org.folio.rest.jaxrs.model.Parameter;
-import org.folio.service.exchange.ExchangeRateProviderResolver;
-import org.folio.service.exchange.ManualExchangeRateProvider;
+import org.folio.service.exchange.CustomExchangeRateProvider;
 import org.folio.service.finance.budget.BudgetRestrictionService;
 import org.folio.service.finance.rollover.LedgerRolloverErrorService;
 import org.folio.service.finance.rollover.LedgerRolloverProgressService;
@@ -78,7 +78,6 @@ public class OrderReEncumberServiceTest {
 
   @InjectMocks
   private OrderReEncumberService orderReEncumberService;
-
   @Mock
   private PurchaseOrderStorageService purchaseOrderStorageService;
   @Mock
@@ -92,14 +91,11 @@ public class OrderReEncumberServiceTest {
   @Mock
   private BudgetRestrictionService budgetRestrictionService;
   @Spy
-  private ManualExchangeRateProvider exchangeRateProvider;
-  @Mock
-  private ExchangeRateProviderResolver exchangeRateProviderResolver;
+  private CustomExchangeRateProvider exchangeRateProvider;
   @Mock
   private TransactionService transactionService;
   @Mock
   private ReEncumbranceHoldersBuilder spyReEncumbranceHoldersBuilder;
-
   @Mock
   private RequestContext requestContext;
 
@@ -123,7 +119,6 @@ public class OrderReEncumberServiceTest {
     mockitoMocks.close();
   }
 
-
   @Test
   void testPopulateNeedReEncumberField() {
     // given
@@ -136,8 +131,8 @@ public class OrderReEncumberServiceTest {
     LedgerFiscalYearRolloverErrorCollection ledgerFiscalYearRolloverErrors = new LedgerFiscalYearRolloverErrorCollection()
         .withLedgerFiscalYearRolloverErrors(Collections.singletonList(new LedgerFiscalYearRolloverError()));
 
-    PoLine line = order.getPoLines().get(0);
-    FundDistribution fundDistribution1 = line.getFundDistribution().get(0);
+    PoLine line = order.getPoLines().getFirst();
+    FundDistribution fundDistribution1 = line.getFundDistribution().getFirst();
     String fiscalYearId = UUID.randomUUID().toString();
 
     ReEncumbranceHolder holder1 = new ReEncumbranceHolder().withPurchaseOrder(order)
@@ -149,7 +144,7 @@ public class OrderReEncumberServiceTest {
 
     FundDistribution fundDistribution2 = line.getFundDistribution().get(1);
     ReEncumbranceHolder holder2 = new ReEncumbranceHolder().withPurchaseOrder(order)
-        .withPoLine(order.getPoLines().get(0))
+        .withPoLine(order.getPoLines().getFirst())
         .withFundDistribution(fundDistribution2)
         .withRollover(rollover)
         .withLedgerId(ledgerId)
@@ -157,7 +152,7 @@ public class OrderReEncumberServiceTest {
 
     FundDistribution fundDistribution3 = line.getFundDistribution().get(1);
     ReEncumbranceHolder holder3 = new ReEncumbranceHolder().withPurchaseOrder(order)
-        .withPoLine(order.getPoLines().get(0))
+        .withPoLine(order.getPoLines().getFirst())
         .withFundDistribution(fundDistribution3)
         .withRollover(rollover)
         .withLedgerId(ledgerId)
@@ -206,7 +201,6 @@ public class OrderReEncumberServiceTest {
     String rolloverId2 = UUID.randomUUID().toString();
     String rolloverId3 = UUID.randomUUID().toString();
 
-
     ReEncumbranceHolder holder1 = new ReEncumbranceHolder()
         .withLedgerId(ledgerId1)
         .withRollover(new LedgerFiscalYearRollover().withId(rolloverId1).withLedgerId(ledgerId1))
@@ -242,7 +236,7 @@ public class OrderReEncumberServiceTest {
       HttpException e = (HttpException) completionException.cause();
       assertEquals(ROLLOVER_NOT_COMPLETED.getCode(), e.getError().getCode());
       assertThat(e.getError().getParameters(), hasSize(1));
-      Parameter parameter = e.getError().getParameters().get(0);
+      Parameter parameter = e.getError().getParameters().getFirst();
       assertThat(parameter.getValue(), containsString(ledgerId1));
       assertThat(parameter.getValue(), containsString(ledgerId2));
       vertxTestContext.completeNow();
@@ -356,7 +350,6 @@ public class OrderReEncumberServiceTest {
 
   @Test
   void reEncumberWithEmptyHoldersShouldFailed(VertxTestContext vertxTestContext) {
-
     String orderId = UUID.randomUUID().toString();
 
     when(purchaseOrderStorageService.getCompositeOrderById(eq(orderId), eq(requestContext)))
@@ -372,8 +365,6 @@ public class OrderReEncumberServiceTest {
         .thenReturn(succeededFuture(new LedgerFiscalYearRolloverErrorCollection()));
     when(ledgerRolloverErrorService.deleteRolloverErrors(anyList(), any())).thenReturn(succeededFuture(null));
     when(purchaseOrderLineService.saveOrderLinesWithoutSearchLocationsUpdate(anyList(), any())).thenReturn(succeededFuture(null));
-    ConversionQuery conversionQuery = ConversionQueryBuilder.of().setBaseCurrency("USD").setTermCurrency("USD").build();
-    when(exchangeRateProviderResolver.resolve(conversionQuery, requestContext)).thenReturn(exchangeRateProvider);
 
     Future<Void> future = orderReEncumberService.reEncumber(orderId, requestContext);
 
@@ -514,7 +505,6 @@ public class OrderReEncumberServiceTest {
         .withId(UUID.randomUUID().toString())
         .withCurrency("USD");
 
-
     List<Transaction> toTransactionList = Collections.emptyList();
 
     FundDistribution fundDistribution1 = new FundDistribution()
@@ -534,9 +524,9 @@ public class OrderReEncumberServiceTest {
         .withFundDistribution(List.of(fundDistribution1, fundDistribution2));
 
     ConversionQuery conversionPoLineToFyQuery = ConversionQueryBuilder.of()
-        .setBaseCurrency("EUR").setTermCurrency("USD").set(ExchangeRateProviderResolver.RATE_KEY, exchangeRate).build();
+        .setBaseCurrency("EUR").setTermCurrency("USD").set(RATE_KEY, exchangeRate).build();
     ConversionQuery conversionFyToPoLineQuery = ConversionQueryBuilder.of()
-        .setBaseCurrency("USD").setTermCurrency("EUR").set(ExchangeRateProviderResolver.RATE_KEY, exchangeRate).build();
+        .setBaseCurrency("USD").setTermCurrency("EUR").set(RATE_KEY, exchangeRate).build();
 
     ReEncumbranceHolder holder1 = new ReEncumbranceHolder()
         .withPurchaseOrder(compPO)
@@ -551,7 +541,6 @@ public class OrderReEncumberServiceTest {
         .withNewEncumbrance(toEncumbrance1)
         .withPoLineToFyConversion(exchangeRateProvider.getCurrencyConversion(conversionPoLineToFyQuery))
         .withFyToPoLineConversion(exchangeRateProvider.getCurrencyConversion(conversionFyToPoLineQuery));
-
 
     ReEncumbranceHolder holder2 = new ReEncumbranceHolder()
         .withPurchaseOrder(compPO)
@@ -585,19 +574,17 @@ public class OrderReEncumberServiceTest {
     when(ledgerRolloverProgressService.getRolloversProgress(eq(rolloverId), any()))
         .thenReturn(succeededFuture(Collections.singletonList(success)));
 
-    when(exchangeRateProviderResolver.resolve(conversionPoLineToFyQuery, requestContext)).thenReturn(exchangeRateProvider);
-    when(exchangeRateProviderResolver.resolve(conversionFyToPoLineQuery, requestContext)).thenReturn(exchangeRateProvider);
     when(transactionService.getTransactions(anyString(), eq(requestContext)))
         .thenReturn(succeededFuture(toTransactionList));
     when(transactionService.batchCreate(anyList(), eq(requestContext)))
       .thenReturn(succeededFuture());
 
-    //When
+    // When
     Future<Void> future = orderReEncumberService.reEncumber(UUID.randomUUID().toString(), requestContext);
     vertxTestContext.assertComplete(future)
       .onSuccess(result -> {
         assertEquals(-35.3d, line1.getCost().getFyroAdjustmentAmount());
-        assertEquals(50d, line1.getFundDistribution().get(0).getValue());
+        assertEquals(50d, line1.getFundDistribution().getFirst().getValue());
         assertEquals(42.35d, line1.getFundDistribution().get(1).getValue());
         vertxTestContext.completeNow();
       })

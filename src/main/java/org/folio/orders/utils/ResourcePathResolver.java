@@ -60,6 +60,7 @@ public class ResourcePathResolver {
   public static final String CONSORTIA_USER_TENANTS = "consortia.user-tenants";
   public static final String DATA_EXPORT_SPRING_CREATE_JOB = "data-export-spring.job";
   public static final String DATA_EXPORT_SPRING_EXECUTE_JOB = "data-export-spring.send-job";
+  public static final String EXCHANGE_RATE = "exchangeRate";
 
   private static final Map<String, String> SUB_OBJECT_ITEM_APIS;
   private static final Map<String, String> SUB_OBJECT_COLLECTION_APIS;
@@ -112,6 +113,7 @@ public class ResourcePathResolver {
     apis.put(ROUTING_LISTS, "/orders-storage/routing-lists");
     apis.put(DATA_EXPORT_SPRING_CREATE_JOB, "/data-export-spring/jobs");
     apis.put(DATA_EXPORT_SPRING_EXECUTE_JOB, "/data-export-spring/jobs/send");
+    apis.put(EXCHANGE_RATE, "/finance/exchange-rate");
 
     SUB_OBJECT_COLLECTION_APIS = Collections.unmodifiableMap(apis);
     SUB_OBJECT_ITEM_APIS = Collections.unmodifiableMap(

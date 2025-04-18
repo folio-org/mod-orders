@@ -18,7 +18,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Ongoing;
-import org.folio.service.exchange.ExchangeRateProviderResolver;
+import org.folio.service.exchange.CacheableExchangeRateService;
 import org.folio.service.finance.FinanceHoldersBuilder;
 import org.folio.service.finance.FiscalYearService;
 import org.folio.service.finance.FundService;
@@ -30,9 +30,9 @@ public class EncumbranceRelationsHoldersBuilder extends FinanceHoldersBuilder {
   private final EncumbranceService encumbranceService;
 
   public EncumbranceRelationsHoldersBuilder(EncumbranceService encumbranceService, FundService fundService,
-                                            FiscalYearService fiscalYearService, ExchangeRateProviderResolver exchangeRateProviderResolver,
-                                            BudgetService budgetService, LedgerService ledgerService) {
-    super(fundService, fiscalYearService, exchangeRateProviderResolver, budgetService, ledgerService);
+                                            FiscalYearService fiscalYearService, BudgetService budgetService,
+                                            LedgerService ledgerService, CacheableExchangeRateService cacheableExchangeRateService) {
+    super(fundService, fiscalYearService, budgetService, ledgerService, cacheableExchangeRateService);
     this.encumbranceService = encumbranceService;
   }
 
@@ -186,5 +186,4 @@ public class EncumbranceRelationsHoldersBuilder extends FinanceHoldersBuilder {
         ))
       );
   }
-
 }

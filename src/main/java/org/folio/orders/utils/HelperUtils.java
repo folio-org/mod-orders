@@ -26,7 +26,6 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
-import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.javamoney.moneta.Money;
 import org.javamoney.moneta.function.MonetaryOperators;
 
@@ -52,6 +51,7 @@ import static org.folio.rest.RestConstants.EN;
 import static org.folio.rest.RestConstants.SEMAPHORE_MAX_ACTIVE_THREADS;
 import static org.folio.rest.core.exceptions.ErrorCodes.MULTIPLE_NONPACKAGE_TITLES;
 import static org.folio.rest.core.exceptions.ErrorCodes.TITLE_NOT_FOUND;
+import static org.folio.service.exchange.CustomExchangeRateProvider.RATE_KEY;
 
 public class HelperUtils {
 
@@ -369,18 +369,12 @@ public class HelperUtils {
     return t instanceof HttpException httpException && httpException.getCode() == 404;
   }
 
-  public static ConversionQuery getConversionQuery(Double exchangeRate, String fromCurrency, String toCurrency) {
-    ConversionQuery conversionQuery;
-    if (exchangeRate != null) {
-      conversionQuery = ConversionQueryBuilder.of().setBaseCurrency(fromCurrency)
-        .setTermCurrency(toCurrency)
-        .set(ExchangeRateProviderResolver.RATE_KEY, exchangeRate)
-        .build();
-    } else {
-      conversionQuery = ConversionQueryBuilder.of().setBaseCurrency(fromCurrency)
-        .setTermCurrency(toCurrency).build();
-    }
-    return conversionQuery;
+  public static ConversionQuery buildConversionQuery(String fromCurrency, String toCurrency, Number exchangeRate) {
+    return ConversionQueryBuilder.of()
+      .setBaseCurrency(fromCurrency)
+      .setTermCurrency(toCurrency)
+      .set(RATE_KEY, exchangeRate)
+      .build();
   }
 
   /**
@@ -457,5 +451,4 @@ public class HelperUtils {
   public interface BiFunctionReturningFuture<I1, I2, O> {
     Future<O> apply(I1 item1, I2 item2);
   }
-
 }

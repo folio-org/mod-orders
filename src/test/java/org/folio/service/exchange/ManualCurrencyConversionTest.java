@@ -1,94 +1,41 @@
 package org.folio.service.exchange;
 
-import static org.folio.TestConfig.autowireDependencies;
-import static org.folio.TestConfig.getFirstContextFromVertx;
-import static org.folio.TestConfig.getVertx;
-import static org.folio.TestConfig.initSpringContext;
-import static org.folio.TestConfig.isVerticleNotDeployed;
+import static org.folio.service.exchange.CustomExchangeRateProvider.RATE_KEY;
+import static org.folio.service.exchange.ManualCurrencyConversion.OperationMode.DIVIDE;
+import static org.folio.service.exchange.ManualCurrencyConversion.OperationMode.MULTIPLY;
 
-import io.vertx.core.Context;
-import io.vertx.junit5.VertxExtension;
-import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 import javax.money.Monetary;
 import javax.money.convert.ConversionContext;
-import javax.money.convert.ConversionQuery;
 import javax.money.convert.ConversionQueryBuilder;
-import org.folio.ApiTestSuite;
-import org.folio.rest.core.models.RequestContext;
 
 import org.javamoney.moneta.Money;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
 
-@ExtendWith(VertxExtension.class)
 public class ManualCurrencyConversionTest {
-
-  @Autowired
-  private ExchangeRateProviderResolver exchangeRateProviderResolver;
-
-  private final Context ctx = getFirstContextFromVertx(getVertx());
-
-  @Mock
-  private Map<String, String> okapiHeadersMock;
-
-  private RequestContext requestContext;
-  private static boolean runningOnOwn;
-
-  @BeforeEach
-  void initMocks(){
-    MockitoAnnotations.openMocks(this);
-    autowireDependencies(this);
-    requestContext = new RequestContext(ctx, okapiHeadersMock);
-  }
-
-  @BeforeAll
-  public static void before() throws InterruptedException, ExecutionException, TimeoutException {
-    if (isVerticleNotDeployed()) {
-      ApiTestSuite.before();
-      runningOnOwn = true;
-    }
-    initSpringContext(ContextConfiguration.class);
-  }
 
   @ParameterizedTest
   @EnumSource(ManualCurrencyConversion.OperationMode.class)
   void testApplyWithOperationModes(ManualCurrencyConversion.OperationMode operationMode) {
-    var totalAmount = 6.51d;
+    var totalAmount = 10;
     var fromCurrency = "USD";
     var toCurrency = "AUD";
 
-    var manualExchangeRateProvider = new ManualExchangeRateProvider();
+    var provider = new CustomExchangeRateProvider(operationMode);
+    var query = ConversionQueryBuilder.of()
+      .setBaseCurrency(fromCurrency)
+      .setTermCurrency(toCurrency)
+      .set(RATE_KEY, operationMode == MULTIPLY ? 1.58d : 0.63d)
+      .build();
+    var conversion = provider.getCurrencyConversion(query);
 
-    ConversionQuery conversionQuery;
-    if (operationMode == ManualCurrencyConversion.OperationMode.MULTIPLY) {
-      conversionQuery = ConversionQueryBuilder.of()
-        .setBaseCurrency(fromCurrency)
-        .setTermCurrency(toCurrency)
-        .build();
-    } else {
-      conversionQuery = ConversionQueryBuilder.of()
-        .setBaseCurrency(fromCurrency)
-        .setTermCurrency(toCurrency)
-        .set(ExchangeRateProviderResolver.RATE_KEY, 0.66d)
-        .build();
-    }
-
-    var exchangeRateProvider = exchangeRateProviderResolver.resolve(conversionQuery, requestContext, operationMode);
-    var currencyConversion = exchangeRateProvider.getCurrencyConversion(conversionQuery);
-    var totalAmountBeforeConversion = Money.of(totalAmount, fromCurrency).with(currencyConversion).with(Monetary.getDefaultRounding());
-    var manualCurrencyConversion = new ManualCurrencyConversion(conversionQuery, manualExchangeRateProvider, ConversionContext.of(), operationMode);
+    var totalAmountBeforeConversion = Money.of(totalAmount, fromCurrency).with(conversion).with(Monetary.getDefaultRounding());
+    var manualCurrencyConversion = new ManualCurrencyConversion(query, provider, ConversionContext.of(), operationMode);
     var totalAmountAfterConversion = manualCurrencyConversion.apply(totalAmountBeforeConversion).getNumber();
+
+    System.out.println(totalAmountAfterConversion.doubleValue());
 
     Assertions.assertTrue(totalAmountAfterConversion.doubleValue() > 0);
   }
@@ -99,26 +46,17 @@ public class ManualCurrencyConversionTest {
     var fromCurrency = "USD";
     var toCurrency = "USD";
 
-    var manualExchangeRateProvider = new ManualExchangeRateProvider();
-
-    var conversionQuery = ConversionQueryBuilder.of()
+    var provider = new CustomExchangeRateProvider();
+    var query = ConversionQueryBuilder.of()
       .setBaseCurrency(fromCurrency)
       .setTermCurrency(toCurrency)
       .build();
+    var conversion = provider.getCurrencyConversion(query);
 
-    var exchangeRateProvider = exchangeRateProviderResolver.resolve(conversionQuery, requestContext);
-    var currencyConversion = exchangeRateProvider.getCurrencyConversion(conversionQuery);
-    var totalAmountBeforeConversion = Money.of(totalAmount, fromCurrency).with(currencyConversion).with(Monetary.getDefaultRounding());
-    var manualCurrencyConversion = new ManualCurrencyConversion(conversionQuery, manualExchangeRateProvider, ConversionContext.of(), ManualCurrencyConversion.OperationMode.DIVIDE);
+    var totalAmountBeforeConversion = Money.of(totalAmount, fromCurrency).with(conversion).with(Monetary.getDefaultRounding());
+    var manualCurrencyConversion = new ManualCurrencyConversion(query, provider, ConversionContext.of(), DIVIDE);
     var totalAmountAfterConversion = manualCurrencyConversion.apply(totalAmountBeforeConversion).getNumber();
 
     Assertions.assertEquals(totalAmount, totalAmountAfterConversion.doubleValue());
-  }
-
-  private static class ContextConfiguration {
-    @Bean
-    ExchangeRateProviderResolver exchangeRateProviderResolver() {
-      return new ExchangeRateProviderResolver();
-    }
   }
 }

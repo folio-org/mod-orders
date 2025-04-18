@@ -38,6 +38,7 @@ public class PendingToOpenEncumbranceStrategy implements EncumbranceWorkflowStra
   public Future<List<EncumbranceRelationsHolder>> prepareProcessEncumbrancesAndValidate(CompositePurchaseOrder compPO,
       CompositePurchaseOrder poAndLinesFromStorage, RequestContext requestContext) {
     validateFundDistributionTotal(compPO.getPoLines());
+
     List<EncumbranceRelationsHolder> holders = encumbranceRelationsHoldersBuilder.buildBaseHolders(compPO);
 
     return encumbranceRelationsHoldersBuilder.withFinances(holders, requestContext)
@@ -51,8 +52,8 @@ public class PendingToOpenEncumbranceStrategy implements EncumbranceWorkflowStra
   }
 
   @Override
-  public Future<Void> processEncumbrances(CompositePurchaseOrder compPO,
-      CompositePurchaseOrder poAndLinesFromStorage, RequestContext requestContext) {
+  public Future<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
+                                          RequestContext requestContext) {
     return prepareProcessEncumbrancesAndValidate(compPO, poAndLinesFromStorage, requestContext)
       .map(encumbrancesProcessingHolderBuilder::distributeHoldersByOperation)
       .compose(holder -> polInvoiceLineRelationService.manageInvoiceRelation(holder, requestContext))
