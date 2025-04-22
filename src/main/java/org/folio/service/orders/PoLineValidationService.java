@@ -1,6 +1,5 @@
 package org.folio.service.orders;
 
-import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
@@ -13,8 +12,8 @@ import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.rest.core.exceptions.ErrorCodes.CREATE_INVENTORY_INCORRECT_FOR_BINDARY_ACTIVE;
 import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_FORMAT_INCORRECT_FOR_BINDARY_ACTIVE;
 import static org.folio.rest.core.exceptions.ErrorCodes.RECEIVING_WORKFLOW_INCORRECT_FOR_BINDARY_ACTIVE;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
+import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.ELECTRONIC_RESOURCE;
+import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.P_E_MIX;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,28 +31,27 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Physical;
-import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 
 
-public class CompositePoLineValidationService extends BaseValidationService {
+public class PoLineValidationService extends BaseValidationService {
 
-  private static final Logger logger = LogManager.getLogger(CompositePoLineValidationService.class);
+  private static final Logger logger = LogManager.getLogger(PoLineValidationService.class);
 
   private final ExpenseClassValidationService expenseClassValidationService;
   private final ConsortiumConfigurationService consortiumConfigurationService;
   private final ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever;
 
-  public CompositePoLineValidationService(ExpenseClassValidationService expenseClassValidationService,
+  public PoLineValidationService(ExpenseClassValidationService expenseClassValidationService,
                                           ConsortiumConfigurationService consortiumConfigurationService,
                                           ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever) {
     this.expenseClassValidationService = expenseClassValidationService;
@@ -61,100 +59,100 @@ public class CompositePoLineValidationService extends BaseValidationService {
     this.consortiumUserTenantsRetriever = consortiumUserTenantsRetriever;
   }
 
-  public Future<List<Error>> validatePoLine(CompositePoLine compPOL, RequestContext requestContext) {
-    List<Error> errors = new ArrayList<>(validatePackagePoLine(compPOL));
-    errors.addAll(validateClaimingConfig(compPOL));
+  public Future<List<Error>> validatePoLine(PoLine poLine, RequestContext requestContext) {
+    List<Error> errors = new ArrayList<>(validatePackagePoLine(poLine));
+    errors.addAll(validateClaimingConfig(poLine));
 
-    if (getPhysicalCostQuantity(compPOL) == 0 && getElectronicCostQuantity(compPOL) == 0
-      && CollectionUtils.isEmpty(compPOL.getLocations())) {
+    if (getPhysicalCostQuantity(poLine) == 0 && getElectronicCostQuantity(poLine) == 0
+      && CollectionUtils.isEmpty(poLine.getLocations())) {
       return Future.succeededFuture(errors);
     }
 
-    return expenseClassValidationService.validateExpenseClasses(List.of(compPOL), false, requestContext)
-      .map(v -> errors.addAll(validatePoLineFormats(compPOL)))
-      .map(v -> errors.addAll(validateForBinadryActive(compPOL)))
-      .map(b -> errors.addAll(validateLocations(compPOL)))
+    return expenseClassValidationService.validateExpenseClasses(List.of(poLine), false, requestContext)
+      .map(v -> errors.addAll(validatePoLineFormats(poLine)))
+      .map(v -> errors.addAll(validateForBinadryActive(poLine)))
+      .map(b -> errors.addAll(validateLocations(poLine)))
       .map(b -> {
-        errors.addAll(validateCostPrices(compPOL));
+        errors.addAll(validateCostPrices(poLine));
         return errors;
       });
   }
 
-  private List<Error> validatePoLineFormats(CompositePoLine compPOL) {
-    CompositePoLine.OrderFormat orderFormat = compPOL.getOrderFormat();
+  private List<Error> validatePoLineFormats(PoLine poLine) {
+    PoLine.OrderFormat orderFormat = poLine.getOrderFormat();
     if (orderFormat == P_E_MIX) {
-      return validatePoLineWithMixedFormat(compPOL);
+      return validatePoLineWithMixedFormat(poLine);
     } else if (orderFormat == ELECTRONIC_RESOURCE) {
-      return validatePoLineWithElectronicFormat(compPOL);
-    } else if (orderFormat == CompositePoLine.OrderFormat.PHYSICAL_RESOURCE) {
-      return validatePoLineWithPhysicalFormat(compPOL);
-    } else if (orderFormat == CompositePoLine.OrderFormat.OTHER) {
-      return validatePoLineWithOtherFormat(compPOL);
+      return validatePoLineWithElectronicFormat(poLine);
+    } else if (orderFormat == PoLine.OrderFormat.PHYSICAL_RESOURCE) {
+      return validatePoLineWithPhysicalFormat(poLine);
+    } else if (orderFormat == PoLine.OrderFormat.OTHER) {
+      return validatePoLineWithOtherFormat(poLine);
     }
 
     return Collections.emptyList();
   }
 
-  private List<Error> validatePoLineWithMixedFormat(CompositePoLine compPOL) {
+  private List<Error> validatePoLineWithMixedFormat(PoLine poLine) {
 
     List<ErrorCodes> errors = new ArrayList<>();
     // The quantity of the physical and electronic resources in the cost must be specified
-    if (getPhysicalCostQuantity(compPOL) == 0) {
+    if (getPhysicalCostQuantity(poLine) == 0) {
       errors.add(ErrorCodes.ZERO_COST_PHYSICAL_QTY);
     }
-    if (getElectronicCostQuantity(compPOL) == 0) {
+    if (getElectronicCostQuantity(poLine) == 0) {
       errors.add(ErrorCodes.ZERO_COST_ELECTRONIC_QTY);
     }
 
-    return convertErrorCodesToErrors(compPOL, errors);
+    return convertErrorCodesToErrors(poLine, errors);
   }
 
-  private Optional<Error> checkMaterialAvailability(CompositePoLine compPOL) {
+  private Optional<Error> checkMaterialAvailability(PoLine poLine) {
     boolean isMissing = false;
-    if (compPOL.getOrderFormat()
+    if (poLine.getOrderFormat()
       .equals(ELECTRONIC_RESOURCE)
-      || compPOL.getOrderFormat()
+      || poLine.getOrderFormat()
       .equals(P_E_MIX)) {
-      isMissing = compPOL.getEresource()
+      isMissing = poLine.getEresource()
         .getCreateInventory() == (Eresource.CreateInventory.INSTANCE_HOLDING_ITEM) && isEmpty(
-        compPOL.getEresource()
+        poLine.getEresource()
           .getMaterialType());
     }
 
-    if (!compPOL.getOrderFormat()
+    if (!poLine.getOrderFormat()
       .equals(ELECTRONIC_RESOURCE)) {
-      isMissing = isMissing || (compPOL.getPhysical()
+      isMissing = isMissing || (poLine.getPhysical()
         .getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING_ITEM && isEmpty(
-        compPOL.getPhysical()
+        poLine.getPhysical()
           .getMaterialType()));
     }
 
     if (isMissing) {
-      return Optional.of(convertErrorCodesToError(compPOL, ErrorCodes.MISSING_MATERIAL_TYPE));
+      return Optional.of(convertErrorCodesToError(poLine, ErrorCodes.MISSING_MATERIAL_TYPE));
     }
     return Optional.empty();
   }
 
-  public List<Error> checkMaterialsAvailability(List<CompositePoLine> poLines) {
+  public List<Error> checkMaterialsAvailability(List<PoLine> poLines) {
     if (Objects.nonNull(poLines)) {
       return poLines.stream()
         .map(this::checkMaterialAvailability)
         .filter(Optional::isPresent)
         .map(Optional::get)
-        .collect(toList());
+        .toList();
     }
     return Collections.emptyList();
   }
 
-  public List<Error> validateLocations(CompositePoLine compPOL) {
+  public List<Error> validateLocations(PoLine poLine) {
     List<ErrorCodes> errors = new ArrayList<>();
-    List<Location> locations = compPOL.getLocations();
+    List<Location> locations = poLine.getLocations();
 
     // The total quantity of the physical and electronic resources of all locations must match specified in the cost
-    if (isLocationsEresourceQuantityNotValid(compPOL)) {
+    if (isLocationsEresourceQuantityNotValid(poLine)) {
       errors.add(ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH);
     }
-    if (isLocationsPhysicalQuantityNotValid(compPOL)) {
+    if (isLocationsPhysicalQuantityNotValid(poLine)) {
       errors.add(ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH);
     }
 
@@ -169,57 +167,57 @@ public class CompositePoLineValidationService extends BaseValidationService {
         errors.add(ErrorCodes.MAY_BE_LINK_TO_EITHER_HOLDING_OR_LOCATION_ERROR);
       }
     });
-    return convertErrorCodesToErrors(compPOL, errors);
+    return convertErrorCodesToErrors(poLine, errors);
   }
 
-  private boolean isLocationsPhysicalQuantityNotValid(CompositePoLine compPOL) {
-    int physicalQuantity = HelperUtils.getPhysicalLocationsQuantity(compPOL.getLocations());
-    return (isHoldingUpdateRequiredForPhysical(compPOL) || physicalQuantity > 0) && (physicalQuantity != getPhysicalCostQuantity(compPOL));
+  private boolean isLocationsPhysicalQuantityNotValid(PoLine poLine) {
+    int physicalQuantity = HelperUtils.getPhysicalLocationsQuantity(poLine.getLocations());
+    return (isHoldingUpdateRequiredForPhysical(poLine) || physicalQuantity > 0) && (physicalQuantity != getPhysicalCostQuantity(poLine));
   }
 
-  private boolean isLocationsEresourceQuantityNotValid(CompositePoLine compPOL) {
-    int electronicQuantity = HelperUtils.getElectronicLocationsQuantity(compPOL.getLocations());
-    return (isHoldingUpdateRequiredForEresource(compPOL) || electronicQuantity > 0) && (electronicQuantity != getElectronicCostQuantity(compPOL));
+  private boolean isLocationsEresourceQuantityNotValid(PoLine poLine) {
+    int electronicQuantity = HelperUtils.getElectronicLocationsQuantity(poLine.getLocations());
+    return (isHoldingUpdateRequiredForEresource(poLine) || electronicQuantity > 0) && (electronicQuantity != getElectronicCostQuantity(poLine));
   }
 
-  private List<Error> validatePoLineWithPhysicalFormat(CompositePoLine compPOL) {
+  private List<Error> validatePoLineWithPhysicalFormat(PoLine poLine) {
     List<ErrorCodes> errors = new ArrayList<>();
 
     // The quantity of the physical resources in the cost must be specified
-    if (getPhysicalCostQuantity(compPOL) == 0) {
+    if (getPhysicalCostQuantity(poLine) == 0) {
       errors.add(ErrorCodes.ZERO_COST_PHYSICAL_QTY);
     }
     // The quantity of the electronic resources in the cost must not be specified
-    if (getElectronicCostQuantity(compPOL) > 0) {
+    if (getElectronicCostQuantity(poLine) > 0) {
       errors.add(ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY);
     }
 
-    return convertErrorCodesToErrors(compPOL, errors);
+    return convertErrorCodesToErrors(poLine, errors);
   }
 
-  private List<Error> validatePoLineWithElectronicFormat(CompositePoLine compPOL) {
+  private List<Error> validatePoLineWithElectronicFormat(PoLine poLine) {
     List<ErrorCodes> errors = new ArrayList<>();
 
     // The quantity of the electronic resources in the cost must be specified
-    if (getElectronicCostQuantity(compPOL) == 0) {
+    if (getElectronicCostQuantity(poLine) == 0) {
       errors.add(ErrorCodes.ZERO_COST_ELECTRONIC_QTY);
     }
     // The quantity of the physical resources in the cost must not be specified
-    if (getPhysicalCostQuantity(compPOL) > 0) {
+    if (getPhysicalCostQuantity(poLine) > 0) {
       errors.add(ErrorCodes.NON_ZERO_COST_PHYSICAL_QTY);
     }
 
-    return convertErrorCodesToErrors(compPOL, errors);
+    return convertErrorCodesToErrors(poLine, errors);
   }
 
-  private List<Error> validatePoLineWithOtherFormat(CompositePoLine compPOL) {
-    return validatePoLineWithPhysicalFormat(compPOL);
+  private List<Error> validatePoLineWithOtherFormat(PoLine poLine) {
+    return validatePoLineWithPhysicalFormat(poLine);
   }
 
-  private List<Error> validateCostPrices(CompositePoLine compLine) {
+  private List<Error> validateCostPrices(PoLine poLine) {
     List<ErrorCodes> errors = new ArrayList<>();
-    Cost cost = compLine.getCost();
-    CompositePoLine.OrderFormat orderFormat = compLine.getOrderFormat();
+    Cost cost = poLine.getCost();
+    PoLine.OrderFormat orderFormat = poLine.getOrderFormat();
     // Using default value as -1 to avoid null checks
     double unitPrice = defaultIfNull(cost.getListUnitPrice(), -1d);
     if (orderFormat == ELECTRONIC_RESOURCE) {
@@ -248,12 +246,12 @@ public class CompositePoLineValidationService extends BaseValidationService {
       errors.add(ErrorCodes.COST_DISCOUNT_INVALID);
     }
 
-    return convertErrorCodesToErrors(compLine, errors);
+    return convertErrorCodesToErrors(poLine, errors);
   }
 
-  protected List<Error> validateClaimingConfig(CompositePoLine compPOL) {
-    List<ErrorCodes> errors = checkClaimingConfig(compPOL.getClaimingActive(), compPOL.getClaimingInterval());
-    return convertErrorCodesToErrors(compPOL, errors);
+  protected List<Error> validateClaimingConfig(PoLine poLine) {
+    List<ErrorCodes> errors = checkClaimingConfig(poLine.getClaimingActive(), poLine.getClaimingInterval());
+    return convertErrorCodesToErrors(poLine, errors);
   }
 
   /**
@@ -272,27 +270,27 @@ public class CompositePoLineValidationService extends BaseValidationService {
    * The method converts {@link ErrorCodes} elements to {@link Error} adding additionally {@link Parameter} with PO Line number is
    * presents
    *
-   * @param compPOL Composite PO Line
+   * @param poLine PO Line
    * @param errors  list of errors{@link ErrorCodes}
    * @return List of {@link Error} elements
    */
-  private List<Error> convertErrorCodesToErrors(CompositePoLine compPOL, List<ErrorCodes> errors) {
+  private List<Error> convertErrorCodesToErrors(PoLine poLine, List<ErrorCodes> errors) {
     return errors.stream()
-      .map(error -> convertErrorCodesToError(compPOL, error))
-      .collect(toList());
+      .map(error -> convertErrorCodesToError(poLine, error))
+      .toList();
   }
 
   /**
    * The method converts {@link ErrorCodes} elements to {@link Error} adding additionally {@link Parameter} with PO Line number is
    * presents
    *
-   * @param compPOL   Composite PO Line
+   * @param poLine   PO Line
    * @param errorCode Error Code{@link ErrorCodes}
    * @return List of {@link Error} elements
    */
-  private Error convertErrorCodesToError(CompositePoLine compPOL, ErrorCodes errorCode) {
+  private Error convertErrorCodesToError(PoLine poLine, ErrorCodes errorCode) {
     Error error = errorCode.toError();
-    String poLineNumber = compPOL.getPoLineNumber();
+    String poLineNumber = poLine.getPoLineNumber();
     if (StringUtils.isNotEmpty(poLineNumber)) {
       error.getParameters()
         .add(new Parameter().withKey(PO_LINE_NUMBER)
@@ -301,17 +299,17 @@ public class CompositePoLineValidationService extends BaseValidationService {
     return error;
   }
 
-  private List<Error> validatePackagePoLine(CompositePoLine compPOL) {
+  private List<Error> validatePackagePoLine(PoLine poLine) {
     List<ErrorCodes> errors = new ArrayList<>();
 
-    if (Boolean.TRUE.equals(compPOL.getIsPackage()) && compPOL.getInstanceId() != null) {
+    if (Boolean.TRUE.equals(poLine.getIsPackage()) && poLine.getInstanceId() != null) {
       errors.add(ErrorCodes.INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE);
     }
 
-    return convertErrorCodesToErrors(compPOL, errors);
+    return convertErrorCodesToErrors(poLine, errors);
   }
 
-  protected List<Error> validateForBinadryActive(CompositePoLine poLine) {
+  protected List<Error> validateForBinadryActive(PoLine poLine) {
     List<Error> errors = new ArrayList<>();
     if (poLine.getDetails() != null && Boolean.TRUE.equals(poLine.getDetails().getIsBinderyActive())) {
       validateOrderFormatForBindaryActive(poLine, errors);
@@ -321,7 +319,7 @@ public class CompositePoLineValidationService extends BaseValidationService {
     return errors;
   }
 
-  private void validateOrderFormatForBindaryActive(CompositePoLine poLine, List<Error> errors) {
+  private void validateOrderFormatForBindaryActive(PoLine poLine, List<Error> errors) {
     var poLineOrderFormat = poLine.getOrderFormat().value();
     if (!Objects.equals(poLineOrderFormat, PoLine.OrderFormat.PHYSICAL_RESOURCE.value())
         && !Objects.equals(poLineOrderFormat, PoLine.OrderFormat.P_E_MIX.value())) {
@@ -331,7 +329,7 @@ public class CompositePoLineValidationService extends BaseValidationService {
     }
   }
 
-  private void validateCreateInventoryForBindary(CompositePoLine poLine, List<Error> errors) {
+  private void validateCreateInventoryForBindary(PoLine poLine, List<Error> errors) {
     if (poLine.getPhysical() != null && poLine.getPhysical().getCreateInventory() != Physical.CreateInventory.INSTANCE_HOLDING_ITEM) {
       var param = new Parameter().withKey("createInventory").withValue(poLine.getPhysical().getCreateInventory().value());
       var error = CREATE_INVENTORY_INCORRECT_FOR_BINDARY_ACTIVE.toError().withParameters(List.of(param));
@@ -339,13 +337,13 @@ public class CompositePoLineValidationService extends BaseValidationService {
     }
   }
 
-  private void validateReceivingWorkflowForBindary(CompositePoLine poLine, List<Error> errors) {
+  private void validateReceivingWorkflowForBindary(PoLine poLine, List<Error> errors) {
     if (Boolean.FALSE.equals(poLine.getCheckinItems())) {
       errors.add(RECEIVING_WORKFLOW_INCORRECT_FOR_BINDARY_ACTIVE.toError());
     }
   }
 
-  public Future<Void> validatePurchaseOrderHasPoLines(List<CompositePoLine> poLines) {
+  public Future<Void> validatePurchaseOrderHasPoLines(List<PoLine> poLines) {
     if (CollectionUtils.isEmpty(poLines)) {
       return Future.failedFuture(new HttpException(org.apache.http.HttpStatus.SC_UNPROCESSABLE_ENTITY, ErrorCodes.COMPOSITE_ORDER_MISSING_PO_LINES));
     }

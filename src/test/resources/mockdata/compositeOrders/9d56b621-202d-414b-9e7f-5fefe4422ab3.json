@@ -6,7 +6,7 @@
   "orderType": "One-Time",
   "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
   "workflowStatus": "Open",
-  "compositePoLines": [
+  "poLines": [
     {
       "id": "4132b641-df5d-4970-8328-566e0c3ac889",
       "checkinItems": false,

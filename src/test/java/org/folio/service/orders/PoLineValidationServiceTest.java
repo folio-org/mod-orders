@@ -2,8 +2,8 @@ package org.folio.service.orders;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.rest.core.exceptions.ErrorCodes.*;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
+import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.OTHER;
+import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.P_E_MIX;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasSize;
@@ -32,7 +32,7 @@ import org.folio.models.consortium.ConsortiumConfiguration;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Details;
@@ -52,13 +52,13 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 @ExtendWith(VertxExtension.class)
-public class CompositePoLineValidationServiceTest {
+public class PoLineValidationServiceTest {
 
   @Mock private ExpenseClassValidationService expenseClassValidationService;
   @Mock private ConsortiumConfigurationService consortiumConfigurationService;
   @Mock private ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever;
   @Mock private RequestContext requestContext;
-  @InjectMocks private CompositePoLineValidationService compositePoLineValidationService;
+  @InjectMocks private PoLineValidationService poLineValidationService;
 
   private AutoCloseable mockitoMocks;
 
@@ -79,9 +79,9 @@ public class CompositePoLineValidationServiceTest {
     Location location2 = new Location().withQuantity(1).withQuantityPhysical(1);
     Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM);
     Cost cost = new Cost().withQuantityPhysical(2);
-    CompositePoLine compositePoLine = new CompositePoLine().withPhysical(physical)
+    PoLine poLine = new PoLine().withPhysical(physical)
       .withCost(cost).withLocations(List.of(location1, location2));
-    List<Error> errors = compositePoLineValidationService.validateLocations(compositePoLine);
+    List<Error> errors = poLineValidationService.validateLocations(poLine);
 
     assertEquals(2, errors.size());
     errors.forEach(error -> assertEquals(ErrorCodes.HOLDINGS_ID_AND_LOCATION_ID_IS_NULL_ERROR.getCode(), error.getCode()));
@@ -96,9 +96,9 @@ public class CompositePoLineValidationServiceTest {
       .withQuantity(1).withQuantityPhysical(1);
     Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM);
     Cost cost = new Cost().withQuantityPhysical(2);
-    CompositePoLine compositePoLine = new CompositePoLine().withPhysical(physical)
+    PoLine poLine = new PoLine().withPhysical(physical)
       .withCost(cost).withLocations(List.of(location1, location2));
-    List<Error> errors = compositePoLineValidationService.validateLocations(compositePoLine);
+    List<Error> errors = poLineValidationService.validateLocations(poLine);
 
     assertEquals(2, errors.size());
     errors.forEach(error -> assertEquals(ErrorCodes.MAY_BE_LINK_TO_EITHER_HOLDING_OR_LOCATION_ERROR.getCode(), error.getCode()));
@@ -106,27 +106,27 @@ public class CompositePoLineValidationServiceTest {
 
   @Test
   void shouldReturnSuccessIfClaimingConfigValid() {
-    CompositePoLine compositePoLine = new CompositePoLine()
+    PoLine poLine = new PoLine()
       .withClaimingActive(true)
       .withClaimingInterval(5);
-    List<Error> errors = compositePoLineValidationService.validateClaimingConfig(compositePoLine);
+    List<Error> errors = poLineValidationService.validateClaimingConfig(poLine);
 
     assertTrue(errors.isEmpty());
   }
 
   @Test
   void shouldReturnSuccessIfClaimingConfigNotSet() {
-    CompositePoLine compositePoLine = new CompositePoLine();
-    List<Error> errors = compositePoLineValidationService.validateClaimingConfig(compositePoLine);
+    PoLine poLine = new PoLine();
+    List<Error> errors = poLineValidationService.validateClaimingConfig(poLine);
 
     assertTrue(errors.isEmpty());
   }
 
   @Test
   void shouldReturnErrorIfClaimingIntervalNotSetWhenClaimingActive() {
-    CompositePoLine compositePoLine = new CompositePoLine()
+    PoLine poLine = new PoLine()
       .withClaimingActive(true);
-    List<Error> errors = compositePoLineValidationService.validateClaimingConfig(compositePoLine);
+    List<Error> errors = poLineValidationService.validateClaimingConfig(poLine);
 
     assertEquals(1, errors.size());
     assertEquals(ErrorCodes.CLAIMING_CONFIG_INVALID.getCode(), errors.get(0).getCode());
@@ -134,10 +134,10 @@ public class CompositePoLineValidationServiceTest {
 
   @Test
   void shouldReturnErrorIfClaimingIntervalIsZeroWhenClaimingActive() {
-    CompositePoLine compositePoLine = new CompositePoLine()
+    PoLine poLine = new PoLine()
       .withClaimingActive(true)
       .withClaimingInterval(0);
-    List<Error> errors = compositePoLineValidationService.validateClaimingConfig(compositePoLine);
+    List<Error> errors = poLineValidationService.validateClaimingConfig(poLine);
 
     assertEquals(1, errors.size());
     assertEquals(ErrorCodes.CLAIMING_CONFIG_INVALID.getCode(), errors.get(0).getCode());
@@ -145,10 +145,10 @@ public class CompositePoLineValidationServiceTest {
 
   @Test
   void shouldReturnErrorIfClaimingIntervalIsNegativeWhenClaimingActive() {
-    CompositePoLine compositePoLine = new CompositePoLine()
+    PoLine poLine = new PoLine()
       .withClaimingActive(true)
       .withClaimingInterval(-1);
-    List<Error> errors = compositePoLineValidationService.validateClaimingConfig(compositePoLine);
+    List<Error> errors = poLineValidationService.validateClaimingConfig(poLine);
 
     assertEquals(1, errors.size());
     assertEquals(ErrorCodes.CLAIMING_CONFIG_INVALID.getCode(), errors.get(0).getCode());
@@ -156,12 +156,12 @@ public class CompositePoLineValidationServiceTest {
 
   @Test
   void shouldReturnErrorIfIncorrectOrderFormatWhenBindaryActive() {
-    var compositePoLine = new CompositePoLine()
+    var poLine = new PoLine()
       .withDetails(new Details().withIsBinderyActive(true))
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
-      .withOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE)
+      .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE)
       .withCheckinItems(true);
-    var errors = compositePoLineValidationService.validateForBinadryActive(compositePoLine);
+    var errors = poLineValidationService.validateForBinadryActive(poLine);
 
     assertEquals(1, errors.size());
     assertEquals(ORDER_FORMAT_INCORRECT_FOR_BINDARY_ACTIVE.getCode(), errors.get(0).getCode());
@@ -169,12 +169,12 @@ public class CompositePoLineValidationServiceTest {
 
   @Test
   void shouldReturnErrorIfIncorrectCreateInventoryWhenBindaryActive() {
-    var compositePoLine = new CompositePoLine()
+    var poLine = new PoLine()
       .withDetails(new Details().withIsBinderyActive(true))
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING))
       .withOrderFormat(P_E_MIX)
       .withCheckinItems(true);
-    var errors = compositePoLineValidationService.validateForBinadryActive(compositePoLine);
+    var errors = poLineValidationService.validateForBinadryActive(poLine);
 
     assertEquals(1, errors.size());
     assertEquals(CREATE_INVENTORY_INCORRECT_FOR_BINDARY_ACTIVE.getCode(), errors.get(0).getCode());
@@ -182,12 +182,12 @@ public class CompositePoLineValidationServiceTest {
 
   @Test
   void shouldReturnErrorIfCheckInItemsFalseWhenBindaryActive() {
-    var compositePoLine = new CompositePoLine()
+    var poLine = new PoLine()
       .withDetails(new Details().withIsBinderyActive(true))
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
       .withOrderFormat(P_E_MIX)
       .withCheckinItems(false);
-    var errors = compositePoLineValidationService.validateForBinadryActive(compositePoLine);
+    var errors = poLineValidationService.validateForBinadryActive(poLine);
 
     assertEquals(1, errors.size());
     assertEquals(RECEIVING_WORKFLOW_INCORRECT_FOR_BINDARY_ACTIVE.getCode(), errors.get(0).getCode());
@@ -195,32 +195,32 @@ public class CompositePoLineValidationServiceTest {
 
   @Test
   void shouldPassWhenBindaryActiveAndCorrectFormat() {
-    var compositePoLineWithPhysical = new CompositePoLine()
+    var compositePoLineWithPhysical = new PoLine()
       .withDetails(new Details().withIsBinderyActive(true))
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
-      .withOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE)
+      .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
       .withCheckinItems(true);
-    var errors1 = compositePoLineValidationService.validateForBinadryActive(compositePoLineWithPhysical);
+    var errors1 = poLineValidationService.validateForBinadryActive(compositePoLineWithPhysical);
 
     assertEquals(0, errors1.size());
 
-    var compositePoLineWithPEMix = new CompositePoLine()
+    var compositePoLineWithPEMix = new PoLine()
       .withDetails(new Details().withIsBinderyActive(true))
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
       .withOrderFormat(P_E_MIX)
       .withCheckinItems(true);
-    var errors2 = compositePoLineValidationService.validateForBinadryActive(compositePoLineWithPEMix);
+    var errors2 = poLineValidationService.validateForBinadryActive(compositePoLineWithPEMix);
 
     assertEquals(0, errors2.size());
   }
 
   @Test
   void shouldPassWhenBindaryNotActive() {
-    var compositePoLine = new CompositePoLine()
+    var poLine = new PoLine()
       .withDetails(new Details())
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
-      .withOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE);
-    var errors = compositePoLineValidationService.validateForBinadryActive(compositePoLine);
+      .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE);
+    var errors = poLineValidationService.validateForBinadryActive(poLine);
 
     assertEquals(0, errors.size());
   }
@@ -239,7 +239,7 @@ public class CompositePoLineValidationServiceTest {
       .withLocationId(UUID.randomUUID().toString())
       .withQuantityElectronic(1)
       .withQuantityPhysical(2);
-    CompositePoLine poLine = new CompositePoLine()
+    PoLine poLine = new PoLine()
       .withOrderFormat(P_E_MIX)
       .withCost(cost)
       .withLocations(List.of(location));
@@ -248,7 +248,7 @@ public class CompositePoLineValidationServiceTest {
       .when(expenseClassValidationService).validateExpenseClasses(eq(List.of(poLine)), eq(false), eq(requestContext));
 
     // When
-    Future<List<Error>> future = compositePoLineValidationService.validatePoLine(poLine, requestContext);
+    Future<List<Error>> future = poLineValidationService.validatePoLine(poLine, requestContext);
 
     // Then
     if (future.failed()) {
@@ -280,7 +280,7 @@ public class CompositePoLineValidationServiceTest {
       .withLocationId(UUID.randomUUID().toString())
       .withQuantityElectronic(0)
       .withQuantityPhysical(1);
-    CompositePoLine poLine = new CompositePoLine()
+    PoLine poLine = new PoLine()
       .withOrderFormat(OTHER)
       .withCost(cost)
       .withLocations(List.of(location));
@@ -289,7 +289,7 @@ public class CompositePoLineValidationServiceTest {
       .when(expenseClassValidationService).validateExpenseClasses(eq(List.of(poLine)), eq(false), eq(requestContext));
 
     // When
-    Future<List<Error>> future = compositePoLineValidationService.validatePoLine(poLine, requestContext);
+    Future<List<Error>> future = poLineValidationService.validatePoLine(poLine, requestContext);
 
     // Then
     if (future.failed()) {
@@ -324,7 +324,7 @@ public class CompositePoLineValidationServiceTest {
       .withLocationId(location1.getLocationId())
       .withQuantityElectronic(0)
       .withQuantityPhysical(0);
-    CompositePoLine poLine = new CompositePoLine()
+    PoLine poLine = new PoLine()
       .withOrderFormat(P_E_MIX)
       .withCost(cost)
       .withLocations(List.of(location1, location2));
@@ -333,7 +333,7 @@ public class CompositePoLineValidationServiceTest {
       .when(expenseClassValidationService).validateExpenseClasses(eq(List.of(poLine)), eq(false), eq(requestContext));
 
     // When
-    Future<List<Error>> future = compositePoLineValidationService.validatePoLine(poLine, requestContext);
+    Future<List<Error>> future = poLineValidationService.validatePoLine(poLine, requestContext);
 
     // Then
     if (future.failed()) {
@@ -361,7 +361,7 @@ public class CompositePoLineValidationServiceTest {
       .withQuantityElectronic(0)
       .withListUnitPrice(24.99)
       .withListUnitPriceElectronic(20.99);
-    CompositePoLine poLine = new CompositePoLine()
+    PoLine poLine = new PoLine()
       .withOrderFormat(P_E_MIX)
       .withCost(cost);
 
@@ -369,7 +369,7 @@ public class CompositePoLineValidationServiceTest {
       .when(expenseClassValidationService).validateExpenseClasses(eq(List.of(poLine)), eq(false), eq(requestContext));
 
     // When
-    Future<List<Error>> future = compositePoLineValidationService.validatePoLine(poLine, requestContext);
+    Future<List<Error>> future = poLineValidationService.validatePoLine(poLine, requestContext);
 
     // Then
     if (future.failed()) {
@@ -398,7 +398,7 @@ public class CompositePoLineValidationServiceTest {
     when(consortiumUserTenantsRetriever.getUserTenants(eq("consortiumId"), anyString(), eq(requestContext)))
       .thenReturn(Future.succeededFuture(List.of("tenant1")));
 
-    compositePoLineValidationService.validateUserUnaffiliatedLocations(updatedPoLineId, locationsUpdated, requestContext)
+    poLineValidationService.validateUserUnaffiliatedLocations(updatedPoLineId, locationsUpdated, requestContext)
       .onComplete(testContext.succeeding(result -> testContext.verify(testContext::completeNow)));
   }
 
@@ -416,7 +416,7 @@ public class CompositePoLineValidationServiceTest {
     when(consortiumUserTenantsRetriever.getUserTenants(eq("consortiumId"), anyString(), eq(requestContext)))
       .thenReturn(Future.succeededFuture(List.of("tenant1", "tenant2")));
 
-    compositePoLineValidationService.validateUserUnaffiliatedLocations(updatedPoLineId, locationsUpdated, requestContext)
+    poLineValidationService.validateUserUnaffiliatedLocations(updatedPoLineId, locationsUpdated, requestContext)
       .onComplete(testContext.succeeding(result -> testContext.verify(testContext::completeNow)));
   }
 
@@ -435,7 +435,7 @@ public class CompositePoLineValidationServiceTest {
     when(consortiumUserTenantsRetriever.getUserTenants(eq("consortiumId"), anyString(), eq(requestContext)))
       .thenReturn(Future.succeededFuture(List.of("tenant1", "tenant2")));
 
-    compositePoLineValidationService.validateUserUnaffiliatedLocations(updatedPoLineId, locationsUpdated, requestContext)
+    poLineValidationService.validateUserUnaffiliatedLocations(updatedPoLineId, locationsUpdated, requestContext)
       .onComplete(testContext.succeeding(result -> testContext.verify(testContext::completeNow)));
   }
 
@@ -453,7 +453,7 @@ public class CompositePoLineValidationServiceTest {
     when(consortiumUserTenantsRetriever.getUserTenants(eq("consortiumId"), anyString(), eq(requestContext)))
       .thenReturn(Future.succeededFuture(List.of("tenant1")));
 
-    compositePoLineValidationService.validateUserUnaffiliatedLocations(updatedPoLineId, locationsUpdated, requestContext)
+    poLineValidationService.validateUserUnaffiliatedLocations(updatedPoLineId, locationsUpdated, requestContext)
       .onComplete(testContext.succeeding(result -> {
         testContext.verify(testContext::completeNow);
         verifyNoInteractions(consortiumUserTenantsRetriever);
@@ -474,7 +474,7 @@ public class CompositePoLineValidationServiceTest {
     when(consortiumUserTenantsRetriever.getUserTenants(eq("consortiumId"), anyString(), eq(requestContext)))
       .thenReturn(Future.succeededFuture(List.of("tenant1")));
 
-    compositePoLineValidationService.validateUserUnaffiliatedLocations(updatedPoLineId, locationsUpdated, requestContext)
+    poLineValidationService.validateUserUnaffiliatedLocations(updatedPoLineId, locationsUpdated, requestContext)
       .onComplete(testContext.failing(cause -> testContext.verify(() -> {
         assertInstanceOf(HttpException.class, cause);
         assertTrue(cause.getMessage().contains(ErrorCodes.LOCATION_UPDATE_WITHOUT_AFFILIATION.getDescription()));
@@ -496,7 +496,7 @@ public class CompositePoLineValidationServiceTest {
     when(consortiumUserTenantsRetriever.getUserTenants(eq("consortiumId"), anyString(), eq(requestContext)))
       .thenReturn(Future.succeededFuture(List.of("tenant3")));
 
-    compositePoLineValidationService.validateUserUnaffiliatedLocations(updatedPoLineId, locationsUpdated, requestContext)
+    poLineValidationService.validateUserUnaffiliatedLocations(updatedPoLineId, locationsUpdated, requestContext)
       .onComplete(testContext.failing(cause -> testContext.verify(() -> {
         assertInstanceOf(HttpException.class, cause);
         assertTrue(cause.getMessage().contains(ErrorCodes.LOCATION_UPDATE_WITHOUT_AFFILIATION.getDescription()));
@@ -508,9 +508,9 @@ public class CompositePoLineValidationServiceTest {
   @CopilotGenerated(partiallyGenerated = true)
   void shouldFailValidationWhenCompositePurchaseOrderHasNullPoLines(VertxTestContext testContext) {
     var compPO = new CompositePurchaseOrder();
-    compPO.setCompositePoLines(null);
+    compPO.setPoLines(null);
 
-    compositePoLineValidationService.validatePurchaseOrderHasPoLines(compPO.getCompositePoLines())
+    poLineValidationService.validatePurchaseOrderHasPoLines(compPO.getPoLines())
       .onComplete(testContext.failing(cause -> testContext.verify(() -> {
         assertInstanceOf(HttpException.class, cause);
         assertEquals(COMPOSITE_ORDER_MISSING_PO_LINES.getCode(), ((HttpException) cause).getError().getCode());
@@ -522,9 +522,9 @@ public class CompositePoLineValidationServiceTest {
   @CopilotGenerated(partiallyGenerated = true)
   void shouldFailValidationWhenCompositePurchaseOrderHasEmptyPoLines(VertxTestContext testContext) {
     var compPO = new CompositePurchaseOrder();
-    compPO.setCompositePoLines(Collections.emptyList());
+    compPO.setPoLines(Collections.emptyList());
 
-    compositePoLineValidationService.validatePurchaseOrderHasPoLines(compPO.getCompositePoLines())
+    poLineValidationService.validatePurchaseOrderHasPoLines(compPO.getPoLines())
       .onComplete(testContext.failing(cause -> testContext.verify(() -> {
         assertInstanceOf(HttpException.class, cause);
         assertEquals(COMPOSITE_ORDER_MISSING_PO_LINES.getCode(), ((HttpException) cause).getError().getCode());
@@ -536,11 +536,11 @@ public class CompositePoLineValidationServiceTest {
   @CopilotGenerated(partiallyGenerated = true)
   void shouldPassValidationWhenCompositePurchaseOrderHasPoLines(VertxTestContext testContext) {
     var compPO = new CompositePurchaseOrder();
-    var poLine = new CompositePoLine();
+    var poLine = new PoLine();
     poLine.setId(UUID.randomUUID().toString());
-    compPO.setCompositePoLines(List.of(poLine));
+    compPO.setPoLines(List.of(poLine));
 
-    compositePoLineValidationService.validatePurchaseOrderHasPoLines(compPO.getCompositePoLines())
+    poLineValidationService.validatePurchaseOrderHasPoLines(compPO.getPoLines())
       .onComplete(testContext.succeeding(result -> testContext.verify(testContext::completeNow)));
   }
 }

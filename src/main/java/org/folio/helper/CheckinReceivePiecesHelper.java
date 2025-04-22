@@ -21,7 +21,7 @@ import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CheckinCollection;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
@@ -31,7 +31,6 @@ import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Piece.ReceivingStatus;
 import org.folio.rest.jaxrs.model.PieceCollection;
-import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.ProcessingStatus;
 import org.folio.rest.jaxrs.model.ReceivingCollection;
@@ -165,7 +164,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
    */
   public Future<Void> findAndSetPurchaseOrderPoLinePair(String poLineId, PiecesHolder holder, RequestContext requestContext) {
     return purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
-      .map(PoLineCommonUtil::convertToCompositePoLine)
       .compose(poLine -> purchaseOrderStorageService.getPurchaseOrderByIdAsJson(poLine.getPurchaseOrderId(), requestContext)
         .map(HelperUtils::convertToCompositePurchaseOrder)
         .map(purchaseOrder -> {
@@ -402,10 +400,9 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     }
 
     short updatedLocations = 0;
-    var compositePoLine = PoLineCommonUtil.convertToCompositePoLine(poLine);
     Set<Location> locations = new HashSet<>();
     for (Piece pieceFromStorage: piecesFromStorage) {
-      locations.addAll(PieceUtil.findOrderPieceLineLocation(pieceFromStorage, compositePoLine));
+      locations.addAll(PieceUtil.findOrderPieceLineLocation(pieceFromStorage, poLine));
     }
 
     for (Piece pieceToUpdate : successfullyProcessed) {
@@ -418,13 +415,13 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       PieceUpdateHolder holder = new PieceUpdateHolder();
       holder.withPieceFromStorage(relatedStoragePiece.get());
       holder.withPieceToUpdate(pieceToUpdate);
-      holder.withPoLineOnly(compositePoLine);
+      holder.withPoLineOnly(poLine);
       pieceUpdateFlowPoLineService.updatePoLineWithoutSave(holder);
       updatedLocations++;
     }
 
     return updatedLocations > 0
-      ? PoLineLocationsPair.of(PoLineCommonUtil.convertToPoLine(compositePoLine), locations.stream().toList())
+      ? PoLineLocationsPair.of(poLine, locations.stream().toList())
       : PoLineLocationsPair.of(poLine, poLine.getLocations());
   }
 
@@ -520,7 +517,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
    */
 
   private static class PoLineAndTitleById {
-    Map<String, CompositePoLine> poLineById;
+    Map<String, PoLine> poLineById;
     Map<String, Title> titleById;
   }
 
@@ -589,8 +586,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
         logger.info("recreateItemRecords:: Recreating an item in another tenant, pieceId: {}, itemId: {}, locationId:{}, holdingId: {}, tenant transfer: {}->{}",
           piece.getId(), piece.getItemId(), piece.getLocationId(), piece.getHoldingId(), srcConfig.tenantId(), dstConfig.tenantId());
         var compOrder = purchaseOrderMap.get(itemToRecreate.getPoLineId());
-        var compPoLine = itemToRecreate.getCompositePoLine();
-        futures.add(itemRecreateInventoryService.recreateItemInDestinationTenant(compOrder, compPoLine, piece, srcConfig.context(), dstConfig.context()));
+        var poLine = itemToRecreate.getPoLine();
+        futures.add(itemRecreateInventoryService.recreateItemInDestinationTenant(compOrder, poLine, piece, srcConfig.context(), dstConfig.context()));
       }
     });
   }
@@ -601,7 +598,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
    *
    * @param poLineIds      List of po lines ids
    * @param requestContext Used to initiate more requests
-   * @return An object with 2 maps: poLineById (with composite po lines) and titleById
+   * @return An object with 2 maps: poLineById (with po lines) and titleById
    */
   private Future<PoLineAndTitleById> getPoLineAndTitleById(List<String> poLineIds, RequestContext requestContext) {
     return getPoLines(poLineIds, requestContext)
@@ -609,10 +606,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
         List<String> ids = poLines.stream().map(PoLine::getId).collect(Collectors.toList());
         return titlesService.getTitlesByPoLineIds(ids, requestContext)
           .map(titles -> {
-            List<CompositePoLine> compositePoLines = poLines.stream()
-              .map(PoLineCommonUtil::convertToCompositePoLine).toList();
-            Map<String, CompositePoLine> poLineById = compositePoLines.stream()
-              .collect(Collectors.toMap(CompositePoLine::getId, Function.identity()));
+            Map<String, PoLine> poLineById = poLines.stream()
+              .collect(Collectors.toMap(PoLine::getId, Function.identity()));
             HelperUtils.verifyTitles(titles, poLineById);
             PoLineAndTitleById result = new PoLineAndTitleById();
             result.poLineById = poLineById;
@@ -629,7 +624,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     List<Future<Boolean>> futuresForHoldingsUpdates = new ArrayList<>();
     extractAllPieces(piecesGroupedByPoLine)
       .forEach(piece -> {
-        CompositePoLine poLine = poLinesAndTitlesById.poLineById.get(piece.getPoLineId());
+        PoLine poLine = poLinesAndTitlesById.poLineById.get(piece.getPoLineId());
         if (poLine == null) {
           logger.error("POLine associated with piece '{}' cannot be found", piece.getId());
           addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
@@ -783,7 +778,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
 
     for (JsonObject item : items) {
       Piece piece = piecesByItemId.get(item.getString(ID));
-      CompositePoLine poLine = poLinesAndTitlesById.poLineById.get(piece.getPoLineId());
+      PoLine poLine = poLinesAndTitlesById.poLineById.get(piece.getPoLineId());
       Title title = poLinesAndTitlesById.titleById.get(piece.getTitleId());
       if (Objects.isNull(poLine) || Objects.isNull(title)) {
         continue;
@@ -817,7 +812,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
    */
   protected abstract Future<Boolean> receiveInventoryItemAndUpdatePiece(PiecesHolder holder, JsonObject item, Piece piece, RequestContext locationContext);
 
-  private boolean holdingUpdateOnCheckinReceiveRequired(Piece piece, CompositePoLine poLine) {
+  private boolean holdingUpdateOnCheckinReceiveRequired(Piece piece, PoLine poLine) {
     boolean isHoldingUpdateRequired;
     if (piece.getFormat() == Piece.Format.ELECTRONIC) {
       isHoldingUpdateRequired = PoLineCommonUtil.isHoldingUpdateRequiredForEresource(poLine);

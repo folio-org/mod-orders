@@ -57,12 +57,12 @@ public class ReEncumbranceHoldersBuilder extends FinanceHoldersBuilder {
   }
 
   public List<ReEncumbranceHolder> buildReEncumbranceHoldersWithOrdersData(CompositePurchaseOrder compPO) {
-    return compPO.getCompositePoLines()
+    return compPO.getPoLines()
       .stream()
-      .flatMap(compositePoLine -> compositePoLine.getFundDistribution()
+      .flatMap(poLine -> poLine.getFundDistribution()
         .stream()
         .map(fundDistribution -> new ReEncumbranceHolder().withFundDistribution(fundDistribution)
-          .withPoLine(compositePoLine)
+          .withPoLine(poLine)
           .withPurchaseOrder(compPO)))
       .toList();
   }

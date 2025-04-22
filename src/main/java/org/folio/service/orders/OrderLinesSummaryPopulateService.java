@@ -14,7 +14,7 @@ import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.finance.ExchangeRate;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.exchange.CacheableExchangeRateService;
@@ -43,10 +43,10 @@ public class OrderLinesSummaryPopulateService implements CompositeOrderDynamicDa
   public Future<CompositeOrderRetrieveHolder> populate(CompositeOrderRetrieveHolder holder,
       RequestContext requestContext) {
     CompositePurchaseOrder compPO = holder.getOrder();
-    List<CompositePoLine> compositePoLines = holder.getOrder().getCompositePoLines();
-    return calculateTotalEstimatedPrice(compositePoLines, requestContext).map(totalAmount -> {
+    List<PoLine> poLines = holder.getOrder().getPoLines();
+    return calculateTotalEstimatedPrice(poLines, requestContext).map(totalAmount -> {
       compPO.setTotalEstimatedPrice(totalAmount);
-      compPO.setTotalItems(calculateTotalItemsQuantity(compositePoLines));
+      compPO.setTotalItems(calculateTotalItemsQuantity(poLines));
       return holder;
     });
   }
@@ -55,18 +55,18 @@ public class OrderLinesSummaryPopulateService implements CompositeOrderDynamicDa
    * Calculates PO's estimated price by summing the Estimated Price of the associated PO Lines. See MODORDERS-181 for more details.
    * At the moment assumption is that all prices could be in the different currency.
    *
-   * @param compositePoLines list of composite PO Lines
+   * @param poLines list of PO Lines
    * @return estimated purchase order's total price
    */
-  public Future<Double> calculateTotalEstimatedPrice(List<CompositePoLine> compositePoLines,
+  public Future<Double> calculateTotalEstimatedPrice(List<PoLine> poLines,
       RequestContext requestContext) {
     return configurationEntriesCache.getSystemCurrency(requestContext)
-      .compose(toCurrency -> getExchangeRatesPerPoLine(compositePoLines, toCurrency, requestContext)
+      .compose(toCurrency -> getExchangeRatesPerPoLine(poLines, toCurrency, requestContext)
       .map(poLineExchangeRate -> Pair.of(toCurrency, poLineExchangeRate))
-      .map(toCurrencyPolExcRates -> convertEstimatedPrice(compositePoLines, toCurrencyPolExcRates)));
+      .map(toCurrencyPolExcRates -> convertEstimatedPrice(poLines, toCurrencyPolExcRates)));
   }
 
-  private Future<Map<String, ExchangeRate>> getExchangeRatesPerPoLine(List<CompositePoLine> poLines, String toCurrency, RequestContext requestContext) {
+  private Future<Map<String, ExchangeRate>> getExchangeRatesPerPoLine(List<PoLine> poLines, String toCurrency, RequestContext requestContext) {
     var poLineExchangeRateFutures = new ArrayList<Future<Map<String, ExchangeRate>>>();
     poLines.forEach(poLine -> {
       var cost = poLine.getCost();
@@ -83,11 +83,11 @@ public class OrderLinesSummaryPopulateService implements CompositeOrderDynamicDa
       .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
   }
 
-  private Double convertEstimatedPrice(List<CompositePoLine> compositePoLines,
+  private Double convertEstimatedPrice(List<PoLine> poLines,
                                        Pair<String, Map<String, ExchangeRate>> toCurrencyPoLineExchangeRates) {
     var toCurrency = toCurrencyPoLineExchangeRates.getLeft();
     var poLineExchangeRates = toCurrencyPoLineExchangeRates.getRight();
-    return compositePoLines.stream()
+    return poLines.stream()
       .map(poLine -> {
         var exchangeRate = poLineExchangeRates.get(poLine.getId());
         var amount = Money.of(poLine.getCost().getPoLineEstimatedPrice(), poLine.getCost().getCurrency());
@@ -105,7 +105,7 @@ public class OrderLinesSummaryPopulateService implements CompositeOrderDynamicDa
       .doubleValue();
   }
 
-  private int calculateTotalItemsQuantity(List<CompositePoLine> poLines) {
+  private int calculateTotalItemsQuantity(List<PoLine> poLines) {
     return poLines.stream()
       .mapToInt(HelperUtils::calculateTotalQuantity)
       .sum();

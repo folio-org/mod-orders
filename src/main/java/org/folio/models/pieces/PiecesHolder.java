@@ -3,7 +3,7 @@ package org.folio.models.pieces;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.tuple.Pair;
 import org.folio.rest.jaxrs.model.CheckInPiece;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Piece;
 
@@ -13,20 +13,20 @@ import java.util.List;
 import java.util.Map;
 
 public class PiecesHolder {
-  private Pair<CompositePurchaseOrder, CompositePoLine> purchaseOrderPoLinePair;
+  private Pair<CompositePurchaseOrder, PoLine> purchaseOrderPoLinePair;
   private Map<String, List<Piece>> piecesFromStorage;
   private Map<String, List<PiecePoLineDto>> itemsToRecreate;
 
   public static class PiecePoLineDto {
     private final String poLineId;
-    private final CompositePoLine compositePoLine;
+    private final PoLine poLine;
     private final Piece pieceFromStorage;
     private final CheckInPiece checkInPiece;
     private final boolean recreateItem;
 
-    public PiecePoLineDto(CompositePoLine compositePoLine, Piece pieceFromStorage, CheckInPiece checkInPiece) {
-      this.poLineId = compositePoLine.getId();
-      this.compositePoLine = compositePoLine;
+    public PiecePoLineDto(PoLine poLine, Piece pieceFromStorage, CheckInPiece checkInPiece) {
+      this.poLineId = poLine.getId();
+      this.poLine = poLine;
       this.pieceFromStorage = pieceFromStorage;
       this.checkInPiece = checkInPiece;
       this.recreateItem = true;
@@ -34,7 +34,7 @@ public class PiecesHolder {
 
     public PiecePoLineDto(String poLineId, Piece pieceFromStorage) {
       this.poLineId = poLineId;
-      this.compositePoLine = null;
+      this.poLine = null;
       this.pieceFromStorage = pieceFromStorage;
       this.checkInPiece = null;
       this.recreateItem = false;
@@ -48,8 +48,8 @@ public class PiecesHolder {
       return pieceFromStorage;
     }
 
-    public CompositePoLine getCompositePoLine() {
-      return compositePoLine;
+    public PoLine getPoLine() {
+      return poLine;
     }
 
     public CheckInPiece getCheckInPiece() {
@@ -61,7 +61,7 @@ public class PiecesHolder {
     }
   }
 
-  public Pair<CompositePurchaseOrder, CompositePoLine> getPurchaseOrderPoLinePair() {
+  public Pair<CompositePurchaseOrder, PoLine> getPurchaseOrderPoLinePair() {
     return purchaseOrderPoLinePair;
   }
 
@@ -73,7 +73,7 @@ public class PiecesHolder {
     return this.itemsToRecreate;
   }
 
-  public PiecesHolder withPurchaseOrderPoLinePair(Pair<CompositePurchaseOrder, CompositePoLine> purchaseOrderPoLinePair) {
+  public PiecesHolder withPurchaseOrderPoLinePair(Pair<CompositePurchaseOrder, PoLine> purchaseOrderPoLinePair) {
     this.purchaseOrderPoLinePair = purchaseOrderPoLinePair;
     return this;
   }

@@ -34,7 +34,7 @@ import org.folio.ApiTestSuite;
 import org.folio.models.ItemStatus;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
@@ -137,7 +137,7 @@ public class UnOpenCompositeOrderManagerTest {
     //given
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePurchaseOrder orderFromStorage = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine poLine = getPoLine(order);
+    PoLine poLine = getPoLine(order);
     prepareInitialSetup(order, orderFromStorage, poLine);
     //When
     unOpenCompositeOrderManager.process(order, orderFromStorage, false, requestContext).result();
@@ -156,7 +156,7 @@ public class UnOpenCompositeOrderManagerTest {
     //given
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePurchaseOrder orderFromStorage = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine poLine = getPoLine(order);
+    PoLine poLine = getPoLine(order);
     prepareInitialSetup(order, orderFromStorage, poLine);
     //When
     unOpenCompositeOrderManager.process(order, orderFromStorage, true, requestContext).result();
@@ -175,7 +175,7 @@ public class UnOpenCompositeOrderManagerTest {
     //given
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePurchaseOrder orderFromStorage = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine poLine = getPoLine(order);
+    PoLine poLine = getPoLine(order);
     prepareInitialSetup(order, orderFromStorage, poLine);
     doReturn(succeededFuture(List.of(getItem()))).when(inventoryItemManager).getItemsByHoldingId(HOLDING_ID, requestContext);
     //When
@@ -195,7 +195,7 @@ public class UnOpenCompositeOrderManagerTest {
     //given
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePurchaseOrder orderFromStorage = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine poLine = getPoLine(order);
+    PoLine poLine = getPoLine(order);
     prepareInitialSetup(order, orderFromStorage, poLine);
     //When
     unOpenCompositeOrderManager.process(order, orderFromStorage, false, requestContext).result();
@@ -214,7 +214,7 @@ public class UnOpenCompositeOrderManagerTest {
     //given
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePurchaseOrder orderFromStorage = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine packagePoLine = getPoLine(order);
+    PoLine packagePoLine = getPoLine(order);
     // make package order line
     packagePoLine.setIsPackage(true);
     prepareInitialSetup(order, orderFromStorage, packagePoLine);
@@ -230,8 +230,8 @@ public class UnOpenCompositeOrderManagerTest {
     //given
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePurchaseOrder orderFromStorage = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine poLine = getPoLine(order);
-    poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
+    PoLine poLine = getPoLine(order);
+    poLine.setReceiptStatus(PoLine.ReceiptStatus.AWAITING_RECEIPT);
     poLine.getPhysical().setCreateInventory(Physical.CreateInventory.NONE);
     prepareInitialSetup(order, orderFromStorage, poLine);
     //When
@@ -248,11 +248,11 @@ public class UnOpenCompositeOrderManagerTest {
     //given
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePurchaseOrder orderFromStorage = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine poLine = getPoLine(order);
+    PoLine poLine = getPoLine(order);
     // make Independent flow with Create Inventory is None and receipt not required status
     poLine.setCheckinItems(true);
-    poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED);
-    poLine.setPaymentStatus(CompositePoLine.PaymentStatus.PAYMENT_NOT_REQUIRED);
+    poLine.setReceiptStatus(PoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED);
+    poLine.setPaymentStatus(PoLine.PaymentStatus.PAYMENT_NOT_REQUIRED);
     poLine.getPhysical().setCreateInventory(Physical.CreateInventory.NONE);
     prepareInitialSetup(order, orderFromStorage, poLine);
     //When
@@ -269,7 +269,7 @@ public class UnOpenCompositeOrderManagerTest {
     //given
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePurchaseOrder orderFromStorage = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine poLine = getPoLine(order);
+    PoLine poLine = getPoLine(order);
     poLine.getPhysical().setCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING);
     poLine.getLocations().forEach(location -> location.setHoldingId(HOLDING_ID));
     prepareInitialSetup(order, orderFromStorage, poLine);
@@ -288,7 +288,7 @@ public class UnOpenCompositeOrderManagerTest {
     //given
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePurchaseOrder orderFromStorage = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine poLine = getPoLine(order);
+    PoLine poLine = getPoLine(order);
     poLine.getPhysical().setCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING);
     poLine.getLocations().forEach(location -> location.setHoldingId(HOLDING_ID));
     prepareInitialSetup(order, orderFromStorage, poLine);
@@ -309,7 +309,7 @@ public class UnOpenCompositeOrderManagerTest {
     //given
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePurchaseOrder orderFromStorage = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine poLine = getPoLine(order);
+    PoLine poLine = getPoLine(order);
     poLine.getPhysical().setCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING);
     poLine.getLocations().forEach(location -> location.setHoldingId(HOLDING_ID));
     prepareInitialSetup(order, orderFromStorage, poLine);
@@ -328,7 +328,7 @@ public class UnOpenCompositeOrderManagerTest {
     //given
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePurchaseOrder orderFromStorage = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine poLine = getPoLine(order);
+    PoLine poLine = getPoLine(order);
     poLine.setCheckinItems(true);
     poLine.getPhysical().setCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING);
     poLine.getLocations().forEach(location -> location.setHoldingId(HOLDING_ID));
@@ -348,7 +348,7 @@ public class UnOpenCompositeOrderManagerTest {
     //given
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePurchaseOrder orderFromStorage = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine poLine = getPoLine(order);
+    PoLine poLine = getPoLine(order);
     poLine.setCheckinItems(true);
     poLine.getPhysical().setCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING);
     poLine.getLocations().forEach(location -> location.setHoldingId(HOLDING_ID));
@@ -363,7 +363,7 @@ public class UnOpenCompositeOrderManagerTest {
     verify(inventoryItemManager, never()).deleteItems(anyList(), anyBoolean(), any(RequestContext.class));
   }
 
-  private void prepareInitialSetup(CompositePurchaseOrder order, CompositePurchaseOrder orderFromStorage, CompositePoLine poLine) {
+  private void prepareInitialSetup(CompositePurchaseOrder order, CompositePurchaseOrder orderFromStorage, PoLine poLine) {
     doReturn(openToPendingEncumbranceStrategy).when(encumbranceWorkflowStrategyFactory).getStrategy(eq(OrderWorkflowType.OPEN_TO_PENDING));
     doReturn(succeededFuture(null)).when(openToPendingEncumbranceStrategy).processEncumbrances(eq(order), eq(orderFromStorage), any());
     JsonObject item = getItem();
@@ -398,23 +398,23 @@ public class UnOpenCompositeOrderManagerTest {
       .put("effectiveLocation", new JsonObject().put("id", EFFECTIVE_LOCATION_ID));
   }
 
-  private CompositePoLine getPoLine(CompositePurchaseOrder order) {
-    CompositePoLine poLine = order.getCompositePoLines().get(0);
-    poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
-    poLine.setPaymentStatus(CompositePoLine.PaymentStatus.AWAITING_PAYMENT);
+  private PoLine getPoLine(CompositePurchaseOrder order) {
+    PoLine poLine = order.getPoLines().get(0);
+    poLine.setReceiptStatus(PoLine.ReceiptStatus.AWAITING_RECEIPT);
+    poLine.setPaymentStatus(PoLine.PaymentStatus.AWAITING_PAYMENT);
     return poLine;
   }
 
   private void makeBasicUnOpenWorkflowChecks(CompositePurchaseOrder order, CompositePurchaseOrder orderFromStorage) {
-    assertEquals(CompositePoLine.ReceiptStatus.PENDING, order.getCompositePoLines().get(0).getReceiptStatus());
-    assertEquals(CompositePoLine.PaymentStatus.PENDING, order.getCompositePoLines().get(0).getPaymentStatus());
+    assertEquals(PoLine.ReceiptStatus.PENDING, order.getPoLines().get(0).getReceiptStatus());
+    assertEquals(PoLine.PaymentStatus.PENDING, order.getPoLines().get(0).getPaymentStatus());
     verify(openToPendingEncumbranceStrategy).processEncumbrances(order, orderFromStorage, requestContext);
     verify(purchaseOrderLineService).saveOrderLine(any(PoLine.class), eq(requestContext));
   }
 
   private void makeBasicUnOpenWorkflowChecksForReceiptNotRequired(CompositePurchaseOrder order, CompositePurchaseOrder orderFromStorage) {
-    assertEquals(CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED, order.getCompositePoLines().get(0).getReceiptStatus());
-    assertEquals(CompositePoLine.PaymentStatus.PAYMENT_NOT_REQUIRED, order.getCompositePoLines().get(0).getPaymentStatus());
+    assertEquals(PoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED, order.getPoLines().get(0).getReceiptStatus());
+    assertEquals(PoLine.PaymentStatus.PAYMENT_NOT_REQUIRED, order.getPoLines().get(0).getPaymentStatus());
     verify(openToPendingEncumbranceStrategy).processEncumbrances(order, orderFromStorage, requestContext);
     verify(purchaseOrderLineService).saveOrderLine(any(PoLine.class), eq(requestContext));
   }

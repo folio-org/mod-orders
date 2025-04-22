@@ -4,7 +4,7 @@ import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 
 import org.folio.models.pieces.BasePieceFlowHolder;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
@@ -45,13 +45,13 @@ public abstract class BasePieceFlowUpdatePoLineService<T extends BasePieceFlowHo
 
   protected abstract List<Location> getPieceLocations(T holder);
 
-  protected CompositePoLine updateEstimatedPrice(CompositePoLine compPoLine) {
-    Cost cost = compPoLine.getCost();
+  protected PoLine updateEstimatedPrice(PoLine poLine) {
+    Cost cost = poLine.getCost();
     cost.setPoLineEstimatedPrice(calculateEstimatedPrice(cost).getNumber().doubleValue());
-    return compPoLine;
+    return poLine;
   }
 
-  protected boolean isLocationUpdateRequired(Piece piece, CompositePoLine lineToSave) {
+  protected boolean isLocationUpdateRequired(Piece piece, PoLine lineToSave) {
     return (piece.getHoldingId() != null || piece.getLocationId() != null) ||
                       PieceValidatorUtil.isLocationRequired(piece.getFormat(), lineToSave);
   }

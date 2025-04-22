@@ -19,11 +19,9 @@ public class ResourcePathResolver {
   public static final String VENDOR_ID = "vendor";
   public static final String PO_LINE_NUMBER = "poLineNumber";
 
-  public static final String ALERTS = "alerts";
   public static final String ACQUISITIONS_UNITS = "acquisitionsUnits";
   public static final String ACQUISITION_METHODS = "acquisitionMethods";
   public static final String ACQUISITIONS_MEMBERSHIPS = "acquisitionsMemberships";
-  public static final String REPORTING_CODES = "reportingCodes";
   public static final String PURCHASE_ORDER_STORAGE = "purchaseOrder";
   public static final String PIECES_STORAGE = "pieces";
   public static final String PIECES_STORAGE_BATCH = "pieces-batch";
@@ -69,11 +67,9 @@ public class ResourcePathResolver {
 
   static {
     Map<String, String> apis = new HashMap<>();
-    apis.put(ALERTS, "/orders-storage/alerts");
     apis.put(ACQUISITIONS_UNITS, "/acquisitions-units-storage/units");
     apis.put(ACQUISITION_METHODS, "/orders-storage/acquisition-methods");
     apis.put(ACQUISITIONS_MEMBERSHIPS, "/acquisitions-units-storage/memberships");
-    apis.put(REPORTING_CODES, "/orders-storage/reporting-codes");
     apis.put(PO_LINES_STORAGE, "/orders-storage/po-lines");
     apis.put(PO_LINES_BATCH_STORAGE, "/orders-storage/po-lines-batch");
     apis.put(PO_LINES_BUSINESS, "/orders/order-lines");

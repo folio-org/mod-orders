@@ -27,7 +27,7 @@ import org.folio.ApiTestSuite;
 import org.folio.rest.acq.model.invoice.Invoice;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.finance.transaction.ClosedToOpenEncumbranceStrategy;
@@ -116,17 +116,17 @@ public class ReOpenCompositeOrderManagerTest {
   void shouldCheckPaymentAndReceiptStatusesIfInvoicesAndPiecesHaveSameStatuses(
       String invoiceStatus, String pieceStatus, String expReceiptStatus, String expPaymentStatus) {
     CompositePurchaseOrder oldOrder = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine poLine1 = oldOrder.getCompositePoLines().get(0);
+    PoLine poLine1 = oldOrder.getPoLines().get(0);
     String poLineId1 = poLine1.getId();
     String encumbrance1Id = poLine1.getFundDistribution().get(0).getEncumbrance();
-    CompositePoLine poLine2 = JsonObject.mapFrom(poLine1).mapTo(CompositePoLine.class);
+    PoLine poLine2 = JsonObject.mapFrom(poLine1).mapTo(PoLine.class);
     String poLineId2 = UUID.randomUUID().toString();
     String encumbrance2Id = UUID.randomUUID().toString();
     String oldInstance2 = UUID.randomUUID().toString();
     poLine2.setId(poLineId2);
     poLine2.getFundDistribution().get(0).setEncumbrance(encumbrance2Id);
     poLine2.setInstanceId(oldInstance2);
-    oldOrder.setCompositePoLines(List.of(poLine1, poLine2));
+    oldOrder.setPoLines(List.of(poLine1, poLine2));
     CompositePurchaseOrder newOrder = JsonObject.mapFrom(oldOrder).mapTo(CompositePurchaseOrder.class);
     newOrder.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.CLOSED);
 
@@ -166,10 +166,10 @@ public class ReOpenCompositeOrderManagerTest {
 
     reOpenCompositeOrderManager.process(newOrder, oldOrder, requestContext).result();
 
-    assertEquals(CompositePoLine.ReceiptStatus.fromValue(expReceiptStatus), newOrder.getCompositePoLines().get(0).getReceiptStatus());
-    assertEquals(CompositePoLine.PaymentStatus.fromValue(expPaymentStatus), newOrder.getCompositePoLines().get(0).getPaymentStatus());
-    assertEquals(CompositePoLine.ReceiptStatus.fromValue(expReceiptStatus), newOrder.getCompositePoLines().get(1).getReceiptStatus());
-    assertEquals(CompositePoLine.PaymentStatus.fromValue(expPaymentStatus), newOrder.getCompositePoLines().get(1).getPaymentStatus());
+    assertEquals(PoLine.ReceiptStatus.fromValue(expReceiptStatus), newOrder.getPoLines().get(0).getReceiptStatus());
+    assertEquals(PoLine.PaymentStatus.fromValue(expPaymentStatus), newOrder.getPoLines().get(0).getPaymentStatus());
+    assertEquals(PoLine.ReceiptStatus.fromValue(expReceiptStatus), newOrder.getPoLines().get(1).getReceiptStatus());
+    assertEquals(PoLine.PaymentStatus.fromValue(expPaymentStatus), newOrder.getPoLines().get(1).getPaymentStatus());
   }
 
   @ParameterizedTest
@@ -184,17 +184,17 @@ public class ReOpenCompositeOrderManagerTest {
       String expReceiptStatus1,  String expReceiptStatus2, String expPaymentStatus1, String expPaymentStatus2,
       boolean releaseEncumbrances1, boolean releaseEncumbrances2) {
     CompositePurchaseOrder oldOrder = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine poLine1 = oldOrder.getCompositePoLines().get(0);
+    PoLine poLine1 = oldOrder.getPoLines().get(0);
     String poLineId1 = poLine1.getId();
     String encumbrance1Id = poLine1.getFundDistribution().get(0).getEncumbrance();
-    CompositePoLine poLine2 = JsonObject.mapFrom(poLine1).mapTo(CompositePoLine.class);
+    PoLine poLine2 = JsonObject.mapFrom(poLine1).mapTo(PoLine.class);
     String poLineId2 = UUID.randomUUID().toString();
     String encumbrance2Id = UUID.randomUUID().toString();
     String oldInstance2 = UUID.randomUUID().toString();
     poLine2.setId(poLineId2);
     poLine2.getFundDistribution().get(0).setEncumbrance(encumbrance2Id);
     poLine2.setInstanceId(oldInstance2);
-    oldOrder.setCompositePoLines(List.of(poLine1, poLine2));
+    oldOrder.setPoLines(List.of(poLine1, poLine2));
     CompositePurchaseOrder newOrder = JsonObject.mapFrom(oldOrder).mapTo(CompositePurchaseOrder.class);
     newOrder.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.CLOSED);
 
@@ -236,10 +236,10 @@ public class ReOpenCompositeOrderManagerTest {
 
     reOpenCompositeOrderManager.process(newOrder, oldOrder, requestContext).result();
 
-    assertEquals(CompositePoLine.ReceiptStatus.fromValue(expReceiptStatus1), newOrder.getCompositePoLines().get(0).getReceiptStatus());
-    assertEquals(CompositePoLine.PaymentStatus.fromValue(expPaymentStatus1), newOrder.getCompositePoLines().get(0).getPaymentStatus());
-    assertEquals(CompositePoLine.ReceiptStatus.fromValue(expReceiptStatus2), newOrder.getCompositePoLines().get(1).getReceiptStatus());
-    assertEquals(CompositePoLine.PaymentStatus.fromValue(expPaymentStatus2), newOrder.getCompositePoLines().get(1).getPaymentStatus());
+    assertEquals(PoLine.ReceiptStatus.fromValue(expReceiptStatus1), newOrder.getPoLines().get(0).getReceiptStatus());
+    assertEquals(PoLine.PaymentStatus.fromValue(expPaymentStatus1), newOrder.getPoLines().get(0).getPaymentStatus());
+    assertEquals(PoLine.ReceiptStatus.fromValue(expReceiptStatus2), newOrder.getPoLines().get(1).getReceiptStatus());
+    assertEquals(PoLine.PaymentStatus.fromValue(expPaymentStatus2), newOrder.getPoLines().get(1).getPaymentStatus());
   }
 
   @ParameterizedTest
@@ -252,17 +252,17 @@ public class ReOpenCompositeOrderManagerTest {
       String invoiceStatus1, String invoiceStatus2, String pieceStatus1, String pieceStatus2,
       String expReceiptStatus1,  String expReceiptStatus2, String expPaymentStatus1, String expPaymentStatus2) {
     CompositePurchaseOrder oldOrder = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine poLine1 = oldOrder.getCompositePoLines().get(0);
+    PoLine poLine1 = oldOrder.getPoLines().get(0);
     String poLineId1 = poLine1.getId();
     String encumbrance1Id = poLine1.getFundDistribution().get(0).getEncumbrance();
-    CompositePoLine poLine2 = JsonObject.mapFrom(poLine1).mapTo(CompositePoLine.class);
+    PoLine poLine2 = JsonObject.mapFrom(poLine1).mapTo(PoLine.class);
     String poLineId2 = UUID.randomUUID().toString();
     String encumbrance2Id = UUID.randomUUID().toString();
     String oldInstance2 = UUID.randomUUID().toString();
     poLine2.setId(poLineId2);
     poLine2.getFundDistribution().get(0).setEncumbrance(encumbrance2Id);
     poLine2.setInstanceId(oldInstance2);
-    oldOrder.setCompositePoLines(List.of(poLine1, poLine2));
+    oldOrder.setPoLines(List.of(poLine1, poLine2));
     CompositePurchaseOrder newOrder = JsonObject.mapFrom(oldOrder).mapTo(CompositePurchaseOrder.class);
     newOrder.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.CLOSED);
 
@@ -310,10 +310,10 @@ public class ReOpenCompositeOrderManagerTest {
 
     reOpenCompositeOrderManager.process(newOrder, oldOrder, requestContext).result();
 
-    assertEquals(CompositePoLine.ReceiptStatus.fromValue(expReceiptStatus1), newOrder.getCompositePoLines().get(0).getReceiptStatus());
-    assertEquals(CompositePoLine.PaymentStatus.fromValue(expPaymentStatus1), newOrder.getCompositePoLines().get(0).getPaymentStatus());
-    assertEquals(CompositePoLine.ReceiptStatus.fromValue(expReceiptStatus2), newOrder.getCompositePoLines().get(1).getReceiptStatus());
-    assertEquals(CompositePoLine.PaymentStatus.fromValue(expPaymentStatus2), newOrder.getCompositePoLines().get(1).getPaymentStatus());
+    assertEquals(PoLine.ReceiptStatus.fromValue(expReceiptStatus1), newOrder.getPoLines().get(0).getReceiptStatus());
+    assertEquals(PoLine.PaymentStatus.fromValue(expPaymentStatus1), newOrder.getPoLines().get(0).getPaymentStatus());
+    assertEquals(PoLine.ReceiptStatus.fromValue(expReceiptStatus2), newOrder.getPoLines().get(1).getReceiptStatus());
+    assertEquals(PoLine.PaymentStatus.fromValue(expPaymentStatus2), newOrder.getPoLines().get(1).getPaymentStatus());
   }
 
   private static class ContextConfiguration {

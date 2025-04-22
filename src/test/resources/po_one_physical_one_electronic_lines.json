@@ -9,7 +9,7 @@
   "reEncumber": false,
   "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
   "workflowStatus": "Open",
-  "compositePoLines": [
+  "poLines": [
     {
       "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
       "cancellationRestriction": false,

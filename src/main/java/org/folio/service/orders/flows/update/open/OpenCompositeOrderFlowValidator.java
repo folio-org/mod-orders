@@ -25,7 +25,7 @@ import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.FundDistribution;
@@ -36,7 +36,7 @@ import org.folio.service.finance.FundService;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.inventory.InventoryHoldingManager;
-import org.folio.service.orders.CompositePoLineValidationService;
+import org.folio.service.orders.PoLineValidationService;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.pieces.PieceStorageService;
 
@@ -47,19 +47,19 @@ public class OpenCompositeOrderFlowValidator {
   private final ExpenseClassValidationService expenseClassValidationService;
   private final PieceStorageService pieceStorageService;
   private final EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
-  private final CompositePoLineValidationService compositePoLineValidationService;
+  private final PoLineValidationService poLineValidationService;
   private final InventoryHoldingManager inventoryHoldingManager;
 
   public OpenCompositeOrderFlowValidator(FundService fundService,
                                          ExpenseClassValidationService expenseClassValidationService,
                                          PieceStorageService pieceStorageService,
                                          EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
-                                         CompositePoLineValidationService compositePoLineValidationService, InventoryHoldingManager inventoryHoldingManager) {
+                                         PoLineValidationService poLineValidationService, InventoryHoldingManager inventoryHoldingManager) {
     this.fundService = fundService;
     this.expenseClassValidationService = expenseClassValidationService;
     this.pieceStorageService = pieceStorageService;
     this.encumbranceWorkflowStrategyFactory = encumbranceWorkflowStrategyFactory;
-    this.compositePoLineValidationService = compositePoLineValidationService;
+    this.poLineValidationService = poLineValidationService;
     this.inventoryHoldingManager = inventoryHoldingManager;
   }
 
@@ -80,9 +80,9 @@ public class OpenCompositeOrderFlowValidator {
           .mapEmpty()
       );
 
-    futures.add(expenseClassValidationService.validateExpenseClasses(compPO.getCompositePoLines(), true, requestContext));
-    futures.add(checkLocationsAndPiecesConsistency(compPO.getCompositePoLines(), requestContext));
-    futures.add(validateFundDistributionTotal(compPO.getCompositePoLines()));
+    futures.add(expenseClassValidationService.validateExpenseClasses(compPO.getPoLines(), true, requestContext));
+    futures.add(checkLocationsAndPiecesConsistency(compPO.getPoLines(), requestContext));
+    futures.add(validateFundDistributionTotal(compPO.getPoLines()));
     futures.add(validateMaterialTypesFuture);
     futures.add(validateEncumbrancesFuture);
 
@@ -90,19 +90,19 @@ public class OpenCompositeOrderFlowValidator {
       .mapEmpty();
   }
 
-  private Future<Void> validateFundDistributionTotal(List<CompositePoLine> compositePoLines) {
+  private Future<Void> validateFundDistributionTotal(List<PoLine> poLines) {
     return Future.succeededFuture().map(v -> {
-      FundDistributionUtils.validateFundDistributionTotal(compositePoLines);
+      FundDistributionUtils.validateFundDistributionTotal(poLines);
       return null;
     });
   }
 
-  public Future<Void> checkLocationsAndPiecesConsistency(List<CompositePoLine> poLines, RequestContext requestContext) {
+  public Future<Void> checkLocationsAndPiecesConsistency(List<PoLine> poLines, RequestContext requestContext) {
     logger.debug("checkLocationsAndPiecesConsistency start");
-    List<CompositePoLine> linesWithIdWithoutManualPieceReceived = poLines.stream().filter(
-        compositePoLine -> StringUtils.isNotEmpty(compositePoLine.getId()) && Boolean.FALSE.equals(compositePoLine.getCheckinItems()))
+    List<PoLine> linesWithIdWithoutManualPieceReceived = poLines.stream().filter(
+        poLine -> StringUtils.isNotEmpty(poLine.getId()) && Boolean.FALSE.equals(poLine.getCheckinItems()))
       .collect(Collectors.toList());
-    List<String> lineIds = linesWithIdWithoutManualPieceReceived.stream().map(CompositePoLine::getId).toList();
+    List<String> lineIds = linesWithIdWithoutManualPieceReceived.stream().map(PoLine::getId).toList();
     return pieceStorageService.getPiecesByLineIdsByChunks(lineIds, requestContext)
       .map(pieces -> new PieceCollection().withPieces(pieces).withTotalRecords(pieces.size()))
       .map(pieces -> {
@@ -113,14 +113,14 @@ public class OpenCompositeOrderFlowValidator {
 
   private void validateMaterialTypes(CompositePurchaseOrder purchaseOrder) {
     if (purchaseOrder.getWorkflowStatus() != PENDING) {
-      List<Error> errors = compositePoLineValidationService.checkMaterialsAvailability(purchaseOrder.getCompositePoLines());
+      List<Error> errors = poLineValidationService.checkMaterialsAvailability(purchaseOrder.getPoLines());
       if (!errors.isEmpty()) {
         throw new HttpException(422, errors.get(0));
       }
     }
   }
 
-  public Future<Void> checkFundLocationRestrictions(List<CompositePoLine> poLines, RequestContext requestContext) {
+  public Future<Void> checkFundLocationRestrictions(List<PoLine> poLines, RequestContext requestContext) {
     logger.debug("checkFundLocationRestrictions start");
     List<Future<Void>> checkFunds = poLines
       .stream()
@@ -136,7 +136,7 @@ public class OpenCompositeOrderFlowValidator {
     return GenericCompositeFuture.join(checkFunds).mapEmpty();
   }
 
-  private Future<Void> validateLocationRestrictions(CompositePoLine poLine, List<Fund> funds, RequestContext requestContext) {
+  private Future<Void> validateLocationRestrictions(PoLine poLine, List<Fund> funds, RequestContext requestContext) {
     logger.debug("validateLocationRestrictions:: Validating location restrictions for poLine '{}' that has '{}' fund(s)", poLine.getId(), funds.size());
     // TODO: will be removed in scope of https://folio-org.atlassian.net/browse/MODORDERS-981
     // as we'll obtain funds once before the processing and check on emptiness
@@ -181,7 +181,7 @@ public class OpenCompositeOrderFlowValidator {
    * @param requestContext  requestContext
    * @return Restricted locations
    */
-  private Future<Set<String>> extractRestrictedLocationIds(CompositePoLine poLine, Set<Fund> restrictedFunds, RequestContext requestContext) {
+  private Future<Set<String>> extractRestrictedLocationIds(PoLine poLine, Set<Fund> restrictedFunds, RequestContext requestContext) {
 
     String currentTenantId = TenantTool.tenantId(requestContext.getHeaders());
 
@@ -205,7 +205,7 @@ public class OpenCompositeOrderFlowValidator {
     });
   }
 
-  private static List<String> getPOLineLocations(CompositePoLine poLine, String currentTenantId) {
+  private static List<String> getPOLineLocations(PoLine poLine, String currentTenantId) {
     return poLine.getLocations()
       .stream()
       .filter(location -> StringUtils.isNotEmpty(location.getLocationId()))
