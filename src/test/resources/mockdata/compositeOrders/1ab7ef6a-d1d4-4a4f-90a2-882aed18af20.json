@@ -13,12 +13,11 @@
     "createdDate": "2018-06-29T00:00:00.000",
     "createdByUserId": "28d0f99c-d137-11e8-a8d5-f2801f1b9fd1"
   },
-  "compositePoLines": [
+  "poLines": [
     {
       "id": "d5c468b0-89cc-4fa2-b75e-38a9a7f18df7",
       "checkinItems": false,
       "acquisitionMethod": "796596c4-62b5-4b64-a2ce-524c747afaa2",
-      "alerts": [],
       "claims": [],
       "collection": false,
       "contributors": [
@@ -93,7 +92,6 @@
       "publisher": "Palgrave Macmillan",
       "purchaseOrderId": "d0dbafca-d05d-4d3f-8d83-e9722eb179d3",
       "receiptStatus": "Pending",
-      "reportingCodes": [],
       "rush": false,
       "source": "User",
       "titleOrPackage": "Futures, biometrics and neuroscience research Luiz Moutinho, Mladen Sokele, editors",

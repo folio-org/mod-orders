@@ -22,7 +22,7 @@ import org.folio.rest.annotations.Validate;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
@@ -30,7 +30,7 @@ import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.ValidateFundDistributionsRequest;
 import org.folio.rest.jaxrs.resource.OrdersOrderLines;
 import org.folio.service.caches.ConfigurationEntriesCache;
-import org.folio.service.orders.CompositePoLineValidationService;
+import org.folio.service.orders.PoLineValidationService;
 import org.folio.service.orders.lines.update.OrderLinePatchOperationService;
 import org.folio.spring.SpringContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,7 +40,7 @@ import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 
-public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
+public class PoLineAPI extends BaseApi implements OrdersOrderLines {
   private static final Logger logger = LogManager.getLogger();
 
   @Autowired
@@ -48,11 +48,11 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
   @Autowired
   private ConfigurationEntriesCache configurationEntriesCache;
   @Autowired
-  private CompositePoLineValidationService compositePoLineValidationService;
+  private PoLineValidationService poLineValidationService;
   @Autowired
   private OrderLinePatchOperationService orderLinePatchOperationService;
 
-  public CompositePoLineAPI() {
+  public PoLineAPI() {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
   }
 
@@ -67,8 +67,8 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
 
   @Override
   @Validate
-  public void postOrdersOrderLines(CompositePoLine poLine, Map<String, String> okapiHeaders,
-    Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void postOrdersOrderLines(PoLine poLine, Map<String, String> okapiHeaders,
+      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
     configurationEntriesCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
       .compose(tenantConfig -> helper.createPoLine(poLine, tenantConfig, requestContext))
@@ -85,7 +85,7 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
   public void getOrdersOrderLinesById(String lineId, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.debug("Started Invocation of POLine Request with id = {}", lineId);
-    helper.getCompositePoLine(lineId, new RequestContext(vertxContext, okapiHeaders))
+    helper.getPoLine(lineId, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(poLine -> asyncResultHandler.handle(succeededFuture(buildOkResponse(poLine))))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
@@ -101,7 +101,7 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
 
   @Override
   @Validate
-  public void putOrdersOrderLinesById(String lineId, CompositePoLine poLine, Map<String, String> okapiHeaders,
+  public void putOrdersOrderLinesById(String lineId, PoLine poLine, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.debug("Handling PUT Order Line operation...");
     // Set id if this is available only in path
@@ -118,7 +118,7 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
     }
     configurationEntriesCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
       .compose(tenantConfig -> helper.setTenantDefaultCreateInventoryValues(poLine, tenantConfig))
-      .compose(v -> compositePoLineValidationService.validatePoLine(poLine, requestContext))
+      .compose(v -> poLineValidationService.validatePoLine(poLine, requestContext))
       .map(errors::addAll)
       .onSuccess(b -> {
         if (!errors.isEmpty()) {

@@ -9,7 +9,7 @@ import java.util.UUID;
 import org.folio.CopilotGenerated;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Cost;
@@ -35,8 +35,8 @@ public class DefaultPieceFlowsValidatorTest {
     Location loc = new Location().withLocationId(LOCATION_ID).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
     CompositePurchaseOrder originOrder = new CompositePurchaseOrder().withId(ORDER_IRD).withWorkflowStatus(WorkflowStatus.OPEN);
-    CompositePoLine originPoLine = new CompositePoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
-                                    .withOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE).withId(PO_LINE_ID)
+    PoLine originPoLine = new PoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
+                                    .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE).withId(PO_LINE_ID)
                                     .withLocations(List.of(loc)).withCost(cost);
 
     HttpException exception = Assertions.assertThrows(HttpException.class, () -> {
@@ -55,8 +55,8 @@ public class DefaultPieceFlowsValidatorTest {
     Cost cost = new Cost().withQuantityElectronic(1);
     Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
     CompositePurchaseOrder originOrder = new CompositePurchaseOrder().withId(ORDER_IRD).withWorkflowStatus(WorkflowStatus.OPEN);
-    CompositePoLine originPoLine = new CompositePoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
-      .withOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(PO_LINE_ID)
+    PoLine originPoLine = new PoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
+      .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(PO_LINE_ID)
       .withEresource(eresource)
       .withLocations(List.of(loc)).withCost(cost);
 
@@ -76,8 +76,8 @@ public class DefaultPieceFlowsValidatorTest {
     Cost cost = new Cost().withQuantityElectronic(1);
     Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
     CompositePurchaseOrder originOrder = new CompositePurchaseOrder().withId(ORDER_IRD).withWorkflowStatus(WorkflowStatus.OPEN);
-    CompositePoLine originPoLine = new CompositePoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
-      .withOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(PO_LINE_ID)
+    PoLine originPoLine = new PoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
+      .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(PO_LINE_ID)
       .withEresource(eresource)
       .withLocations(List.of(loc)).withCost(cost);
 
@@ -91,8 +91,8 @@ public class DefaultPieceFlowsValidatorTest {
     Cost cost = new Cost().withQuantityElectronic(1);
     Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
     CompositePurchaseOrder originOrder = new CompositePurchaseOrder().withId(ORDER_IRD).withWorkflowStatus(WorkflowStatus.OPEN);
-    CompositePoLine originPoLine = new CompositePoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
-                .withOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(PO_LINE_ID)
+    PoLine originPoLine = new PoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
+                .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(PO_LINE_ID)
                 .withEresource(eresource)
                 .withLocations(List.of(loc)).withCost(cost);
 
@@ -111,8 +111,8 @@ public class DefaultPieceFlowsValidatorTest {
     Cost cost = new Cost().withQuantityElectronic(1);
     Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
     CompositePurchaseOrder originOrder = new CompositePurchaseOrder().withId(ORDER_IRD).withWorkflowStatus(WorkflowStatus.OPEN);
-    CompositePoLine originPoLine = new CompositePoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
-      .withOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(PO_LINE_ID)
+    PoLine originPoLine = new PoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
+      .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(PO_LINE_ID)
       .withEresource(eresource)
       .withLocations(List.of(loc)).withCost(cost);
 
@@ -128,8 +128,8 @@ public class DefaultPieceFlowsValidatorTest {
     Cost cost = new Cost().withQuantityElectronic(1);
     Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
     CompositePurchaseOrder originOrder = new CompositePurchaseOrder().withId(ORDER_IRD).withWorkflowStatus(WorkflowStatus.OPEN);
-    CompositePoLine originPoLine = new CompositePoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
-      .withOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(PO_LINE_ID)
+    PoLine originPoLine = new PoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
+      .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(PO_LINE_ID)
       .withEresource(eresource)
       .withLocations(List.of(loc)).withCost(cost);
 
@@ -150,8 +150,8 @@ public class DefaultPieceFlowsValidatorTest {
     // creating order with pending status
     CompositePurchaseOrder originOrder = new CompositePurchaseOrder().withId(ORDER_IRD).withWorkflowStatus(WorkflowStatus.PENDING);
     // creating poLine with synchronized status(by default)
-    CompositePoLine originPoLine = new CompositePoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
-      .withOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(PO_LINE_ID)
+    PoLine originPoLine = new PoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
+      .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(PO_LINE_ID)
       .withEresource(eresource)
       .withLocations(List.of(loc)).withCost(cost);
 
@@ -171,8 +171,8 @@ public class DefaultPieceFlowsValidatorTest {
     var cost = new Cost().withQuantityElectronic(1);
     var eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
     var originOrder = new CompositePurchaseOrder().withId(ORDER_IRD).withWorkflowStatus(WorkflowStatus.OPEN);
-    var originPoLine = new CompositePoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
-      .withOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(PO_LINE_ID)
+    var originPoLine = new PoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
+      .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(PO_LINE_ID)
       .withEresource(eresource)
       .withLocations(List.of(loc)).withCost(cost);
 
@@ -184,8 +184,8 @@ public class DefaultPieceFlowsValidatorTest {
     var piece1 = new Piece().withPoLineId(PO_LINE_ID).withTitleId(ORDER_IRD).withLocationId(LOCATION_ID).withFormat(Piece.Format.ELECTRONIC);
     var piece2 = new Piece().withPoLineId(PO_LINE_ID).withTitleId(ORDER_IRD).withLocationId(LOCATION_ID).withFormat(Piece.Format.PHYSICAL);
     var originOrder = new CompositePurchaseOrder().withId(ORDER_IRD).withWorkflowStatus(WorkflowStatus.OPEN);
-    var originPoLine = new CompositePoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
-      .withOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(PO_LINE_ID);
+    var originPoLine = new PoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
+      .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(PO_LINE_ID);
 
     var exception = Assertions.assertThrows(HttpException.class, () ->
       defaultPieceFlowsValidator.isPieceBatchRequestValid(List.of(piece1, piece2), originOrder, originPoLine, true));
@@ -199,8 +199,8 @@ public class DefaultPieceFlowsValidatorTest {
     var piece1 = new Piece().withPoLineId(PO_LINE_ID).withTitleId(UUID.randomUUID().toString()).withLocationId(LOCATION_ID).withFormat(Piece.Format.PHYSICAL);
     var piece2 = new Piece().withPoLineId(PO_LINE_ID).withTitleId(UUID.randomUUID().toString()).withLocationId(LOCATION_ID).withFormat(Piece.Format.PHYSICAL);
     var originOrder = new CompositePurchaseOrder().withId(ORDER_IRD).withWorkflowStatus(WorkflowStatus.OPEN);
-    var originPoLine = new CompositePoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
-      .withOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(PO_LINE_ID);
+    var originPoLine = new PoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
+      .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(PO_LINE_ID);
 
     var exception = Assertions.assertThrows(HttpException.class, () ->
       defaultPieceFlowsValidator.isPieceBatchRequestValid(List.of(piece1, piece2), originOrder, originPoLine, true));
@@ -217,8 +217,8 @@ public class DefaultPieceFlowsValidatorTest {
     var piece2 = new Piece().withPoLineId(UUID.randomUUID().toString()).withTitleId(ORDER_IRD)
       .withLocationId(LOCATION_ID).withFormat(Piece.Format.ELECTRONIC);
     var originOrder = new CompositePurchaseOrder().withId(ORDER_IRD).withWorkflowStatus(WorkflowStatus.OPEN);
-    var originPoLine = new CompositePoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
-      .withOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(PO_LINE_ID);
+    var originPoLine = new PoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
+      .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(PO_LINE_ID);
 
     var exception = Assertions.assertThrows(HttpException.class, () ->
       defaultPieceFlowsValidator.isPieceBatchRequestValid(List.of(piece1, piece2), originOrder, originPoLine, true));

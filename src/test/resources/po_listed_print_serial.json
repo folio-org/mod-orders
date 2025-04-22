@@ -18,15 +18,9 @@
   "reEncumber": false,
   "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
   "workflowStatus": "Open",
-  "compositePoLines": [
+  "poLines": [
     {
       "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
-      "alerts": [
-        {
-          "alert": "Receipt overdue",
-          "id": "9a665b22-9fe5-4c95-b4ee-837a5433c95d"
-        }
-      ],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "ABCDEFGHIJKLMNOPQRSTUVW",
       "claims": [
@@ -71,7 +65,7 @@
         "createInventory": "None",
         "materialType": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
         "trial": false,
-        "userLimit": 10
+        "userLimit": "10"
       },
       "fundDistribution": [
         {
@@ -115,23 +109,6 @@
       "publisher": "Schiffer Publishing",
       "receiptDate": "2018-10-09T00:00:00.000Z",
       "receiptStatus": "Awaiting Receipt",
-      "reportingCodes": [
-        {
-          "code": "CODE1",
-          "description": "ABCDEF",
-          "id": "5926dcd7-85f5-4504-8283-712595ebc38b"
-        },
-        {
-          "code": "CODE2",
-          "description": "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-          "id": "fa316c04-8101-4e72-8aaf-01281bac718f"
-        },
-        {
-          "code": "CODE3",
-          "description": "ABCDE",
-          "id": "ea68b696-3125-4940-bf91-1d128323473e"
-        }
-      ],
       "requester": "Leo Bulero",
       "rush": true,
       "selector": "ABCD",

@@ -33,7 +33,6 @@ import org.apache.commons.io.IOUtils;
 import org.folio.rest.impl.MockServer;
 import org.folio.rest.jaxrs.model.BindItem;
 import org.folio.rest.jaxrs.model.CheckInPiece;
-import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Details;
@@ -131,7 +130,7 @@ public final class TestUtils {
     assertEquals(1, getPoLineSearches().size());
   }
 
-  public static void verifyLocationQuantity(Location location, CompositePoLine.OrderFormat orderFormat) {
+  public static void verifyLocationQuantity(Location location, PoLine.OrderFormat orderFormat) {
     switch (orderFormat) {
       case P_E_MIX ->
         assertEquals(location.getQuantityPhysical() + location.getQuantityElectronic(), location.getQuantity().intValue());
@@ -140,13 +139,13 @@ public final class TestUtils {
     }
   }
 
-  public static CompositePurchaseOrder getMinimalOrder(CompositePoLine poLine) {
+  public static CompositePurchaseOrder getMinimalOrder(PoLine poLine) {
     return new CompositePurchaseOrder()
       .withId(poLine.getPurchaseOrderId())
       .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
   }
 
-  public static Title getTitle(CompositePoLine poLine) {
+  public static Title getTitle(PoLine poLine) {
     return new Title().withId(UUID.randomUUID().toString())
       .withPoLineId(poLine.getId())
       .withTitle(poLine.getTitleOrPackage())
@@ -154,14 +153,14 @@ public final class TestUtils {
       .withProductIds(Optional.ofNullable(poLine.getDetails()).orElseGet(Details::new).getProductIds());
   }
 
-  public static CompositePoLine getMinimalContentCompositePoLine() {
+  public static PoLine getMinimalContentCompositePoLine() {
     return getMinimalContentCompositePoLine(MIN_PO_ID);
   }
 
-  public static CompositePoLine getMinimalContentCompositePoLine(String orderId) {
-    return new CompositePoLine().withSource(CompositePoLine.Source.EDI)
+  public static PoLine getMinimalContentCompositePoLine(String orderId) {
+    return new PoLine().withSource(PoLine.Source.EDI)
       .withId(MIN_PO_LINE_ID)
-      .withOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE)
+      .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
       .withAcquisitionMethod(PURCHASE_METHOD)
       .withPhysical(new Physical().withMaterialType("2d1398ae-e1aa-4c7c-b9c9-15adf8cf6425"))
       .withCost(new Cost().withCurrency("EUR").withQuantityPhysical(2).withListUnitPrice(10.0))

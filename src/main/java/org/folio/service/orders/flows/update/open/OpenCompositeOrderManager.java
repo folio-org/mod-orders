@@ -1,8 +1,5 @@
 package org.folio.service.orders.flows.update.open;
 
-import static java.util.stream.Collectors.toList;
-import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
-import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 
 import java.util.Date;
@@ -16,11 +13,8 @@ import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.Alert;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.ReportingCode;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
@@ -69,7 +63,7 @@ public class OpenCompositeOrderManager {
       return openCompositeOrderFlowValidator.validate(compPO, poFromStorage, requestContext)
         .compose(aCompPO -> titlesService.fetchNonPackageTitles(compPO, requestContext))
         .compose(linesIdTitles -> {
-          populateInstanceId(linesIdTitles, compPO.getCompositePoLines());
+          populateInstanceId(linesIdTitles, compPO.getPoLines());
           return openCompositeOrderInventoryService.processInventory(linesIdTitles, compPO, isInstanceMatchingDisabled(config), requestContext);
         })
         .compose(v -> finishProcessingEncumbrancesForOpenOrder(compPO, poFromStorage, requestContext))
@@ -77,7 +71,7 @@ public class OpenCompositeOrderManager {
           changePoLineStatuses(compPO);
           return null;
         })
-        .compose(ok -> openOrderUpdatePoLinesSummary(compPO.getCompositePoLines(), requestContext));
+        .compose(ok -> openOrderUpdatePoLinesSummary(compPO.getPoLines(), requestContext));
   }
 
   private boolean isInstanceMatchingDisabled(JsonObject config) {
@@ -86,37 +80,26 @@ public class OpenCompositeOrderManager {
       .orElse(false);
   }
 
-  public Future<Void> openOrderUpdatePoLinesSummary(List<CompositePoLine> compositePoLines, RequestContext requestContext) {
-    return GenericCompositeFuture.join(compositePoLines.stream()
+  public Future<Void> openOrderUpdatePoLinesSummary(List<PoLine> poLines, RequestContext requestContext) {
+    return GenericCompositeFuture.join(poLines.stream()
       .map(this::removeLocationId)
-      .map(this::convertToPoLine)
       .map(line -> purchaseOrderLineService.saveOrderLine(line, requestContext))
-      .collect(toList()))
+      .toList())
       .mapEmpty();
   }
 
-  public PoLine convertToPoLine(CompositePoLine compPoLine) {
-    JsonObject pol = JsonObject.mapFrom(compPoLine);
-    pol.remove(ALERTS);
-    pol.remove(REPORTING_CODES);
-    PoLine poLine = pol.mapTo(PoLine.class);
-    poLine.setAlerts(compPoLine.getAlerts().stream().map(Alert::getId).collect(toList()));
-    poLine.setReportingCodes(compPoLine.getReportingCodes().stream().map(ReportingCode::getId).collect(toList()));
-    return poLine;
-  }
-
-  private CompositePoLine removeLocationId(CompositePoLine compositePoLine) {
-    compositePoLine.getLocations().forEach(location ->
+  private PoLine removeLocationId(PoLine poLine) {
+    poLine.getLocations().forEach(location ->
     {
       if (location.getHoldingId() != null) {
         location.setLocationId(null);
       }
     });
-    return compositePoLine;
+    return poLine;
   }
 
 
-  private void populateInstanceId(Map<String, List<Title>> lineIdsTitles, List<CompositePoLine> lines) {
+  private void populateInstanceId(Map<String, List<Title>> lineIdsTitles, List<PoLine> lines) {
     getNonPackageLines(lines).forEach(line -> {
       if (lineIdsTitles.containsKey(line.getId())) {
         line.setInstanceId(lineIdsTitles.get(line.getId()).get(0).getInstanceId());
@@ -125,37 +108,37 @@ public class OpenCompositeOrderManager {
   }
 
   private void changePoLineStatuses(CompositePurchaseOrder compPO) {
-    compPO.getCompositePoLines().forEach(poLine -> {
+    compPO.getPoLines().forEach(poLine -> {
       changeReceiptStatus(compPO, poLine);
       changePaymentStatus(compPO, poLine);
     });
   }
 
-  private void changePaymentStatus(CompositePurchaseOrder compPO, CompositePoLine poLine) {
+  private void changePaymentStatus(CompositePurchaseOrder compPO, PoLine poLine) {
     if (compPO.getOrderType().equals(CompositePurchaseOrder.OrderType.ONGOING)
-    && !poLine.getPaymentStatus().equals(CompositePoLine.PaymentStatus.PAYMENT_NOT_REQUIRED) ) {
+    && !poLine.getPaymentStatus().equals(PoLine.PaymentStatus.PAYMENT_NOT_REQUIRED) ) {
 
-      poLine.setPaymentStatus(CompositePoLine.PaymentStatus.ONGOING);
+      poLine.setPaymentStatus(PoLine.PaymentStatus.ONGOING);
     }
-    else if (poLine.getPaymentStatus() == CompositePoLine.PaymentStatus.PENDING) {
-      poLine.setPaymentStatus(CompositePoLine.PaymentStatus.AWAITING_PAYMENT);
+    else if (poLine.getPaymentStatus() == PoLine.PaymentStatus.PENDING) {
+      poLine.setPaymentStatus(PoLine.PaymentStatus.AWAITING_PAYMENT);
     }
   }
 
-  private void changeReceiptStatus(CompositePurchaseOrder compPO, CompositePoLine poLine) {
+  private void changeReceiptStatus(CompositePurchaseOrder compPO, PoLine poLine) {
     if (compPO.getOrderType().equals(CompositePurchaseOrder.OrderType.ONGOING)
-    && !poLine.getReceiptStatus().equals(CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED)) {
+    && !poLine.getReceiptStatus().equals(PoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED)) {
 
-      poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.ONGOING);
+      poLine.setReceiptStatus(PoLine.ReceiptStatus.ONGOING);
     }
-    else if (poLine.getReceiptStatus() == CompositePoLine.ReceiptStatus.PENDING) {
+    else if (poLine.getReceiptStatus() == PoLine.ReceiptStatus.PENDING) {
 
-      poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
+      poLine.setReceiptStatus(PoLine.ReceiptStatus.AWAITING_RECEIPT);
     }
   }
 
-  private List<CompositePoLine> getNonPackageLines(List<CompositePoLine> compositePoLines) {
-    return compositePoLines.stream().filter(line -> !line.getIsPackage()).collect(toList());
+  private List<PoLine> getNonPackageLines(List<PoLine> poLines) {
+    return poLines.stream().filter(line -> !line.getIsPackage()).toList();
   }
 
   private Future<Void> finishProcessingEncumbrancesForOpenOrder(CompositePurchaseOrder compPO,
@@ -177,10 +160,10 @@ public class OpenCompositeOrderManager {
   private void updateIncomingOrder(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage) {
     compPO.setWorkflowStatus(OPEN);
     compPO.setDateOrdered(new Date());
-    if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
+    if (CollectionUtils.isEmpty(compPO.getPoLines())) {
       CompositePurchaseOrder clonedPoFromStorage = JsonObject.mapFrom(poFromStorage).mapTo(CompositePurchaseOrder.class);
-      compPO.setCompositePoLines(clonedPoFromStorage.getCompositePoLines());
+      compPO.setPoLines(clonedPoFromStorage.getPoLines());
     }
-    compPO.getCompositePoLines().forEach(poLine -> PoLineCommonUtil.updateLocationsQuantity(poLine.getLocations()));
+    compPO.getPoLines().forEach(poLine -> PoLineCommonUtil.updateLocationsQuantity(poLine.getLocations()));
   }
 }

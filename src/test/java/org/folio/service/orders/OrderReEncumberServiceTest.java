@@ -45,7 +45,7 @@ import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverProgress;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.EncumbranceRollover;
@@ -131,7 +131,7 @@ public class OrderReEncumberServiceTest {
     LedgerFiscalYearRolloverErrorCollection ledgerFiscalYearRolloverErrors = new LedgerFiscalYearRolloverErrorCollection()
         .withLedgerFiscalYearRolloverErrors(Collections.singletonList(new LedgerFiscalYearRolloverError()));
 
-    CompositePoLine line = order.getCompositePoLines().getFirst();
+    PoLine line = order.getPoLines().getFirst();
     FundDistribution fundDistribution1 = line.getFundDistribution().getFirst();
     String fiscalYearId = UUID.randomUUID().toString();
 
@@ -144,7 +144,7 @@ public class OrderReEncumberServiceTest {
 
     FundDistribution fundDistribution2 = line.getFundDistribution().get(1);
     ReEncumbranceHolder holder2 = new ReEncumbranceHolder().withPurchaseOrder(order)
-        .withPoLine(order.getCompositePoLines().getFirst())
+        .withPoLine(order.getPoLines().getFirst())
         .withFundDistribution(fundDistribution2)
         .withRollover(rollover)
         .withLedgerId(ledgerId)
@@ -152,7 +152,7 @@ public class OrderReEncumberServiceTest {
 
     FundDistribution fundDistribution3 = line.getFundDistribution().get(1);
     ReEncumbranceHolder holder3 = new ReEncumbranceHolder().withPurchaseOrder(order)
-        .withPoLine(order.getCompositePoLines().getFirst())
+        .withPoLine(order.getPoLines().getFirst())
         .withFundDistribution(fundDistribution3)
         .withRollover(rollover)
         .withLedgerId(ledgerId)
@@ -381,7 +381,7 @@ public class OrderReEncumberServiceTest {
   @Test
   void shouldFailReEncumberHoldersWithEmptyEncumbranceRollover(VertxTestContext vertxTestContext) {
 
-    CompositePoLine line= new CompositePoLine().withCost(new Cost().withCurrency("USD").withListUnitPrice(1d));
+    PoLine line= new PoLine().withCost(new Cost().withCurrency("USD").withListUnitPrice(1d));
     String orderId = UUID.randomUUID().toString();
 
     ReEncumbranceHolder holder1 = new ReEncumbranceHolder()
@@ -519,7 +519,7 @@ public class OrderReEncumberServiceTest {
         .withEncumbrance(fromEncumbrance2.getId())
         .withFundId(fund2Id);
 
-     CompositePoLine line1 = new CompositePoLine().withId(UUID.randomUUID().toString())
+     PoLine line1 = new PoLine().withId(UUID.randomUUID().toString())
         .withCost(cost1)
         .withFundDistribution(List.of(fundDistribution1, fundDistribution2));
 

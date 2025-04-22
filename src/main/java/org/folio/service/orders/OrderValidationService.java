@@ -16,11 +16,10 @@ import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Parameter;
-import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.service.PrefixService;
 import org.folio.service.ProtectionService;
 import org.folio.service.SuffixService;
@@ -62,7 +61,7 @@ import static org.folio.service.UserService.getCurrentUserId;
 public class OrderValidationService {
   private static final Logger logger = LogManager.getLogger();
 
-  private final CompositePoLineValidationService compositePoLineValidationService;
+  private final PoLineValidationService poLineValidationService;
   private final ConfigurationEntriesCache configurationEntriesCache;
   private final OrganizationService organizationService;
   private final PoNumberHelper poNumberHelper;
@@ -73,12 +72,13 @@ public class OrderValidationService {
   private final SuffixService suffixService;
   private final UnOpenCompositeOrderManager unOpenCompositeOrderManager;
 
-  public OrderValidationService(CompositePoLineValidationService compositePoLineValidationService,
+  public OrderValidationService(
+    PoLineValidationService poLineValidationService,
       ConfigurationEntriesCache configurationEntriesCache, OrganizationService organizationService,
       ProtectionService protectionService, PrefixService prefixService, PurchaseOrderLineHelper purchaseOrderLineHelper,
       PurchaseOrderLineService purchaseOrderLineService, SuffixService suffixService, PoNumberHelper poNumberHelper,
       UnOpenCompositeOrderManager unOpenCompositeOrderManager) {
-    this.compositePoLineValidationService = compositePoLineValidationService;
+    this.poLineValidationService = poLineValidationService;
     this.configurationEntriesCache = configurationEntriesCache;
     this.organizationService = organizationService;
     this.poNumberHelper = poNumberHelper;
@@ -109,7 +109,7 @@ public class OrderValidationService {
       .compose(v -> validateOrderPoLines(compPO, requestContext))
       .map(errors::addAll)
       .map(v -> errors.addAll(validatePoLineLimit(compPO, tenantConfig)))
-      .compose(v -> purchaseOrderLineService.validateAndNormalizeISBN(compPO.getCompositePoLines(), requestContext))
+      .compose(v -> purchaseOrderLineService.validateAndNormalizeISBN(compPO.getPoLines(), requestContext))
       .compose(v -> validateVendor(compPO, requestContext))
       .map(errors::addAll)
       .map(v -> {
@@ -157,9 +157,9 @@ public class OrderValidationService {
     // Validate order uuid
     if (!compPO.getId().equals(orderId)) {
       resultErrors.add(ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.toError());
-    } else if (isNotEmpty(compPO.getCompositePoLines())) {
+    } else if (isNotEmpty(compPO.getPoLines())) {
       // Validate that each PO Line has correct order id
-      compPO.getCompositePoLines().forEach(poLine -> {
+      compPO.getPoLines().forEach(poLine -> {
         if (!orderId.equals(poLine.getPurchaseOrderId())) {
           Error error = ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.toError();
           if (StringUtils.isNotEmpty(poLine.getPoLineNumber())) {
@@ -207,8 +207,8 @@ public class OrderValidationService {
   }
 
   public Future<List<Error>> validateOrderPoLines(CompositePurchaseOrder compositeOrder, RequestContext requestContext) {
-    List<Future<List<Error>>> poLinesErrors = compositeOrder.getCompositePoLines().stream()
-      .map(compositePoLine -> compositePoLineValidationService.validatePoLine(compositePoLine, requestContext))
+    List<Future<List<Error>>> poLinesErrors = compositeOrder.getPoLines().stream()
+      .map(poLine -> poLineValidationService.validatePoLine(poLine, requestContext))
       .toList();
 
     return collectResultsOnSuccess(poLinesErrors).map(
@@ -288,11 +288,11 @@ public class OrderValidationService {
   }
 
   private Set<ProtectedOperationType> getInvolvedOperations(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage) {
-    if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
+    if (CollectionUtils.isEmpty(compPO.getPoLines())) {
       return Collections.singleton(UPDATE);
     }
-    List<PoLine> poLines = PoLineCommonUtil.convertToPoLines(poFromStorage.getCompositePoLines());
-    Set<String> newIds = compPO.getCompositePoLines().stream().map(CompositePoLine::getId).collect(Collectors.toSet());
+    List<PoLine> poLines = poFromStorage.getPoLines();
+    Set<String> newIds = compPO.getPoLines().stream().map(PoLine::getId).collect(Collectors.toSet());
     Set<String> storageIds = poLines.stream().map(PoLine::getId).collect(Collectors.toSet());
     Set<ProtectedOperationType> operations = new HashSet<>();
     operations.add(UPDATE);
@@ -316,9 +316,9 @@ public class OrderValidationService {
 
   private Future<Void> setCreateInventoryDefaultValues(CompositePurchaseOrder compPO, JsonObject tenantConfiguration) {
     logger.info("setCreateInventoryDefaultValues:: orderId: {}", compPO.getId());
-    List<Future<Void>> futures = compPO.getCompositePoLines()
+    List<Future<Void>> futures = compPO.getPoLines()
       .stream()
-      .map(compPOL -> purchaseOrderLineHelper.setTenantDefaultCreateInventoryValues(compPOL, tenantConfiguration))
+      .map(poLine -> purchaseOrderLineHelper.setTenantDefaultCreateInventoryValues(poLine, tenantConfiguration))
       .toList();
 
     return GenericCompositeFuture.join(futures)
@@ -330,7 +330,7 @@ public class OrderValidationService {
       List<Error> combinedErrors = new ArrayList<>();
       return organizationService.validateVendor(compPO.getVendor(), requestContext)
         .map(aErrors -> combinedErrors.addAll(aErrors.getErrors()))
-        .compose(errors -> fetchCompositePoLines(compPO, requestContext)
+        .compose(errors -> fetchPoLines(compPO, requestContext)
           .compose(poLines -> organizationService.validateAccessProviders(poLines, requestContext))
           .map(aErrors -> combinedErrors.addAll(aErrors.getErrors()))
           .map(v -> combinedErrors));
@@ -348,24 +348,24 @@ public class OrderValidationService {
   }
 
   private List<Error> validatePoLineLimit(CompositePurchaseOrder compPO, JsonObject tenantConfig) {
-    if (isNotEmpty(compPO.getCompositePoLines())) {
+    if (isNotEmpty(compPO.getPoLines())) {
       int limit = getPoLineLimit(tenantConfig);
-      if (compPO.getCompositePoLines().size() > limit) {
+      if (compPO.getPoLines().size() > limit) {
         return List.of(ErrorCodes.POL_LINES_LIMIT_EXCEEDED.toError());
       }
     }
     return Collections.emptyList();
   }
 
-  private Future<List<CompositePoLine>> fetchCompositePoLines(CompositePurchaseOrder compPO, RequestContext requestContext) {
-    if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
-      return purchaseOrderLineService.getCompositePoLinesByOrderId(compPO.getId(), requestContext)
+  private Future<List<PoLine>> fetchPoLines(CompositePurchaseOrder compPO, RequestContext requestContext) {
+    if (CollectionUtils.isEmpty(compPO.getPoLines())) {
+      return purchaseOrderLineService.getPoLinesByOrderId(compPO.getId(), requestContext)
         .map(poLines -> {
           PoLineCommonUtil.sortPoLinesByPoLineNumber(poLines);
           return poLines;
         });
     } else {
-      return Future.succeededFuture(compPO.getCompositePoLines());
+      return Future.succeededFuture(compPO.getPoLines());
     }
   }
 

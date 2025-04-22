@@ -16,7 +16,7 @@ import io.vertx.junit5.VertxTestContext;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
@@ -52,7 +52,7 @@ public class OpenCompositeOrderFlowValidatorTest {
   public void testCheckFundLocationRestrictions1(VertxTestContext vertxTestContext) {
     // given
     List<String> fundIds = List.of("F1", "F2");
-    CompositePoLine poLine = new CompositePoLine()
+    PoLine poLine = new PoLine()
       .withId("ID")
       .withPoLineNumber("number")
       .withFundDistribution(
@@ -81,7 +81,7 @@ public class OpenCompositeOrderFlowValidatorTest {
     // given
     List<String> fundIds = List.of("F1", "F2");
     List<String> locationIds = List.of("L1");
-    CompositePoLine poLine = new CompositePoLine()
+    PoLine poLine = new PoLine()
       .withId("ID")
       .withPoLineNumber("number")
       .withFundDistribution(
@@ -112,7 +112,7 @@ public class OpenCompositeOrderFlowValidatorTest {
     // given
     List<String> fundIds = List.of("F1", "F2");
     List<String> locationIds = List.of("L2");
-    CompositePoLine poLine = new CompositePoLine()
+    PoLine poLine = new PoLine()
       .withId("ID")
       .withPoLineNumber("number")
       .withFundDistribution(
@@ -151,7 +151,7 @@ public class OpenCompositeOrderFlowValidatorTest {
     // given
     List<String> fundIds = List.of("F1", "F2");
     List<String> locationIds = List.of("L7");
-    CompositePoLine poLine = new CompositePoLine()
+    PoLine poLine = new PoLine()
       .withId("ID")
       .withPoLineNumber("number")
       .withFundDistribution(
@@ -183,7 +183,7 @@ public class OpenCompositeOrderFlowValidatorTest {
     // given
     List<String> fundIds = List.of("F1", "F2");
     List<String> locationIds = List.of("L1");
-    CompositePoLine poLine = new CompositePoLine()
+    PoLine poLine = new PoLine()
       .withId("ID")
       .withPoLineNumber("number")
       .withFundDistribution(
@@ -215,7 +215,7 @@ public class OpenCompositeOrderFlowValidatorTest {
     // given
     List<String> fundIds = List.of("F1", "F2");
     List<String> locationIds = List.of("L2");
-    CompositePoLine poLine = new CompositePoLine()
+    PoLine poLine = new PoLine()
       .withId("ID")
       .withPoLineNumber("number")
       .withFundDistribution(
@@ -255,7 +255,7 @@ public class OpenCompositeOrderFlowValidatorTest {
     // given
     List<String> fundIds = List.of("F1", "F2");
     List<String> locationIds = List.of("L1");
-    CompositePoLine poLine = new CompositePoLine()
+    PoLine poLine = new PoLine()
       .withId("ID")
       .withPoLineNumber("number")
       .withFundDistribution(
@@ -295,7 +295,7 @@ public class OpenCompositeOrderFlowValidatorTest {
     // given
     List<String> fundIds = List.of("F1", "F2");
     List<String> locationIds = List.of("L3");
-    CompositePoLine poLine = new CompositePoLine()
+    PoLine poLine = new PoLine()
       .withId("ID")
       .withPoLineNumber("number")
       .withFundDistribution(
@@ -335,7 +335,7 @@ public class OpenCompositeOrderFlowValidatorTest {
     // given
     List<String> fundIds = List.of("F1", "F2");
     List<String> locationIds = List.of("L3");
-    CompositePoLine poLine = new CompositePoLine()
+    PoLine poLine = new PoLine()
       .withId("ID")
       .withPoLineNumber("number")
       .withFundDistribution(
@@ -375,7 +375,7 @@ public class OpenCompositeOrderFlowValidatorTest {
     // given
     List<String> fundIds = List.of("F1", "F2");
     List<String> locationIds = List.of("L1", "L2");
-    CompositePoLine poLine = new CompositePoLine()
+    PoLine poLine = new PoLine()
       .withId("ID")
       .withPoLineNumber("number")
       .withFundDistribution(
@@ -407,7 +407,7 @@ public class OpenCompositeOrderFlowValidatorTest {
     // given
     List<String> fundIds = List.of("F1", "F2");
     List<String> locationIds = List.of("L2", "L3");
-    CompositePoLine poLine = new CompositePoLine()
+    PoLine poLine = new PoLine()
       .withId("ID")
       .withPoLineNumber("number")
       .withFundDistribution(
@@ -439,7 +439,7 @@ public class OpenCompositeOrderFlowValidatorTest {
     // given
     List<String> fundIds = List.of("F1", "F2");
     List<String> locationIds = List.of("L1", "L3");
-    CompositePoLine poLine = new CompositePoLine()
+    PoLine poLine = new PoLine()
       .withId("ID")
       .withPoLineNumber("number")
       .withFundDistribution(
@@ -479,7 +479,7 @@ public class OpenCompositeOrderFlowValidatorTest {
     // given
     List<String> fundIds = List.of("F1", "F2");
     List<String> locationIds = List.of("L1", "L2", "L3");
-    CompositePoLine poLine = new CompositePoLine()
+    PoLine poLine = new PoLine()
       .withId("ID")
       .withPoLineNumber("number")
       .withFundDistribution(
@@ -511,7 +511,7 @@ public class OpenCompositeOrderFlowValidatorTest {
     // given
     List<String> fundIds = List.of("F1", "F2");
     List<String> locationIds = List.of("L3");
-    CompositePoLine poLine = new CompositePoLine()
+    PoLine poLine = new PoLine()
       .withId("ID")
       .withPoLineNumber("number")
       .withFundDistribution(
@@ -545,7 +545,7 @@ public class OpenCompositeOrderFlowValidatorTest {
     String holdingId = "297d5fbe-7994-43ae-b51d-65be761dff8b";
     JsonObject holding = JsonObject.of("permanentLocationId", "L2");
 
-    CompositePoLine poLine = new CompositePoLine()
+    PoLine poLine = new PoLine()
       .withId("ID")
       .withPoLineNumber("number")
       .withFundDistribution(
@@ -585,7 +585,7 @@ public class OpenCompositeOrderFlowValidatorTest {
     String locationId = "L1";
     String holdingId = "297d5fbe-7994-43ae-b51d-65be761dff8b";
 
-    CompositePoLine poLine = new CompositePoLine()
+    PoLine poLine = new PoLine()
       .withId("ID")
       .withPoLineNumber("number")
       .withFundDistribution(

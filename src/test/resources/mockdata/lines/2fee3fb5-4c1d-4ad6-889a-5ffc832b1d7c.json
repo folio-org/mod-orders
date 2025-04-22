@@ -8,7 +8,6 @@
     "poLineEstimatedPrice": 1.0
   },
   "rush": false,
-  "alerts": [],
   "claims": [],
   "source": "User",
   "details": {
@@ -45,7 +44,6 @@
   "paymentStatus": "Cancelled",
   "receiptStatus": "Cancelled",
   "claimingActive": false,
-  "reportingCodes": [],
   "titleOrPackage": "1173-5-2",
   "automaticExport": false,
   "purchaseOrderId": "0ea6b8bf-405e-4f06-aeb1-79853c48d41b",

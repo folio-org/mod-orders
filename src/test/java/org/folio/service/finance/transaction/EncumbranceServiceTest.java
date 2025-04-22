@@ -34,7 +34,7 @@ import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.invoice.Adjustment;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.service.finance.FiscalYearService;
@@ -109,7 +109,7 @@ public class EncumbranceServiceTest {
     fiscalYear.setId(UUID.randomUUID().toString());
 
 
-    CompositePoLine poLine = new CompositePoLine();
+    PoLine poLine = new PoLine();
     poLine.withFundDistribution(List.of(fundDistribution));
 
     String orderId = UUID.randomUUID().toString();

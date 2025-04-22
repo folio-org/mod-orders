@@ -19,12 +19,11 @@ import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.exceptions.NoInventoryRecordException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
 import org.javamoney.moneta.Money;
@@ -58,7 +57,7 @@ public class HelperUtils {
 
   public static final String ID = "id";
   public static final String FUND_ID = "fundId";
-  public static final String COMPOSITE_PO_LINES = "compositePoLines";
+  public static final String PO_LINES = "poLines";
   public static final String CONFIGS = "configs";
   public static final String CONFIG_NAME = "configName";
   public static final String CONFIG_VALUE = "value";
@@ -97,11 +96,11 @@ public class HelperUtils {
   /**
    * Calculates total quantity based of cost for electronic and physical resources
    *
-   * @param compPOL PO line to calculate total quantity
+   * @param poLine PO line to calculate total quantity
    * @return total quantity for PO Line
    */
-  public static int calculateTotalQuantity(CompositePoLine compPOL) {
-    Cost cost = compPOL.getCost();
+  public static int calculateTotalQuantity(PoLine poLine) {
+    Cost cost = poLine.getCost();
     int eQuantity = ObjectUtils.defaultIfNull(cost.getQuantityElectronic(), 0);
     int physicalQuantity = ObjectUtils.defaultIfNull(cost.getQuantityPhysical(), 0);
     return eQuantity + physicalQuantity;
@@ -114,61 +113,61 @@ public class HelperUtils {
    * If format = Electronic and Create Inventory = Instance,Holding,Item, the associated electronic quantities will result in item records being created in inventory<br/>
    * If format = Electronic and Create Item = False, the associated electronic quantities will NOT result in item records being created in inventory
    *
-   * @param compPOL composite PO Line
+   * @param poLine PO Line
    * @return quantity of items expected in the inventory for PO Line
    */
-  public static int calculateInventoryItemsQuantity(CompositePoLine compPOL) {
-    return calculateInventoryItemsQuantity(compPOL, compPOL.getLocations());
+  public static int calculateInventoryItemsQuantity(PoLine poLine) {
+    return calculateInventoryItemsQuantity(poLine, poLine.getLocations());
   }
 
   /**
    * Calculates items quantity for specified locations.
    *
-   * @param compPOL   composite PO Line
+   * @param poLine   PO Line
    * @param locations list of locations to calculate quantity for
    * @return quantity of items expected in the inventory for PO Line
-   * @see #calculateInventoryItemsQuantity(CompositePoLine)
+   * @see #calculateInventoryItemsQuantity(PoLine)
    */
-  public static int calculateInventoryItemsQuantity(CompositePoLine compPOL, List<Location> locations) {
-    return IntStreamEx.of(calculatePiecesWithItemIdQuantity(compPOL, locations).values()).sum();
+  public static int calculateInventoryItemsQuantity(PoLine poLine, List<Location> locations) {
+    return IntStreamEx.of(calculatePiecesWithItemIdQuantity(poLine, locations).values()).sum();
   }
 
   /**
    * Calculates pieces quantity for list of locations and return map where piece format is a key and corresponding quantity of pieces as value.
    *
-   * @param compPOL   composite PO Line
+   * @param poLine   PO Line
    * @param locations list of locations to calculate quantity for
    * @return quantity of pieces per piece format either required Inventory item for PO Line
    */
-  public static Map<Piece.Format, Integer> calculatePiecesWithItemIdQuantity(CompositePoLine compPOL, List<Location> locations) {
+  public static Map<Piece.Format, Integer> calculatePiecesWithItemIdQuantity(PoLine poLine, List<Location> locations) {
     // Piece records are not going to be created for PO Line which is going to be checked-in
-    if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
+    if (poLine.getCheckinItems() != null && poLine.getCheckinItems()) {
       return Collections.emptyMap();
     }
 
     var quantities = new EnumMap<Piece.Format, Integer>(Piece.Format.class);
-    return switch (compPOL.getOrderFormat()) {
+    return switch (poLine.getOrderFormat()) {
       case P_E_MIX -> {
-        if (PoLineCommonUtil.isItemsUpdateRequiredForPhysical(compPOL)) {
+        if (PoLineCommonUtil.isItemsUpdateRequiredForPhysical(poLine)) {
           quantities.put(Piece.Format.PHYSICAL, calculatePiecesQuantity(Piece.Format.PHYSICAL, locations));
         }
-        if (PoLineCommonUtil.isItemsUpdateRequiredForEresource(compPOL)) {
+        if (PoLineCommonUtil.isItemsUpdateRequiredForEresource(poLine)) {
           quantities.put(Piece.Format.ELECTRONIC, calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations));
         }
         yield quantities;
       }
       case PHYSICAL_RESOURCE -> {
-        int pQty = PoLineCommonUtil.isItemsUpdateRequiredForPhysical(compPOL) ? calculatePiecesQuantity(Piece.Format.PHYSICAL, locations) : 0;
+        int pQty = PoLineCommonUtil.isItemsUpdateRequiredForPhysical(poLine) ? calculatePiecesQuantity(Piece.Format.PHYSICAL, locations) : 0;
         quantities.put(Piece.Format.PHYSICAL, pQty);
         yield quantities;
       }
       case ELECTRONIC_RESOURCE -> {
-        int eQty = PoLineCommonUtil.isItemsUpdateRequiredForEresource(compPOL) ? calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations) : 0;
+        int eQty = PoLineCommonUtil.isItemsUpdateRequiredForEresource(poLine) ? calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations) : 0;
         quantities.put(Piece.Format.ELECTRONIC, eQty);
         yield quantities;
       }
       case OTHER -> {
-        int oQty = PoLineCommonUtil.isItemsUpdateRequiredForPhysical(compPOL) ? calculatePiecesQuantity(Piece.Format.OTHER, locations) : 0;
+        int oQty = PoLineCommonUtil.isItemsUpdateRequiredForPhysical(poLine) ? calculatePiecesQuantity(Piece.Format.OTHER, locations) : 0;
         quantities.put(Piece.Format.OTHER, oQty);
         yield quantities;
       }
@@ -333,8 +332,8 @@ public class HelperUtils {
     return poJson.mapTo(CompositePurchaseOrder.class);
   }
 
-  public static boolean isProductIdsExist(CompositePoLine compPOL) {
-    return compPOL.getDetails() != null && CollectionUtils.isNotEmpty(compPOL.getDetails().getProductIds());
+  public static boolean isProductIdsExist(PoLine poLine) {
+    return poLine.getDetails() != null && CollectionUtils.isNotEmpty(poLine.getDetails().getProductIds());
   }
 
   public static Void handleErrorResponse(Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, BaseHelper helper,
@@ -347,21 +346,21 @@ public class HelperUtils {
    * Check the number of titles per po line.
    *
    * @param lineIdTitles Map po line id -> list of titles
-   * @param poLineById   Map po line id -> composite po line
+   * @param poLineById   Map po line id -> po line
    */
-  public static void verifyTitles(Map<String, List<Title>> lineIdTitles, Map<String, CompositePoLine> poLineById) {
+  public static void verifyTitles(Map<String, List<Title>> lineIdTitles, Map<String, PoLine> poLineById) {
     verifyAllTitlesExist(lineIdTitles, poLineById);
     verifyNonPackageLinesHaveSingleTitle(lineIdTitles, poLineById);
   }
 
   private static void verifyNonPackageLinesHaveSingleTitle(Map<String, List<Title>> titles,
-                                                           Map<String, CompositePoLine> poLineById) {
+                                                           Map<String, PoLine> poLineById) {
     if (titles.keySet().stream().anyMatch(lineId -> titles.get(lineId).size() > 1 && !poLineById.get(lineId).getIsPackage())) {
       throw new HttpException(400, MULTIPLE_NONPACKAGE_TITLES);
     }
   }
 
-  public static void verifyAllTitlesExist(Map<String, List<Title>> titles, Map<String, CompositePoLine> poLineById) {
+  public static void verifyAllTitlesExist(Map<String, List<Title>> titles, Map<String, PoLine> poLineById) {
     if (titles.size() < poLineById.size())
       throw new HttpException(400, TITLE_NOT_FOUND);
   }
@@ -403,12 +402,9 @@ public class HelperUtils {
       .getString(CommonFields.CREATED_DATE.getValue());
   }
 
-  public static CompositePurchaseOrder convertToCompositePurchaseOrder(PurchaseOrder purchaseOrder, List<PoLine> poLineList) {
+  public static CompositePurchaseOrder convertToCompositePurchaseOrder(PurchaseOrder purchaseOrder, List<PoLine> poLines) {
     var purchaseOrderJson = JsonObject.mapFrom(purchaseOrder);
-    var compositePoLines = poLineList.stream()
-      .map(PoLineCommonUtil::convertToCompositePoLine)
-      .toList();
-    return purchaseOrderJson.mapTo(CompositePurchaseOrder.class).withCompositePoLines(compositePoLines);
+    return purchaseOrderJson.mapTo(CompositePurchaseOrder.class).withPoLines(poLines);
   }
 
   public static void sendEvent(MessageAddress messageAddress, JsonObject data, RequestContext requestContext) {

@@ -14,7 +14,7 @@ import org.folio.rest.acq.model.finance.Metadata;
 import org.folio.rest.acq.model.finance.Tags;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Ongoing;
@@ -37,7 +37,7 @@ public class EncumbranceRelationsHoldersBuilder extends FinanceHoldersBuilder {
   }
 
   public List<EncumbranceRelationsHolder> buildBaseHolders(CompositePurchaseOrder compPO) {
-    return compPO.getCompositePoLines()
+    return compPO.getPoLines()
       .stream()
       .flatMap(poLine -> poLine.getFundDistribution()
         .stream()
@@ -76,7 +76,7 @@ public class EncumbranceRelationsHoldersBuilder extends FinanceHoldersBuilder {
       return Future.succeededFuture(encumbranceHolders);
     }
 
-    List<String> transactionIds = poAndLinesFromStorage.getCompositePoLines().stream()
+    List<String> transactionIds = poAndLinesFromStorage.getPoLines().stream()
       .flatMap(poLine -> poLine.getFundDistribution().stream().map(FundDistribution::getEncumbrance))
       .filter(Objects::nonNull)
       .collect(Collectors.toList());
@@ -168,7 +168,7 @@ public class EncumbranceRelationsHoldersBuilder extends FinanceHoldersBuilder {
       .compose(v -> withExistingTransactions(holders, poFromStorage, requestContext));
   }
 
-  public Future<Map<String, List<CompositePoLine>>> retrieveMapFiscalYearsWithCompPOLines(CompositePurchaseOrder compPO,
+  public Future<Map<String, List<PoLine>>> retrieveMapFiscalYearsWithPoLines(CompositePurchaseOrder compPO,
                                                                                           CompositePurchaseOrder poAndLinesFromStorage,
                                                                                           RequestContext requestContext) {
     return prepareEncumbranceRelationsHolder(compPO, poAndLinesFromStorage, requestContext)

@@ -1,7 +1,7 @@
 package org.folio.orders.utils;
 
 import org.folio.CopilotGenerated;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
@@ -37,9 +37,9 @@ public class StatusUtilsTest {
 
   @Test
   void isStatusChanged_shouldReturnTrue_whenStatusChanged() {
-    CompositePoLine compOrderLine = new CompositePoLine();
-    compOrderLine.setReceiptStatus(CompositePoLine.ReceiptStatus.FULLY_RECEIVED);
-    compOrderLine.setPaymentStatus(CompositePoLine.PaymentStatus.FULLY_PAID);
+    PoLine compOrderLine = new PoLine();
+    compOrderLine.setReceiptStatus(PoLine.ReceiptStatus.FULLY_RECEIVED);
+    compOrderLine.setPaymentStatus(PoLine.PaymentStatus.FULLY_PAID);
 
     poLine1.setReceiptStatus(PoLine.ReceiptStatus.PENDING);
     poLine1.setPaymentStatus(PoLine.PaymentStatus.PENDING);
@@ -49,9 +49,9 @@ public class StatusUtilsTest {
 
   @Test
   void isStatusChanged_shouldReturnFalse_whenStatusNotChanged() {
-    CompositePoLine compOrderLine = new CompositePoLine();
-    compOrderLine.setReceiptStatus(CompositePoLine.ReceiptStatus.PENDING);
-    compOrderLine.setPaymentStatus(CompositePoLine.PaymentStatus.PENDING);
+    PoLine compOrderLine = new PoLine();
+    compOrderLine.setReceiptStatus(PoLine.ReceiptStatus.PENDING);
+    compOrderLine.setPaymentStatus(PoLine.PaymentStatus.PENDING);
 
     poLine1.setReceiptStatus(PoLine.ReceiptStatus.PENDING);
     poLine1.setPaymentStatus(PoLine.PaymentStatus.PENDING);

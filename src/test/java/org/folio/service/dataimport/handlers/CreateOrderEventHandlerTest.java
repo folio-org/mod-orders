@@ -30,7 +30,7 @@ import org.folio.processing.events.EventManager;
 import org.folio.rest.RestConstants;
 import org.folio.rest.client.TenantClient;
 import org.folio.rest.impl.MockServer;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Eresource;
@@ -90,10 +90,10 @@ import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 import static org.folio.rest.impl.MockServer.CONFIGS;
 import static org.folio.rest.impl.MockServer.JOB_EXECUTIONS;
 import static org.folio.rest.impl.MockServer.addMockEntry;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.PHYSICAL_RESOURCE;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
+import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.ELECTRONIC_RESOURCE;
+import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.OTHER;
+import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.PHYSICAL_RESOURCE;
+import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.P_E_MIX;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.EntityType.ORDER;
 import static org.folio.rest.jaxrs.model.FundDistribution.DistributionType.PERCENTAGE;
@@ -769,7 +769,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value());
     verifyOrder(eventPayload);
-    CompositePoLine createdPoLine = verifyPoLine(eventPayload);
+    PoLine createdPoLine = verifyPoLine(eventPayload);
     assertEquals(instanceJson.getString(ID_FIELD), createdPoLine.getInstanceId());
   }
 
@@ -834,7 +834,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
     verifyOrder(eventPayload);
-    CompositePoLine createdPoLine = verifyPoLine(eventPayload);
+    PoLine createdPoLine = verifyPoLine(eventPayload);
     assertEquals(expectedActivationDue, createdPoLine.getEresource().getActivationDue());
   }
 
@@ -872,7 +872,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().getLast());
     verifyOrder(eventPayload);
     verifyPoLine(eventPayload);
-    CompositePoLine createdPoLine = verifyPoLine(eventPayload);
+    PoLine createdPoLine = verifyPoLine(eventPayload);
     assertEquals(expectedActivationDue, createdPoLine.getEresource().getActivationDue());
   }
 
@@ -893,7 +893,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
     addMockEntry(CONFIGS, polLimitConfig);
-    addMockEntry(PO_LINES_STORAGE, new CompositePoLine().withTitleOrPackage("Mocked poLine for data-import"));
+    addMockEntry(PO_LINES_STORAGE, new PoLine().withTitleOrPackage("Mocked poLine for data-import"));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
@@ -924,7 +924,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, PHYSICAL_RESOURCE);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getPhysical());
     assertEquals(Physical.CreateInventory.INSTANCE, poLine.getPhysical().getCreateInventory());
   }
@@ -937,7 +937,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, PHYSICAL_RESOURCE);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getPhysical());
     assertEquals(Physical.CreateInventory.INSTANCE_HOLDING, poLine.getPhysical().getCreateInventory());
   }
@@ -951,7 +951,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, PHYSICAL_RESOURCE);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getPhysical());
     assertEquals(Physical.CreateInventory.INSTANCE_HOLDING_ITEM, poLine.getPhysical().getCreateInventory());
   }
@@ -960,7 +960,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   public void shouldSetPhysicalPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatPhysicalAndHaveNoInventoryActionsProfiles() throws InterruptedException {
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(List.of(), PHYSICAL_RESOURCE);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getPhysical());
     assertEquals(Physical.CreateInventory.NONE, poLine.getPhysical().getCreateInventory());
   }
@@ -971,7 +971,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(inventoryActionProfiles, ELECTRONIC_RESOURCE);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getEresource());
     assertEquals(Eresource.CreateInventory.INSTANCE, poLine.getEresource().getCreateInventory());
   }
@@ -984,7 +984,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, ELECTRONIC_RESOURCE);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getEresource());
     assertEquals(Eresource.CreateInventory.INSTANCE_HOLDING, poLine.getEresource().getCreateInventory());
   }
@@ -998,7 +998,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, ELECTRONIC_RESOURCE);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getEresource());
     assertEquals(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM, poLine.getEresource().getCreateInventory());
   }
@@ -1007,7 +1007,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   public void shouldSetElectronicPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatElectronicAndHaveNoInventoryActionProfiles() throws InterruptedException {
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(List.of(), ELECTRONIC_RESOURCE);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getEresource());
     assertEquals(Eresource.CreateInventory.NONE, poLine.getEresource().getCreateInventory());
   }
@@ -1018,7 +1018,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, OTHER);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getPhysical());
     assertEquals(Physical.CreateInventory.INSTANCE, poLine.getPhysical().getCreateInventory());
   }
@@ -1031,7 +1031,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, OTHER);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getPhysical());
     assertEquals(Physical.CreateInventory.INSTANCE_HOLDING, poLine.getPhysical().getCreateInventory());
   }
@@ -1045,7 +1045,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, OTHER);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getPhysical());
     assertEquals(Physical.CreateInventory.INSTANCE_HOLDING_ITEM, poLine.getPhysical().getCreateInventory());
   }
@@ -1054,7 +1054,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   public void shouldSetPhysicalPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatOtherAndHaveNoInventoryActionProfiles() throws InterruptedException {
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(List.of(), OTHER);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getPhysical());
     assertEquals(Physical.CreateInventory.NONE, poLine.getPhysical().getCreateInventory());
   }
@@ -1065,7 +1065,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, P_E_MIX);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getPhysical());
     assertNotNull(poLine.getEresource());
     assertEquals(Physical.CreateInventory.INSTANCE, poLine.getPhysical().getCreateInventory());
@@ -1080,7 +1080,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, P_E_MIX);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getPhysical());
     assertNotNull(poLine.getEresource());
     assertEquals(Physical.CreateInventory.INSTANCE_HOLDING, poLine.getPhysical().getCreateInventory());
@@ -1096,7 +1096,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, P_E_MIX);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getPhysical());
     assertNotNull(poLine.getEresource());
     assertEquals(Physical.CreateInventory.INSTANCE_HOLDING_ITEM, poLine.getPhysical().getCreateInventory());
@@ -1107,7 +1107,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   public void shouldSetPhysicalAndElectronicPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatMixAndHaveNoInventoryActionProfiles() throws InterruptedException {
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(List.of(), P_E_MIX);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getPhysical());
     assertNotNull(poLine.getEresource());
     assertEquals(Physical.CreateInventory.NONE, poLine.getPhysical().getCreateInventory());
@@ -1115,7 +1115,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   private DataImportEventPayload importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(List<ActionProfile> inventoryActionProfiles,
-                                                                                                  CompositePoLine.OrderFormat orderFormat) throws InterruptedException {
+                                                                                                  PoLine.OrderFormat orderFormat) throws InterruptedException {
     // given
     openOrderMappingProfile.getMappingDetails().getMappingFields().stream()
       .filter(mappingRule -> mappingRule.getPath().equals("order.poLine.orderFormat"))
@@ -1228,7 +1228,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     assertNotNull(eventPayload.getContext().get(ORDER.value()));
     assertDoesNotThrow(() -> Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class));
     assertNotNull(eventPayload.getContext().get(PO_LINE_KEY));
-    assertDoesNotThrow(() -> Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class));
+    assertDoesNotThrow(() -> Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class));
   }
 
   @Test
@@ -1483,7 +1483,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     assertNotNull(createdOrder.getVendor());
     assertEquals(createdOrder.getVendor(), organization.getId());
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getPhysical());
     assertEquals(poLine.getPhysical().getMaterialSupplier(), organization.getId());
 
@@ -1540,7 +1540,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
     assertNull(createdOrder.getVendor());
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getPhysical());
     assertNull(poLine.getPhysical().getMaterialSupplier());
 
@@ -1594,7 +1594,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
     verifyOrder(eventPayload);
-    CompositePoLine createdPoLine = verifyPoLine(eventPayload);
+    PoLine createdPoLine = verifyPoLine(eventPayload);
     assertNotNull(createdPoLine.getFundDistribution());
     assertEquals(1, createdPoLine.getFundDistribution().size());
     assertEquals(expectedFundId, createdPoLine.getFundDistribution().getFirst().getFundId());
@@ -1772,7 +1772,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   private String getPurchaseOrderId(DataImportEventPayload eventPayload) {
-    return Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class).getPurchaseOrderId();
+    return Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class).getPurchaseOrderId();
   }
 
   private CompositePurchaseOrder verifyOrder(DataImportEventPayload eventPayload) {
@@ -1786,14 +1786,14 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     return createdOrder;
   }
 
-  private CompositePoLine verifyPoLine(DataImportEventPayload eventPayload) {
+  private PoLine verifyPoLine(DataImportEventPayload eventPayload) {
     assertNotNull(eventPayload.getContext().get(PO_LINE_KEY));
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getId());
     assertNotNull(poLine.getTitleOrPackage());
     assertNotNull(poLine.getPurchaseOrderId());
-    assertEquals(CompositePoLine.Source.MARC, poLine.getSource());
-    assertEquals(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE, poLine.getOrderFormat());
+    assertEquals(PoLine.Source.MARC, poLine.getSource());
+    assertEquals(PoLine.OrderFormat.PHYSICAL_RESOURCE, poLine.getOrderFormat());
     assertTrue(poLine.getCheckinItems());
     assertNotNull(poLine.getAcquisitionMethod());
     return poLine;

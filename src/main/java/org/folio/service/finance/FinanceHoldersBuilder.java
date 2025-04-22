@@ -29,7 +29,7 @@ import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Ledger;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.service.exchange.CacheableExchangeRateService;
@@ -131,7 +131,7 @@ public class FinanceHoldersBuilder {
   protected Double getFirstFixedPoLineExchangeRateFromCost(List<? extends EncumbranceRelationsHolder> holders) {
     return holders.stream()
       .map(EncumbranceRelationsHolder::getPoLine)
-      .map(CompositePoLine::getCost)
+      .map(PoLine::getCost)
       .map(Cost::getExchangeRate)
       .filter(Objects::nonNull)
       .findFirst()

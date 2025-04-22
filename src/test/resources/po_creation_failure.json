@@ -2,7 +2,7 @@
   "poNumber": "123123123123123123123",
   "orderType": "One-Time",
   "vendor": "168f8a86-d26c-406e-813f-c7527f241ac3",
-  "compositePoLines": [
+  "poLines": [
     {
       "acquisitionMethod": "796596c4-62b5-4b64-a2ce-524c747afaa2",
       "cost": {

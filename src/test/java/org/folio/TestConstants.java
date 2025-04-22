@@ -60,7 +60,7 @@ public final class TestConstants {
   public static final String NON_EXIST_INSTANCE_TYPE_TENANT = "nonExistInstanceType";
   public static final String NON_EXIST_LOAN_TYPE_TENANT = "nonExistLoanType";
   public static final String NON_EXIST_HOLDINGS_SOURCE_TENANT = "nonExistHoldingsSource";
-  public static final String COMPOSITE_PO_LINES_PREFIX = "compositePoLines[0].";
+  public static final String COMPOSITE_PO_LINES_PREFIX = "poLines[0].";
   public static final String OKAPI_URL = "X-Okapi-Url";
   public static final String OKAPI_TENANT = "X-Okapi-Tenant";
 

@@ -79,7 +79,6 @@
       "poLineEstimatedPrice": 100.0
     },
     "rush": false,
-    "alerts": [],
     "claims": [],
     "source": "User",
     "details": {
@@ -121,7 +120,6 @@
     "paymentStatus": "Awaiting Payment",
     "receiptStatus": "Awaiting Receipt",
     "claimingActive": false,
-    "reportingCodes": [],
     "titleOrPackage": "Test 1",
     "automaticExport": false,
     "purchaseOrderId": "347aba4a-cdab-411d-880b-a63f8b696ec3",

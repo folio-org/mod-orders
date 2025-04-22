@@ -33,7 +33,7 @@ public final class FinanceInteractionsTestHelper {
 
     assertThat(createdEncumbrances.size(), equalTo(expectedCreated));
     // Make sure that each fund distribution has now links to encumbrances
-    assertThat(polUpdates.size(), equalTo(rqPo.getCompositePoLines().size()));
+    assertThat(polUpdates.size(), equalTo(rqPo.getPoLines().size()));
 
     // Verify created encumbrances
     if (!createdEncumbrances.isEmpty()) {
@@ -57,7 +57,7 @@ public final class FinanceInteractionsTestHelper {
   }
 
   private static int getFundDistributionCount(CompositePurchaseOrder rsPo) {
-    return rsPo.getCompositePoLines()
+    return rsPo.getPoLines()
       .stream()
       .mapToInt(pol -> pol.getFundDistribution().size())
       .sum();

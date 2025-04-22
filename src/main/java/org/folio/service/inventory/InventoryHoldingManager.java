@@ -15,7 +15,7 @@ import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
@@ -300,7 +300,7 @@ public class InventoryHoldingManager {
     return Future.succeededFuture();
   }
 
-  public Map<String, Future<List<JsonObject>>> getHoldingsByLocationTenants(CompositePoLine poLine, RequestContext requestContext) {
+  public Map<String, Future<List<JsonObject>>> getHoldingsByLocationTenants(PoLine poLine, RequestContext requestContext) {
     String currentTenantId = TenantTool.tenantId(requestContext.getHeaders());
     Map<String, List<String>> holdingsByTenant = poLine.getLocations()
       .stream()

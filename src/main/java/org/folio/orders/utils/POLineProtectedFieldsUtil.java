@@ -19,10 +19,10 @@ import static org.folio.orders.utils.POLineFieldNames.PHYSICAL_VOLUMES;
 import static org.folio.orders.utils.POLineFieldNames.RUSH;
 import static org.folio.orders.utils.POLineFieldNames.SELECTOR;
 import static org.folio.orders.utils.POLineFieldNames.VENDORDETAIL_INSTRUCTION_TO_VENDOR;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.PHYSICAL_RESOURCE;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
+import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.ELECTRONIC_RESOURCE;
+import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.OTHER;
+import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.PHYSICAL_RESOURCE;
+import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.P_E_MIX;
 
 import java.util.Collections;
 import java.util.HashMap;

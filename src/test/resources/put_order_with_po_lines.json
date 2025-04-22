@@ -8,11 +8,10 @@
   "reEncumber": false,
   "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
   "workflowStatus": "Pending",
-  "compositePoLines": [
+  "poLines": [
     {
       "id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1",
       "acquisitionMethod": "df26d81b-9d63-4ff8-bf41-49bf75cfa70e",
-      "alerts": [],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "",
       "claims": [
@@ -62,7 +61,6 @@
       "publisher": "Tapir Academic Press",
       "receiptDate": null,
       "receiptStatus": "Awaiting Receipt",
-      "reportingCodes": [],
       "requester": "",
       "rush": false,
       "selector": "Stevens",
@@ -80,7 +78,6 @@
     {
       "id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd3",
       "acquisitionMethod": "df26d81b-9d63-4ff8-bf41-49bf75cfa70e",
-      "alerts": [],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "",
       "claims": [
@@ -143,7 +140,6 @@
       "publisher": "Tapir Academic Press",
       "receiptDate": null,
       "receiptStatus": "Awaiting Receipt",
-      "reportingCodes": [],
       "requester": "",
       "rush": false,
       "selector": "Brown",
@@ -161,11 +157,6 @@
     {
       "id": "c2755a78-2f8d-47d0-a218-059a9b7391b3",
       "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
-      "alerts": [
-        {
-          "alert": "Receipt overdue"
-        }
-      ],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "ABCDEFGHIJKLMNOPQRSTUVW",
       "claims": [
@@ -242,23 +233,6 @@
       "publisher": "Schiffer Publishing",
       "receiptDate": "2018-10-09T00:00:00.000Z",
       "receiptStatus": "Awaiting Receipt",
-      "reportingCodes": [
-        {
-          "code": "CODE1",
-          "id": "5926dcd7-85f5-4504-8283-712595ebc38b",
-          "description": "ABCDEF"
-        },
-        {
-          "code": "CODE2",
-          "id": "fa316c04-8101-4e72-8aaf-01281bac718f",
-          "description": "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        },
-        {
-          "code": "CODE3",
-          "id": "ea68b696-3125-4940-bf91-1d128323473e",
-          "description": "ABCDE"
-        }
-      ],
       "requester": "Leo Bulero",
       "rush": true,
       "selector": "ABCD",
@@ -289,7 +263,6 @@
     {
       "id": "c2755a78-2f8d-47d0-a218-059a9b7391b4",
       "acquisitionMethod": "df26d81b-9d63-4ff8-bf41-49bf75cfa70e",
-      "alerts": [],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "",
       "claims": [
@@ -329,7 +302,7 @@
         "activationDue": 0,
         "createInventory": "None",
         "trial": false,
-        "userLimit": 10,
+        "userLimit": "10",
         "accessProvider": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
         "materialType":  "1a54b431-2e4f-452d-9cae-9cee66c9a892"
       },
@@ -357,7 +330,6 @@
       "publisher": "John Wiley & Sons, Inc.",
       "receiptDate": null,
       "receiptStatus": "Fully Received",
-      "reportingCodes": [],
       "requester": "",
       "rush": false,
       "selector": "Woods",

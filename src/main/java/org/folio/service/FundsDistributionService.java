@@ -19,7 +19,7 @@ import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.service.finance.transaction.FinanceUtils;
 import org.javamoney.moneta.Money;
@@ -29,7 +29,7 @@ import org.javamoney.moneta.function.MonetaryOperators;
 public class FundsDistributionService {
 
   public <T extends EncumbranceRelationsHolder> List<T> distributeFunds(List<T> holders) {
-    Map<CompositePoLine, List<EncumbranceRelationsHolder>> lineHoldersMap = holders.stream()
+    Map<PoLine, List<EncumbranceRelationsHolder>> lineHoldersMap = holders.stream()
       .filter(holder -> Objects.nonNull(holder.getPoLine()))
       .collect(Collectors.groupingBy(EncumbranceRelationsHolder::getPoLine));
 

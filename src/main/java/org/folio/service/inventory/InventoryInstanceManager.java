@@ -17,7 +17,7 @@ import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Contributor;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.ProductId;
@@ -128,10 +128,10 @@ public class InventoryInstanceManager {
 
     List<Contributor> titleContributors = title.getContributors();
     if (isNotEmpty(titleContributors)) {
-      List<JsonObject> contributors = titleContributors.stream().map(compPolContributor -> {
+      List<JsonObject> contributors = titleContributors.stream().map(polContributor -> {
         JsonObject invContributor = new JsonObject();
-        invContributor.put(CONTRIBUTOR_NAME_TYPE_ID, compPolContributor.getContributorNameTypeId());
-        invContributor.put(CONTRIBUTOR_NAME, compPolContributor.getContributor());
+        invContributor.put(CONTRIBUTOR_NAME_TYPE_ID, polContributor.getContributorNameTypeId());
+        invContributor.put(CONTRIBUTOR_NAME, polContributor.getContributor());
         return invContributor;
       }).collect(toList());
       instance.put(INSTANCE_CONTRIBUTORS, contributors);
@@ -162,19 +162,19 @@ public class InventoryInstanceManager {
    * Returns Id of the Instance Record corresponding to given PO line.
    * Instance record is either retrieved from Inventory or a new one is created if no corresponding Record exists.
    *
-   * @param compPOL PO line to retrieve Instance Record Id for
+   * @param poLine PO line to retrieve Instance Record Id for
    * @return future with Instance Id
    */
-  private Future<String> getInstanceRecord(CompositePoLine compPOL, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    if (compPOL.getInstanceId() != null) {
-      return Future.succeededFuture(compPOL.getInstanceId());
+  private Future<String> getInstanceRecord(PoLine poLine, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+    if (poLine.getInstanceId() != null) {
+      return Future.succeededFuture(poLine.getInstanceId());
     }
     // proceed with new Instance Record creation if no productId is provided
-    if (!isProductIdsExist(compPOL) || isInstanceMatchingDisabled) {
-      return createInstanceRecord(compPOL, requestContext);
+    if (!isProductIdsExist(poLine) || isInstanceMatchingDisabled) {
+      return createInstanceRecord(poLine, requestContext);
     }
 
-    String query = compPOL.getDetails().getProductIds().stream()
+    String query = poLine.getDetails().getProductIds().stream()
       .map(this::buildProductIdQuery)
       .collect(joining(" or "));
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCES))
@@ -184,17 +184,17 @@ public class InventoryInstanceManager {
         if (!instances.getJsonArray(INSTANCES).isEmpty()) {
           return Future.succeededFuture(extractId(getFirstObjectFromResponse(instances, INSTANCES)));
         }
-        return createInstanceRecord(compPOL, requestContext);
+        return createInstanceRecord(poLine, requestContext);
       });
   }
 
   /**
    * Creates Instance Record in Inventory and returns its Id.
    *
-   * @param compPOL PO line to create Instance Record for
+   * @param poLine PO line to create Instance Record for
    * @return id of newly created Instance Record
    */
-  private Future<String> createInstanceRecord(CompositePoLine compPOL, RequestContext requestContext) {
+  private Future<String> createInstanceRecord(PoLine poLine, RequestContext requestContext) {
     logger.debug("Start processing instance record");
     JsonObject lookupObj = new JsonObject();
     Future<Void> instanceTypeFuture = InventoryUtils.getEntryId(configurationEntriesCache, inventoryCache, INSTANCE_TYPES, MISSING_INSTANCE_TYPE, requestContext)
@@ -205,50 +205,50 @@ public class InventoryInstanceManager {
       .onSuccess(lookupObj::mergeIn)
       .mapEmpty();
 
-    Future<Void> contributorNameTypeIdFuture = verifyContributorNameTypesExist(compPOL.getContributors(), requestContext);
+    Future<Void> contributorNameTypeIdFuture = verifyContributorNameTypesExist(poLine.getContributors(), requestContext);
 
     return CompositeFuture.join(instanceTypeFuture, statusFuture, contributorNameTypeIdFuture)
-      .map(v -> buildInstanceRecordJsonObject(compPOL, lookupObj))
+      .map(v -> buildInstanceRecordJsonObject(poLine, lookupObj))
       .compose(instanceRecJson -> {
         RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCES));
         return restClient.postJsonObjectAndGetId(requestEntry, instanceRecJson, requestContext);
       });
   }
 
-  private JsonObject buildInstanceRecordJsonObject(CompositePoLine compPOL, JsonObject lookupObj) {
+  private JsonObject buildInstanceRecordJsonObject(PoLine poLine, JsonObject lookupObj) {
     JsonObject instance = new JsonObject();
 
     // MODORDERS-145 The Source and source code are required by schema
     instance.put(INSTANCE_SOURCE, SOURCE_FOLIO);
-    instance.put(INSTANCE_TITLE, compPOL.getTitleOrPackage());
+    instance.put(INSTANCE_TITLE, poLine.getTitleOrPackage());
     instance.put(INSTANCE_DISCOVERY_SUPPRESS, false);
 
-    if (compPOL.getEdition() != null) {
-      instance.put(INSTANCE_EDITIONS, new JsonArray(singletonList(compPOL.getEdition())));
+    if (poLine.getEdition() != null) {
+      instance.put(INSTANCE_EDITIONS, new JsonArray(singletonList(poLine.getEdition())));
     }
     instance.put(INSTANCE_STATUS_ID, lookupObj.getString(INSTANCE_STATUSES));
     instance.put(INSTANCE_TYPE_ID, lookupObj.getString(INSTANCE_TYPES));
 
-    if (compPOL.getPublisher() != null || compPOL.getPublicationDate() != null) {
+    if (poLine.getPublisher() != null || poLine.getPublicationDate() != null) {
       JsonObject publication = new JsonObject();
-      publication.put(INSTANCE_PUBLISHER, compPOL.getPublisher());
-      publication.put(INSTANCE_DATE_OF_PUBLICATION, compPOL.getPublicationDate());
+      publication.put(INSTANCE_PUBLISHER, poLine.getPublisher());
+      publication.put(INSTANCE_DATE_OF_PUBLICATION, poLine.getPublicationDate());
       instance.put(INSTANCE_PUBLICATION, new JsonArray(singletonList(publication)));
     }
 
-    if (isNotEmpty(compPOL.getContributors())) {
-      List<JsonObject> contributors = compPOL.getContributors().stream().map(compPolContributor -> {
+    if (isNotEmpty(poLine.getContributors())) {
+      List<JsonObject> contributors = poLine.getContributors().stream().map(polContributor -> {
         JsonObject invContributor = new JsonObject();
-        invContributor.put(CONTRIBUTOR_NAME_TYPE_ID, compPolContributor.getContributorNameTypeId());
-        invContributor.put(CONTRIBUTOR_NAME, compPolContributor.getContributor());
+        invContributor.put(CONTRIBUTOR_NAME_TYPE_ID, polContributor.getContributorNameTypeId());
+        invContributor.put(CONTRIBUTOR_NAME, polContributor.getContributor());
         return invContributor;
       }).collect(toList());
       instance.put(INSTANCE_CONTRIBUTORS, contributors);
     }
 
-    if (isProductIdsExist(compPOL)) {
+    if (isProductIdsExist(poLine)) {
       List<JsonObject> identifiers =
-        compPOL.getDetails()
+        poLine.getDetails()
           .getProductIds()
           .stream()
           .map(pId -> {
@@ -347,14 +347,14 @@ public class InventoryInstanceManager {
     return restClient.postJsonObjectAndGetId(requestEntry, instanceRecJson, requestContext);
   }
 
-  public Future<CompositePoLine> openOrderHandleInstance(CompositePoLine compPOL, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+  public Future<PoLine> openOrderHandleInstance(PoLine poLine, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
       .compose(configuration ->
-        getInstanceRecord(compPOL, isInstanceMatchingDisabled, requestContext)
+        getInstanceRecord(poLine, isInstanceMatchingDisabled, requestContext)
           .compose(instanceId -> configuration
-            .map(consortiumConfiguration -> shareInstanceAmongTenantsIfNeeded(instanceId, consortiumConfiguration, compPOL.getLocations(), requestContext))
+            .map(consortiumConfiguration -> shareInstanceAmongTenantsIfNeeded(instanceId, consortiumConfiguration, poLine.getLocations(), requestContext))
             .orElse(Future.succeededFuture(instanceId))))
-      .map(compPOL::withInstanceId);
+      .map(poLine::withInstanceId);
   }
 
   private Future<String> shareInstanceAmongTenantsIfNeeded(String instanceId, ConsortiumConfiguration consortiumConfiguration,

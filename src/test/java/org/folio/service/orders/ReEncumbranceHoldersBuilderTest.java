@@ -37,7 +37,7 @@ import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.EncumbranceRollover;
@@ -101,11 +101,11 @@ public class ReEncumbranceHoldersBuilderTest {
   void shouldCreateNewReEncumbranceHoldersForEveryFundDistributions() {
     FundDistribution fundDistribution1 = new FundDistribution().withFundId(UUID.randomUUID().toString());
     FundDistribution fundDistribution2 = new FundDistribution().withFundId(UUID.randomUUID().toString());
-    CompositePoLine compositePoLine1 = new CompositePoLine().withId(UUID.randomUUID().toString())
+    PoLine compositePoLine1 = new PoLine().withId(UUID.randomUUID().toString())
             .withFundDistribution(Arrays.asList(fundDistribution1, fundDistribution2));
-    CompositePoLine compositePoLine2 = new CompositePoLine().withId(UUID.randomUUID().toString());
+    PoLine compositePoLine2 = new PoLine().withId(UUID.randomUUID().toString());
     CompositePurchaseOrder compPO = new CompositePurchaseOrder().withId(UUID.randomUUID().toString())
-            .withCompositePoLines(Arrays.asList(compositePoLine1, compositePoLine2));
+            .withPoLines(Arrays.asList(compositePoLine1, compositePoLine2));
 
     List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.buildReEncumbranceHoldersWithOrdersData(compPO);
     assertThat(resultHolders, hasSize(2));
@@ -197,8 +197,8 @@ public class ReEncumbranceHoldersBuilderTest {
   @Test
   void shouldPopulateReEncumbranceHoldersWithConversionWhenHoldersContainsCurrency(VertxTestContext vertxTestContext) {
     FiscalYear fiscalYear = new FiscalYear().withCurrency("USD");
-    CompositePoLine line1 = new CompositePoLine().withCost(new Cost().withCurrency("EUR"));
-    CompositePoLine line2 = new CompositePoLine().withCost(new Cost().withCurrency("EUR"));
+    PoLine line1 = new PoLine().withCost(new Cost().withCurrency("EUR"));
+    PoLine line2 = new PoLine().withCost(new Cost().withCurrency("EUR"));
     double exchangeEurToUsdRate = 1.1d;
 
     ReEncumbranceHolder holder1 = new ReEncumbranceHolder()
@@ -417,10 +417,10 @@ public class ReEncumbranceHoldersBuilderTest {
             .withFundId(fund2Id)
             .withEncumbrance(fromEncumbrance2.getId());
 
-    CompositePoLine line1 = new CompositePoLine().withId(UUID.randomUUID().toString())
+    PoLine line1 = new PoLine().withId(UUID.randomUUID().toString())
             .withFundDistribution(Collections.singletonList(fundDistribution1));
 
-    CompositePoLine line2 = new CompositePoLine().withId(UUID.randomUUID().toString())
+    PoLine line2 = new PoLine().withId(UUID.randomUUID().toString())
             .withFundDistribution(Collections.singletonList(fundDistribution2));
 
     Transaction toEncumbrance1 = new Transaction().withEncumbrance(new Encumbrance()
@@ -506,10 +506,10 @@ public class ReEncumbranceHoldersBuilderTest {
             .withFundId(fund2Id)
             .withEncumbrance(fromEncumbrance2.getId());
 
-    CompositePoLine line1 = new CompositePoLine().withId(UUID.randomUUID().toString())
+    PoLine line1 = new PoLine().withId(UUID.randomUUID().toString())
             .withFundDistribution(Collections.singletonList(fundDistribution1));
 
-    CompositePoLine line2 = new CompositePoLine().withId(UUID.randomUUID().toString())
+    PoLine line2 = new PoLine().withId(UUID.randomUUID().toString())
             .withFundDistribution(Collections.singletonList(fundDistribution2));
 
 
@@ -599,7 +599,7 @@ public class ReEncumbranceHoldersBuilderTest {
       .withEncumbrance(fromEncumbrance2.getId())
       .withFundId(fund2Id);
 
-    CompositePoLine line1 = new CompositePoLine().withId(UUID.randomUUID().toString())
+    PoLine line1 = new PoLine().withId(UUID.randomUUID().toString())
       .withCost(cost1)
       .withFundDistribution(List.of(fundDistribution1, fundDistribution2));
 

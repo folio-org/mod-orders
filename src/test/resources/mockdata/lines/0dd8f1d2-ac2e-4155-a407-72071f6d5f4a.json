@@ -1,7 +1,6 @@
 {
   "id": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
   "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
-  "alerts": [],
   "cancellationRestriction": false,
   "cancellationRestrictionNote": "ABCDEFGHIJKLMNOPQRSTUVW",
   "claims": [],
@@ -77,7 +76,6 @@
   "purchaseOrderId": "95d29d04-34b1-4fe0-a15e-1cd129143692",
   "receiptDate": "2018-10-09T00:00:00.000+0000",
   "receiptStatus": "Awaiting Receipt",
-  "reportingCodes": [],
   "requester": "Leo Bulero",
   "rush": true,
   "selector": "ABCD",
