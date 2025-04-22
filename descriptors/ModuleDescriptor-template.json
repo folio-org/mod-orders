@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "orders",
-      "version": "12.1",
+      "version": "13.0",
       "handlers": [
         {
           "methods": [
@@ -139,7 +139,7 @@
     },
     {
       "id": "order-lines",
-      "version": "3.3",
+      "version": "4.0",
       "handlers": [
         {
           "methods": [

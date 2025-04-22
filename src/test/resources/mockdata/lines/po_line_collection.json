@@ -381,7 +381,7 @@
         "createInventory": "Instance",
         "trial": false,
         "expectedActivation": null,
-        "userLimit": 0,
+        "userLimit": "0",
         "accessProvider": "9bdc385e-6403-46aa-a3aa-db91d4527b19",
         "license": {
           "code": "Code 1",
@@ -463,7 +463,7 @@
           "description": "License Agreement 1"
         },
         "trial": false,
-        "userLimit": 10,
+        "userLimit": "10",
         "materialType": "1a54b431-2e4f-452d-9cae-9cee66c9a892"
       },
       "fundDistribution": [
@@ -589,7 +589,7 @@
         "createInventory": "Instance",
         "trial": false,
         "expectedActivation": "2018-10-09T00:00:00.000Z",
-        "userLimit": 10,
+        "userLimit": "10",
         "accessProvider": "ba3f3d45-247d-41f6-8dc9-6488adcad329",
         "license": {
           "code": "Code 1",
@@ -674,7 +674,7 @@
           "description": "License Agreement 1"
         },
         "trial": false,
-        "userLimit": 10
+        "userLimit": "10"
       },
       "fundDistribution": [
         {

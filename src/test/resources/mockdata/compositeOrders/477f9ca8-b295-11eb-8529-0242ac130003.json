@@ -20,7 +20,7 @@
         "activationDue": 0,
         "createInventory": "Instance",
         "expectedActivation": "2019-01-01T00:00:00.000Z",
-        "userLimit": 0,
+        "userLimit": "0",
         "accessProvider": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
         "materialType":  "1a54b431-2e4f-452d-9cae-9cee66c9a892"
       },
@@ -60,7 +60,7 @@
         "activationDue": 0,
         "createInventory": "Instance",
         "expectedActivation": "2019-01-01T00:00:00.000Z",
-        "userLimit": 0,
+        "userLimit": "0",
         "accessProvider": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
         "materialType":  "1a54b431-2e4f-452d-9cae-9cee66c9a892"
       },

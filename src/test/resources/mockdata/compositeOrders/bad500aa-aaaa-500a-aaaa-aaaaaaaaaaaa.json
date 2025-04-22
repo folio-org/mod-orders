@@ -53,7 +53,7 @@
         "createInventory": "Instance",
         "trial": false,
         "expectedActivation": "2014-07-06T00:00:00.000Z",
-        "userLimit": 1,
+        "userLimit": "1",
         "accessProvider": "858e80d2-f562-4c54-9934-6e274dee511d",
         "license": {
           "code": "Code 1",
