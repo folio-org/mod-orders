@@ -7,7 +7,6 @@ import static org.folio.orders.utils.AcqDesiredPermissions.TITLES_ASSIGN;
 import static org.folio.orders.utils.AcqDesiredPermissions.TITLES_MANAGE;
 import static org.folio.orders.utils.HelperUtils.ID;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.orders.utils.HelperUtils.combineResultListsOnSuccess;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
