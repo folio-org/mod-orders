@@ -320,18 +320,26 @@ public class TitlesService {
     List<Future<List<Void>>> deleteItemFutures = holdingIds.stream()
       .map(holdingId -> inventoryItemManager.getItemsByHoldingId(holdingId, tenantContext)
         .compose(items -> {
-          if (items.isEmpty()) return Future.succeededFuture();
+          if (items.isEmpty()) {
+            log.info("deleteItemsForHolding:: No items found for holding: {}", holdingId);
+            return Future.succeededFuture();
+          }
 
           var itemIds = items.stream()
             .filter(item -> holder.getPoLineId().equals(item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER)))
             .map(item -> item.getString(ID))
             .toList();
 
+          if (itemIds.isEmpty()) {
+            log.info("deleteItemsForHolding:: No items to delete for holdingId: {} and poLine: {}", holdingId, holder.getPoLineId());
+            return Future.succeededFuture();
+          }
+
           return inventoryItemManager.deleteItems(itemIds, true, tenantContext);
         }))
       .toList();
 
-    return combineResultListsOnSuccess(deleteItemFutures)
+    return collectResultsOnSuccess(deleteItemFutures)
       .onSuccess(v -> log.info("deleteItemsForHolding:: Items were deleted successfully for holdingIds: {}", holdingIds))
       .onFailure(t -> log.error("deleteItemsForHolding:: Failed to delete items for holdingIds: {}", holdingIds, t))
       .mapEmpty();
