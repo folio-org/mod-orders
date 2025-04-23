@@ -48,9 +48,7 @@ import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyCollection;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -292,8 +290,10 @@ public class FinanceHoldersBuilderTest {
       .thenReturn(Future.succeededFuture(List.of(fund1, fund2)));
     when(ledgerService.getLedgersByIds(anyCollection(), any()))
       .thenReturn(Future.succeededFuture(List.of(ledger1, ledger2)));
-    when(fiscalYearService.getCurrentFiscalYear(anyString(), any()))
+    when(fiscalYearService.getCurrentFiscalYear(eq(ledger1.getId()), any()))
       .thenReturn(Future.succeededFuture(fiscalYear1));
+    when(fiscalYearService.getCurrentFiscalYear(eq(ledger2.getId()), any()))
+      .thenReturn(Future.succeededFuture(fiscalYear2));
     when(budgetService.getBudgetsByQuery(anyString(), any()))
       .thenReturn(Future.succeededFuture(List.of(budget1)));
 

@@ -155,23 +155,37 @@ public class FinanceHoldersBuilder {
 
   private Future<FiscalYear> getFiscalYear(List<Ledger> ledgers,
       List<? extends EncumbranceRelationsHolder> encumbranceHolders, RequestContext requestContext) {
-    List<String> fiscalYearIds = ledgers.stream()
-      .map(Ledger::getFiscalYearOneId)
-      .distinct()
-      .toList();
-    if (fiscalYearIds.size() > 1) {
-      List<Parameter> parameters = List.of(
-        new Parameter().withKey("fiscalYearIds").withValue(fiscalYearIds.toString()),
-        new Parameter().withKey("poId").withValue(encumbranceHolders.get(0).getPurchaseOrder().getId())
-      );
-      throw new HttpException(422, MULTIPLE_FISCAL_YEARS.toError().withParameters(parameters));
-    }
-    return fiscalYearService.getCurrentFiscalYear(ledgers.get(0).getId(), requestContext)
-      .map(fiscalYear -> {
+    return getLedgersFiscalYears(ledgers, requestContext)
+      .map(fiscalYears -> {
+        List<String> fiscalYearIds = fiscalYears.stream()
+          .map(FiscalYear::getId)
+          .distinct()
+          .toList();
+        if (fiscalYearIds.size() > 1) {
+          List<Parameter> parameters = List.of(
+            new Parameter().withKey("fiscalYearIds").withValue(fiscalYearIds.toString()),
+            new Parameter().withKey("poId").withValue(encumbranceHolders.getFirst().getPurchaseOrder().getId())
+          );
+          throw new HttpException(422, MULTIPLE_FISCAL_YEARS.toError().withParameters(parameters));
+        }
+        FiscalYear fiscalYear = fiscalYears.getFirst();
         encumbranceHolders.forEach(holder -> holder.withCurrentFiscalYearId(fiscalYear.getId())
           .withCurrency(fiscalYear.getCurrency()));
         return fiscalYear;
       });
+  }
+
+  private Future<List<FiscalYear>> getLedgersFiscalYears(List<Ledger> ledgers, RequestContext requestContext) {
+    List<String> ledgerIds = ledgers.stream()
+      .map(Ledger::getId)
+      .distinct()
+      .toList();
+
+    List<Future<FiscalYear>> futures = ledgerIds.stream()
+      .map(ledgerId -> fiscalYearService.getCurrentFiscalYear(ledgerId, requestContext))
+      .toList();
+
+    return collectResultsOnSuccess(futures);
   }
 
   private Future<Void> getBudgets(FiscalYear fiscalYear, List<? extends EncumbranceRelationsHolder> encumbranceHolders,
