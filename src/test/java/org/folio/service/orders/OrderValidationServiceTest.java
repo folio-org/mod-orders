@@ -57,8 +57,6 @@ public class OrderValidationServiceTest {
       .when(purchaseOrderLineHelper).setTenantDefaultCreateInventoryValues(any(PoLine.class), any(JsonObject.class));
     doReturn(succeededFuture(List.of()))
       .when(poLineValidationService).validatePoLine(any(PoLine.class), eq(requestContext));
-    doReturn(succeededFuture(null))
-      .when(purchaseOrderLineService).validateAndNormalizeISBN(anyList(), eq(requestContext));
   }
 
   @AfterEach
