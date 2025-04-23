@@ -4,18 +4,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.folio.rest.acq.model.invoice.InvoiceLine;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLine;
 
 
 public class PoLineInvoiceLineHolder {
 
-  private final CompositePoLine poLineFromRequest;
+  private final PoLine poLineFromRequest;
   private final PoLine poLineFromStorage;
   private List<InvoiceLine> invoiceLines;
   private List<InvoiceLine> openOrReviewedInvoiceLines;
 
-  public PoLineInvoiceLineHolder(CompositePoLine poLineFromRequest, PoLine poLineFromStorage) {
+  public PoLineInvoiceLineHolder(PoLine poLineFromRequest, PoLine poLineFromStorage) {
     this.poLineFromRequest = poLineFromRequest;
     this.poLineFromStorage = poLineFromStorage;
     this.invoiceLines = new ArrayList<>();
@@ -32,7 +32,7 @@ public class PoLineInvoiceLineHolder {
     return this;
   }
 
-  public CompositePoLine getPoLineFromRequest() {
+  public PoLine getPoLineFromRequest() {
     return poLineFromRequest;
   }
 

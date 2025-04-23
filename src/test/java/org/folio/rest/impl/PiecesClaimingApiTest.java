@@ -11,7 +11,7 @@ import org.folio.config.ApplicationConfig;
 import org.folio.rest.jaxrs.model.ClaimingCollection;
 import org.folio.rest.jaxrs.model.ClaimingPieceResult;
 import org.folio.rest.jaxrs.model.ClaimingResults;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceCollection;
 import org.junit.jupiter.api.AfterAll;
@@ -148,7 +148,7 @@ public class PiecesClaimingApiTest {
     var poLine = getMockAsJson(PO_LINES_COLLECTION)
       .getJsonArray(PO_LINES_KEY)
       .getJsonObject(poLineIdx)
-      .mapTo(CompositePoLine.class);
+      .mapTo(PoLine.class);
     var purchaseOrder = getMinimalOrder(poLine)
       .withVendor(organization.getId());
     var piece = getMockAsJson(PIECES_COLLECTION)

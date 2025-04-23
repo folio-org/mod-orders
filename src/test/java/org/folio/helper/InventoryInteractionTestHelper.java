@@ -89,7 +89,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
-import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Contributor;
 import org.folio.rest.jaxrs.model.Location;
@@ -108,7 +107,7 @@ public class InventoryInteractionTestHelper {
   public static void verifyInstanceLinksForUpdatedOrder(CompositePurchaseOrder reqData) {
     List<JsonObject> polUpdates = getPoLineUpdates();
     assertNotNull(polUpdates);
-    for (CompositePoLine compLine : reqData.getCompositePoLines()) {
+    for (PoLine compLine : reqData.getPoLines()) {
       int itemsQuantity = calculateInventoryItemsQuantity(compLine);
       if (itemsQuantity > 0) {
         boolean instanceLinked = false;
@@ -144,13 +143,13 @@ public class InventoryInteractionTestHelper {
     // All existing and created items
     List<JsonObject> items = joinExistingAndNewItems();
 
-    verifyPiecesQuantityForSuccessCase(reqData.getCompositePoLines(), createdPieces);
+    verifyPiecesQuantityForSuccessCase(reqData.getPoLines(), createdPieces);
 
-    for (CompositePoLine pol : reqData.getCompositePoLines()) {
+    for (PoLine pol : reqData.getPoLines()) {
       verifyInstanceCreated(tenant, createdInstances, pol);
       verifyHoldingsCreated(createdHoldings, pol);
       verifyItemsCreated(tenant, items, pol);
-      verifyOpenOrderPiecesCreated(items, reqData.getCompositePoLines(), createdPieces, expectedWithItemQty);
+      verifyOpenOrderPiecesCreated(items, reqData.getPoLines(), createdPieces, expectedWithItemQty);
     }
   }
 
@@ -188,14 +187,14 @@ public class InventoryInteractionTestHelper {
     logger.debug("--------------------------- Pieces created -------------------------------\n" + new JsonArray(createdPieces).encodePrettily());
   }
 
-  public static void verifyPiecesQuantityForSuccessCase(List<CompositePoLine> poLines, List<JsonObject> createdPieces) {
+  public static void verifyPiecesQuantityForSuccessCase(List<PoLine> poLines, List<JsonObject> createdPieces) {
     List<Piece> pieces = createdPieces
       .stream()
       .map(pieceObj -> pieceObj.mapTo(PieceCollection.class))
       .flatMap(pieceCollection -> pieceCollection.getPieces().stream())
       .toList();
     int totalQuantity = 0;
-    for (CompositePoLine poLine : poLines) {
+    for (PoLine poLine : poLines) {
       if (poLine.getCheckinItems() != null && poLine.getCheckinItems()) continue;
       totalQuantity += calculateTotalQuantity(poLine);
     }
@@ -213,7 +212,7 @@ public class InventoryInteractionTestHelper {
     return items;
   }
 
-  private static void verifyInstanceCreated(Header tenant, List<JsonObject> inventoryInstances, CompositePoLine pol) {
+  private static void verifyInstanceCreated(Header tenant, List<JsonObject> inventoryInstances, PoLine pol) {
     boolean verified = false;
     for (JsonObject instance : inventoryInstances) {
       if (pol.getTitleOrPackage().equals(instance.getString("title"))) {
@@ -234,7 +233,7 @@ public class InventoryInteractionTestHelper {
     }
   }
 
-  public static void verifyPiecesCreated(List<JsonObject> inventoryItems, List<CompositePoLine> compositePoLines, List<JsonObject> pieceJsons) {
+  public static void verifyPiecesCreated(List<JsonObject> inventoryItems, List<PoLine> poLines, List<JsonObject> pieceJsons) {
     // Collect all item id's
     List<String> itemIds = inventoryItems.stream()
       .map(item -> item.getString(ID))
@@ -246,7 +245,7 @@ public class InventoryInteractionTestHelper {
 
     // Verify quantity of created pieces
     int totalForAllPoLines = 0;
-    for (CompositePoLine poLine : compositePoLines) {
+    for (PoLine poLine : poLines) {
       List<Location> locations = poLine.getLocations().stream()
         .filter(location -> PoLineCommonUtil.isHoldingCreationRequiredForLocation(poLine, location) && !Objects.equals(location.getLocationId(), ID_FOR_INTERNAL_SERVER_ERROR))
         .collect(Collectors.toList());
@@ -258,7 +257,7 @@ public class InventoryInteractionTestHelper {
       int expectedPhysQty = 0;
       int expectedOthQty = 0;
       if (poLine.getCheckinItems() == null || !poLine.getCheckinItems()) {
-        if (poLine.getOrderFormat() == CompositePoLine.OrderFormat.OTHER) {
+        if (poLine.getOrderFormat() == PoLine.OrderFormat.OTHER) {
           expectedOthQty += getPhysicalCostQuantity(poLine);//calculatePiecesQuantity(Piece.Format.OTHER, locations);
         } else {
           expectedPhysQty += getPhysicalCostQuantity(poLine);//calculatePiecesQuantity(Piece.Format.PHYSICAL, locations);
@@ -309,7 +308,7 @@ public class InventoryInteractionTestHelper {
     assertThat(pieceJsons, hasSize(totalForAllPoLines));
   }
 
-  public static void verifyOpenOrderPiecesCreated(List<JsonObject> inventoryItems, List<CompositePoLine> compositePoLines, List<JsonObject> pieceJsons, int expectedWithItemQty) {
+  public static void verifyOpenOrderPiecesCreated(List<JsonObject> inventoryItems, List<PoLine> poLines, List<JsonObject> pieceJsons, int expectedWithItemQty) {
     // Collect all item id's
     List<String> itemIds = inventoryItems.stream()
       .map(item -> item.getString(ID))
@@ -321,7 +320,7 @@ public class InventoryInteractionTestHelper {
       .toList();
 
     // Verify quantity of created pieces
-    for (CompositePoLine poLine : compositePoLines) {
+    for (PoLine poLine : poLines) {
       Map<String, List<JsonObject>> createdHoldingsByLocationId =
         getCreatedHoldings().stream()
           .filter(json -> json.getString("instanceId").equals(poLine.getInstanceId()))
@@ -335,7 +334,7 @@ public class InventoryInteractionTestHelper {
       int expectedPhysQty = 0;
       int expectedOthQty = 0;
       if (poLine.getCheckinItems() == null || !poLine.getCheckinItems()) {
-        if (poLine.getOrderFormat() == CompositePoLine.OrderFormat.OTHER) {
+        if (poLine.getOrderFormat() == PoLine.OrderFormat.OTHER) {
           expectedOthQty += getPhysicalCostQuantity(poLine);//calculatePiecesQuantity(Piece.Format.OTHER, locations);
         } else {
           expectedPhysQty += getPhysicalCostQuantity(poLine);//calculatePiecesQuantity(Piece.Format.PHYSICAL, locations);
@@ -406,7 +405,7 @@ public class InventoryInteractionTestHelper {
     assertNull(updatedOrders);
   }
 
-  public static void verifyHoldingsCreated(int expectedQty, List<JsonObject> holdings, CompositePoLine pol) {
+  public static void verifyHoldingsCreated(int expectedQty, List<JsonObject> holdings, PoLine pol) {
     Map<String, List<Location>> groupedLocationsByHoldingId = pol.getLocations()
       .stream()
       .filter(location -> Objects.nonNull(location.getHoldingId()))
@@ -422,7 +421,7 @@ public class InventoryInteractionTestHelper {
     assertEquals(expectedQty, actualQty, "Quantity of holdings does not match to expected");
   }
 
-  private static void verifyHoldingsCreated(List<JsonObject> holdings, CompositePoLine pol) {
+  private static void verifyHoldingsCreated(List<JsonObject> holdings, PoLine pol) {
     Map<String, List<Location>> groupedLocations = groupLocationsByLocationId(pol);
 
     long actualQty = 0;
@@ -446,7 +445,7 @@ public class InventoryInteractionTestHelper {
     }
   }
 
-  public static void verifyItemsCreated(Header tenant, List<JsonObject> inventoryItems, CompositePoLine pol) {
+  public static void verifyItemsCreated(Header tenant, List<JsonObject> inventoryItems, PoLine pol) {
     Map<Piece.Format, Integer> expectedItemsPerResourceType = HelperUtils.calculatePiecesWithItemIdQuantity(pol,
       pol.getLocations());
 
@@ -481,7 +480,7 @@ public class InventoryInteractionTestHelper {
     }
   }
 
-  public static void verifyItemsCreated(Header tenant, int expItemQtq, List<JsonObject> inventoryItems, CompositePoLine pol) {
+  public static void verifyItemsCreated(Header tenant, int expItemQtq, List<JsonObject> inventoryItems, PoLine pol) {
     Map<Piece.Format, Integer> expectedItemsPerResourceType = HelperUtils.calculatePiecesWithItemIdQuantity(pol,
       pol.getLocations());
 
@@ -515,7 +514,7 @@ public class InventoryInteractionTestHelper {
     }
   }
 
-  private static void verifyInstanceRecordRequest(Header tenant, JsonObject instance, CompositePoLine line) {
+  private static void verifyInstanceRecordRequest(Header tenant, JsonObject instance, PoLine line) {
     assertThat(instance.getString(INSTANCE_TITLE), equalTo(line.getTitleOrPackage()));
     assertThat(instance.getBoolean(INSTANCE_DISCOVERY_SUPPRESS), equalTo(false));
     assertThat(instance.getString(INSTANCE_SOURCE), equalTo("FOLIO"));

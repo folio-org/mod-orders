@@ -13,15 +13,15 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.folio.orders.utils.HelperUtils.REASON_CANCELLED;
+import static org.folio.orders.utils.HelperUtils.buildConversionQuery;
+import static org.folio.orders.utils.HelperUtils.combineResultListsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.isNotFound;
 import static org.folio.rest.core.exceptions.ErrorCodes.PREFIX_NOT_FOUND;
-import static org.folio.service.exchange.ExchangeRateProviderResolver.RATE_KEY;
+import static org.folio.service.exchange.CustomExchangeRateProvider.RATE_KEY;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.emptyOrNullString;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class HelperUtilsTest {
@@ -31,7 +31,7 @@ public class HelperUtilsTest {
     var f1 = Future.succeededFuture(List.of(1, 2, 3));
     var f2 = Future.succeededFuture(List.of(4, 5, 6));
     var f3 = Future.succeededFuture(List.of(7, 8, 9));
-    Future<List<Integer>> listFuture = HelperUtils.combineResultListsOnSuccess(List.of(f1, f2, f3));
+    Future<List<Integer>> listFuture = combineResultListsOnSuccess(List.of(f1, f2, f3));
     listFuture.onSuccess(
       combined -> assertEquals(List.of(1, 2, 3, 4, 5, 6, 7, 8, 9), combined)
     );
@@ -51,22 +51,11 @@ public class HelperUtilsTest {
     String toCurrency = "AUD";
     Double exchangeRate = 0.66d;
 
-    ConversionQuery conversionQuery = HelperUtils.getConversionQuery(exchangeRate, fromCurrency, toCurrency);
+    ConversionQuery conversionQuery = buildConversionQuery(fromCurrency, toCurrency, exchangeRate);
 
     assertThat(conversionQuery.get(RATE_KEY, Double.class), is(exchangeRate));
     assertThat(conversionQuery.getBaseCurrency().getCurrencyCode(), is(fromCurrency));
     assertThat(conversionQuery.getCurrency().getCurrencyCode(), is(toCurrency));
-  }
-
-  @Test
-  void testShouldReturnConversionQueryWithoutExchangeRate() {
-    String fromCurrency = "USD";
-    String toCurrency = "AUD";
-
-    ConversionQuery conversionQuery = HelperUtils.getConversionQuery(null, toCurrency, fromCurrency);
-
-    assertEquals(conversionQuery.getCurrency().getCurrencyCode(), fromCurrency);
-    assertNull(conversionQuery.get(RATE_KEY, Double.class));
   }
 
   @Test
@@ -88,8 +77,7 @@ public class HelperUtilsTest {
     List<PoLine> poLines = List.of(firstPoLine, secondPoLine);
 
     assertTrue(StatusUtils.changeOrderStatusForOrderUpdate(purchaseOrder, poLines));
-    assertEquals(purchaseOrder.getWorkflowStatus(), PurchaseOrder.WorkflowStatus.CLOSED);
+    assertEquals(PurchaseOrder.WorkflowStatus.CLOSED, purchaseOrder.getWorkflowStatus());
     assertEquals(purchaseOrder.getCloseReason(), new CloseReason().withReason(REASON_CANCELLED));
   }
-
 }

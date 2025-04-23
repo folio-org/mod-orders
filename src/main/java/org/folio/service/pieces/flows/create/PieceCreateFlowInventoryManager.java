@@ -9,7 +9,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
@@ -33,12 +33,12 @@ public class PieceCreateFlowInventoryManager {
     this.inventoryHoldingManager = inventoryHoldingManager;
   }
 
-  public Future<Void> processInventory(CompositePurchaseOrder compPO, CompositePoLine compPOL,
+  public Future<Void> processInventory(CompositePurchaseOrder compPO, PoLine poLine,
                                        Piece piece, boolean createItem, RequestContext requestContext) {
     var locationContext = createContextWithNewTenantId(requestContext, piece.getReceivingTenantId());
-    return updateInventoryInstanceForPoLine(compPOL, piece, locationContext, requestContext)
-      .compose(instanceId -> handleHolding(compPOL, piece, instanceId, locationContext))
-      .compose(holdingId -> handleItem(compPO, compPOL, createItem, piece, locationContext))
+    return updateInventoryInstanceForPoLine(poLine, piece, locationContext, requestContext)
+      .compose(instanceId -> handleHolding(poLine, piece, instanceId, locationContext))
+      .compose(holdingId -> handleItem(compPO, poLine, createItem, piece, locationContext))
       .map(itemId -> Optional.ofNullable(itemId).map(piece::withItemId))
       .onSuccess(optional -> logger.info("processInventory:: successfully created inventory for piece with itemId: {}, poLineId: {}, receivingTenantId: {}",
         piece.getItemId(), piece.getPoLineId(), piece.getReceivingTenantId()))
@@ -47,28 +47,28 @@ public class PieceCreateFlowInventoryManager {
       .mapEmpty();
   }
 
-  private Future<String> updateInventoryInstanceForPoLine(CompositePoLine compPOL, Piece piece, RequestContext locationContext, RequestContext requestContext) {
-    if (!Boolean.TRUE.equals(compPOL.getIsPackage())) {
-      return Optional.ofNullable(getPoLineInstanceId(compPOL))
+  private Future<String> updateInventoryInstanceForPoLine(PoLine poLine, Piece piece, RequestContext locationContext, RequestContext requestContext) {
+    if (!Boolean.TRUE.equals(poLine.getIsPackage())) {
+      return Optional.ofNullable(getPoLineInstanceId(poLine))
         .orElseGet(() -> titlesService.updateTitleWithInstance(piece.getTitleId(), locationContext, requestContext))
-        .map(instanceId -> compPOL.withInstanceId(instanceId).getInstanceId());
+        .map(instanceId -> poLine.withInstanceId(instanceId).getInstanceId());
     }
     return titlesService.updateTitleWithInstance(piece.getTitleId(), locationContext, requestContext);
   }
 
-  private Future<String> getPoLineInstanceId(CompositePoLine compPOL) {
-    return compPOL.getInstanceId() != null || PoLineCommonUtil.isInventoryUpdateNotRequired(compPOL)
-      ? Future.succeededFuture(compPOL.getInstanceId())
+  private Future<String> getPoLineInstanceId(PoLine poLine) {
+    return poLine.getInstanceId() != null || PoLineCommonUtil.isInventoryUpdateNotRequired(poLine)
+      ? Future.succeededFuture(poLine.getInstanceId())
       : null;
   }
 
-  private Future<Location> handleHolding(CompositePoLine compPOL, Piece piece, String instanceId, RequestContext requestContext) {
+  private Future<Location> handleHolding(PoLine poLine, Piece piece, String instanceId, RequestContext requestContext) {
     if (piece.getHoldingId() != null) {
       return Future.succeededFuture(new Location().withHoldingId(piece.getHoldingId()));
     }
 
     var location = new Location().withLocationId(piece.getLocationId());
-    if (instanceId == null || !DefaultPieceFlowsValidator.isCreateHoldingForPiecePossible(piece, compPOL)) {
+    if (instanceId == null || !DefaultPieceFlowsValidator.isCreateHoldingForPiecePossible(piece, poLine)) {
       return Future.succeededFuture(location);
     }
     return inventoryHoldingManager.createHoldingAndReturnId(instanceId, piece.getLocationId(), requestContext)
@@ -81,11 +81,11 @@ public class PieceCreateFlowInventoryManager {
       });
   }
 
-  private Future<String> handleItem(CompositePurchaseOrder compPO, CompositePoLine compPOL, boolean createItem,
+  private Future<String> handleItem(CompositePurchaseOrder compPO, PoLine poLine, boolean createItem,
                                     Piece piece, RequestContext requestContext) {
     return piece.getItemId() != null || !createItem || piece.getHoldingId() == null
       ? Future.succeededFuture(piece.getItemId())
-      : pieceUpdateInventoryService.manualPieceFlowCreateItemRecord(piece, compPO, compPOL, requestContext);
+      : pieceUpdateInventoryService.manualPieceFlowCreateItemRecord(piece, compPO, poLine, requestContext);
   }
 
 }

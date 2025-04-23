@@ -13,7 +13,7 @@ import org.folio.helper.PurchaseOrderHelper;
 import org.folio.helper.PurchaseOrderLineHelper;
 import org.folio.kafka.KafkaConfig;
 import org.folio.rest.core.RestClient;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CreateInventoryType;
 import org.folio.service.AcquisitionMethodsService;
 import org.folio.service.AcquisitionsUnitsService;
@@ -33,8 +33,7 @@ import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
 import org.folio.service.consortium.SharingInstanceService;
-import org.folio.service.exchange.ExchangeRateProviderResolver;
-import org.folio.service.exchange.FinanceExchangeRateService;
+import org.folio.service.exchange.CacheableExchangeRateService;
 import org.folio.service.finance.FiscalYearService;
 import org.folio.service.finance.FundService;
 import org.folio.service.finance.LedgerService;
@@ -71,7 +70,7 @@ import org.folio.service.invoice.POLInvoiceLineRelationService;
 import org.folio.service.orders.CombinedOrderDataPopulateService;
 import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
 import org.folio.service.orders.CompositeOrderRetrieveHolderBuilder;
-import org.folio.service.orders.CompositePoLineValidationService;
+import org.folio.service.orders.PoLineValidationService;
 import org.folio.service.orders.HoldingsSummaryService;
 import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderLinesSummaryPopulateService;
@@ -168,16 +167,6 @@ public class ApplicationConfig {
     return new RestClient();
   }
 
-  @Bean
-  ExchangeRateProviderResolver exchangeRateProviderResolver() {
-    return new ExchangeRateProviderResolver();
-  }
-
-  @Bean
-  FinanceExchangeRateService financeExchangeRateService(RestClient restClient) {
-    return new FinanceExchangeRateService(restClient);
-  }
-
   @Bean PurchaseOrderStorageService purchaseOrderService(RestClient restClient, PurchaseOrderLineService purchaseOrderLineService) {
     return new PurchaseOrderStorageService(restClient, purchaseOrderLineService);
   }
@@ -210,12 +199,11 @@ public class ApplicationConfig {
 
   @Bean
   OrderRolloverService rolloverOrderService(FundService fundService, PurchaseOrderLineService purchaseOrderLineService, TransactionService transactionService,
-                                            ConfigurationEntriesCache configurationEntriesCache, ExchangeRateProviderResolver exchangeRateProviderResolver,
-                                            LedgerRolloverProgressService ledgerRolloverProgressService, LedgerRolloverErrorService ledgerRolloverErrorService,
-                                            FailedLedgerRolloverPoLineDao failedLedgerRolloverPoLineDao) {
-    return new OrderRolloverService(fundService, purchaseOrderLineService, transactionService,
-                                    configurationEntriesCache, exchangeRateProviderResolver,
-                                    ledgerRolloverProgressService, ledgerRolloverErrorService, failedLedgerRolloverPoLineDao);
+                                            ConfigurationEntriesCache configurationEntriesCache, LedgerRolloverProgressService ledgerRolloverProgressService,
+                                            LedgerRolloverErrorService ledgerRolloverErrorService, FailedLedgerRolloverPoLineDao failedLedgerRolloverPoLineDao,
+                                            CacheableExchangeRateService cacheableExchangeRateService) {
+    return new OrderRolloverService(fundService, purchaseOrderLineService, transactionService, configurationEntriesCache,
+      ledgerRolloverProgressService, ledgerRolloverErrorService, failedLedgerRolloverPoLineDao, cacheableExchangeRateService);
   }
 
   @Bean
@@ -304,11 +292,10 @@ public class ApplicationConfig {
   @Bean EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder(EncumbranceService encumbranceService,
                                                                               FundService fundService,
                                                                               FiscalYearService fiscalYearService,
-                                                                              ExchangeRateProviderResolver exchangeRateProviderResolver,
                                                                               BudgetService budgetService,
-                                                                              LedgerService ledgerService) {
-    return new EncumbranceRelationsHoldersBuilder(encumbranceService, fundService, fiscalYearService, exchangeRateProviderResolver, budgetService,
-                                                  ledgerService);
+                                                                              LedgerService ledgerService,
+                                                                              CacheableExchangeRateService cacheableExchangeRateService) {
+    return new EncumbranceRelationsHoldersBuilder(encumbranceService, fundService, fiscalYearService, budgetService, ledgerService, cacheableExchangeRateService);
   }
 
   @Bean
@@ -346,18 +333,13 @@ public class ApplicationConfig {
   ReEncumbranceHoldersBuilder reEncumbranceHoldersBuilder(BudgetService budgetService,
                                                           LedgerService ledgerService,
                                                           FundService fundService,
-                                                          ExchangeRateProviderResolver exchangeRateProviderResolver,
                                                           FiscalYearService fiscalYearService,
                                                           LedgerRolloverService ledgerRolloverService,
                                                           TransactionService transactionService,
-                                                          FundsDistributionService fundsDistributionService) {
-    return new ReEncumbranceHoldersBuilder(budgetService,
-                                           ledgerService,
-                                           fundService,
-                                           exchangeRateProviderResolver,
-                                           fiscalYearService,
-                                           ledgerRolloverService,
-                                           transactionService, fundsDistributionService);
+                                                          FundsDistributionService fundsDistributionService,
+                                                          CacheableExchangeRateService cacheableExchangeRateService) {
+    return new ReEncumbranceHoldersBuilder(budgetService, ledgerService, fundService, fiscalYearService, ledgerRolloverService,
+      transactionService, fundsDistributionService, cacheableExchangeRateService);
   }
 
   @Bean
@@ -431,8 +413,8 @@ public class ApplicationConfig {
 
   @Bean("orderLinesSummaryPopulateService")
   CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService(ConfigurationEntriesCache configurationEntriesCache,
-                                                                            ExchangeRateProviderResolver exchangeRateProviderResolver) {
-    return new OrderLinesSummaryPopulateService(configurationEntriesCache, exchangeRateProviderResolver);
+                                                                            CacheableExchangeRateService cacheableExchangeRateService) {
+    return new OrderLinesSummaryPopulateService(configurationEntriesCache, cacheableExchangeRateService);
   }
 
   @Bean
@@ -705,10 +687,10 @@ public class ApplicationConfig {
                                                                   ExpenseClassValidationService expenseClassValidationService,
                                                                   PieceStorageService pieceStorageService,
                                                                   EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
-                                                                  CompositePoLineValidationService compositePoLineValidationService,
+                                                                  PoLineValidationService poLineValidationService,
                                                                   InventoryHoldingManager inventoryHoldingManager) {
     return new OpenCompositeOrderFlowValidator(fundService, expenseClassValidationService, pieceStorageService,
-      encumbranceWorkflowStrategyFactory, compositePoLineValidationService, inventoryHoldingManager);
+      encumbranceWorkflowStrategyFactory, poLineValidationService, inventoryHoldingManager);
   }
 
   @Bean PoNumberHelper poNumberHelper(RestClient restClient, PurchaseOrderStorageService purchaseOrderStorageService) {
@@ -725,22 +707,23 @@ public class ApplicationConfig {
     OpenCompositeOrderManager openCompositeOrderManager, PurchaseOrderStorageService purchaseOrderStorageService,
     ConfigurationEntriesCache configurationEntriesCache, PoNumberHelper poNumberHelper,
     OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator, ReOpenCompositeOrderManager reOpenCompositeOrderManager,
-    OrderValidationService orderValidationService, CompositePoLineValidationService compositePoLineValidationService) {
+    OrderValidationService orderValidationService, PoLineValidationService poLineValidationService) {
     return new PurchaseOrderHelper(purchaseOrderLineHelper, orderLinesSummaryPopulateService, encumbranceService,
       combinedPopulateService, encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, tagService,
       purchaseOrderLineService, titlesService, protectionService, itemStatusSyncService,
       openCompositeOrderManager, purchaseOrderStorageService, configurationEntriesCache,
       poNumberHelper, openCompositeOrderFlowValidator, reOpenCompositeOrderManager,
-      orderValidationService, compositePoLineValidationService);
+      orderValidationService, poLineValidationService);
   }
 
   @Bean
-  public OrderValidationService orderValidationService(CompositePoLineValidationService compositePoLineValidationService,
+  public OrderValidationService orderValidationService(
+    PoLineValidationService poLineValidationService,
     ConfigurationEntriesCache configurationEntriesCache, OrganizationService organizationService,
     ProtectionService protectionService, PrefixService prefixService, PurchaseOrderLineHelper purchaseOrderLineHelper,
     PurchaseOrderLineService purchaseOrderLineService, SuffixService suffixService, PoNumberHelper poNumberHelper,
     UnOpenCompositeOrderManager unOpenCompositeOrderManager) {
-    return new OrderValidationService(compositePoLineValidationService, configurationEntriesCache, organizationService,
+    return new OrderValidationService(poLineValidationService, configurationEntriesCache, organizationService,
       protectionService, prefixService, purchaseOrderLineHelper, purchaseOrderLineService, suffixService, poNumberHelper,
       unOpenCompositeOrderManager);
   }
@@ -757,19 +740,19 @@ public class ApplicationConfig {
                                                   PurchaseOrderLineService purchaseOrderLineService,
                                                   PurchaseOrderStorageService purchaseOrderStorageService,
                                                   RestClient restClient,
-                                                  CompositePoLineValidationService compositePoLineValidationService,
+                                                  PoLineValidationService poLineValidationService,
                                                   OrganizationService organizationService) {
     return new PurchaseOrderLineHelper(itemStatusSyncService, inventoryInstanceManager, encumbranceService, expenseClassValidationService,
       encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, titlesService, protectionService,
-      purchaseOrderLineService, purchaseOrderStorageService, restClient, compositePoLineValidationService,
+      purchaseOrderLineService, purchaseOrderStorageService, restClient, poLineValidationService,
       organizationService);
   }
 
   @Bean
-  CompositePoLineValidationService compositePoLineValidationService(ExpenseClassValidationService expenseClassValidationService,
+  PoLineValidationService compositePoLineValidationService(ExpenseClassValidationService expenseClassValidationService,
                                                                     ConsortiumConfigurationService consortiumConfigurationService,
                                                                     ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever) {
-    return new CompositePoLineValidationService(expenseClassValidationService, consortiumConfigurationService, consortiumUserTenantsRetriever);
+    return new PoLineValidationService(expenseClassValidationService, consortiumConfigurationService, consortiumUserTenantsRetriever);
   }
 
   @Bean TitleValidationService titleValidationService() {
@@ -801,10 +784,10 @@ public class ApplicationConfig {
     ProcessInventoryPhysicalStrategy processInventoryPhysicalStrategy = new ProcessInventoryPhysicalStrategy(consortiumConfigurationService);
     ProcessInventoryMixedStrategy processInventoryMixedStrategy = new ProcessInventoryMixedStrategy(consortiumConfigurationService);
 
-    strategy.put(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE.value(), processInventoryElectronicStrategy);
-    strategy.put(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE.value(), processInventoryPhysicalStrategy);
-    strategy.put(CompositePoLine.OrderFormat.OTHER.value(), processInventoryPhysicalStrategy);
-    strategy.put(CompositePoLine.OrderFormat.P_E_MIX.value(), processInventoryMixedStrategy);
+    strategy.put(PoLine.OrderFormat.ELECTRONIC_RESOURCE.value(), processInventoryElectronicStrategy);
+    strategy.put(PoLine.OrderFormat.PHYSICAL_RESOURCE.value(), processInventoryPhysicalStrategy);
+    strategy.put(PoLine.OrderFormat.OTHER.value(), processInventoryPhysicalStrategy);
+    strategy.put(PoLine.OrderFormat.P_E_MIX.value(), processInventoryMixedStrategy);
 
     return new ProcessInventoryStrategyResolver(strategy);
   }
@@ -887,5 +870,4 @@ public class ApplicationConfig {
   SettingsRetriever settingsRetriever(RestClient restClient) {
     return new SettingsRetriever(restClient);
   }
-
 }

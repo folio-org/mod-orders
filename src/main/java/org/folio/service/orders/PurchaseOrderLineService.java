@@ -1,20 +1,17 @@
 package org.folio.service.orders;
 
-import static io.vertx.core.json.JsonObject.mapFrom;
 import static one.util.streamex.StreamEx.ofSubLists;
-import static org.folio.helper.BaseHelper.ID;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.QueryUtils.convertIdsToCqlQuery;
-import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
-import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
-import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
-import static org.folio.rest.RestConstants.SEMAPHORE_MAX_ACTIVE_THREADS;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
+import static org.folio.service.orders.utils.ProductIdUtils.buildSetOfProductIdsFromPoLines;
+import static org.folio.service.orders.utils.ProductIdUtils.isISBN;
+import static org.folio.service.orders.utils.ProductIdUtils.extractQualifier;
+import static org.folio.service.orders.utils.ProductIdUtils.removeISBNDuplicates;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
@@ -36,9 +33,7 @@ import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
-import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -47,9 +42,7 @@ import org.folio.rest.jaxrs.model.PoLineCollection;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertxconcurrent.Semaphore;
 import org.folio.service.inventory.InventoryHoldingManager;
 
 public class PurchaseOrderLineService {
@@ -99,19 +92,10 @@ public class PurchaseOrderLineService {
     return saveOrderLine(poLine, poLine.getLocations(), requestContext);
   }
 
-  private Future<Void> saveOrderLine(PoLine poLine, List<Location> locations, RequestContext requestContext) {
+  public Future<Void> saveOrderLine(PoLine poLine, List<Location> locations, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(poLine.getId());
     return updateSearchLocations(poLine, locations, requestContext)
       .compose(v -> restClient.put(requestEntry, poLine, requestContext));
-  }
-
-  public Future<Void> saveOrderLine(CompositePoLine compositePoLine, RequestContext requestContext) {
-    return saveOrderLine(compositePoLine, compositePoLine.getLocations(), requestContext);
-  }
-
-  public Future<Void> saveOrderLine(CompositePoLine compositePoLine, List<Location> locations, RequestContext requestContext) {
-    PoLine poLine = PoLineCommonUtil.convertToPoLine(compositePoLine);
-    return saveOrderLine(poLine, locations, requestContext);
   }
 
   public Future<Void> saveOrderLinesWithoutSearchLocationsUpdate(List<PoLine> orderLines, RequestContext requestContext) {
@@ -176,65 +160,6 @@ public class PurchaseOrderLineService {
     return promise.future();
   }
 
-  public Future<List<CompositePoLine>> getCompositePoLinesByOrderId(String orderId, RequestContext requestContext) {
-    return getOrderLines("purchaseOrderId==" + orderId, 0, Integer.MAX_VALUE, requestContext)
-      .compose(poLines -> requestContext.getContext().owner()
-        .<List<Future<CompositePoLine>>>executeBlocking(event -> {
-          if (CollectionUtils.isEmpty(poLines)) {
-            event.complete(new ArrayList<>());
-            return;
-          }
-
-          Semaphore semaphore = new Semaphore(SEMAPHORE_MAX_ACTIVE_THREADS, requestContext.getContext().owner());
-          List<Future<CompositePoLine>> futures = new ArrayList<>();
-          for (PoLine line : poLines) {
-            semaphore.acquire(() -> {
-              var future = operateOnPoLine(HttpMethod.GET, line, requestContext)
-                .onComplete(asyncResult -> semaphore.release());
-
-              futures.add(future);
-              if (futures.size() == poLines.size()) {
-                event.complete(futures);
-              }
-            });
-
-          }
-        }))
-      .compose(HelperUtils::collectResultsOnSuccess);
-  }
-
-  public Future<CompositePoLine> operateOnPoLine(HttpMethod operation, PoLine poline, RequestContext requestContext) {
-    Promise<CompositePoLine> promise = Promise.promise();
-    JsonObject line = JsonObject.mapFrom(poline);
-
-    List<Future<Void>> futures = new ArrayList<>();
-    futures.addAll(operateOnSubObjsIfPresent(operation, line, ALERTS, requestContext));
-    futures.addAll(operateOnSubObjsIfPresent(operation, line, REPORTING_CODES, requestContext));
-
-    GenericCompositeFuture.join(new ArrayList<>(futures))
-      .onSuccess(v -> promise.complete(line.mapTo(CompositePoLine.class)))
-      .onFailure(t -> {
-        logger.error("Exception resolving one or more poLine sub-object(s) on {} operation", operation, t);
-        promise.fail(t);
-      });
-    return promise.future();
-  }
-
-  private List<Future<Void>> operateOnSubObjsIfPresent(HttpMethod operation, JsonObject pol, String field, RequestContext requestContext) {
-    JsonArray array = new JsonArray();
-    List<Future<Void>> futures = new ArrayList<>();
-    ((Iterable<?>) pol.remove(field)).forEach(
-      fieldId -> futures.add(operateOnObject(operation, resourceByIdPath(field) + fieldId, requestContext)
-        .map(value -> {
-          if (value != null && !value.isEmpty()) {
-            array.add(value);
-          }
-          return null;
-        })));
-    pol.put(field, array);
-    return futures;
-  }
-
   public Future<JsonObject> operateOnObject(HttpMethod operation, String url, RequestContext requestContext) {
     return operateOnObject(operation, url, null, requestContext);
   }
@@ -275,114 +200,16 @@ public class PurchaseOrderLineService {
     return promise.future();
   }
 
-  public Future<JsonObject> updateOrderLineSummary(String poLineId, JsonObject poLine, RequestContext requestContext) {
-    logger.debug("Updating PO line...");
-    String endpoint = resourceByIdPath(PO_LINES_STORAGE, poLineId);
-    return operateOnObject(HttpMethod.PUT, endpoint, poLine, requestContext);
-  }
-  public Future<JsonObject> updatePoLineSubObjects(CompositePoLine compOrderLine, JsonObject lineFromStorage, RequestContext requestContext) {
-    JsonObject updatedLineJson = mapFrom(compOrderLine);
-    logger.debug("Updating PO line sub-objects...");
-
-    List<Future<Void>> futures = new ArrayList<>();
-
-    futures.add(handleSubObjsOperation(ALERTS, updatedLineJson, lineFromStorage, requestContext));
-    futures.add(handleSubObjsOperation(REPORTING_CODES, updatedLineJson, lineFromStorage, requestContext));
-
-    // Once all operations completed, return updated PO Line with new sub-object id's as json object
-    return GenericCompositeFuture.join(new ArrayList<>(futures))
-      .map(cf -> updatedLineJson);
-  }
-
-  private Future<String> handleSubObjOperation(String prop, JsonObject subObjContent, String storageId, RequestContext requestContext) {
-    final String url;
-    final HttpMethod operation;
-    // In case the id is available in the PO line from storage, depending on the request content the sub-object is going to be updated or removed
-    if (StringUtils.isNotEmpty(storageId)) {
-      url = resourceByIdPath(prop, storageId);
-      operation = (subObjContent != null) ? HttpMethod.PUT : HttpMethod.DELETE;
-    } else if (subObjContent != null) {
-      operation = HttpMethod.POST;
-      url = resourcesPath(prop);
-    } else {
-      // There is no object in storage nor in request - skipping operation
-      return Future.succeededFuture();
-    }
-
-    return operateOnObject(operation, url, subObjContent, requestContext)
-      .map(json -> {
-        if (operation == HttpMethod.PUT) {
-          return storageId;
-        } else if (operation == HttpMethod.POST && json.getString(ID) != null) {
-          return json.getString(ID);
-        }
-        return null;
-      });
-  }
-
-  private Future<Void> handleSubObjsOperation(String prop, JsonObject updatedLine, JsonObject lineFromStorage, RequestContext requestContext) {
-    List<Future<String>> futures = new ArrayList<>();
-    JsonArray idsInStorage = lineFromStorage.getJsonArray(prop);
-    JsonArray jsonObjects = updatedLine.getJsonArray(prop);
-
-    // Handle updated sub-objects content
-    if (jsonObjects != null && !jsonObjects.isEmpty()) {
-      // Clear array of object which will be replaced with array of id's
-      updatedLine.remove(prop);
-      for (int i = 0; i < jsonObjects.size(); i++) {
-        JsonObject subObj = jsonObjects.getJsonObject(i);
-        if (subObj != null  && subObj.getString(ID) != null) {
-          String id = idsInStorage.remove(subObj.getString(ID)) ? subObj.getString(ID) : null;
-
-          futures.add(handleSubObjOperation(prop, subObj, id, requestContext)
-            .recover(throwable -> {
-              Error error = handleProcessingError(throwable, prop, id);
-              throw new HttpException(500, error);
-            })
-          );
-        }
-      }
-    }
-
-    // The remaining unprocessed objects should be removed
-    for (int i = 0; i < idsInStorage.size(); i++) {
-      String id = idsInStorage.getString(i);
-      if (id != null) {
-        futures.add(handleSubObjOperation(prop, null, id, requestContext)
-          .otherwise(throwable -> {
-            handleProcessingError(throwable, prop, id);
-            // In case the object is not deleted, still keep reference to old id
-            return id;
-          })
-        );
-      }
-    }
-
-    return GenericCompositeFuture.join(new ArrayList<>(futures))
-      .map(newIds -> updatedLine.put(prop, newIds.list()))
-      .mapEmpty();
-  }
-
-  private Error handleProcessingError(Throwable exc, String propName, String propId) {
-    Error error = new Error().withMessage(exc.getMessage());
-    error.getParameters()
-      .add(new Parameter().withKey(propName)
-        .withValue(propId));
-
-    return error;
-  }
-
-
   /**
    * Does nothing if the order already has lines.
-   * Otherwise, populates the order with its lines from storage, without fetching alerts and reporting codes.
+   * Otherwise, populates the order with its lines from storage.
    */
   public Future<CompositePurchaseOrder> populateOrderLines(CompositePurchaseOrder compPO, RequestContext requestContext) {
-    if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
-      return getCompositePoLinesByOrderId(compPO.getId(), requestContext)
+    if (CollectionUtils.isEmpty(compPO.getPoLines())) {
+      return getPoLinesByOrderId(compPO.getId(), requestContext)
         .map(poLines -> {
           PoLineCommonUtil.sortPoLinesByPoLineNumber(poLines);
-          return compPO.withCompositePoLines(poLines);
+          return compPO.withPoLines(poLines);
         })
          .recover(t -> {
           Parameter idParam = new Parameter().withKey("orderId").withValue(compPO.getId());
@@ -430,13 +257,10 @@ public class PurchaseOrderLineService {
       .mapEmpty();
   }
 
-  public Future<Void> deletePoLine(PoLine line, RequestContext requestContext) {
-    return operateOnPoLine(HttpMethod.DELETE, line, requestContext)
-      .compose(poline -> {
-        String polineId = poline.getId();
-        return operateOnObject(HttpMethod.DELETE, resourceByIdPath(PO_LINES_STORAGE, polineId), requestContext)
-          .mapEmpty();
-      });
+  public Future<Void> deletePoLine(PoLine poLine, RequestContext requestContext) {
+    String polineId = poLine.getId();
+    return operateOnObject(HttpMethod.DELETE, resourceByIdPath(PO_LINES_STORAGE, polineId), requestContext)
+      .mapEmpty();
   }
 
   public boolean updatePoLineReceiptStatusWithoutSave(PoLine poLine, PoLine.ReceiptStatus status) {
@@ -462,14 +286,10 @@ public class PurchaseOrderLineService {
   }
 
 
-  public Future<Void> updateSearchLocations(CompositePoLine compositePoLine, RequestContext requestContext) {
-    return retrieveSearchLocationIds(compositePoLine.getLocations(), requestContext)
-      .map(compositePoLine::withSearchLocationIds)
+  public Future<Void> updateSearchLocations(PoLine poLine, RequestContext requestContext) {
+    return retrieveSearchLocationIds(poLine.getLocations(), requestContext)
+      .map(poLine::withSearchLocationIds)
       .mapEmpty();
-  }
-
-  private Future<Void> updateSearchLocations(PoLine poLine, RequestContext requestContext) {
-    return updateSearchLocations(poLine, poLine.getLocations(), requestContext);
   }
 
   private Future<Void> updateSearchLocations(PoLine poLine, List<Location> locations, RequestContext requestContext) {

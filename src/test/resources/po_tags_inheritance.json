@@ -15,11 +15,10 @@
     "createdDate": "2010-10-08T03:53:00.000",
     "createdByUserId": "ab18897b-0e40-4f31-896b-9c9adc979a88"
   },
-  "compositePoLines": [
+  "poLines": [
     {
       "id": "bb66b269-76ed-4616-8da9-730d9b817247",
       "acquisitionMethod": "df26d81b-9d63-4ff8-bf41-49bf75cfa70e",
-      "alerts": [],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "",
       "claims": [
@@ -92,7 +91,6 @@
       "publisher": "John Wiley & Sons, Inc.",
       "receiptDate": "2020-10-10T00:00:00.000Z",
       "receiptStatus": "Pending",
-      "reportingCodes": [],
       "requester": "",
       "rush": false,
       "selector": "Woods",

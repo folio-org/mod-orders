@@ -4,7 +4,7 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import org.folio.helper.PurchaseOrderLineHelper;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Ongoing;
@@ -38,7 +38,7 @@ public class OrderValidationServiceTest {
   @InjectMocks
   private OrderValidationService orderValidationService;
   @Mock
-  private CompositePoLineValidationService compositePoLineValidationService;
+  private PoLineValidationService poLineValidationService;
   @Mock
   private PurchaseOrderLineHelper purchaseOrderLineHelper;
   @Mock
@@ -54,9 +54,11 @@ public class OrderValidationServiceTest {
     mockitoMocks = MockitoAnnotations.openMocks(this);
 
     doReturn(succeededFuture(null))
-      .when(purchaseOrderLineHelper).setTenantDefaultCreateInventoryValues(any(CompositePoLine.class), any(JsonObject.class));
+      .when(purchaseOrderLineHelper).setTenantDefaultCreateInventoryValues(any(PoLine.class), any(JsonObject.class));
     doReturn(succeededFuture(List.of()))
-      .when(compositePoLineValidationService).validatePoLine(any(CompositePoLine.class), eq(requestContext));
+      .when(poLineValidationService).validatePoLine(any(PoLine.class), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(purchaseOrderLineService).validateAndNormalizeISBN(anyList(), eq(requestContext));
   }
 
   @AfterEach

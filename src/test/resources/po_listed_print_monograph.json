@@ -16,15 +16,10 @@
     "createdDate": "2010-10-08T03:53:00.000",
     "createdByUserId": "ab18897b-0e40-4f31-896b-9c9adc979a88"
   },
-  "compositePoLines": [
+  "poLines": [
     {
       "id": "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47",
       "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
-      "alerts": [
-        {
-          "alert": "Receipt overdue"
-        }
-      ],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "ABCDEFGHIJKLMNOPQRSTUVW",
       "claims": [
@@ -123,23 +118,6 @@
       "publisher": "Schiffer Publishing",
       "receiptDate": "2018-10-09T00:00:00.000Z",
       "receiptStatus": "Pending",
-      "reportingCodes": [
-        {
-          "code": "CODE1",
-          "id": "5926dcd7-85f5-4504-8283-712595ebc38b",
-          "description": "ABCDEF"
-        },
-        {
-          "code": "CODE2",
-          "id": "fa316c04-8101-4e72-8aaf-01281bac718f",
-          "description": "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        },
-        {
-          "code": "CODE3",
-          "id": "ea68b696-3125-4940-bf91-1d128323473e",
-          "description": "ABCDE"
-        }
-      ],
       "requester": "Leo Bulero",
       "rush": true,
       "selector": "ABCD",
@@ -171,7 +149,6 @@
     {
       "id": "c0d08448-347b-418a-8c2f-5fb50248d67e",
       "acquisitionMethod": "df26d81b-9d63-4ff8-bf41-49bf75cfa70e",
-      "alerts": [],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "",
       "claims": [
@@ -244,7 +221,6 @@
       "publisher": "John Wiley & Sons, Inc.",
       "receiptDate": "2020-10-10T00:00:00.000Z",
       "receiptStatus": "Pending",
-      "reportingCodes": [],
       "requester": "",
       "rush": false,
       "selector": "Woods",

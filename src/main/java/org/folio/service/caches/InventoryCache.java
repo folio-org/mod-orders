@@ -20,6 +20,7 @@ import static org.folio.orders.utils.CacheUtils.buildAsyncCache;
 
 @Component
 public class InventoryCache {
+
   private static final Logger log = LogManager.getLogger();
 
   private final AsyncCache<String, JsonObject> asyncJsonCache;

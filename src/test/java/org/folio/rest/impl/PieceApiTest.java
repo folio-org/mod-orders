@@ -73,7 +73,7 @@ import org.folio.HttpStatus;
 import org.folio.config.ApplicationConfig;
 import org.folio.orders.events.handlers.HandlersTestHelper;
 import org.folio.rest.jaxrs.model.CheckInPiece;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Error;
@@ -161,15 +161,15 @@ public class PieceApiTest {
   void testPostPhysicalPieceCancelledPurchaseOrder() {
     logger.info("=== Test POST physical piece with a cancelled purchase order ===");
 
-    CompositePoLine compositePoLine = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(14).mapTo(CompositePoLine.class);
-    CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(compositePoLine.getPurchaseOrderId()).withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.CLOSED);
-    Title tile = getTitle(compositePoLine);
+    PoLine poLine = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(14).mapTo(PoLine.class);
+    CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(poLine.getPurchaseOrderId()).withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.CLOSED);
+    Title tile = getTitle(poLine);
     addMockEntry(PURCHASE_ORDER_STORAGE, compositePurchaseOrder);
-    addMockEntry(PO_LINES_STORAGE, compositePoLine);
+    addMockEntry(PO_LINES_STORAGE, poLine);
     addMockEntry(TITLES, tile);
 
-    Location location = compositePoLine.getLocations().stream().findFirst().orElseThrow();
-    Piece piece = new Piece().withPoLineId(compositePoLine.getId())
+    Location location = poLine.getLocations().stream().findFirst().orElseThrow();
+    Piece piece = new Piece().withPoLineId(poLine.getId())
       .withTitleId(tile.getId())
       .withFormat(Piece.Format.PHYSICAL)
       .withLocationId(location.getLocationId())
@@ -195,7 +195,7 @@ public class PieceApiTest {
     for (JsonObject itemJson : itemsCreated) {
       logger.info("Item with from a cancelled purchase order: {}", JsonObject.mapFrom(itemJson).encodePrettily());
       assertThat(itemJson.getString(ID), is(createdPiece.getItemId()));
-      assertThat(itemJson.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER), is(compositePoLine.getId()));
+      assertThat(itemJson.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER), is(poLine.getId()));
       assertThat(itemJson.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), is(CheckInPiece.ItemStatus.ORDER_CLOSED.value()));
     }
   }
@@ -212,15 +212,15 @@ public class PieceApiTest {
   void testPostPieceCancelledOrderLine(int poLineIdx, CheckInPiece.ItemStatus itemStatus) {
     logger.info("=== Test POST physical piece with a cancelled order line ===");
 
-    CompositePoLine compositePoLine = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(poLineIdx).mapTo(CompositePoLine.class);
-    CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(compositePoLine.getPurchaseOrderId()).withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-    Title tile = getTitle(compositePoLine);
+    PoLine poLine = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(poLineIdx).mapTo(PoLine.class);
+    CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(poLine.getPurchaseOrderId()).withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    Title tile = getTitle(poLine);
     addMockEntry(PURCHASE_ORDER_STORAGE, compositePurchaseOrder);
-    addMockEntry(PO_LINES_STORAGE, compositePoLine);
+    addMockEntry(PO_LINES_STORAGE, poLine);
     addMockEntry(TITLES, tile);
 
-    Location location = compositePoLine.getLocations().stream().findFirst().orElseThrow();
-    Piece piece = new Piece().withPoLineId(compositePoLine.getId())
+    Location location = poLine.getLocations().stream().findFirst().orElseThrow();
+    Piece piece = new Piece().withPoLineId(poLine.getId())
       .withTitleId(tile.getId())
       .withFormat(Piece.Format.PHYSICAL)
       .withLocationId(location.getLocationId())
@@ -246,7 +246,7 @@ public class PieceApiTest {
     for (JsonObject itemJson : itemsCreated) {
       logger.info("Item with from a cancelled order line: {}", JsonObject.mapFrom(itemJson).encodePrettily());
       assertThat(itemJson.getString(ID), is(createdPiece.getItemId()));
-      assertThat(itemJson.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER), is(compositePoLine.getId()));
+      assertThat(itemJson.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER), is(poLine.getId()));
       assertThat(itemJson.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), is(itemStatus.value()));
     }
   }
@@ -310,7 +310,7 @@ public class PieceApiTest {
   void testPutPiecesByIdTest() throws Exception {
     logger.info("=== Test update piece by id - valid Id 204 ===");
 
-    CompositePoLine poLineForOpenOrder = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(5).mapTo(CompositePoLine.class);
+    PoLine poLineForOpenOrder = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(5).mapTo(PoLine.class);
     CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(poLineForOpenOrder.getPurchaseOrderId()).withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     addMockEntry(PURCHASE_ORDER_STORAGE, compositePurchaseOrder);
     addMockEntry(PO_LINES_STORAGE, poLineForOpenOrder);
@@ -389,7 +389,7 @@ public class PieceApiTest {
   void testPutPiecesByIdConsistentReceiptStatusTest() throws Exception {
     logger.info("=== Test update piece by id when receipt status is consistent - valid Id 204 ===");
 
-    CompositePoLine poLineForOpenOrder = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(5).mapTo(CompositePoLine.class);
+    PoLine poLineForOpenOrder = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(5).mapTo(PoLine.class);
     CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(poLineForOpenOrder.getPurchaseOrderId()).withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     addMockEntry(PURCHASE_ORDER_STORAGE, compositePurchaseOrder);
     addMockEntry(PO_LINES_STORAGE, poLineForOpenOrder);
@@ -436,12 +436,12 @@ public class PieceApiTest {
     CompositePurchaseOrder order = new CompositePurchaseOrder().withId(orderId);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(2);
-    CompositePoLine poLine = new CompositePoLine().withId(lineId).withPurchaseOrderId(order.getId())
+    PoLine poLine = new PoLine().withId(lineId).withPurchaseOrderId(order.getId())
       .withIsPackage(false).withPurchaseOrderId(orderId).withId(lineId)
-      .withOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE)
+      .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
       .withLocations(List.of(loc)).withCost(cost)
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM));
-    order.setCompositePoLines(Collections.singletonList(poLine));
+    order.setPoLines(Collections.singletonList(poLine));
     Title title = new Title().withId(titleId).withTitle("title name");
     Piece piece = new Piece().withFormat(Piece.Format.PHYSICAL).withId(UUID.randomUUID().toString())
       .withHoldingId(holdingId)
@@ -463,12 +463,12 @@ public class PieceApiTest {
     logger.info("=== Test delete piece by id - item deletion Internal Server Error ===");
 
     CompositePurchaseOrder order = new CompositePurchaseOrder().withId(UUID.randomUUID().toString());
-    CompositePoLine poLine = new CompositePoLine().withId(UUID.randomUUID().toString()).withPurchaseOrderId(order.getId())
+    PoLine poLine = new PoLine().withId(UUID.randomUUID().toString()).withPurchaseOrderId(order.getId())
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM));
     Piece piece = new Piece().withId(UUID.randomUUID().toString())
                               .withFormat(Piece.Format.PHYSICAL)
                               .withItemId(ID_FOR_INTERNAL_SERVER_ERROR).withPoLineId(poLine.getId());
-    order.setCompositePoLines(Collections.singletonList(poLine));
+    order.setPoLines(Collections.singletonList(poLine));
     MockServer.addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(piece));
     MockServer.addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
     MockServer.addMockEntry(PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(order));
@@ -488,12 +488,12 @@ public class PieceApiTest {
     CompositePurchaseOrder order = new CompositePurchaseOrder().withId(orderId);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(2);
-    CompositePoLine poLine = new CompositePoLine().withId(lineId).withPurchaseOrderId(order.getId())
+    PoLine poLine = new PoLine().withId(lineId).withPurchaseOrderId(order.getId())
       .withIsPackage(false).withPurchaseOrderId(orderId).withId(lineId)
-      .withOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE)
+      .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
       .withLocations(List.of(loc)).withCost(cost)
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.NONE));
-    order.setCompositePoLines(Collections.singletonList(poLine));
+    order.setPoLines(Collections.singletonList(poLine));
     Title title = new Title().withId(titleId).withTitle("title name");
     Piece piece = new Piece().withId(UUID.randomUUID().toString()).withPoLineId(poLine.getId()).withTitleId(titleId);
 
@@ -520,12 +520,12 @@ public class PieceApiTest {
     CompositePurchaseOrder order = new CompositePurchaseOrder().withId(orderId);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(2);
-    CompositePoLine poLine = new CompositePoLine().withId(lineId).withPurchaseOrderId(order.getId())
+    PoLine poLine = new PoLine().withId(lineId).withPurchaseOrderId(order.getId())
       .withIsPackage(false).withPurchaseOrderId(orderId).withId(lineId)
-      .withOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE)
+      .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
       .withLocations(List.of(loc)).withCost(cost)
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM));
-    order.setCompositePoLines(Collections.singletonList(poLine));
+    order.setPoLines(Collections.singletonList(poLine));
     Title title = new Title().withId(titleId).withTitle("title name");
 
     Piece piece = new Piece().withId(UUID.randomUUID().toString()).withFormat(Piece.Format.PHYSICAL)
@@ -548,7 +548,7 @@ public class PieceApiTest {
     logger.info("=== Test delete piece by id without requests ===");
 
     PurchaseOrder order = new PurchaseOrder().withId(UUID.randomUUID().toString());
-    CompositePoLine poLine = new CompositePoLine().withId(UUID.randomUUID().toString()).withPurchaseOrderId(order.getId())
+    PoLine poLine = new PoLine().withId(UUID.randomUUID().toString()).withPurchaseOrderId(order.getId())
       .withCost(new Cost().withQuantityElectronic(2));
     Title title = new Title().withId(UUID.randomUUID().toString()).withTitle("title name");
     Piece piece = new Piece().withId(UUID.randomUUID().toString())

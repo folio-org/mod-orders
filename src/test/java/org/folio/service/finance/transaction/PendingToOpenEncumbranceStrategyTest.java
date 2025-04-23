@@ -1,80 +1,74 @@
 package org.folio.service.finance.transaction;
 
-  import static io.vertx.core.Future.succeededFuture;
-  import static java.lang.Boolean.TRUE;
-  import static java.util.Collections.singletonList;
-  import static javax.money.Monetary.getDefaultRounding;
-  import static org.folio.TestConstants.COMP_ORDER_MOCK_DATA_PATH;
-  import static org.folio.TestConstants.PO_WFD_ID_OPEN_STATUS;
-  import static org.folio.TestUtils.getMockAsJson;
-  import static org.folio.rest.acq.model.finance.Transaction.TransactionType.ENCUMBRANCE;
-  import static org.folio.rest.acq.model.finance.Transaction.TransactionType.PENDING_PAYMENT;
-  import static org.folio.rest.core.exceptions.ErrorCodes.DELETE_WITH_EXPENDED_AMOUNT;
-  import static org.junit.jupiter.api.Assertions.assertEquals;
-  import static org.junit.jupiter.api.Assertions.assertNull;
-  import static org.junit.jupiter.api.Assertions.assertTrue;
-  import static org.mockito.ArgumentMatchers.any;
-  import static org.mockito.ArgumentMatchers.anyCollection;
-  import static org.mockito.ArgumentMatchers.anyList;
-  import static org.mockito.ArgumentMatchers.anyString;
-  import static org.mockito.ArgumentMatchers.argThat;
-  import static org.mockito.ArgumentMatchers.eq;
-  import static org.mockito.Mockito.doAnswer;
-  import static org.mockito.Mockito.doReturn;
-  import static org.mockito.Mockito.times;
-  import static org.mockito.Mockito.verify;
-  import static org.mockito.Mockito.when;
+import static io.vertx.core.Future.succeededFuture;
+import static java.lang.Boolean.TRUE;
+import static java.util.Collections.singletonList;
+import static javax.money.Monetary.getDefaultRounding;
+import static org.folio.TestConstants.COMP_ORDER_MOCK_DATA_PATH;
+import static org.folio.TestConstants.PO_WFD_ID_OPEN_STATUS;
+import static org.folio.TestUtils.getMockAsJson;
+import static org.folio.rest.acq.model.finance.Transaction.TransactionType.ENCUMBRANCE;
+import static org.folio.rest.acq.model.finance.Transaction.TransactionType.PENDING_PAYMENT;
+import static org.folio.rest.core.exceptions.ErrorCodes.DELETE_WITH_EXPENDED_AMOUNT;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
-  import java.util.List;
-  import java.util.UUID;
+import java.util.List;
+import java.util.UUID;
 
-  import io.vertx.core.Vertx;
-  import io.vertx.junit5.VertxExtension;
-  import io.vertx.junit5.VertxTestContext;
-  import org.folio.rest.acq.model.finance.AwaitingPayment;
-  import org.folio.rest.acq.model.finance.Budget;
-  import org.folio.rest.acq.model.finance.Encumbrance;
-  import org.folio.rest.acq.model.finance.FiscalYear;
-  import org.folio.rest.acq.model.finance.Fund;
-  import org.folio.rest.acq.model.finance.Ledger;
-  import org.folio.rest.acq.model.finance.Metadata;
-  import org.folio.rest.acq.model.finance.Transaction;
-  import org.folio.rest.acq.model.invoice.InvoiceLine;
-  import org.folio.rest.core.exceptions.HttpException;
-  import org.folio.rest.core.models.RequestContext;
-  import org.folio.rest.jaxrs.model.CompositePoLine;
-  import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-  import org.folio.rest.jaxrs.model.FundDistribution;
-  import org.folio.rest.jaxrs.model.Parameter;
-  import org.folio.service.FundsDistributionService;
-  import org.folio.service.exchange.ExchangeRateProviderResolver;
-  import org.folio.service.exchange.ManualCurrencyConversion;
-  import org.folio.service.finance.FiscalYearService;
-  import org.folio.service.finance.FundService;
-  import org.folio.service.finance.LedgerService;
-  import org.folio.service.finance.budget.BudgetRestrictionService;
-  import org.folio.service.finance.budget.BudgetService;
-  import org.folio.service.invoice.InvoiceLineService;
-  import org.folio.service.invoice.POLInvoiceLineRelationService;
-  import org.folio.service.orders.OrderInvoiceRelationService;
-  import org.junit.jupiter.api.BeforeEach;
-  import org.junit.jupiter.api.Test;
-  import org.junit.jupiter.api.extension.ExtendWith;
-  import org.mockito.ArgumentCaptor;
-  import org.mockito.Captor;
-  import org.mockito.Mock;
-  import org.mockito.junit.jupiter.MockitoExtension;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
+import org.folio.rest.acq.model.finance.AwaitingPayment;
+import org.folio.rest.acq.model.finance.Budget;
+import org.folio.rest.acq.model.finance.Encumbrance;
+import org.folio.rest.acq.model.finance.ExchangeRate;
+import org.folio.rest.acq.model.finance.FiscalYear;
+import org.folio.rest.acq.model.finance.Fund;
+import org.folio.rest.acq.model.finance.Ledger;
+import org.folio.rest.acq.model.finance.Metadata;
+import org.folio.rest.acq.model.finance.Transaction;
+import org.folio.rest.acq.model.invoice.InvoiceLine;
+import org.folio.rest.core.exceptions.HttpException;
+import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.FundDistribution;
+import org.folio.rest.jaxrs.model.Parameter;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.service.FundsDistributionService;
+import org.folio.service.exchange.CacheableExchangeRateService;
+import org.folio.service.finance.FiscalYearService;
+import org.folio.service.finance.FundService;
+import org.folio.service.finance.LedgerService;
+import org.folio.service.finance.budget.BudgetRestrictionService;
+import org.folio.service.finance.budget.BudgetService;
+import org.folio.service.invoice.InvoiceLineService;
+import org.folio.service.invoice.POLInvoiceLineRelationService;
+import org.folio.service.orders.OrderInvoiceRelationService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-  import io.vertx.core.Future;
-  import io.vertx.core.json.JsonObject;
-
-  import javax.money.MonetaryAmount;
-  import javax.money.convert.ConversionQuery;
-  import javax.money.convert.ExchangeRateProvider;
+import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
 
 @ExtendWith(MockitoExtension.class)
 @ExtendWith(VertxExtension.class)
 public class PendingToOpenEncumbranceStrategyTest {
+
   public static final String ORDER_PATH = COMP_ORDER_MOCK_DATA_PATH + PO_WFD_ID_OPEN_STATUS + ".json";
 
   private PendingToOpenEncumbranceStrategy pendingToOpenEncumbranceStrategy;
@@ -89,15 +83,13 @@ public class PendingToOpenEncumbranceStrategyTest {
   @Mock
   private FiscalYearService fiscalYearService;
   @Mock
-  private ExchangeRateProviderResolver exchangeRateProviderResolver;
-  @Mock
-  private ExchangeRateProvider exchangeRateProvider;
-  @Mock
-  private ManualCurrencyConversion currencyConversion;
+  private ExchangeRate exchangeRate;
   @Mock
   private BudgetService budgetService;
   @Mock
   private LedgerService ledgerService;
+  @Mock
+  private CacheableExchangeRateService cacheableExchangeRateService;
   @Mock
   private RequestContext requestContext;
   @Captor
@@ -112,7 +104,7 @@ public class PendingToOpenEncumbranceStrategyTest {
     FundsDistributionService fundsDistributionService = new FundsDistributionService();
     BudgetRestrictionService budgetRestrictionService = new BudgetRestrictionService();
     EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder = new EncumbranceRelationsHoldersBuilder(
-      encumbranceService, fundService, fiscalYearService, exchangeRateProviderResolver, budgetService, ledgerService);
+      encumbranceService, fundService, fiscalYearService, budgetService, ledgerService, cacheableExchangeRateService);
     EncumbrancesProcessingHolderBuilder encumbrancesProcessingHolderBuilder = new EncumbrancesProcessingHolderBuilder();
     PendingPaymentService pendingPaymentService = new PendingPaymentService(transactionService);
     POLInvoiceLineRelationService polInvoiceLineRelationService = new POLInvoiceLineRelationService(invoiceLineService,
@@ -126,8 +118,8 @@ public class PendingToOpenEncumbranceStrategyTest {
   void testUpdatingAReleasedEncumbranceWithACancelledInvoice(VertxTestContext vertxTestContext) {
     // Given
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine poLine = order.getCompositePoLines().get(0);
-    FundDistribution fd1 = poLine.getFundDistribution().get(0);
+    PoLine poLine = order.getPoLines().getFirst();
+    FundDistribution fd1 = poLine.getFundDistribution().getFirst();
     String fundId1 = fd1.getFundId();
     String fundId2 = "1b6d3338-186e-4e35-9e75-1b886b0da53e";
     String encumbranceId = fd1.getEncumbrance();
@@ -184,14 +176,8 @@ public class PendingToOpenEncumbranceStrategyTest {
       .withId(invoiceLineId)
       .withInvoiceLineStatus(InvoiceLine.InvoiceLineStatus.CANCELLED);
 
-    doReturn(Vertx.vertx().getOrCreateContext())
-      .when(requestContext).getContext();
-    doReturn(exchangeRateProvider)
-      .when(exchangeRateProviderResolver).resolve(any(), eq(requestContext));
-    doReturn(currencyConversion)
-      .when(exchangeRateProvider).getCurrencyConversion(any(ConversionQuery.class));
-    doAnswer(invocation -> invocation.getArgument(0))
-      .when(currencyConversion).apply(any(MonetaryAmount.class));
+    doReturn(Future.succeededFuture(exchangeRate))
+      .when(cacheableExchangeRateService).getExchangeRate(any(), any(), any(), eq(requestContext));
     doReturn(succeededFuture(List.of(invoiceLine)))
       .when(invoiceLineService).getInvoiceLinesByOrderLineIds(anyList(), eq(requestContext));
     doReturn(succeededFuture(singletonList(released)))
@@ -212,8 +198,8 @@ public class PendingToOpenEncumbranceStrategyTest {
           .getTransactionsByIds(anyList(), eq(requestContext));
         List<List<Transaction>> transactionLists = transactionListCaptor.getAllValues();
         assertEquals(1, transactionLists.size());
-        assertEquals(1, transactionLists.get(0).size());
-        assertEquals(Encumbrance.Status.RELEASED, transactionLists.get(0).get(0).getEncumbrance().getStatus());
+        assertEquals(1, transactionLists.getFirst().size());
+        assertEquals(Encumbrance.Status.RELEASED, transactionLists.getFirst().getFirst().getEncumbrance().getStatus());
         vertxTestContext.completeNow();
       }))
       .onFailure(vertxTestContext::failNow);
@@ -223,8 +209,8 @@ public class PendingToOpenEncumbranceStrategyTest {
   void testDeletingAnEncumbranceWithAPendingPayment(VertxTestContext vertxTestContext) {
     // Given
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine poLine = order.getCompositePoLines().get(0);
-    FundDistribution fd = poLine.getFundDistribution().get(0);
+    PoLine poLine = order.getPoLines().getFirst();
+    FundDistribution fd = poLine.getFundDistribution().getFirst();
     String fundId = fd.getFundId();
     String encumbranceId = fd.getEncumbrance();
     String invoiceLineId = UUID.randomUUID().toString();
@@ -232,7 +218,7 @@ public class PendingToOpenEncumbranceStrategyTest {
     String pendingPaymentId = UUID.randomUUID().toString();
 
     CompositePurchaseOrder orderFromStorage = JsonObject.mapFrom(order).mapTo(CompositePurchaseOrder.class);
-    poLine.getFundDistribution().remove(0);
+    poLine.getFundDistribution().removeFirst();
 
     Encumbrance encumbrance = new Encumbrance()
       .withSourcePurchaseOrderId(order.getId())
@@ -275,7 +261,7 @@ public class PendingToOpenEncumbranceStrategyTest {
       .when(invoiceLineService).getInvoiceLinesByOrderLineIds(anyList(), eq(requestContext));
     String expectedQuery = "awaitingPayment.encumbranceId==(" + encumbranceId + ")";
     doReturn(succeededFuture(pendingPayments))
-      .when(transactionService).getTransactions(eq(expectedQuery), eq(requestContext));
+      .when(transactionService).getTransactions(expectedQuery, requestContext);
     doReturn(succeededFuture(singletonList(released)))
       .when(transactionService).getTransactionsByIds(argThat(list -> list.size() == 1), eq(requestContext));
     doReturn(succeededFuture(null))
@@ -300,15 +286,15 @@ public class PendingToOpenEncumbranceStrategyTest {
         List<List<String>> idLists = idListCaptor.getAllValues();
         assertEquals(1, transactionLists.size());
         assertEquals(1, idLists.size());
-        assertEquals(2, transactionLists.get(0).size());
-        assertEquals(1, idLists.get(0).size());
-        assertEquals(Encumbrance.Status.RELEASED, transactionLists.get(0).get(0).getEncumbrance().getStatus());
-        Transaction updatedEncumbrance = transactionLists.get(0).get(0);
+        assertEquals(2, transactionLists.getFirst().size());
+        assertEquals(1, idLists.getFirst().size());
+        assertEquals(Encumbrance.Status.RELEASED, transactionLists.getFirst().getFirst().getEncumbrance().getStatus());
+        Transaction updatedEncumbrance = transactionLists.getFirst().getFirst();
         assertEquals(ENCUMBRANCE, updatedEncumbrance.getTransactionType());
         assertEquals(encumbranceId, updatedEncumbrance.getId());
-        String deletedId = idLists.get(0).get(0);
+        String deletedId = idLists.getFirst().getFirst();
         assertEquals(encumbranceId, deletedId);
-        Transaction updatedPendingPayment = transactionLists.get(0).get(1);
+        Transaction updatedPendingPayment = transactionLists.getFirst().get(1);
         assertEquals(PENDING_PAYMENT, updatedPendingPayment.getTransactionType());
         assertEquals(pendingPaymentId, updatedPendingPayment.getId());
         assertNull(updatedPendingPayment.getAwaitingPayment().getEncumbranceId());
@@ -321,13 +307,13 @@ public class PendingToOpenEncumbranceStrategyTest {
   void testDeletingAnEncumbranceWithExpendedAmountGreaterThanZero(VertxTestContext vertxTestContext) {
     // Given
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine poLine = order.getCompositePoLines().get(0);
-    FundDistribution fd = poLine.getFundDistribution().get(0);
+    PoLine poLine = order.getPoLines().getFirst();
+    FundDistribution fd = poLine.getFundDistribution().getFirst();
     String fundId = fd.getFundId();
     String encumbranceId = fd.getEncumbrance();
 
     CompositePurchaseOrder orderFromStorage = JsonObject.mapFrom(order).mapTo(CompositePurchaseOrder.class);
-    poLine.getFundDistribution().remove(0);
+    poLine.getFundDistribution().removeFirst();
 
     Encumbrance encumbrance = new Encumbrance()
       .withSourcePurchaseOrderId(order.getId())

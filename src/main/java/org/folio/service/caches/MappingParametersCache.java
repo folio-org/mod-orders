@@ -137,8 +137,8 @@ public class MappingParametersCache {
     var tenantConfigurationAddressesFuture = getTenantConfigurationAddresses(params);
 
     return GenericCompositeFuture.join(Arrays.asList(locationsFuture, materialTypesFuture, contributorNameTypesFuture,
-      organizationsFuture, fundsFuture, identifierTypesFuture, expenseClassesFuture, acquisitionsUnitsFuture,
-      acquisitionsMethodsFuture, tenantConfigurationAddressesFuture))
+        organizationsFuture, fundsFuture, identifierTypesFuture, expenseClassesFuture, acquisitionsUnitsFuture,
+        acquisitionsMethodsFuture, tenantConfigurationAddressesFuture))
       .map(v -> new MappingParameters()
         .withLocations(locationsFuture.result())
         .withMaterialTypes(materialTypesFuture.result())
@@ -177,7 +177,7 @@ public class MappingParametersCache {
   }
 
   private Future<List<Organization>> getRemainingOrganizations(OkapiConnectionParams params,
-                                                              OrganizationCollection organizationCollection) {
+                                                               OrganizationCollection organizationCollection) {
     return collectResultsOnSuccess(getOrganizationCollectionFutures(params.getHeaders(), organizationCollection.getTotalRecords()))
       .map(orgCollections -> orgCollections.stream()
         .flatMap(orgCollection -> orgCollection.getOrganizations().stream())

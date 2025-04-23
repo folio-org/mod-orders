@@ -4,7 +4,6 @@
   "checkinItems" : false,
   "acquisitionMethod" : "482bb632-c2b3-4320-be10-11b18a925bbc",
   "instanceId" : "69640328-788e-43fc-9c3c-af39e243f3b7",
-  "alerts" : [ ],
   "claims" : [ ],
   "contributors" : [ {
     "contributor" : "Moutinho, Luiz",
@@ -56,7 +55,6 @@
   "publisher" : "Palgrave Macmillan",
   "purchaseOrderId" : "00000000-1111-2222-8888-999999999999",
   "receiptStatus" : "Pending",
-  "reportingCodes" : [ ],
   "source" : "User",
   "titleOrPackage" : "Futures, biometrics and neuroscience research Luiz Moutinho, Mladen Sokele, editors",
   "vendorDetail" : {

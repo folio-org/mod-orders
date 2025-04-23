@@ -50,7 +50,7 @@ import static org.folio.TestUtils.getMinimalOrder;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
 import static org.folio.TestUtils.getTitle;
-import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
+import static org.folio.orders.utils.HelperUtils.PO_LINES;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.FUND_ID;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
@@ -58,7 +58,6 @@ import static org.folio.orders.utils.QueryUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITION_METHODS;
-import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.BUDGETS;
 import static org.folio.orders.utils.ResourcePathResolver.CURRENT_BUDGET;
 import static org.folio.orders.utils.ResourcePathResolver.DATA_EXPORT_SPRING_CREATE_JOB;
@@ -84,7 +83,6 @@ import static org.folio.orders.utils.ResourcePathResolver.PREFIXES;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.REASONS_FOR_CLOSURE;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
-import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.ROUTING_LISTS;
 import static org.folio.orders.utils.ResourcePathResolver.SUFFIXES;
 import static org.folio.orders.utils.ResourcePathResolver.TAGS;
@@ -163,11 +161,9 @@ import org.folio.Organization;
 import org.folio.OrganizationCollection;
 import org.folio.helper.BaseHelper;
 import org.folio.rest.RestVerticle;
-import org.folio.rest.acq.model.Alert;
 import org.folio.rest.acq.model.OrderInvoiceRelationshipCollection;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
-import org.folio.rest.acq.model.ReportingCode;
 import org.folio.rest.acq.model.SequenceNumber;
 import org.folio.rest.acq.model.SequenceNumbers;
 import org.folio.rest.acq.model.Title;
@@ -198,14 +194,13 @@ import org.folio.rest.jaxrs.model.AcquisitionsUnit;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembership;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.OrderTemplate;
 import org.folio.rest.jaxrs.model.OrderTemplateCollection;
-import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.Prefix;
 import org.folio.rest.jaxrs.model.PrefixCollection;
@@ -339,6 +334,7 @@ public class MockServer {
   public static final String MOCK_DATA_MATERIAL_TYPES_JSON = "mockdata/material-types/material-types.json";
   public static final String MOCK_DATA_WRAPPER_PIECES_JSON = "mockdata/wrapper-pieces/wrapper-pieces.json";
   public static final String MOCK_DATA_WRAPPER_PIECES_BY_ID_JSON = "mockdata/wrapper-pieces/wrapper-pieces-by-id.json";
+  private static final String PO_ID_FOR_FAILURE_CASE = "bad500aa-aaaa-500a-aaaa-aaaaaaaaaaaa";
 
   public static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
   public static HashMap<String, List<String>> serverRqQueries = new HashMap<>();
@@ -351,13 +347,13 @@ public class MockServer {
     this.vertx = Vertx.vertx();
   }
 
-  public static void addMockTitles(List<CompositePoLine> poLines) {
+  public static void addMockTitles(List<PoLine> poLines) {
     poLines.stream()
       .filter(line -> !line.getIsPackage() && isNotEmpty(line.getId()))
       .forEach(line -> addMockEntry(TITLES, getTitle(line)));
   }
 
-  public static void addMockOrderData(List<CompositePoLine> poLines) {
+  public static void addMockOrderData(List<PoLine> poLines) {
     poLines.stream()
       .filter(poLine -> !poLine.getIsPackage() && isNotEmpty(poLine.getId()))
       .forEach(poLine -> {
@@ -367,7 +363,7 @@ public class MockServer {
       });
   }
 
-  public static void addMockTitleWithId(CompositePoLine poLine, String titleId) {
+  public static void addMockTitleWithId(PoLine poLine, String titleId) {
     org.folio.rest.jaxrs.model.Title newTitle = getTitle(poLine);
     newTitle.setId(titleId);
     addMockEntry(TITLES, newTitle);
@@ -599,8 +595,6 @@ public class MockServer {
     router.post("/item-storage/items").handler(this::handlePostItemStorRecord);
     router.post("/holdings-storage/holdings").handler(this::handlePostHoldingRecord);
     router.post(resourcesPath(PO_LINES_STORAGE)).handler(this::handlePostPOLine);
-    router.post(resourcesPath(ALERTS)).handler(ctx -> handlePostGenericSubObj(ctx, ALERTS));
-    router.post(resourcesPath(REPORTING_CODES)).handler(ctx -> handlePostGenericSubObj(ctx, REPORTING_CODES));
     router.post(resourcesPath(PIECES_STORAGE)).handler(ctx -> handlePostGenericSubObj(ctx, PIECES_STORAGE));
     router.post(resourcesPath(PIECES_STORAGE_BATCH)).handler(this::handlePostPiecesBatch);
     router.post(resourcesPath(ORDER_TEMPLATES)).handler(ctx -> handlePostGenericSubObj(ctx, ORDER_TEMPLATES));
@@ -636,8 +630,6 @@ public class MockServer {
     router.get("/circulation/requests").handler(this::handleGetItemRequests);
     router.get(resourcesPath(PO_LINES_STORAGE)).handler(this::handleGetPoLines);
     router.get(resourcePath(PO_LINES_STORAGE)).handler(this::handleGetPoLineById);
-    router.get(resourcePath(ALERTS)).handler(ctx -> handleGetGenericSubObj(ctx, ALERTS));
-    router.get(resourcePath(REPORTING_CODES)).handler(ctx -> handleGetGenericSubObj(ctx, REPORTING_CODES));
     router.get(resourcesPath(PO_NUMBER)).handler(this::handleGetPoNumber);
     router.get(resourcesPath(PIECES_STORAGE)).handler(this::handleGetPieces);
     router.get(resourcePath(PIECES_STORAGE)).handler(this::handleGetPieceById);
@@ -694,8 +686,6 @@ public class MockServer {
     router.put(resourcesPath(PO_LINES_BATCH_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES_BATCH_STORAGE));
     router.put(resourcePath(PIECES_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PIECES_STORAGE));
     router.put(resourcesPath(PIECES_STORAGE_BATCH)).handler(this::handlePutPiecesBatch); // without id param
-    router.put(resourcePath(REPORTING_CODES)).handler(ctx -> handlePutGenericSubObj(ctx, REPORTING_CODES));
-    router.put(resourcePath(ALERTS)).handler(ctx -> handlePutGenericSubObj(ctx, ALERTS));
     router.put("/inventory/items/:id").handler(ctx -> handlePutGenericSubObj(ctx, ITEM_RECORDS));
     router.put("/holdings-storage/holdings/:id").handler(ctx -> handlePutGenericSubObj(ctx, ITEM_RECORDS));
     router.put(resourcePath(ACQUISITIONS_UNITS)).handler(ctx -> handlePutGenericSubObj(ctx, ACQUISITIONS_UNITS));
@@ -710,8 +700,6 @@ public class MockServer {
     // DELETE
     router.delete(resourcePath(PURCHASE_ORDER_STORAGE)).handler(ctx -> handleDeleteGenericSubObj(ctx, PURCHASE_ORDER_STORAGE));
     router.delete(resourcePath(PO_LINES_STORAGE)).handler(ctx -> handleDeleteGenericSubObj(ctx, PO_LINES_STORAGE));
-    router.delete(resourcePath(ALERTS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ALERTS));
-    router.delete(resourcePath(REPORTING_CODES)).handler(ctx -> handleDeleteGenericSubObj(ctx, REPORTING_CODES));
     router.delete(resourcePath(PIECES_STORAGE)).handler(ctx -> handleDeleteGenericSubObj(ctx, PIECES_STORAGE));
     router.delete(resourcePath(ACQUISITIONS_UNITS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ACQUISITIONS_UNITS));
     router.delete(resourcePath(ACQUISITION_METHODS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ACQUISITION_METHODS));
@@ -1708,7 +1696,7 @@ public class MockServer {
             }
             JsonObject compPO = new JsonObject(getMockData(filePath));
             // Build PoLineCollection to make sure content is valid
-            poLineCollection = buildPoLineCollection(tenant, compPO.getJsonArray(COMPOSITE_PO_LINES), poId);
+            poLineCollection = buildPoLineCollection(tenant, compPO.getJsonArray(PO_LINES), poId);
           }
         } else {
           // Attempt to find POLine in mock server memory
@@ -1768,14 +1756,11 @@ public class MockServer {
     if (lines == null || lines.isEmpty()) {
       result.setTotalRecords(0);
     } else {
-      // Transform composite PO Lines to storage representation
+      // Transform PO Lines to storage representation
       List<PoLine> poLines = lines
         .stream()
         .map(JsonObject::mapFrom)
-        .map(line -> {
-          replaceObjectsByIds(line, ALERTS, REPORTING_CODES);
-          return line.mapTo(PoLine.class);
-        })
+        .map(line -> line.mapTo(PoLine.class))
         .map(line -> line.withPurchaseOrderId(StringUtils.isNotEmpty(poId) ? poId : UUID.randomUUID().toString()))
         .collect(Collectors.toList());
 
@@ -1795,18 +1780,6 @@ public class MockServer {
       }
     }
     return result;
-  }
-
-  private void replaceObjectsByIds(JsonObject line, String... property) {
-    for (String prop : property) {
-      JsonArray objs = (JsonArray) line.remove(prop);
-      if (objs != null) {
-        line.put(prop, new JsonArray(objs.stream()
-          .map(o -> JsonObject.mapFrom(o).getString(ID))
-          .filter(Objects::nonNull)
-          .collect(Collectors.toList())));
-      }
-    }
   }
 
   private void handleGetPoLineById(RoutingContext ctx) {
@@ -2179,9 +2152,12 @@ public class MockServer {
       JsonObject po = getMockEntry(PURCHASE_ORDER_STORAGE, id).orElse(null);
       // If previous step has no result then attempt to find PO in stubs
       if (po == null) {
+        if (PO_ID_FOR_FAILURE_CASE.equals(id)) {
+          serverResponse(ctx, 404, APPLICATION_JSON, id);
+        }
         if (MIN_PO_ID.equals(id)) {
           CompositePurchaseOrder compPO = getMinimalContentCompositePurchaseOrder();
-          compPO.setCompositePoLines(null);
+          compPO.setPoLines(null);
           compPO.setTotalItems(null);
           compPO.setTotalEstimatedPrice(null);
           serverResponse(ctx, 200, APPLICATION_JSON, encodePrettily(compPO));
@@ -2195,7 +2171,7 @@ public class MockServer {
           filePath = String.format("%s%s.json", COMP_ORDER_MOCK_DATA_PATH, id);
         }
         po = new JsonObject(getMockData(filePath));
-        po.remove(COMPOSITE_PO_LINES);
+        po.remove(PO_LINES);
         po.remove("totalEstimatedPrice");
         po.remove("totalItems");
         // Validate the content against schema
@@ -2206,7 +2182,7 @@ public class MockServer {
       if (po.getString("orderType") == null) {
         po.put("orderType", org.folio.rest.acq.model.PurchaseOrder.OrderType.ONE_TIME.value());
       }
-      po.remove(COMPOSITE_PO_LINES);
+      po.remove(PO_LINES);
       po.remove("totalEstimatedPrice");
       po.remove("totalItems");
       addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER_STORAGE, po);
@@ -2232,12 +2208,12 @@ public class MockServer {
       orderCollection
         .withPurchaseOrders(
           postedOrders.stream()
-            .peek(order -> order.remove(COMPOSITE_PO_LINES))
+            .peek(order -> order.remove(PO_LINES))
             .map(order -> order.mapTo(PurchaseOrder.class))
             .collect(Collectors.toList()))
         .withTotalRecords(orderCollection.getPurchaseOrders().size());
       po = JsonObject.mapFrom(orderCollection);
-      po.remove(COMPOSITE_PO_LINES);
+      po.remove(PO_LINES);
       po.remove("totalEstimatedPrice");
       po.remove("totalItems");
 
@@ -2447,8 +2423,6 @@ public class MockServer {
 
   private Class<?> getSubObjClass(String subObj) {
     return switch (subObj) {
-      case ALERTS -> Alert.class;
-      case REPORTING_CODES -> ReportingCode.class;
       case PIECES_STORAGE -> Piece.class;
       case ACQUISITIONS_UNITS -> AcquisitionsUnit.class;
       case ACQUISITION_METHODS -> AcquisitionMethod.class;

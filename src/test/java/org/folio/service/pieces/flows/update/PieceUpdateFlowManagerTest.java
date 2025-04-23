@@ -34,17 +34,15 @@ import java.util.concurrent.TimeoutException;
 import org.folio.ApiTestSuite;
 import org.folio.models.ItemStatus;
 import org.folio.models.pieces.PieceUpdateHolder;
-import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceBatchStatusCollection;
-import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.ProtectionService;
@@ -188,8 +186,8 @@ public class PieceUpdateFlowManagerTest {
     doNothing().when(pieceService).receiptConsistencyPiecePoLine(anyString(), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceUpdateFlowPoLineService).updatePoLine(pieceUpdateHolderCapture.capture(), eq(requestContext));
     doReturn(succeededFuture(null))
-      .when(purchaseOrderLineService).saveOrderLine(any(CompositePoLine.class),
-        eq(PieceUtil.findOrderPieceLineLocation(pieceToUpdate, PoLineCommonUtil.convertToCompositePoLine(poLine))),
+      .when(purchaseOrderLineService).saveOrderLine(any(PoLine.class),
+        eq(PieceUtil.findOrderPieceLineLocation(pieceToUpdate, poLine)),
         eq(requestContext));
 
     //When

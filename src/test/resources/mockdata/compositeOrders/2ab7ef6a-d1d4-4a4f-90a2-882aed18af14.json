@@ -15,11 +15,10 @@
     "createdDate": "2018-06-29T00:00:00.000",
     "createdByUserId": "28d0f99c-d137-11e8-a8d5-f2801f1b9fd1"
   },
-  "compositePoLines": [
+  "poLines": [
     {
       "id": "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47",
       "acquisitionMethod": "df26d81b-9d63-4ff8-bf41-49bf75cfa70e",
-      "alerts": [],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "",
       "claims": [
@@ -89,7 +88,6 @@
       "purchaseOrderId": "2ab7ef6a-d1d4-4a4f-90a2-882aed18af14",
       "receiptDate": null,
       "receiptStatus": "Awaiting Receipt",
-      "reportingCodes": [],
       "requester": "",
       "rush": false,
       "selector": "Stevens",
@@ -112,7 +110,6 @@
     {
       "id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd2",
       "acquisitionMethod": "df26d81b-9d63-4ff8-bf41-49bf75cfa70e",
-      "alerts": [],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "",
       "claims": [
@@ -182,7 +179,6 @@
       "purchaseOrderId": "2ab7ef6a-d1d4-4a4f-90a2-882aed18af14",
       "receiptDate": null,
       "receiptStatus": "Awaiting Receipt",
-      "reportingCodes": [],
       "requester": "",
       "rush": false,
       "selector": "Brown",
@@ -204,7 +200,6 @@
     {
       "id": "c2755a78-2f8d-47d0-a218-059a9b7391b4",
       "acquisitionMethod": "df26d81b-9d63-4ff8-bf41-49bf75cfa70e",
-      "alerts": [],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "",
       "claims": [
@@ -274,7 +269,6 @@
       "purchaseOrderId": "2ab7ef6a-d1d4-4a4f-90a2-882aed18af14",
       "receiptDate": null,
       "receiptStatus": "Awaiting Receipt",
-      "reportingCodes": [],
       "requester": "",
       "rush": false,
       "selector": "Brown",

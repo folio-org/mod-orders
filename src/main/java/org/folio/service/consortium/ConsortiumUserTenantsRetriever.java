@@ -4,6 +4,7 @@ import com.github.benmanes.caffeine.cache.AsyncCache;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import jakarta.annotation.PostConstruct;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.rest.core.RestClient;
@@ -13,7 +14,6 @@ import org.springframework.beans.factory.annotation.Value;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.folio.orders.utils.CacheUtils.buildAsyncCache;
@@ -32,16 +32,19 @@ public class ConsortiumUserTenantsRetriever {
   private static final String CONSORTIA_USER_TENANTS_ENDPOINT = resourcesPath(CONSORTIA_USER_TENANTS);
   private static final String USER_TENANTS_CACHE_KEY_TEMPLATE = "%s.%s";
 
+  private final RestClient restClient;
+  private AsyncCache<String, List<String>> asyncCache;
+
   @Value("${orders.cache.consortium-user-tenants.expiration.time.seconds:60}")
   private long cacheExpirationTime;
 
-  private final RestClient restClient;
-  private final AsyncCache<String, List<String>> asyncCache;
-
   public ConsortiumUserTenantsRetriever(RestClient restClient) {
     this.restClient = restClient;
-    var context = Vertx.currentContext();
-    asyncCache = buildAsyncCache(context, cacheExpirationTime);
+  }
+
+  @PostConstruct
+  void init() {
+    this.asyncCache = buildAsyncCache(Vertx.currentContext(), cacheExpirationTime);
   }
 
   public Future<List<String>> getUserTenants(String consortiumId, String centralTenantId, RequestContext requestContext) {
@@ -72,7 +75,6 @@ public class ConsortiumUserTenantsRetriever {
     return IntStream.range(0, userTenants.size())
       .mapToObj(userTenants::getJsonObject)
       .map(userTenant -> userTenant.getString(TENANT_ID.getValue()))
-      .collect(Collectors.toList());
+      .toList();
   }
-
 }

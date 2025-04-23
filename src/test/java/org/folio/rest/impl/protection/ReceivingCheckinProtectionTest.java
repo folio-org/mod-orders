@@ -46,7 +46,7 @@ import org.folio.ApiTestSuite;
 import org.folio.HttpStatus;
 import org.folio.config.ApplicationConfig;
 import org.folio.rest.jaxrs.model.CheckinCollection;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.ProcessingStatus;
@@ -187,9 +187,9 @@ public class ReceivingCheckinProtectionTest extends ProtectedEntityTestBase {
   @Test
   void testReceivingCompositeFlow() {
     CompositePurchaseOrder purchaseOrder = new CompositePurchaseOrder().withId(UUID.randomUUID().toString());
-    CompositePoLine expectedFlowPoLine = getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(EXPECTED_FLOW_PO_LINE_ID);
-    CompositePoLine randomPoLine1 = getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_1);
-    CompositePoLine randomPoLine2 = getMinimalContentCompositePoLine(ORDER_WITH_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_2);
+    PoLine expectedFlowPoLine = getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(EXPECTED_FLOW_PO_LINE_ID);
+    PoLine randomPoLine1 = getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_1);
+    PoLine randomPoLine2 = getMinimalContentCompositePoLine(ORDER_WITH_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_2);
     List.of(expectedFlowPoLine, randomPoLine1, randomPoLine2).forEach(line -> addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(line.withPurchaseOrderId(purchaseOrder.getId()))));
     addMockEntry(PURCHASE_ORDER_STORAGE, purchaseOrder);
 
@@ -234,9 +234,9 @@ public class ReceivingCheckinProtectionTest extends ProtectedEntityTestBase {
   @Test
   void testCheckInCompositeFlow() {
     CompositePurchaseOrder purchaseOrder = new CompositePurchaseOrder().withId(UUID.randomUUID().toString());
-    CompositePoLine expectedFlowPoLine = getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(EXPECTED_FLOW_PO_LINE_ID);
-    CompositePoLine randomPoLine1 = getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_1);
-    CompositePoLine randomPoLine2 = getMinimalContentCompositePoLine(ORDER_WITH_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_2);
+    PoLine expectedFlowPoLine = getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(EXPECTED_FLOW_PO_LINE_ID);
+    PoLine randomPoLine1 = getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_1);
+    PoLine randomPoLine2 = getMinimalContentCompositePoLine(ORDER_WITH_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_2);
     List.of(expectedFlowPoLine, randomPoLine1, randomPoLine2).forEach(line -> addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(line.withPurchaseOrderId(purchaseOrder.getId()))));
     addMockEntry(PURCHASE_ORDER_STORAGE, purchaseOrder);
 
@@ -283,7 +283,7 @@ public class ReceivingCheckinProtectionTest extends ProtectedEntityTestBase {
     CompositePurchaseOrder order = getMinimalContentCompositePurchaseOrder().withAcqUnitIds(units).withId(getRandomId());
     addMockEntry(PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(order));
 
-    CompositePoLine poLine = getMinimalContentCompositePoLine(order.getId()).withId(EXPECTED_FLOW_PO_LINE_ID);
+    PoLine poLine = getMinimalContentCompositePoLine(order.getId()).withId(EXPECTED_FLOW_PO_LINE_ID);
     addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
 
     Title title = getTitle(poLine).withAcqUnitIds(units);
@@ -306,7 +306,7 @@ public class ReceivingCheckinProtectionTest extends ProtectedEntityTestBase {
     CompositePurchaseOrder order = getMinimalContentCompositePurchaseOrder().withAcqUnitIds(units).withId(getRandomId());
     addMockEntry(PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(order));
 
-    CompositePoLine poLine = getMinimalContentCompositePoLine(order.getId()).withId(EXPECTED_FLOW_PO_LINE_ID);
+    PoLine poLine = getMinimalContentCompositePoLine(order.getId()).withId(EXPECTED_FLOW_PO_LINE_ID);
     addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
 
     Title title = getTitle(poLine).withAcqUnitIds(units);

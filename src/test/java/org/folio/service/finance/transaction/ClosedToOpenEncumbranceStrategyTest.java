@@ -24,7 +24,7 @@ import java.util.UUID;
 import io.vertx.junit5.VertxExtension;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.FundDistribution;
@@ -73,12 +73,12 @@ public class ClosedToOpenEncumbranceStrategyTest {
     // Given
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
 
-    Map<String, List<CompositePoLine>> mapFiscalYearsWithCompPOLines = new HashMap<>();
+    Map<String, List<PoLine>> mapFiscalYearsWithPoLines = new HashMap<>();
     String fiscalYearId = UUID.randomUUID().toString();
-    mapFiscalYearsWithCompPOLines.put(fiscalYearId, singletonList(new CompositePoLine().withId(UUID.randomUUID().toString())));
+    mapFiscalYearsWithPoLines.put(fiscalYearId, singletonList(new PoLine().withId(UUID.randomUUID().toString())));
     CompositePurchaseOrder orderFromStorage = JsonObject.mapFrom(order).mapTo(CompositePurchaseOrder.class);
     orderFromStorage.setWorkflowStatus(WorkflowStatus.CLOSED);
-    doReturn(succeededFuture(mapFiscalYearsWithCompPOLines)).when(encumbranceRelationsHoldersBuilder).retrieveMapFiscalYearsWithCompPOLines(eq(order), eq(orderFromStorage), eq(requestContext));
+    doReturn(succeededFuture(mapFiscalYearsWithPoLines)).when(encumbranceRelationsHoldersBuilder).retrieveMapFiscalYearsWithPoLines(eq(order), eq(orderFromStorage), eq(requestContext));
 
     doReturn(succeededFuture(emptyList())).when(encumbranceService).getOrderEncumbrancesToUnrelease(any(), any(), any());
 
@@ -113,18 +113,18 @@ public class ClosedToOpenEncumbranceStrategyTest {
       .withWorkflowStatus(WorkflowStatus.OPEN);
     FundDistribution fd = new FundDistribution()
       .withEncumbrance(UUID.randomUUID().toString());
-    CompositePoLine poLine = new CompositePoLine()
+    PoLine poLine = new PoLine()
       .withId(poLineId)
       .withPurchaseOrderId(order.getId())
       .withFundDistribution(singletonList(fd));
-    order.setCompositePoLines(Collections.singletonList(poLine));
+    order.setPoLines(Collections.singletonList(poLine));
 
-    Map<String, List<CompositePoLine>> mapFiscalYearsWithCompPOLines = new HashMap<>();
+    Map<String, List<PoLine>> mapFiscalYearsWithPoLines = new HashMap<>();
     String fiscalYearId = UUID.randomUUID().toString();
-    mapFiscalYearsWithCompPOLines.put(fiscalYearId, singletonList(new CompositePoLine().withId(UUID.randomUUID().toString())));
+    mapFiscalYearsWithPoLines.put(fiscalYearId, singletonList(new PoLine().withId(UUID.randomUUID().toString())));
     CompositePurchaseOrder orderFromStorage = JsonObject.mapFrom(order).mapTo(CompositePurchaseOrder.class);
     orderFromStorage.setWorkflowStatus(WorkflowStatus.CLOSED);
-    doReturn(succeededFuture(mapFiscalYearsWithCompPOLines)).when(encumbranceRelationsHoldersBuilder).retrieveMapFiscalYearsWithCompPOLines(eq(order), eq(orderFromStorage), eq(requestContext));
+    doReturn(succeededFuture(mapFiscalYearsWithPoLines)).when(encumbranceRelationsHoldersBuilder).retrieveMapFiscalYearsWithPoLines(eq(order), eq(orderFromStorage), eq(requestContext));
 
     doReturn(succeededFuture(emptyList())).when(encumbranceService).getOrderEncumbrancesToUnrelease(any(), any(), any());
 

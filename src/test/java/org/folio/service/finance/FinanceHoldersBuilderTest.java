@@ -4,23 +4,23 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.apache.commons.lang.StringUtils;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.ReEncumbranceHolder;
 import org.folio.rest.acq.model.finance.Budget;
+import org.folio.rest.acq.model.finance.ExchangeRate;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Ledger;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.FundDistribution;
-import org.folio.service.exchange.ExchangeRateProviderResolver;
-import org.folio.service.exchange.ManualCurrencyConversion;
-import org.folio.service.exchange.ManualExchangeRateProvider;
+import org.folio.service.exchange.CacheableExchangeRateService;
 import org.folio.service.finance.budget.BudgetService;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
@@ -31,8 +31,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import javax.money.convert.ConversionQuery;
-import javax.money.convert.ExchangeRateProvider;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -51,6 +49,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -58,6 +57,7 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(VertxExtension.class)
 public class FinanceHoldersBuilderTest {
+
   @InjectMocks
   private FinanceHoldersBuilder financeHoldersBuilder;
   @Mock
@@ -67,9 +67,9 @@ public class FinanceHoldersBuilderTest {
   @Mock
   private LedgerService ledgerService;
   @Mock
-  private ExchangeRateProviderResolver exchangeRateProviderResolver;
-  @Mock
   private FiscalYearService fiscalYearService;
+  @Mock
+  private CacheableExchangeRateService cacheableExchangeRateService;
   @Mock
   private RequestContext requestContext;
 
@@ -79,26 +79,27 @@ public class FinanceHoldersBuilderTest {
   private EncumbranceRelationsHolder holder3;
 
   @BeforeEach
-  public void initMocks(){
+  public void initMocks() {
     mockitoMocks = MockitoAnnotations.openMocks(this);
 
     FundDistribution distribution1 = new FundDistribution().withFundId(UUID.randomUUID().toString()).withCode("FUND1");
 
-    CompositePoLine line1 = new CompositePoLine().withId(UUID.randomUUID().toString())
+    // Source/base/from currency
+    PoLine line1 = new PoLine().withId(UUID.randomUUID().toString())
       .withPoLineNumber("1")
       .withCost(new Cost().withCurrency("USD"))
       .withFundDistribution(Collections.singletonList(distribution1));
 
     FundDistribution distribution2 = new FundDistribution().withFundId(UUID.randomUUID().toString()).withCode("FUND2");
 
-    CompositePoLine line2 = new CompositePoLine().withId(UUID.randomUUID().toString())
+    PoLine line2 = new PoLine().withId(UUID.randomUUID().toString())
       .withPoLineNumber("2")
       .withCost(new Cost().withCurrency("USD"))
       .withFundDistribution(Collections.singletonList(distribution2));
 
     FundDistribution distribution3 = new FundDistribution().withFundId(UUID.randomUUID().toString());
 
-    CompositePoLine line3 = new CompositePoLine().withId(UUID.randomUUID().toString())
+    PoLine line3 = new PoLine().withId(UUID.randomUUID().toString())
       .withCost(new Cost().withCurrency("EUR"))
       .withFundDistribution(Collections.singletonList(distribution3));
 
@@ -122,7 +123,9 @@ public class FinanceHoldersBuilderTest {
 
   @AfterEach
   public void resetMocks() throws Exception {
-    mockitoMocks.close();
+    if (mockitoMocks != null) {
+      mockitoMocks.close();
+    }
   }
 
   @Test
@@ -141,6 +144,7 @@ public class FinanceHoldersBuilderTest {
     Budget budget3 = new Budget().withId(UUID.randomUUID().toString()).withFundId(holder3.getFundId());
 
     String fiscalYearId = UUID.randomUUID().toString();
+    // Destination/term/to currency
     FiscalYear fiscalYear = new FiscalYear().withId(fiscalYearId).withCurrency("RUB");
 
     List<EncumbranceRelationsHolder> holders = List.of(holder1, holder2, holder3);
@@ -153,14 +157,8 @@ public class FinanceHoldersBuilderTest {
       .thenReturn(Future.succeededFuture(fiscalYear));
     when(budgetService.getBudgetsByQuery(anyString(), any()))
       .thenReturn(Future.succeededFuture(List.of(budget1, budget2, budget3)));
-    ExchangeRateProvider exchangeRateProvider = mock(ManualExchangeRateProvider.class);
-    when(exchangeRateProviderResolver.resolve(any(), any()))
-      .thenReturn(exchangeRateProvider);
-    when(exchangeRateProvider.getCurrencyConversion(any(ConversionQuery.class)))
-      .thenAnswer(invocation -> {
-        ConversionQuery conversionQuery = invocation.getArgument(0);
-        return mock(ManualCurrencyConversion.class, conversionQuery.getBaseCurrency().getCurrencyCode());
-      });
+    when(cacheableExchangeRateService.getExchangeRate(any(), any(), any(), eq(requestContext)))
+      .thenReturn(Future.succeededFuture(mock(ExchangeRate.class)));
     when(requestContext.getContext())
       .thenReturn(Vertx.vertx().getOrCreateContext());
 
@@ -186,10 +184,18 @@ public class FinanceHoldersBuilderTest {
           hasProperty("currency", is(fiscalYear.getCurrency()))
         ))));
 
-        assertEquals("USD", holder1.getPoLineToFyConversion().toString());
-        assertEquals("USD", holder2.getPoLineToFyConversion().toString());
+        // Assertion is changed to validate against a real provider object with a proper toString() implementation
+        assertTrue(StringUtils.contains(holder1.getPoLineToFyConversion().toString(), "baseCurrency=USD"));
+        assertTrue(StringUtils.contains(holder1.getPoLineToFyConversion().toString(), "termCurrency=RUB"));
+
+        assertTrue(StringUtils.contains(holder2.getPoLineToFyConversion().toString(), "baseCurrency=USD"));
+        assertTrue(StringUtils.contains(holder2.getPoLineToFyConversion().toString(), "termCurrency=RUB"));
+
+        // The same currency is used so the currency conversion object is reused
         assertSame(holder1.getPoLineToFyConversion(), holder2.getPoLineToFyConversion());
-        assertEquals("EUR", holder3.getPoLineToFyConversion().toString());
+
+        assertTrue(StringUtils.contains(holder3.getPoLineToFyConversion().toString(), "baseCurrency=EUR"));
+        assertTrue(StringUtils.contains(holder3.getPoLineToFyConversion().toString(), "termCurrency=RUB"));
 
         vertxTestContext.completeNow();
       });
@@ -207,14 +213,14 @@ public class FinanceHoldersBuilderTest {
     verify(ledgerService, never()).getLedgersByIds(anyCollection(), any());
     verify(fiscalYearService, never()).getCurrentFiscalYear(anyString(), any());
     verify(budgetService, never()).getBudgetsByQuery(anyString(), any());
-    verify(exchangeRateProviderResolver, never()).resolve(any(), any());
+    verify(cacheableExchangeRateService, never()).getExchangeRate(any(), any(), any(), any());
   }
 
   @Test
   void shouldNotFailIfHoldersHaveNoFund() {
-    EncumbranceRelationsHolder holder1 = new EncumbranceRelationsHolder().withFundDistribution(new FundDistribution());
-    EncumbranceRelationsHolder holder2 = new EncumbranceRelationsHolder().withFundDistribution(new FundDistribution());
-    List<EncumbranceRelationsHolder> holders = List.of(holder1, holder2);
+    EncumbranceRelationsHolder encumbranceRelationsHolder1 = new EncumbranceRelationsHolder().withFundDistribution(new FundDistribution());
+    EncumbranceRelationsHolder encumbranceRelationsHolder2 = new EncumbranceRelationsHolder().withFundDistribution(new FundDistribution());
+    List<EncumbranceRelationsHolder> holders = List.of(encumbranceRelationsHolder1, encumbranceRelationsHolder2);
 
     Future<Void> f = financeHoldersBuilder.withFinances(holders, requestContext);
 
@@ -254,7 +260,7 @@ public class FinanceHoldersBuilderTest {
     Future<Void> f = financeHoldersBuilder.withFinances(holders, requestContext);
 
     // Then
-    HttpException httpException = (HttpException)f.cause();
+    HttpException httpException = (HttpException) f.cause();
     assertEquals(422, httpException.getCode());
     Error error = httpException.getError();
     assertEquals(BUDGET_NOT_FOUND_FOR_FISCAL_YEAR.getCode(), error.getCode());
@@ -286,14 +292,16 @@ public class FinanceHoldersBuilderTest {
       .withFiscalYearId(fiscalYear1.getId());
 
     var holders = List.of(holder1, holder2);
-    holders.get(0).withPurchaseOrder(new CompositePurchaseOrder().withId(purchaseOrderId));
+    holders.getFirst().withPurchaseOrder(new CompositePurchaseOrder().withId(purchaseOrderId));
 
     when(fundService.getAllFunds(anyCollection(), any()))
       .thenReturn(Future.succeededFuture(List.of(fund1, fund2)));
     when(ledgerService.getLedgersByIds(anyCollection(), any()))
       .thenReturn(Future.succeededFuture(List.of(ledger1, ledger2)));
-    when(fiscalYearService.getCurrentFiscalYear(anyString(), any()))
+    when(fiscalYearService.getCurrentFiscalYear(eq(ledger1.getId()), any()))
       .thenReturn(Future.succeededFuture(fiscalYear1));
+    when(fiscalYearService.getCurrentFiscalYear(eq(ledger2.getId()), any()))
+      .thenReturn(Future.succeededFuture(fiscalYear2));
     when(budgetService.getBudgetsByQuery(anyString(), any()))
       .thenReturn(Future.succeededFuture(List.of(budget1)));
 
@@ -301,7 +309,7 @@ public class FinanceHoldersBuilderTest {
     Future<Void> f = financeHoldersBuilder.withFinances(holders, requestContext);
 
     // Then
-    HttpException httpException = (HttpException)f.cause();
+    HttpException httpException = (HttpException) f.cause();
     assertEquals(422, httpException.getCode());
     Error error = httpException.getError();
     assertEquals(MULTIPLE_FISCAL_YEARS.getCode(), error.getCode());
@@ -318,5 +326,4 @@ public class FinanceHoldersBuilderTest {
     assertThat(holders, Matchers.is(empty()));
     verify(fundService, never()).getFunds(anyCollection(), any());
   }
-
 }

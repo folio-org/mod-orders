@@ -54,9 +54,9 @@ import org.folio.service.TitlesServiceTest;
 import org.folio.service.UserServiceTest;
 import org.folio.service.consortium.ConsortiumConfigurationServiceTest;
 import org.folio.service.consortium.SharingInstanceServiceTest;
-import org.folio.service.exchange.ExchangeRateProviderResolverTest;
+import org.folio.service.exchange.CacheableExchangeRateServiceTest;
 import org.folio.service.exchange.ManualCurrencyConversionTest;
-import org.folio.service.exchange.ManualExchangeRateProviderTest;
+import org.folio.service.exchange.CustomExchangeRateProviderTest;
 import org.folio.service.expenceclass.ExpenseClassValidationServiceTest;
 import org.folio.service.finance.FinanceHoldersBuilderTest;
 import org.folio.service.finance.FiscalYearServiceTest;
@@ -78,7 +78,7 @@ import org.folio.service.invoice.InvoiceLineServiceTest;
 import org.folio.service.orders.AcquisitionsUnitsServiceTest;
 import org.folio.service.orders.CombinedOrderDataPopulateServiceTest;
 import org.folio.service.orders.CompositeOrderRetrieveHolderBuilderTest;
-import org.folio.service.orders.CompositePoLineValidationServiceTest;
+import org.folio.service.orders.PoLineValidationServiceTest;
 import org.folio.service.orders.FundsDistributionServiceTest;
 import org.folio.service.orders.OrderInvoiceRelationServiceTest;
 import org.folio.service.orders.OrderReEncumberServiceTest;
@@ -269,15 +269,11 @@ public class ApiTestSuite {
   }
 
   @Nested
-  class ManualExchangeRateProviderTestNested extends ManualExchangeRateProviderTest {
+  class CustomExchangeRateProviderTestNested extends CustomExchangeRateProviderTest {
   }
 
   @Nested
   class ManualCurrencyConversionTestNested extends ManualCurrencyConversionTest {
-  }
-
-  @Nested
-  class ExchangeRateProviderResolverTestNested extends ExchangeRateProviderResolverTest {
   }
 
   @Nested
@@ -385,7 +381,7 @@ public class ApiTestSuite {
   }
 
   @Nested
-  class CompositePoLineValidationServiceTestNested extends CompositePoLineValidationServiceTest {
+  class PoLineValidationServiceTestNested extends PoLineValidationServiceTest {
   }
 
   @Nested
@@ -574,5 +570,10 @@ public class ApiTestSuite {
 
   @Nested
   class TitlesServiceTestNested extends TitlesServiceTest {
+  }
+
+
+  @Nested
+  class CacheableExchangeRateServiceTestNested extends CacheableExchangeRateServiceTest {
   }
 }

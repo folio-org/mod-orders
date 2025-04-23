@@ -67,17 +67,17 @@ import io.vertx.core.Future;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
-
 @ExtendWith(VertxExtension.class)
 public class PieceStorageServiceTest {
 
   private static final String USER_TENANTS_PATH = BASE_MOCK_DATA_PATH + "userTenants/";
   private static final String USER_TENANTS_MOCK = "userTenants";
-
   private static final String PIECES_PATH = BASE_MOCK_DATA_PATH + "pieces/";
   private static final String PIECES_MOCK = "pieces-for-user-tenants";
-
   private static final String REQUEST_TENANT_ID = "tenantId";
+  private static boolean runningOnOwn;
+
+  private final Context ctx = getFirstContextFromVertx(getVertx());
 
   @Autowired
   PieceStorageService pieceStorageService;
@@ -89,16 +89,14 @@ public class PieceStorageServiceTest {
   SettingsRetriever settingsRetriever;
 
   @Autowired
-  private RestClient restClientMock;
-
-  private final Context ctx = getFirstContextFromVertx(getVertx());
+  private RestClient restClient;
 
   private RequestContext requestContext;
-  private static boolean runningOnOwn;
+  private AutoCloseable openMocks;
 
   @BeforeEach
   void initMocks(){
-    MockitoAnnotations.openMocks(this);
+    openMocks = MockitoAnnotations.openMocks(this);
     autowireDependencies(this);
     var okapiHeadersMock = new HashMap<String, String>();
     okapiHeadersMock.put(OKAPI_URL, "http://localhost:" + mockPort);
@@ -109,8 +107,11 @@ public class PieceStorageServiceTest {
   }
 
   @AfterEach
-  void resetMocks() {
-    reset(restClientMock);
+  void resetMocks() throws Exception {
+    reset(restClient);
+    if (openMocks != null) {
+      openMocks.close();
+    }
   }
 
   @BeforeAll
@@ -132,20 +133,19 @@ public class PieceStorageServiceTest {
 
   @Test
   void testPiecesShouldBeReturnedByQuery(VertxTestContext vertxTestContext) {
-    String pieceId = UUID.randomUUID()
-      .toString();
+    String pieceId = UUID.randomUUID().toString();
     List<Piece> pieces = Collections.singletonList(new Piece().withId(pieceId));
 
     PieceCollection pieceCollection = new PieceCollection().withPieces(pieces)
       .withTotalRecords(1);
 
-    when(restClientMock.get(any(RequestEntry.class), any(), any())).thenReturn(Future.succeededFuture(pieceCollection));
+    when(restClient.get(any(RequestEntry.class), any(), any())).thenReturn(Future.succeededFuture(pieceCollection));
     when(consortiumConfigurationService.getConsortiumConfiguration(any(RequestContext.class))).thenReturn(Future.succeededFuture(Optional.empty()));
 
     String expectedQuery = String.format("id==%s", pieceId);
     var future = pieceStorageService.getAllPieces(expectedQuery, requestContext);
 
-    verify(restClientMock).get(any(RequestEntry.class), eq(PieceCollection.class), eq(requestContext));
+    verify(restClient).get(any(RequestEntry.class), eq(PieceCollection.class), eq(requestContext));
     vertxTestContext.assertComplete(future)
       .onComplete(result -> {
         assertEquals(pieceCollection, result.result());
@@ -155,18 +155,18 @@ public class PieceStorageServiceTest {
 
   @Test
   void testShouldDeleteItems() {
-    //given
+    // Given
     doReturn(succeededFuture(null)).when(pieceStorageService).deletePiece(any(String.class), eq(requestContext));
-    //When
+    // When
     pieceStorageService.deletePiecesByIds(List.of(UUID.randomUUID().toString()), requestContext).result();
-    //Then
+    // Then
     verify(pieceStorageService, times(1)).deletePiece(any(String.class), eq(requestContext));
   }
 
-  @ParameterizedTest(name = "{index} {0}")
+  @ParameterizedTest
+  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   @MethodSource("testGetPiecesFilterByUserTenantsParams")
-  void testGetPiecesFilterByUserTenants(String testCaseName, Optional<ConsortiumConfiguration> consortiumConfiguration,
-                                        Boolean shouldFilter, VertxTestContext vertxTestContext) {
+  void testGetPiecesFilterByUserTenants(Optional<ConsortiumConfiguration> consortiumConfiguration, Boolean shouldFilter, VertxTestContext vertxTestContext) {
     var userTenantsMockData = getMockAsJson(USER_TENANTS_PATH, USER_TENANTS_MOCK);
     var piecesMockData = getMockAsJson(PIECES_PATH, PIECES_MOCK).mapTo(PieceCollection.class);
 
@@ -175,16 +175,16 @@ public class PieceStorageServiceTest {
     doReturn(Future.succeededFuture(Optional.of(new Setting().withValue((shouldFilter.toString())))))
       .when(settingsRetriever).getSettingByKey(eq(SettingKey.CENTRAL_ORDERING_ENABLED), any(RequestContext.class));
     doReturn(Future.succeededFuture(piecesMockData))
-      .when(restClientMock).get(any(RequestEntry.class), eq(PieceCollection.class), any(RequestContext.class));
+      .when(restClient).get(any(RequestEntry.class), eq(PieceCollection.class), any(RequestContext.class));
 
     if (shouldFilter) {
-      doReturn(Future.succeededFuture(userTenantsMockData)).when(restClientMock).getAsJsonObject(any(), any(RequestContext.class));
+      doReturn(Future.succeededFuture(userTenantsMockData)).when(restClient).getAsJsonObject(any(), any(RequestContext.class));
     }
 
     var future = pieceStorageService.getPieces(Integer.MAX_VALUE, 0, null, requestContext);
 
-    verify(restClientMock, times(1)).get(any(RequestEntry.class), eq(PieceCollection.class), eq(requestContext));
-    verify(restClientMock, times(shouldFilter ? 1 : 0)).getAsJsonObject(any(), any(RequestContext.class));
+    verify(restClient, times(1)).get(any(RequestEntry.class), eq(PieceCollection.class), eq(requestContext));
+    verify(restClient, times(shouldFilter ? 1 : 0)).getAsJsonObject(any(), any(RequestContext.class));
     verify(consortiumConfigurationService, times(1)).getConsortiumConfiguration(eq(requestContext));
 
     vertxTestContext.assertComplete(future)
@@ -205,12 +205,10 @@ public class PieceStorageServiceTest {
   }
 
   private static Stream<Arguments> testGetPiecesFilterByUserTenantsParams() {
-    var consortiumConfigurationCentral = Optional.of(new ConsortiumConfiguration(REQUEST_TENANT_ID, UUID.randomUUID().toString()));
-    var consortiumConfigurationMember = Optional.of(new ConsortiumConfiguration("centralTenantId", UUID.randomUUID().toString()));
     return Stream.of(
-      Arguments.of("ECS - Central", consortiumConfigurationCentral, true),
-      Arguments.of("ECS - Member", consortiumConfigurationMember, false),
-      Arguments.of("Non-ECS", Optional.empty(), false)
+      Arguments.of(Optional.of(new ConsortiumConfiguration(REQUEST_TENANT_ID, UUID.randomUUID().toString())), true),
+      Arguments.of(Optional.of(new ConsortiumConfiguration("centralTenantId", UUID.randomUUID().toString())), false),
+      Arguments.of(Optional.empty(), false)
     );
   }
 
@@ -238,11 +236,11 @@ public class PieceStorageServiceTest {
     PieceCollection pieceCollection = new PieceCollection().withPieces(pieces)
       .withTotalRecords(1);
 
-    when(restClientMock.get(any(RequestEntry.class), any(), any())).thenReturn(Future.succeededFuture(pieceCollection));
+    when(restClient.get(any(RequestEntry.class), any(), any())).thenReturn(Future.succeededFuture(pieceCollection));
 
     var future = pieceStorageService.getPiecesByLineIdAndTitleId(lineId, titleId, requestContext);
 
-    verify(restClientMock).get(any(RequestEntry.class), eq(PieceCollection.class), eq(requestContext));
+    verify(restClient).get(any(RequestEntry.class), eq(PieceCollection.class), eq(requestContext));
     vertxTestContext.assertComplete(future)
       .onComplete(result -> {
         assertEquals(pieceCollection.getPieces(), result.result());
@@ -284,7 +282,5 @@ public class PieceStorageServiceTest {
     SettingsRetriever settingsRetriever(RestClient restClient) {
       return spy(new SettingsRetriever(restClient));
     }
-
   }
-
 }

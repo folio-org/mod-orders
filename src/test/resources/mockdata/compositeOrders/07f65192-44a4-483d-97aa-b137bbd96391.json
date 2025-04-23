@@ -13,11 +13,10 @@
     "createdDate": "2018-07-18T00:00:00.000",
     "createdByUserId": "28d102a2-d137-11e8-a8d5-f2801f1b9fd1"
   },
-  "compositePoLines": [
+  "poLines": [
     {
       "id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1",
       "acquisitionMethod": "df26d81b-9d63-4ff8-bf41-49bf75cfa70e",
-      "alerts": [],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "",
       "claims": [
@@ -58,7 +57,7 @@
         "createInventory": "Instance",
         "trial": false,
         "expectedActivation": "2019-01-01T00:00:00.000Z",
-        "userLimit": 0,
+        "userLimit": "0",
         "accessProvider": "fde2cad6-cde3-11e8-a8d5-f2801f1b9fd1",
         "license": {
           "code": "Code 1",
@@ -91,7 +90,6 @@
       "publisher": "American Chemical Society",
       "purchaseOrderId": "07f65192-44a4-483d-97aa-b137bbd96390",
       "receiptDate": null,
-      "reportingCodes": [],
       "requester": "",
       "rush": false,
       "selector": "Buchanan",

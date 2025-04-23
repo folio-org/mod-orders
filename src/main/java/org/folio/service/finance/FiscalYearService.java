@@ -17,6 +17,7 @@ import java.util.concurrent.CompletionException;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
 import io.vertx.core.Vertx;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.log4j.Log4j2;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.FiscalYearCollection;
@@ -40,23 +41,26 @@ public class FiscalYearService {
   private static final String FISCAL_YEAR_BY_SERIES_QUERY = "series==\"%s\" AND periodEnd>=%s sortBy periodStart";
   private static final String CACHE_KEY_TEMPLATE = "%s.%s";
 
-  @Value("${orders.cache.fiscal-years.expiration.time.seconds:300}")
-  private long cacheExpirationTime;
-  private final AsyncCache<String, String> currentFiscalYearCacheBySeries;
-  private final AsyncCache<String, String> seriesCacheByFiscalYearId;
-
   private final RestClient restClient;
   private final FundService fundService;
   private final ConfigurationEntriesCache configurationEntriesCache;
+  private AsyncCache<String, String> currentFiscalYearCacheBySeries;
+  private AsyncCache<String, String> seriesCacheByFiscalYearId;
 
+  @Value("${orders.cache.fiscal-years.expiration.time.seconds:300}")
+  private long cacheExpirationTime;
 
   public FiscalYearService(RestClient restClient, FundService fundService, ConfigurationEntriesCache configurationEntriesCache) {
     this.restClient = restClient;
     this.fundService = fundService;
     this.configurationEntriesCache = configurationEntriesCache;
+  }
+
+  @PostConstruct
+  void init() {
     var context = Vertx.currentContext();
-    currentFiscalYearCacheBySeries = buildAsyncCache(context, cacheExpirationTime);
-    seriesCacheByFiscalYearId = buildAsyncCache(context, cacheExpirationTime);
+    this.currentFiscalYearCacheBySeries = buildAsyncCache(context, cacheExpirationTime);
+    this.seriesCacheByFiscalYearId = buildAsyncCache(context, cacheExpirationTime);
   }
 
   public Future<FiscalYear> getCurrentFiscalYear(String ledgerId, RequestContext requestContext) {
@@ -82,7 +86,7 @@ public class FiscalYearService {
   /**
    * Retrieves the current fiscal year ID for the series related to the fiscal year corresponding to the given ID.
    *
-   * @param fiscalYearId fiscal year ID
+   * @param fiscalYearId   fiscal year ID
    * @param requestContext {@link RequestContext} to be used for the request
    * @return future with the current fiscal year ID
    */
@@ -123,7 +127,7 @@ public class FiscalYearService {
       return null;
     }
     if (fiscalYears.size() == 1) {
-      return fiscalYears.get(0).getId();
+      return fiscalYears.getFirst().getId();
     }
     var now = new Date();
     var firstYear = fiscalYears.get(0);
@@ -137,7 +141,6 @@ public class FiscalYearService {
   }
 
   private boolean isFiscalYearNotFound(Throwable t) {
-    return t instanceof HttpException && ((HttpException) t).getCode() == 404;
+    return t instanceof HttpException ht && ht.getCode() == 404;
   }
-
 }

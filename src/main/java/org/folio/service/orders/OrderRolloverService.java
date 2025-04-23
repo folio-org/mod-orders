@@ -2,8 +2,8 @@ package org.folio.service.orders;
 
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.toList;
 import static one.util.streamex.StreamEx.ofSubLists;
+import static org.folio.orders.utils.HelperUtils.buildConversionQuery;
 import static org.folio.orders.utils.HelperUtils.calculateCostUnitsTotal;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
@@ -11,32 +11,36 @@ import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverError.ErrorType.ORDER_ROLLOVER;
 import static org.folio.rest.jaxrs.model.RolloverStatus.ERROR;
 import static org.folio.rest.jaxrs.model.RolloverStatus.SUCCESS;
+import static org.folio.service.exchange.ManualCurrencyConversion.OperationMode.DIVIDE;
+import static org.folio.service.exchange.ManualCurrencyConversion.OperationMode.MULTIPLY;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import javax.money.Monetary;
 import javax.money.MonetaryAmount;
-import javax.money.convert.ConversionQuery;
 import javax.money.convert.CurrencyConversion;
-import javax.money.convert.ExchangeRateProvider;
 
 import io.vertx.core.AsyncResult;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.dao.FailedLedgerRolloverPoLineDao;
 import org.folio.models.FailedLedgerRolloverPoLineDto;
 import org.folio.models.PoLineEncumbrancesHolder;
+import org.folio.models.RolloverConversionHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
-import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverProgress;
@@ -54,8 +58,8 @@ import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.RolloverStatus;
 import org.folio.service.caches.ConfigurationEntriesCache;
-import org.folio.service.exchange.ExchangeRateProviderResolver;
-import org.folio.service.exchange.ManualCurrencyConversion;
+import org.folio.service.exchange.CacheableExchangeRateService;
+import org.folio.service.exchange.CustomExchangeRateProvider;
 import org.folio.service.finance.FundService;
 import org.folio.service.finance.rollover.LedgerRolloverErrorService;
 import org.folio.service.finance.rollover.LedgerRolloverProgressService;
@@ -87,23 +91,23 @@ public class OrderRolloverService {
   private final PurchaseOrderLineService purchaseOrderLineService;
   private final TransactionService transactionService;
   private final ConfigurationEntriesCache configurationEntriesCache;
-  private final ExchangeRateProviderResolver exchangeRateProviderResolver;
   private final LedgerRolloverProgressService ledgerRolloverProgressService;
   private final LedgerRolloverErrorService ledgerRolloverErrorService;
   private final FailedLedgerRolloverPoLineDao failedLedgerRolloverPoLineDao;
+  private final CacheableExchangeRateService cacheableExchangeRateService;
 
   public OrderRolloverService(FundService fundService, PurchaseOrderLineService purchaseOrderLineService, TransactionService transactionService,
-    ConfigurationEntriesCache configurationEntriesCache, ExchangeRateProviderResolver exchangeRateProviderResolver,
-    LedgerRolloverProgressService ledgerRolloverProgressService, LedgerRolloverErrorService ledgerRolloverErrorService,
-    FailedLedgerRolloverPoLineDao failedLedgerRolloverPoLineDao) {
+                              ConfigurationEntriesCache configurationEntriesCache, LedgerRolloverProgressService ledgerRolloverProgressService,
+                              LedgerRolloverErrorService ledgerRolloverErrorService, FailedLedgerRolloverPoLineDao failedLedgerRolloverPoLineDao,
+                              CacheableExchangeRateService cacheableExchangeRateService) {
     this.fundService = fundService;
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.transactionService = transactionService;
     this.configurationEntriesCache = configurationEntriesCache;
-    this.exchangeRateProviderResolver = exchangeRateProviderResolver;
     this.ledgerRolloverProgressService = ledgerRolloverProgressService;
     this.ledgerRolloverErrorService = ledgerRolloverErrorService;
     this.failedLedgerRolloverPoLineDao = failedLedgerRolloverPoLineDao;
+    this.cacheableExchangeRateService = cacheableExchangeRateService;
   }
 
   public Future<Void> rollover(LedgerFiscalYearRollover ledgerFYRollover, RequestContext requestContext) {
@@ -143,7 +147,7 @@ public class OrderRolloverService {
       return Future.succeededFuture();
     }
     var fundIdChunks = Lists.partition(ledgerFundIds, MAX_IDS_FOR_GET_RQ_15);
-    var ctx =  requestContext.getContext();
+    var ctx = requestContext.getContext();
     return ctx
       .<List<Future<Void>>>executeBlocking(promise -> {
         var futures = new ArrayList<Future<Void>>();
@@ -155,7 +159,7 @@ public class OrderRolloverService {
             var future = rolloverOrdersByFundIds(fundIds, ledgerFYRollover, systemCurrency, true, requestContext)
               .andThen(openOrdersResult -> rolloverOrdersByFundIds(fundIds, ledgerFYRollover, systemCurrency,
                 false, requestContext)
-              .andThen(closedOrdersResult -> throwExceptionIfOneOfFailed(openOrdersResult, closedOrdersResult)))
+                .andThen(closedOrdersResult -> throwExceptionIfOneOfFailed(openOrdersResult, closedOrdersResult)))
               .onComplete(asyncResult -> semaphore.release());
 
             futures.add(future);
@@ -185,36 +189,36 @@ public class OrderRolloverService {
       .map(PoLineCollection::getTotalRecords);
     var ctx = requestContext.getContext();
     return totalRecordsFuture.compose(totalRecords ->
-      ctx.<List<Future<Void>>>executeBlocking(promise -> {
-        var futures = new ArrayList<Future<Void>>();
-        if (totalRecords == 0) {
-          promise.complete(emptyList());
-          return;
-        }
-        var numberOfChunks = (int) Math.ceil((double) totalRecords / POLINES_CHUNK_SIZE_200);
-        // only 1 active thread because of chunk size = 200 records
-        var semaphore = new Semaphore(1, ctx.owner());
-        var atomicChunkCounter = new AtomicInteger();
-        for (var chunkNumber = 0; chunkNumber < numberOfChunks; chunkNumber++) {
-          // can produce "thread blocked" warnings because of large number of data
-          semaphore.acquire(() -> {
-            var future = purchaseOrderLineService.getOrderLines(query, atomicChunkCounter.getAndIncrement() * POLINES_CHUNK_SIZE_200, POLINES_CHUNK_SIZE_200, requestContext)
-              .compose(poLines -> rolloverOrders(systemCurrency, poLines, ledgerFYRollover, openOrders, requestContext))
-              .compose(modifiedPoLines -> saveOrderLines(modifiedPoLines, ledgerFYRollover, openOrders, requestContext))
-              .onComplete(asyncResult -> semaphore.release());
-            futures.add(future);
-            if (futures.size() == numberOfChunks) {
-              promise.complete(futures);
-            }
-          });
-        }
-      }))
+        ctx.<List<Future<Void>>>executeBlocking(promise -> {
+          var futures = new ArrayList<Future<Void>>();
+          if (totalRecords == 0) {
+            promise.complete(emptyList());
+            return;
+          }
+          var numberOfChunks = (int) Math.ceil((double) totalRecords / POLINES_CHUNK_SIZE_200);
+          // only 1 active thread because of chunk size = 200 records
+          var semaphore = new Semaphore(1, ctx.owner());
+          var atomicChunkCounter = new AtomicInteger();
+          for (var chunkNumber = 0; chunkNumber < numberOfChunks; chunkNumber++) {
+            // can produce "thread blocked" warnings because of large number of data
+            semaphore.acquire(() -> {
+              var future = purchaseOrderLineService.getOrderLines(query, atomicChunkCounter.getAndIncrement() * POLINES_CHUNK_SIZE_200, POLINES_CHUNK_SIZE_200, requestContext)
+                .compose(poLines -> rolloverOrders(systemCurrency, poLines, ledgerFYRollover, openOrders, requestContext))
+                .compose(modifiedPoLines -> saveOrderLines(modifiedPoLines, ledgerFYRollover, openOrders, requestContext))
+                .onComplete(asyncResult -> semaphore.release());
+              futures.add(future);
+              if (futures.size() == numberOfChunks) {
+                promise.complete(futures);
+              }
+            });
+          }
+        }))
       .compose(GenericCompositeFuture::join)
       .mapEmpty();
   }
 
   private Future<Void> saveOrderLines(List<PoLine> orderLines, LedgerFiscalYearRollover ledgerFYRollover,
-      boolean openOrders, RequestContext requestContext) {
+                                      boolean openOrders, RequestContext requestContext) {
     logger.info("saveOrderLines:: Saving POLs after rollover processing, size: {}", orderLines.size());
     return purchaseOrderLineService.saveOrderLinesWithoutSearchLocationsUpdate(orderLines, requestContext)
       .recover(t -> handlePoLineUpdateFailures(orderLines, ledgerFYRollover, openOrders, t, requestContext)
@@ -224,7 +228,7 @@ public class OrderRolloverService {
   }
 
   private Future<Void> handlePoLineUpdateFailures(List<PoLine> poLines, LedgerFiscalYearRollover ledgerFYRollover,
-      boolean openOrders, Throwable t, RequestContext requestContext) {
+                                                  boolean openOrders, Throwable t, RequestContext requestContext) {
     return GenericCompositeFuture.join(poLines.stream()
         .map(poLine -> handlePoLineUpdateFailure(poLine, ledgerFYRollover, openOrders, t, requestContext))
         .toList())
@@ -232,7 +236,7 @@ public class OrderRolloverService {
   }
 
   private Future<Void> handlePoLineUpdateFailure(PoLine poLine, LedgerFiscalYearRollover ledgerFYRollover, boolean openOrders,
-      Throwable t, RequestContext requestContext) {
+                                                 Throwable t, RequestContext requestContext) {
     logger.error("PO line {} update failed while making rollover", poLine.getId(), t);
     var failureDto = new FailedLedgerRolloverPoLineDto(
       UUID.randomUUID(), // id
@@ -248,20 +252,23 @@ public class OrderRolloverService {
   }
 
   private Future<List<PoLine>> rolloverOrders(String systemCurrency, List<PoLine> poLines, LedgerFiscalYearRollover ledgerFYRollover,
-      boolean openOrders, RequestContext requestContext) {
+                                              boolean openOrders, RequestContext requestContext) {
     if (poLines.isEmpty()) {
       return Future.succeededFuture(emptyList());
     }
     var poLineIds = poLines.stream()
       .map(PoLine::getId)
-      .collect(toList());
+      .toList();
     return getEncumbrancesForRollover(poLineIds, ledgerFYRollover, requestContext)
-      .compose(encumbrances -> {
+      .compose(encumbrances -> getExchangeRatesPerPoLine(poLines, systemCurrency, requestContext)
+      .compose(poLineExchangeRates -> Future.succeededFuture(Pair.of(encumbrances, poLineExchangeRates))))
+      .compose(encumbrancePoLineExchangeRates -> {
         if (openOrders) {
-          var holders = buildPoLineEncumbrancesHolders(systemCurrency, poLines, encumbrances, requestContext);
+          var holders = buildPoLineEncumbrancesHolders(poLines, encumbrancePoLineExchangeRates);
           var modifiedPoLines = applyPoLinesRolloverChanges(holders);
           return Future.succeededFuture(modifiedPoLines);
         } else {
+          var encumbrances = encumbrancePoLineExchangeRates.getLeft();
           return removeEncumbrancesFromPoLines(poLines, encumbrances, requestContext);
         }
       });
@@ -273,7 +280,7 @@ public class OrderRolloverService {
         if (transactions.isEmpty()) {
           return Future.succeededFuture();
         } else {
-          List<String> idsOfTransactionsToDelete =  transactions.stream().map(Transaction::getId).toList();
+          List<String> idsOfTransactionsToDelete = transactions.stream().map(Transaction::getId).toList();
           return transactionService.batchDelete(idsOfTransactionsToDelete, requestContext);
         }
       })
@@ -300,7 +307,7 @@ public class OrderRolloverService {
         updatePoLineCostWithFundDistribution(holder, currEncumbranceFundIdMap);
       }
     });
-    return poLineEncumbrancesHolders.stream().map(PoLineEncumbrancesHolder::getPoLine).collect(toList());
+    return poLineEncumbrancesHolders.stream().map(PoLineEncumbrancesHolder::getPoLine).toList();
   }
 
   private List<PoLine> removeEncumbranceLinks(List<PoLine> poLines) {
@@ -355,23 +362,21 @@ public class OrderRolloverService {
 
   protected BigDecimal calculateTotalInitialAmountEncumbered(PoLineEncumbrancesHolder holder) {
     BigDecimal totalAmountBeforeConversion = holder.getEncumbrances().stream()
-       .map(Transaction::getEncumbrance)
-       .map(Encumbrance::getInitialAmountEncumbered)
-       .map(BigDecimal::valueOf).reduce(BigDecimal.ZERO, BigDecimal::add);
+      .map(Transaction::getEncumbrance)
+      .map(Encumbrance::getInitialAmountEncumbered)
+      .map(BigDecimal::valueOf).reduce(BigDecimal.ZERO, BigDecimal::add);
     Cost cost = holder.getPoLine().getCost();
-    logger.info("calculateTotalInitialAmountEncumbered:: initiating currency conversion: {}->{}", holder.getSystemCurrency(), cost.getCurrency());
+    logger.info("calculateTotalInitialAmountEncumbered:: initiating currency conversion: {} -> {}", holder.getSystemCurrency(), cost.getCurrency());
     logger.info("calculateTotalInitialAmountEncumbered:: totalAmountBeforeConversion: {}", totalAmountBeforeConversion.doubleValue());
     Number totalAmountAfterConversion = amountWithConversion(totalAmountBeforeConversion, holder).getNumber();
     logger.info("calculateTotalInitialAmountEncumbered:: totalAmountAfterConversion: {}", totalAmountAfterConversion.doubleValue());
     return BigDecimal.valueOf(totalAmountAfterConversion.doubleValue());
   }
 
-  protected CurrencyConversion retrieveCurrencyConversion(String fromCurrency, Cost cost, RequestContext requestContext) {
-    String toCurrency = cost.getCurrency();
-    Double exchangeRate = cost.getExchangeRate();
-    ConversionQuery conversionQuery = HelperUtils.getConversionQuery(exchangeRate, fromCurrency, toCurrency);
-    ExchangeRateProvider exchangeRateProvider = exchangeRateProviderResolver.resolve(conversionQuery, requestContext, ManualCurrencyConversion.OperationMode.DIVIDE);
-    return exchangeRateProvider.getCurrencyConversion(conversionQuery);
+  protected CurrencyConversion retrieveCurrencyConversion(String fromCurrency, String toCurrency, Number exchangeRate, boolean isCustomExchangeRate) {
+    var query = buildConversionQuery(fromCurrency, toCurrency, exchangeRate);
+    var provider = new CustomExchangeRateProvider(Boolean.TRUE.equals(isCustomExchangeRate) ? DIVIDE : MULTIPLY);
+    return provider.getCurrencyConversion(query);
   }
 
   private MonetaryAmount amountWithConversion(BigDecimal totalInitialAmountEncumbered, PoLineEncumbrancesHolder holder) {
@@ -380,14 +385,18 @@ public class OrderRolloverService {
       .with(Monetary.getDefaultRounding());
   }
 
-  private List<PoLineEncumbrancesHolder> buildPoLineEncumbrancesHolders(String  systemCurrency, List<PoLine> poLines,
-                                                                        List<Transaction> encumbrances, RequestContext requestContext) {
-    List<PoLineEncumbrancesHolder> poLineEncumbrancesHolders = new ArrayList<>();
+  private List<PoLineEncumbrancesHolder> buildPoLineEncumbrancesHolders(List<PoLine> poLines,
+                                                                        Pair<List<Transaction>, List<RolloverConversionHolder>> encumbrancePoLineExchangeRates) {
+    var poLineEncumbrancesHolders = new ArrayList<PoLineEncumbrancesHolder>();
+    var encumbrances = encumbrancePoLineExchangeRates.getLeft();
+    var poLineExchangeRates = encumbrancePoLineExchangeRates.getRight();
     poLines.forEach(poLine -> {
-      CurrencyConversion currencyConversion = retrieveCurrencyConversion(systemCurrency, poLine.getCost(), requestContext);
-      PoLineEncumbrancesHolder holder = new PoLineEncumbrancesHolder(poLine)
-        .withCurrencyConversion(currencyConversion)
-        .withSystemCurrency(systemCurrency);
+      var rolloverConversion = getRolloverConversionByPoLineId(poLine, poLineExchangeRates);
+      var exchangeRate = rolloverConversion.getExchangeRate();
+      var conversion = retrieveCurrencyConversion(exchangeRate.getFrom(), exchangeRate.getTo(), exchangeRate.getExchangeRate(), rolloverConversion.isCustomExchangeRate());
+      var holder = new PoLineEncumbrancesHolder(poLine)
+        .withCurrencyConversion(conversion)
+        .withSystemCurrency(exchangeRate.getFrom());
       extractPoLineEncumbrances(poLine, encumbrances).forEach(encumbrance -> {
         holder.addEncumbrance(encumbrance);
         poLineEncumbrancesHolders.add(holder);
@@ -396,37 +405,55 @@ public class OrderRolloverService {
     return poLineEncumbrancesHolders;
   }
 
+  private RolloverConversionHolder getRolloverConversionByPoLineId(PoLine poLine, List<RolloverConversionHolder> poLineExchangeRates) {
+    return poLineExchangeRates.stream()
+      .filter(rc -> StringUtils.equals(rc.getPoLineId(), poLine.getId()))
+      .findFirst().orElseThrow(() -> new NoSuchElementException(String.format("Cannot find rollover conversion for poLineId: %s", poLine.getId())));
+  }
+
   private List<Transaction> extractPoLineEncumbrances(PoLine poLine, List<Transaction> encumbrances) {
     return encumbrances.stream()
       .filter(encumbrance -> poLine.getId().equals(encumbrance.getEncumbrance().getSourcePoLineId()))
-      .collect(toList());
+      .toList();
   }
 
-  private Future<List<Transaction>> getEncumbrancesForRollover(List<String> polineIds, LedgerFiscalYearRollover ledgerFYRollover, RequestContext requestContext) {
-    var futures = ofSubLists(new ArrayList<>(polineIds), MAX_IDS_FOR_GET_RQ_15)
+  private Future<List<Transaction>> getEncumbrancesForRollover(List<String> poLineIds, LedgerFiscalYearRollover ledgerFYRollover, RequestContext requestContext) {
+    var futures = ofSubLists(new ArrayList<>(poLineIds), MAX_IDS_FOR_GET_RQ_15)
       .map(ids -> buildQueryEncumbrancesForRollover(ids, ledgerFYRollover))
       .map(query -> transactionService.getTransactions(query, requestContext))
       .toList();
     return collectResultsOnSuccess(futures)
       .map(lists -> lists.stream()
         .flatMap(Collection::stream)
-        .collect(Collectors.toList()));
+        .toList());
   }
 
-  private String buildQueryEncumbrancesForRollover(List<String> polineIds, LedgerFiscalYearRollover ledgerFYRollover) {
-    String fiscalYearIdsQuery = buildQuery(List.of(ledgerFYRollover.getToFiscalYearId()), ENCUMBR_FY_QUERY, OR);
-    String orderLineIdsQuery = buildQuery(polineIds, ENCUMBRANCE_BY_POLINE_ID_QUERY, OR);
+  private Future<List<RolloverConversionHolder>> getExchangeRatesPerPoLine(List<PoLine> poLines, String fromCurrency, RequestContext requestContext) {
+    var poLineExchangeRateFutures = new ArrayList<Future<RolloverConversionHolder>>();
+    poLines.forEach(poLine -> {
+      var cost = poLine.getCost();
+      var isCustomExchangeRate = Objects.nonNull(cost.getExchangeRate());
+      poLineExchangeRateFutures.add(cacheableExchangeRateService.getExchangeRate(fromCurrency, cost.getCurrency(), cost.getExchangeRate(), requestContext)
+        .compose(exchangeRate -> Future.succeededFuture(new RolloverConversionHolder()
+          .withPoLineId(poLine.getId()).withExchangeRate(exchangeRate).withCustomExchangeRate(isCustomExchangeRate))));
+    });
+    return collectResultsOnSuccess(poLineExchangeRateFutures);
+  }
+
+  private String buildQueryEncumbrancesForRollover(List<String> poLineIds, LedgerFiscalYearRollover ledgerFYRollover) {
+    String fiscalYearIdsQuery = buildQuery(List.of(ledgerFYRollover.getToFiscalYearId()), ENCUMBR_FY_QUERY);
+    String orderLineIdsQuery = buildQuery(poLineIds, ENCUMBRANCE_BY_POLINE_ID_QUERY);
     return "(" + fiscalYearIdsQuery + ")" + AND + "(" + orderLineIdsQuery + ")";
   }
 
-  private String buildQuery(List<String> orderIds, String queryTemplate, String delimiter) {
+  private String buildQuery(List<String> orderIds, String queryTemplate) {
     return orderIds.stream()
       .map(orderId -> String.format(queryTemplate, orderId))
-      .collect(Collectors.joining(delimiter));
+      .collect(Collectors.joining(OrderRolloverService.OR));
   }
 
   protected String buildOpenOrClosedOrderQueryByFundIdsAndTypes(List<String> fundIds, boolean openOrders,
-      LedgerFiscalYearRollover ledgerFYRollover) {
+                                                                LedgerFiscalYearRollover ledgerFYRollover) {
     StringBuilder resultQuery = new StringBuilder();
     if (!ledgerFYRollover.getEncumbrancesRollover().isEmpty()) {
       resultQuery.append("(").append(buildOrderTypesQuery(ledgerFYRollover)).append(")").append(AND);

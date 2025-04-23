@@ -21,7 +21,7 @@ public class CompositeOrderRetrieveHolderBuilder {
   public Future<CompositeOrderRetrieveHolder> withCurrentFiscalYear(CompositeOrderRetrieveHolder holder,
       RequestContext requestContext) {
     return holder.getOrder()
-      .getCompositePoLines()
+      .getPoLines()
       .stream()
       .flatMap(poLine -> poLine.getFundDistribution()
         .stream())

@@ -13,17 +13,11 @@
   "reEncumber": false,
   "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
   "workflowStatus": "Pending",
-  "compositePoLines": [
+  "poLines": [
     {
       "id": "3fc83599-41cc-4439-a901-29de3a3e9720",
       "checkinItems": false,
       "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
-      "alerts": [
-        {
-          "id": "bf4a9a32-2ba5-4495-b807-eaf894740a4c",
-          "alert": "Receipt overdue"
-        }
-      ],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "ABCDEFGHIJKLMNOPQRSTUVW",
       "claims": [
@@ -67,7 +61,7 @@
         "createInventory": "Instance, Holding, Item",
         "trial": false,
         "expectedActivation": "2018-10-09T00:00:00.000+0000",
-        "userLimit": 10,
+        "userLimit": "10",
         "accessProvider": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1"
       },
       "fundDistribution": [
@@ -96,23 +90,6 @@
       "purchaseOrderId": "0cb6741d-4a00-47e5-a902-5678eb24478d",
       "receiptDate": "2018-10-09T00:00:00.000+0000",
       "receiptStatus": "Awaiting Receipt",
-      "reportingCodes": [
-        {
-          "id": "3d81b889-c163-4f16-a20d-d2f29437a6b5",
-          "code": "CODE1",
-          "description": "ABCDEF"
-        },
-        {
-          "id": "f4aded1c-5818-4ecc-95c2-3a46a8154d7c",
-          "code": "CODE2",
-          "description": "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        },
-        {
-          "id": "127c2b31-d3b3-49e0-97dc-70ccce3a779a",
-          "code": "CODE3",
-          "description": "ABCDE"
-        }
-      ],
       "requester": "Leo Bulero",
       "rush": true,
       "selector": "ABCD",

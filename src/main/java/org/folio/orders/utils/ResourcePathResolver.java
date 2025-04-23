@@ -19,11 +19,9 @@ public class ResourcePathResolver {
   public static final String VENDOR_ID = "vendor";
   public static final String PO_LINE_NUMBER = "poLineNumber";
 
-  public static final String ALERTS = "alerts";
   public static final String ACQUISITIONS_UNITS = "acquisitionsUnits";
   public static final String ACQUISITION_METHODS = "acquisitionMethods";
   public static final String ACQUISITIONS_MEMBERSHIPS = "acquisitionsMemberships";
-  public static final String REPORTING_CODES = "reportingCodes";
   public static final String PURCHASE_ORDER_STORAGE = "purchaseOrder";
   public static final String PIECES_STORAGE = "pieces";
   public static final String PIECES_STORAGE_BATCH = "pieces-batch";
@@ -62,17 +60,16 @@ public class ResourcePathResolver {
   public static final String CONSORTIA_USER_TENANTS = "consortia.user-tenants";
   public static final String DATA_EXPORT_SPRING_CREATE_JOB = "data-export-spring.job";
   public static final String DATA_EXPORT_SPRING_EXECUTE_JOB = "data-export-spring.send-job";
+  public static final String EXCHANGE_RATE = "exchangeRate";
 
   private static final Map<String, String> SUB_OBJECT_ITEM_APIS;
   private static final Map<String, String> SUB_OBJECT_COLLECTION_APIS;
 
   static {
     Map<String, String> apis = new HashMap<>();
-    apis.put(ALERTS, "/orders-storage/alerts");
     apis.put(ACQUISITIONS_UNITS, "/acquisitions-units-storage/units");
     apis.put(ACQUISITION_METHODS, "/orders-storage/acquisition-methods");
     apis.put(ACQUISITIONS_MEMBERSHIPS, "/acquisitions-units-storage/memberships");
-    apis.put(REPORTING_CODES, "/orders-storage/reporting-codes");
     apis.put(PO_LINES_STORAGE, "/orders-storage/po-lines");
     apis.put(PO_LINES_BATCH_STORAGE, "/orders-storage/po-lines-batch");
     apis.put(PO_LINES_BUSINESS, "/orders/order-lines");
@@ -116,6 +113,7 @@ public class ResourcePathResolver {
     apis.put(ROUTING_LISTS, "/orders-storage/routing-lists");
     apis.put(DATA_EXPORT_SPRING_CREATE_JOB, "/data-export-spring/jobs");
     apis.put(DATA_EXPORT_SPRING_EXECUTE_JOB, "/data-export-spring/jobs/send");
+    apis.put(EXCHANGE_RATE, "/finance/exchange-rate");
 
     SUB_OBJECT_COLLECTION_APIS = Collections.unmodifiableMap(apis);
     SUB_OBJECT_ITEM_APIS = Collections.unmodifiableMap(

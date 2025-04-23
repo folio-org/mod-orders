@@ -53,7 +53,7 @@ import org.folio.ApiTestSuite;
 import org.folio.HttpStatus;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
@@ -137,7 +137,7 @@ public class TitlesApiTest {
     logger.info("=== Test POST Title (Create Title) ===");
 
     String poLineId = UUID.randomUUID().toString();
-    CompositePoLine poLine = getMinimalContentCompositePoLine()
+    PoLine poLine = getMinimalContentCompositePoLine()
       .withId(poLineId);
 
     addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
@@ -210,7 +210,7 @@ public class TitlesApiTest {
     String polNumbber = "1000-01";
     String packageNote = "test note";
 
-    CompositePoLine packagePoLine = getMinimalContentCompositePoLine()
+    PoLine packagePoLine = getMinimalContentCompositePoLine()
       .withId(packagePoLineId)
       .withTitleOrPackage(packageTitleName)
       .withPoLineNumber(polNumbber)

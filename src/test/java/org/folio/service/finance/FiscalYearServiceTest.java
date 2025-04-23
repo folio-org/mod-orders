@@ -29,14 +29,15 @@ import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.service.caches.ConfigurationEntriesCache;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 
 @CopilotGenerated(partiallyGenerated = true)
@@ -52,11 +53,21 @@ public class FiscalYearServiceTest {
   @Mock
   private ConfigurationEntriesCache configurationEntriesCacheMock;
 
+  private AutoCloseable openMocks;
+
   @BeforeEach
   public void initMocks() {
-    MockitoAnnotations.openMocks(this);
+    openMocks = MockitoAnnotations.openMocks(this);
     doReturn(Future.succeededFuture("UTC"))
       .when(configurationEntriesCacheMock).getSystemTimeZone(any(RequestContext.class));
+    fiscalYearService.init();
+  }
+
+  @AfterEach
+  public void closeMocks() throws Exception {
+    if (openMocks != null) {
+      openMocks.close();
+    }
   }
 
   @Test
@@ -182,5 +193,4 @@ public class FiscalYearServiceTest {
     assertEquals(HttpException.class, result.cause().getClass());
     assertEquals(404, ((HttpException) result.cause()).getCode());
   }
-
 }

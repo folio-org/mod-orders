@@ -28,11 +28,11 @@ import org.folio.rest.acq.model.finance.Metadata;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
-import org.folio.service.exchange.ExchangeRateProviderResolver;
+import org.folio.service.exchange.CacheableExchangeRateService;
 import org.folio.service.finance.FiscalYearService;
 import org.folio.service.finance.FundService;
 import org.folio.service.finance.LedgerService;
@@ -51,6 +51,7 @@ import io.vertx.core.json.JsonObject;
 @ExtendWith(MockitoExtension.class)
 @ExtendWith(VertxExtension.class)
 public class PendingToPendingEncumbranceStrategyTest {
+
   public static final String PENDING_ORDER_2_FD_ID = "22f0d3dd-267d-405c-9917-29395b8507d8";
   public static final String PENDING_ORDER_1_FD_ID = "b3ada928-f5e0-4fc8-9233-e1c16d9c5287";
   public static final String ORDER_2_FD_PATH = COMP_ORDER_MOCK_DATA_PATH + PENDING_ORDER_2_FD_ID + ".json";
@@ -65,13 +66,13 @@ public class PendingToPendingEncumbranceStrategyTest {
   @Mock
   private FiscalYearService fiscalYearService;
   @Mock
-  private ExchangeRateProviderResolver exchangeRateProviderResolver;
-  @Mock
   private BudgetService budgetService;
   @Mock
   private LedgerService ledgerService;
   @Mock
   private TransactionService transactionService;
+  @Mock
+  private CacheableExchangeRateService cacheableExchangeRateService;
   @Mock
   private RequestContext requestContext;
   @Captor
@@ -80,7 +81,7 @@ public class PendingToPendingEncumbranceStrategyTest {
   @BeforeEach
   void init() {
     EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder = new EncumbranceRelationsHoldersBuilder(
-      encumbranceService, fundService, fiscalYearService, exchangeRateProviderResolver, budgetService, ledgerService);
+      encumbranceService, fundService, fiscalYearService, budgetService, ledgerService, cacheableExchangeRateService);
     PendingPaymentService pendingPaymentService = new PendingPaymentService(transactionService);
     pendingToPendingEncumbranceStrategy = new PendingToPendingEncumbranceStrategy(encumbranceService,
       encumbranceRelationsHoldersBuilder, pendingPaymentService);
@@ -92,8 +93,8 @@ public class PendingToPendingEncumbranceStrategyTest {
     String newExpenseClassId = "d9328814-eba1-4083-98ca-026eb269a4a8";
     CompositePurchaseOrder order = getMockAsJson(ORDER_2_FD_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePurchaseOrder orderFromStorage = JsonObject.mapFrom(order).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine poLine = order.getCompositePoLines().get(0);
-    FundDistribution fd1 = poLine.getFundDistribution().get(0);
+    PoLine poLine = order.getPoLines().getFirst();
+    FundDistribution fd1 = poLine.getFundDistribution().getFirst();
     FundDistribution fd2 = poLine.getFundDistribution().get(1);
 
     String oldExpenseClassId = fd1.getExpenseClassId();
@@ -146,13 +147,13 @@ public class PendingToPendingEncumbranceStrategyTest {
           .createOrUpdateEncumbrances(holderCaptor.capture(), eq(requestContext));
         List<EncumbrancesProcessingHolder> holders = holderCaptor.getAllValues();
         assertEquals(1, holders.size());
-        EncumbrancesProcessingHolder holder = holders.get(0);
+        EncumbrancesProcessingHolder holder = holders.getFirst();
         assertEquals(0, holder.getEncumbrancesForCreate().size());
         assertEquals(1, holder.getEncumbrancesForUpdate().size());
         assertEquals(0, holder.getEncumbrancesForDelete().size());
         assertEquals(0, holder.getEncumbrancesForRelease().size());
         assertEquals(0, holder.getEncumbrancesForUnrelease().size());
-        EncumbranceRelationsHolder updateHolder = holder.getEncumbrancesForUpdate().get(0);
+        EncumbranceRelationsHolder updateHolder = holder.getEncumbrancesForUpdate().getFirst();
         Transaction updatedTransaction = updateHolder.getNewEncumbrance();
         assertEquals(newExpenseClassId, updatedTransaction.getExpenseClassId());
         assertEquals(encumbrance1, updatedTransaction.withExpenseClassId(oldExpenseClassId));
@@ -166,8 +167,8 @@ public class PendingToPendingEncumbranceStrategyTest {
     // Given
     CompositePurchaseOrder order = getMockAsJson(ORDER_1_FD_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePurchaseOrder orderFromStorage = JsonObject.mapFrom(order).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine poLine = order.getCompositePoLines().get(0);
-    FundDistribution fd = poLine.getFundDistribution().get(0);
+    PoLine poLine = order.getPoLines().getFirst();
+    FundDistribution fd = poLine.getFundDistribution().getFirst();
     String encumbranceId = fd.getEncumbrance();
     String fundId = fd.getFundId();
     String invoiceId = UUID.randomUUID().toString();
@@ -175,7 +176,7 @@ public class PendingToPendingEncumbranceStrategyTest {
     String fiscalYearId = UUID.randomUUID().toString();
     String pendingPaymentId = UUID.randomUUID().toString();
 
-    poLine.getFundDistribution().remove(0);
+    poLine.getFundDistribution().removeFirst();
 
     Transaction encumbrance = new Transaction()
       .withTransactionType(Transaction.TransactionType.ENCUMBRANCE)
@@ -225,16 +226,16 @@ public class PendingToPendingEncumbranceStrategyTest {
           .createOrUpdateEncumbrances(holderCaptor.capture(), eq(requestContext));
         List<EncumbrancesProcessingHolder> holders = holderCaptor.getAllValues();
         assertEquals(1, holders.size());
-        EncumbrancesProcessingHolder holder = holders.get(0);
+        EncumbrancesProcessingHolder holder = holders.getFirst();
         assertEquals(0, holder.getEncumbrancesForCreate().size());
         assertEquals(0, holder.getEncumbrancesForUpdate().size());
         assertEquals(1, holder.getEncumbrancesForDelete().size());
         assertEquals(0, holder.getEncumbrancesForRelease().size());
         assertEquals(0, holder.getEncumbrancesForUnrelease().size());
         assertEquals(1, holder.getPendingPaymentsToUpdate().size());
-        String deletedId = holder.getEncumbrancesForDelete().get(0).getOldEncumbrance().getId();
+        String deletedId = holder.getEncumbrancesForDelete().getFirst().getOldEncumbrance().getId();
         assertEquals(encumbranceId, deletedId);
-        Transaction updatedPendingPayment = holder.getPendingPaymentsToUpdate().get(0);
+        Transaction updatedPendingPayment = holder.getPendingPaymentsToUpdate().getFirst();
         assertEquals(pendingPaymentId, updatedPendingPayment.getId());
         assertNull(updatedPendingPayment.getAwaitingPayment().getEncumbranceId());
         vertxTestContext.completeNow();
@@ -247,12 +248,12 @@ public class PendingToPendingEncumbranceStrategyTest {
     // Given
     CompositePurchaseOrder order = getMockAsJson(ORDER_1_FD_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePurchaseOrder orderFromStorage = JsonObject.mapFrom(order).mapTo(CompositePurchaseOrder.class);
-    CompositePoLine poLine = order.getCompositePoLines().get(0);
-    FundDistribution fd = poLine.getFundDistribution().get(0);
+    PoLine poLine = order.getPoLines().getFirst();
+    FundDistribution fd = poLine.getFundDistribution().getFirst();
     String encumbranceId = fd.getEncumbrance();
     String fundId = fd.getFundId();
 
-    poLine.getFundDistribution().remove(0);
+    poLine.getFundDistribution().removeFirst();
 
     Transaction encumbrance = new Transaction()
       .withTransactionType(Transaction.TransactionType.ENCUMBRANCE)

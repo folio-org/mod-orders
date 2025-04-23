@@ -34,7 +34,7 @@ import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -106,20 +106,20 @@ public class OpenToPendingEncumbranceStrategyTest {
       doReturn(succeededFuture(encumbranceRelationsHolders)).when(encumbranceRelationsHoldersBuilder).withExistingTransactions(any(), any(), any());
       doReturn(succeededFuture(encumbranceRelationsHolders)).when(encumbranceRelationsHoldersBuilder).prepareEncumbranceRelationsHolder(any(), any(), any());
 
-      Map<String, List<CompositePoLine>> mapFiscalYearsWithCompPOLines = new HashMap<>();
+      Map<String, List<PoLine>> mapFiscalYearsWithPoLines = new HashMap<>();
       String fiscalYearId = UUID.randomUUID().toString();
-      mapFiscalYearsWithCompPOLines.put(fiscalYearId, Arrays.asList(new CompositePoLine().withId(UUID.randomUUID().toString())));
+      mapFiscalYearsWithPoLines.put(fiscalYearId, Arrays.asList(new PoLine().withId(UUID.randomUUID().toString())));
       CompositePurchaseOrder orderFromStorage = JsonObject.mapFrom(order).mapTo(CompositePurchaseOrder.class);
       orderFromStorage.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
 
-      doReturn(succeededFuture(mapFiscalYearsWithCompPOLines)).when(encumbranceRelationsHoldersBuilder).retrieveMapFiscalYearsWithCompPOLines(eq(order), eq(orderFromStorage), eq(requestContext));
+      doReturn(succeededFuture(mapFiscalYearsWithPoLines)).when(encumbranceRelationsHoldersBuilder).retrieveMapFiscalYearsWithPoLines(eq(order), eq(orderFromStorage), eq(requestContext));
       String compositePoLineId = UUID.randomUUID().toString();
-      List<CompositePoLine> compositePoLines = Arrays.asList(new CompositePoLine().withId(compositePoLineId));
+      List<PoLine> poLines = Arrays.asList(new PoLine().withId(compositePoLineId));
       List<String> poLineIds = Arrays.asList(compositePoLineId);
       List<Transaction> allTransactions = Arrays.asList(encumbrance);
       doReturn(succeededFuture(Arrays.asList(encumbrance))).when(transactionService).getTransactionsByPoLinesIds(eq(poLineIds), eq(fiscalYearId), eq(requestContext));
-      doReturn(succeededFuture(Arrays.asList(encumbrance))).when(encumbranceService).getCurrentPoLinesEncumbrances(eq(compositePoLines), eq(fiscalYearId), eq(requestContext));
-      doReturn(succeededFuture(allTransactions)).when(encumbranceService).getEncumbrancesByPoLinesFromCurrentFy(eq(mapFiscalYearsWithCompPOLines), eq(requestContext));
+      doReturn(succeededFuture(Arrays.asList(encumbrance))).when(encumbranceService).getCurrentPoLinesEncumbrances(eq(poLines), eq(fiscalYearId), eq(requestContext));
+      doReturn(succeededFuture(allTransactions)).when(encumbranceService).getEncumbrancesByPoLinesFromCurrentFy(eq(mapFiscalYearsWithPoLines), eq(requestContext));
 
       // When
       openToPendingEncumbranceStrategy.processEncumbrances(order, orderFromStorage, requestContext).result();

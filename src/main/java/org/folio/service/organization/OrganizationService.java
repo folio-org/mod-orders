@@ -1,6 +1,5 @@
 package org.folio.service.organization;
 
-import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.CacheUtils.buildAsyncCache;
 import static org.folio.orders.utils.QueryUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.QueryUtils.encodeQuery;
@@ -27,7 +26,7 @@ import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
@@ -44,21 +43,22 @@ import io.vertx.core.Vertx;
 
 @Component
 public class OrganizationService {
+
   private static final Logger log = LogManager.getLogger(OrganizationService.class);
-  private final RestClient restClient;
-  static final String ORGANIZATIONS = "organizations";
+
   private static final String ORGANIZATIONS_STORAGE_VENDORS = "/organizations-storage/organizations/";
   private static final String ORGANIZATIONS_WITH_QUERY_ENDPOINT = "/organizations-storage/organizations?limit=%d&&query=%s";
   private static final String PO_LINE_NUMBER = "poLineNumber";
-  private final AsyncCache<String, Organization> asyncCache;
   private static final String UNIQUE_CACHE_KEY_PATTERN = "%s_%s_%s";
 
+  private final RestClient restClient;
+  private final AsyncCache<String, Organization> asyncCache;
   private final Errors processingErrors = new Errors();
-  public OrganizationService(RestClient restClient) {
-    asyncCache = buildAsyncCache(Vertx.currentContext(), 30);
-    this.restClient = restClient;
-  }
 
+  public OrganizationService(RestClient restClient) {
+    this.restClient = restClient;
+    this.asyncCache = buildAsyncCache(Vertx.currentContext(), 30);
+  }
 
   /**
    * Checks if vendor in {@link CompositePurchaseOrder} exists in Organizations
@@ -66,7 +66,6 @@ public class OrganizationService {
    * corresponding error to {@link Errors} object.
    *
    * @param vendorId organization id
-   *
    * @return CompletableFuture with {@link Errors} object
    */
   public Future<Errors> validateVendor(String vendorId, RequestContext requestContext) {
@@ -77,7 +76,7 @@ public class OrganizationService {
     List<Error> errors = new ArrayList<>();
     getAndCacheVendorById(vendorId, requestContext)
       .map(organization -> {
-        if(!organization.getStatus().equals(Organization.Status.ACTIVE)) {
+        if (!organization.getStatus().equals(Organization.Status.ACTIVE)) {
           errors.add(createErrorWithId(ORDER_VENDOR_IS_INACTIVE, organization.getId()));
         }
         if (null == organization.getIsVendor() || !organization.getIsVendor()) {
@@ -100,12 +99,14 @@ public class OrganizationService {
 
   /**
    * Checks if access providers in exist and have status Active. If any false, adds corresponding error to {@link Errors} object.
+   *
    * @param poLines list of composite purchase order lines
    * @return CompletableFuture with {@link Errors} object
-   */public Future<Errors> validateAccessProviders(List<CompositePoLine> poLines, RequestContext requestContext) {
+   */
+  public Future<Errors> validateAccessProviders(List<PoLine> poLines, RequestContext requestContext) {
     Promise<Errors> promise = Promise.promise();
 
-    Map<String, List<CompositePoLine>> poLinesMap =
+    Map<String, List<PoLine>> poLinesMap =
       poLines.stream()
         .filter(p -> (p.getEresource() != null && p.getEresource().getAccessProvider() != null))
         .collect(Collectors.groupingBy(p -> p.getEresource().getAccessProvider()));
@@ -114,19 +115,19 @@ public class OrganizationService {
 
     List<Error> errors = new ArrayList<>();
     if (!ids.isEmpty()) {
-      log.debug("Validating {} access provider(s) for order with id={}", ids.size(), poLines.get(0).getPurchaseOrderId());
+      log.debug("Validating {} access provider(s) for order with id={}", ids.size(), poLines.getFirst().getPurchaseOrderId());
 
       getAccessProvidersByIds(ids, requestContext).map(organizations -> {
           // Validate access provider status Active
           organizations.forEach(organization -> {
-            if(!organization.getStatus().equals(Organization.Status.ACTIVE)) {
+            if (!organization.getStatus().equals(Organization.Status.ACTIVE)) {
               errors.add(createErrorWithId(POL_ACCESS_PROVIDER_IS_INACTIVE, organization.getId(), poLinesMap.get(organization.getId())));
             }
           });
           // Validate access provider existence
           List<String> vendorsIds = organizations.stream()
             .map(Organization::getId)
-            .collect(toList());
+            .toList();
           ids.stream()
             .filter(id -> !vendorsIds.contains(id))
             .forEach(id -> errors.add(createErrorWithId(POL_ACCESS_PROVIDER_NOT_FOUND, id, poLinesMap.get(id))));
@@ -182,7 +183,7 @@ public class OrganizationService {
   /**
    * Creates {@link Error} with id of corresponding vendor/access provider
    *
-   * @param id vendor's/access provider's identifier
+   * @param id         vendor's/access provider's identifier
    * @param errorCodes error code
    * @return {@link Error} with id of failed vendor/access provider
    */
@@ -195,12 +196,12 @@ public class OrganizationService {
   /**
    * Creates {@link Error} with id of corresponding vendor/access provider and poLines ids
    *
-   * @param id vendor's/access provider's identifier
+   * @param id         vendor's/access provider's identifier
    * @param errorCodes error code
-   * @param poLines list of composite PoLines
+   * @param poLines list of po lines
    * @return {@link Error} with id of failed vendor/access provider
    */
-  private Error createErrorWithId(ErrorCodes errorCodes, String id, List<CompositePoLine> poLines) {
+  private Error createErrorWithId(ErrorCodes errorCodes, String id, List<PoLine> poLines) {
     Error error = createErrorWithId(errorCodes, id);
     poLines.stream()
       .filter(p -> p.getPoLineNumber() != null)
@@ -231,17 +232,8 @@ public class OrganizationService {
       .map(OrganizationCollection::getOrganizations);
   }
 
-  protected Errors getProcessingErrors() {
-    processingErrors.setTotalRecords(processingErrors.getErrors().size());
-    return processingErrors;
-  }
-
-  public void addProcessingError(Error error) {
-    processingErrors.getErrors().add(error);
-  }
-
   protected void addProcessingErrors(List<Error> errors) {
     processingErrors.getErrors().addAll(errors);
   }
-
 }
+

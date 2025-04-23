@@ -9,7 +9,7 @@ import java.util.List;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.consortium.ConsortiumConfigurationService;
@@ -25,7 +25,7 @@ public class ProcessInventoryPhysicalStrategy extends ProcessInventoryStrategy {
   }
 
   public Future<List<Piece>> handleHoldingsAndItemsRecords(CompositePurchaseOrder compPO,
-                                                           CompositePoLine compPOL,
+                                                           PoLine poLine,
                                                            InventoryItemManager inventoryItemManager,
                                                            InventoryHoldingManager inventoryHoldingManager,
                                                            RestClient restClient,
@@ -33,8 +33,8 @@ public class ProcessInventoryPhysicalStrategy extends ProcessInventoryStrategy {
     List<Future<List<Piece>>> itemsPerHolding = new ArrayList<>();
 
     // Group all locations by location id because the holding should be unique for different locations
-    if (PoLineCommonUtil.isHoldingUpdateRequiredForPhysical(compPOL)) {
-      itemsPerHolding = updateHolding(compPO, compPOL, inventoryItemManager, inventoryHoldingManager, restClient, requestContext);
+    if (PoLineCommonUtil.isHoldingUpdateRequiredForPhysical(poLine)) {
+      itemsPerHolding = updateHolding(compPO, poLine, inventoryItemManager, inventoryHoldingManager, restClient, requestContext);
     }
     return collectResultsOnSuccess(itemsPerHolding)
       .map(itemCreated -> itemCreated.stream()

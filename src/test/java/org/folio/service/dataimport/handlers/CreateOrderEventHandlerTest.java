@@ -30,7 +30,7 @@ import org.folio.processing.events.EventManager;
 import org.folio.rest.RestConstants;
 import org.folio.rest.client.TenantClient;
 import org.folio.rest.impl.MockServer;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Eresource;
@@ -90,10 +90,10 @@ import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 import static org.folio.rest.impl.MockServer.CONFIGS;
 import static org.folio.rest.impl.MockServer.JOB_EXECUTIONS;
 import static org.folio.rest.impl.MockServer.addMockEntry;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.PHYSICAL_RESOURCE;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
+import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.ELECTRONIC_RESOURCE;
+import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.OTHER;
+import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.PHYSICAL_RESOURCE;
+import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.P_E_MIX;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.EntityType.ORDER;
 import static org.folio.rest.jaxrs.model.FundDistribution.DistributionType.PERCENTAGE;
@@ -123,7 +123,6 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   private static final String ORGANIZATIONS_MOCK = "organizations";
   private static final String TENANT_APPROVAL_REQUIRED = "test_diku_limit_1";
   private static final String OKAPI_URL = "http://localhost:" + TestConfig.mockPort;
-  private static final String USER_ID = "6bece55a-831c-4197-bed1-coff1e00b7d8";
   private static final String PO_LINE_ORDER_ID_KEY = "purchaseOrderId";
   private static final String SYSTEM_USER_ENABLED = "SYSTEM_USER_ENABLED";
 
@@ -243,7 +242,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst())
       .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withTenant(TENANT_ID)
@@ -261,7 +260,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
-    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().getLast());
     verifyOrder(eventPayload);
     verifyPoLine(eventPayload);
 
@@ -278,7 +277,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst())
       .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withTenant(TENANT_ID)
@@ -296,7 +295,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
-    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().getLast());
     verifyOrder(eventPayload);
     verifyPoLine(eventPayload);
 
@@ -344,7 +343,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst())
       .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withTenant(TENANT_ID)
@@ -362,7 +361,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
-    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().getLast());
     verifyOrder(eventPayload);
     verifyPoLine(eventPayload);
   }
@@ -374,7 +373,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst())
       .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withTenant(TENANT_APPROVAL_REQUIRED)
@@ -399,9 +398,9 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
       .observeFor(30, TimeUnit.SECONDS)
       .build());
 
-    Event obtainedEvent = Json.decodeValue(observedRecords.get(0).getValue(), Event.class);
+    Event obtainedEvent = Json.decodeValue(observedRecords.getFirst().getValue(), Event.class);
     DataImportEventPayload eventPayload = Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
-    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().getLast());
 
     CompositePurchaseOrder order = Json.decodeValue(eventPayload.getContext().get(ActionProfile.FolioRecord.ORDER.value()), CompositePurchaseOrder.class);
     assertFalse(order.getApproved());
@@ -576,7 +575,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
       .observeFor(30, TimeUnit.SECONDS)
       .build());
 
-    Event obtainedEvent = Json.decodeValue(observedRecords.get(0).getValue(), Event.class);
+    Event obtainedEvent = Json.decodeValue(observedRecords.getFirst().getValue(), Event.class);
     DataImportEventPayload eventPayload = Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
     assertEquals(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value(), eventPayload.getEventType());
 
@@ -618,9 +617,9 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
       .observeFor(30, TimeUnit.SECONDS)
       .build());
 
-    Event obtainedEvent = Json.decodeValue(observedRecords.get(0).getValue(), Event.class);
+    Event obtainedEvent = Json.decodeValue(observedRecords.getFirst().getValue(), Event.class);
     DataImportEventPayload eventPayload = Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
-    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().getLast());
 
     CompositePurchaseOrder order = Json.decodeValue(eventPayload.getContext().get(ActionProfile.FolioRecord.ORDER.value()), CompositePurchaseOrder.class);
     assertEquals(Boolean.FALSE, order.getApproved());
@@ -691,9 +690,9 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
       .observeFor(30, TimeUnit.SECONDS)
       .build());
 
-    Event obtainedEvent = Json.decodeValue(observedRecords.get(0).getValue(), Event.class);
+    Event obtainedEvent = Json.decodeValue(observedRecords.getFirst().getValue(), Event.class);
     DataImportEventPayload eventPayload = Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
-    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().getLast());
     verifyOrder(eventPayload);
     verifyPoLine(eventPayload);
   }
@@ -730,7 +729,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
       .observeFor(30, TimeUnit.SECONDS)
       .build());
 
-    Event obtainedEvent = Json.decodeValue(observedRecords.get(0).getValue(), Event.class);
+    Event obtainedEvent = Json.decodeValue(observedRecords.getFirst().getValue(), Event.class);
     DataImportEventPayload eventPayload = Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
 
     assertEquals(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value(), eventPayload.getEventType());
@@ -770,7 +769,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value());
     verifyOrder(eventPayload);
-    CompositePoLine createdPoLine = verifyPoLine(eventPayload);
+    PoLine createdPoLine = verifyPoLine(eventPayload);
     assertEquals(instanceJson.getString(ID_FIELD), createdPoLine.getInstanceId());
   }
 
@@ -798,7 +797,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_ERROR.value());
-    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().getLast());
     assertEquals(DI_ERROR.value(), eventPayload.getEventType());
   }
 
@@ -835,7 +834,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
     verifyOrder(eventPayload);
-    CompositePoLine createdPoLine = verifyPoLine(eventPayload);
+    PoLine createdPoLine = verifyPoLine(eventPayload);
     assertEquals(expectedActivationDue, createdPoLine.getEresource().getActivationDue());
   }
 
@@ -870,10 +869,10 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
-    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().getLast());
     verifyOrder(eventPayload);
     verifyPoLine(eventPayload);
-    CompositePoLine createdPoLine = verifyPoLine(eventPayload);
+    PoLine createdPoLine = verifyPoLine(eventPayload);
     assertEquals(expectedActivationDue, createdPoLine.getEresource().getActivationDue());
   }
 
@@ -894,7 +893,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
     addMockEntry(CONFIGS, polLimitConfig);
-    addMockEntry(PO_LINES_STORAGE, new CompositePoLine().withTitleOrPackage("Mocked poLine for data-import"));
+    addMockEntry(PO_LINES_STORAGE, new PoLine().withTitleOrPackage("Mocked poLine for data-import"));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
@@ -914,7 +913,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
-    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().getLast());
     verifyOrder(eventPayload);
     verifyPoLine(eventPayload);
   }
@@ -925,7 +924,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, PHYSICAL_RESOURCE);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getPhysical());
     assertEquals(Physical.CreateInventory.INSTANCE, poLine.getPhysical().getCreateInventory());
   }
@@ -938,7 +937,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, PHYSICAL_RESOURCE);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getPhysical());
     assertEquals(Physical.CreateInventory.INSTANCE_HOLDING, poLine.getPhysical().getCreateInventory());
   }
@@ -952,7 +951,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, PHYSICAL_RESOURCE);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getPhysical());
     assertEquals(Physical.CreateInventory.INSTANCE_HOLDING_ITEM, poLine.getPhysical().getCreateInventory());
   }
@@ -961,7 +960,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   public void shouldSetPhysicalPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatPhysicalAndHaveNoInventoryActionsProfiles() throws InterruptedException {
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(List.of(), PHYSICAL_RESOURCE);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getPhysical());
     assertEquals(Physical.CreateInventory.NONE, poLine.getPhysical().getCreateInventory());
   }
@@ -972,7 +971,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(inventoryActionProfiles, ELECTRONIC_RESOURCE);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getEresource());
     assertEquals(Eresource.CreateInventory.INSTANCE, poLine.getEresource().getCreateInventory());
   }
@@ -985,7 +984,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, ELECTRONIC_RESOURCE);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getEresource());
     assertEquals(Eresource.CreateInventory.INSTANCE_HOLDING, poLine.getEresource().getCreateInventory());
   }
@@ -999,7 +998,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, ELECTRONIC_RESOURCE);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getEresource());
     assertEquals(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM, poLine.getEresource().getCreateInventory());
   }
@@ -1008,7 +1007,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   public void shouldSetElectronicPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatElectronicAndHaveNoInventoryActionProfiles() throws InterruptedException {
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(List.of(), ELECTRONIC_RESOURCE);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getEresource());
     assertEquals(Eresource.CreateInventory.NONE, poLine.getEresource().getCreateInventory());
   }
@@ -1019,7 +1018,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, OTHER);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getPhysical());
     assertEquals(Physical.CreateInventory.INSTANCE, poLine.getPhysical().getCreateInventory());
   }
@@ -1032,7 +1031,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, OTHER);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getPhysical());
     assertEquals(Physical.CreateInventory.INSTANCE_HOLDING, poLine.getPhysical().getCreateInventory());
   }
@@ -1046,7 +1045,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, OTHER);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getPhysical());
     assertEquals(Physical.CreateInventory.INSTANCE_HOLDING_ITEM, poLine.getPhysical().getCreateInventory());
   }
@@ -1055,7 +1054,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   public void shouldSetPhysicalPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatOtherAndHaveNoInventoryActionProfiles() throws InterruptedException {
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(List.of(), OTHER);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getPhysical());
     assertEquals(Physical.CreateInventory.NONE, poLine.getPhysical().getCreateInventory());
   }
@@ -1066,7 +1065,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, P_E_MIX);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getPhysical());
     assertNotNull(poLine.getEresource());
     assertEquals(Physical.CreateInventory.INSTANCE, poLine.getPhysical().getCreateInventory());
@@ -1081,7 +1080,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, P_E_MIX);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getPhysical());
     assertNotNull(poLine.getEresource());
     assertEquals(Physical.CreateInventory.INSTANCE_HOLDING, poLine.getPhysical().getCreateInventory());
@@ -1097,7 +1096,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, P_E_MIX);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getPhysical());
     assertNotNull(poLine.getEresource());
     assertEquals(Physical.CreateInventory.INSTANCE_HOLDING_ITEM, poLine.getPhysical().getCreateInventory());
@@ -1108,7 +1107,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   public void shouldSetPhysicalAndElectronicPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatMixAndHaveNoInventoryActionProfiles() throws InterruptedException {
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(List.of(), P_E_MIX);
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getPhysical());
     assertNotNull(poLine.getEresource());
     assertEquals(Physical.CreateInventory.NONE, poLine.getPhysical().getCreateInventory());
@@ -1116,7 +1115,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   private DataImportEventPayload importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(List<ActionProfile> inventoryActionProfiles,
-                                                                                                  CompositePoLine.OrderFormat orderFormat) throws InterruptedException {
+                                                                                                  PoLine.OrderFormat orderFormat) throws InterruptedException {
     // given
     openOrderMappingProfile.getMappingDetails().getMappingFields().stream()
       .filter(mappingRule -> mappingRule.getPath().equals("order.poLine.orderFormat"))
@@ -1189,7 +1188,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
-    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().getLast());
     CompositePurchaseOrder order = verifyOrder(eventPayload);
     MatcherAssert.assertThat(order.getAcqUnitIds(), Matchers.hasItem(expectedAcqUnitId));
   }
@@ -1225,11 +1224,11 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_ERROR.value());
-    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().getLast());
     assertNotNull(eventPayload.getContext().get(ORDER.value()));
     assertDoesNotThrow(() -> Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class));
     assertNotNull(eventPayload.getContext().get(PO_LINE_KEY));
-    assertDoesNotThrow(() -> Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class));
+    assertDoesNotThrow(() -> Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class));
   }
 
   @Test
@@ -1246,7 +1245,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst())
       .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -1263,7 +1262,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_ERROR.value());
-    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().getLast());
     JsonObject poLineJsonObject = new JsonObject(eventPayload.getContext().get(PO_LINE_KEY));
     assertNull(poLineJsonObject.getString(PO_LINE_ORDER_ID_KEY));
   }
@@ -1282,7 +1281,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_ID)
@@ -1300,7 +1299,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_ERROR.value());
-    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().getLast());
     assertNotNull(eventPayload.getContext().get(ORDER.value()));
     CompositePurchaseOrder order = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
     assertNotNull(order.getId());
@@ -1322,7 +1321,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_ID)
@@ -1370,7 +1369,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     for (int i = 0; i < recordsNumber; i++) {
       record = getRecord(i);
       dataImportEventPayload = new DataImportEventPayload()
-        .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+        .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst())
         .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
         .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
         .withTenant(TENANT_ID)
@@ -1399,8 +1398,8 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     }
 
     // then
-    Assertions.assertEquals(ordersIds.size(), poLimit);
-    Assertions.assertEquals(orderLinesIds.size(), recordsNumber);
+    Assertions.assertEquals(poLimit, ordersIds.size());
+    Assertions.assertEquals(recordsNumber, orderLinesIds.size());
   }
 
 
@@ -1409,7 +1408,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     mappingProfile.getMappingDetails().getMappingFields().add(new MappingRule().withName("test"));
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CreateOrderEventHandler createOrderHandler = getBeanFromSpringContext(vertx, CreateOrderEventHandler.class);
     Assertions.assertTrue(createOrderHandler.isEligible(dataImportEventPayload));
@@ -1463,7 +1462,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst())
       .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -1484,7 +1483,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     assertNotNull(createdOrder.getVendor());
     assertEquals(createdOrder.getVendor(), organization.getId());
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getPhysical());
     assertEquals(poLine.getPhysical().getMaterialSupplier(), organization.getId());
 
@@ -1521,7 +1520,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst())
       .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -1541,7 +1540,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
     assertNull(createdOrder.getVendor());
 
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getPhysical());
     assertNull(poLine.getPhysical().getMaterialSupplier());
 
@@ -1595,13 +1594,13 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
     verifyOrder(eventPayload);
-    CompositePoLine createdPoLine = verifyPoLine(eventPayload);
+    PoLine createdPoLine = verifyPoLine(eventPayload);
     assertNotNull(createdPoLine.getFundDistribution());
     assertEquals(1, createdPoLine.getFundDistribution().size());
-    assertEquals(expectedFundId, createdPoLine.getFundDistribution().get(0).getFundId());
-    assertEquals(expectedFundCode, createdPoLine.getFundDistribution().get(0).getCode());
-    assertEquals(expectedDistributionValue, createdPoLine.getFundDistribution().get(0).getValue());
-    assertEquals(PERCENTAGE, createdPoLine.getFundDistribution().get(0).getDistributionType());
+    assertEquals(expectedFundId, createdPoLine.getFundDistribution().getFirst().getFundId());
+    assertEquals(expectedFundCode, createdPoLine.getFundDistribution().getFirst().getCode());
+    assertEquals(expectedDistributionValue, createdPoLine.getFundDistribution().getFirst().getValue());
+    assertEquals(PERCENTAGE, createdPoLine.getFundDistribution().getFirst().getDistributionType());
   }
 
   @Test
@@ -1613,7 +1612,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     String recordId = UUID.randomUUID().toString();
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst())
       .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withTenant(TENANT_ID)
@@ -1644,7 +1643,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     String newRecordId = UUID.randomUUID().toString();
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst())
       .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withTenant(TENANT_ID)
@@ -1746,7 +1745,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
   private DataImportEventPayload observeEvent(String eventType) throws InterruptedException {
     String topicToObserve = formatToKafkaTopicName(eventType);
-    List<KeyValue<String, String>> observedRecords = null;
+    List<KeyValue<String, String>> observedRecords;
     try {
       observedRecords = kafkaCluster.observe(ObserveKeyValues.on(topicToObserve, 1)
         .with(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID)
@@ -1758,12 +1757,12 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         .with(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID)
         .observeFor(15, TimeUnit.SECONDS)
         .build());
-      String error = getCompositePurchaseOrder(observedRecords.get(0).getValue()).getContext().get("ERROR");
+      String error = getCompositePurchaseOrder(observedRecords.getFirst().getValue()).getContext().get("ERROR");
       throw new AssertionError(error);
     }
 
-    assertEquals(record.getId(), new String(observedRecords.get(0).getHeaders().lastHeader(RECORD_ID_HEADER).value(), UTF_8));
-    Event obtainedEvent = Json.decodeValue(observedRecords.get(0).getValue(), Event.class);
+    assertEquals(record.getId(), new String(observedRecords.getFirst().getHeaders().lastHeader(RECORD_ID_HEADER).value(), UTF_8));
+    Event obtainedEvent = Json.decodeValue(observedRecords.getFirst().getValue(), Event.class);
     return Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
   }
 
@@ -1773,7 +1772,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   private String getPurchaseOrderId(DataImportEventPayload eventPayload) {
-    return Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class).getPurchaseOrderId();
+    return Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class).getPurchaseOrderId();
   }
 
   private CompositePurchaseOrder verifyOrder(DataImportEventPayload eventPayload) {
@@ -1787,14 +1786,14 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     return createdOrder;
   }
 
-  private CompositePoLine verifyPoLine(DataImportEventPayload eventPayload) {
+  private PoLine verifyPoLine(DataImportEventPayload eventPayload) {
     assertNotNull(eventPayload.getContext().get(PO_LINE_KEY));
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     assertNotNull(poLine.getId());
     assertNotNull(poLine.getTitleOrPackage());
     assertNotNull(poLine.getPurchaseOrderId());
-    assertEquals(CompositePoLine.Source.MARC, poLine.getSource());
-    assertEquals(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE, poLine.getOrderFormat());
+    assertEquals(PoLine.Source.MARC, poLine.getSource());
+    assertEquals(PoLine.OrderFormat.PHYSICAL_RESOURCE, poLine.getOrderFormat());
     assertTrue(poLine.getCheckinItems());
     assertNotNull(poLine.getAcquisitionMethod());
     return poLine;
