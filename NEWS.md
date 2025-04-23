@@ -1,5 +1,14 @@
 ## 13.1.0 - Unreleased
 
+## 13.0.3 - Released (Sunflower R1 2025 Bug Fix)
+The primary focus of this release was to fix an issue when Fund cannot be added to POL fund distribution after rollover.
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v13.0.2...v13.0.3)
+
+### Bug Fixes
+* [MODORDERS-1282](https://issues.folio.org/browse/MODORDERS-1282) - Fund cannot be added to POL fund distribution after rollover
+
+
 ## 13.0.2 - Released (Sunflower R1 2025 Bug Fix)
 The primary focus of this release was to fix an issue where PO line statuses became "Pending" when user without appropriate affiliation is trying to unopen an order.
 
