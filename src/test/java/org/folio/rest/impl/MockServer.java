@@ -162,7 +162,6 @@ import org.folio.HttpStatus;
 import org.folio.Organization;
 import org.folio.OrganizationCollection;
 import org.folio.helper.BaseHelper;
-import org.folio.isbn.IsbnUtil;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.acq.model.Alert;
 import org.folio.rest.acq.model.OrderInvoiceRelationshipCollection;
@@ -320,7 +319,6 @@ public class MockServer {
   private static final String INSTANCE_STATUSES = "instanceStatuses";
   private static final String IDENTIFIER_TYPES = "identifierTypes";
   private static final String HOLDINGS_SOURCES = "holdingsRecordsSources";
-  private static final String ISBN_CONVERT13 = "ISBN13";
   private static final String HOLDING_PERMANENT_LOCATION_ID = "permanentLocationId";
   private static final String ORGANIZATIONS = "organizations";
   static final String LOAN_TYPES = "loantypes";
@@ -650,7 +648,6 @@ public class MockServer {
     router.get(resourcePath(ACQUISITIONS_UNITS)).handler(this::handleGetAcquisitionsUnit);
     router.get(resourcesPath(ACQUISITIONS_MEMBERSHIPS)).handler(this::handleGetAcquisitionsMemberships);
     router.get(resourcePath(ACQUISITIONS_MEMBERSHIPS)).handler(this::handleGetAcquisitionsMembership);
-    router.get("/isbn/convertTo13").handler(this::handleGetIsbnConverter);
     router.get(resourcePath(ORDER_TEMPLATES)).handler(ctx -> handleGetGenericSubObj(ctx, ORDER_TEMPLATES));
     router.get(resourcesPath(ORDER_TEMPLATES)).handler(this::handleGetOrderTemplates);
     router.get("/finance/ledgers/:id/current-fiscal-year").handler(this::handleGetCurrentFiscalYearByLedgerId);
@@ -2763,24 +2760,6 @@ public class MockServer {
       JsonObject data = JsonObject.mapFrom(acquisitionMethodCollection.withTotalRecords(acquisitionMethodCollection.getAcquisitionMethods().size()));
       addServerRqRsData(HttpMethod.GET, ACQUISITION_METHODS, data);
       serverResponse(ctx, 200, APPLICATION_JSON, data.encodePrettily());
-    }
-  }
-
-  private void handleGetIsbnConverter(RoutingContext ctx) {
-    logger.info("handleGetIsbnConverter got: {}", ctx.request().path());
-    String isbn = ctx.request()
-      .getParam("isbn");
-    JsonObject data = new JsonObject();
-    if (IsbnUtil.isValid13DigitNumber(isbn)) {
-      data.put("isbn", isbn);
-      addServerRqRsData(HttpMethod.GET, ISBN_CONVERT13, data);
-      serverResponse(ctx, 200, APPLICATION_JSON, data.encodePrettily());
-    } else if (IsbnUtil.isValid10DigitNumber(isbn)) {
-      data.put("isbn", IsbnUtil.convertTo13DigitNumber(isbn));
-      addServerRqRsData(HttpMethod.GET, ISBN_CONVERT13, data);
-      serverResponse(ctx, 200, APPLICATION_JSON, data.encodePrettily());
-    } else {
-      serverResponse(ctx, 400, TEXT_PLAIN, String.format("ISBN value %s is invalid", isbn));
     }
   }
 

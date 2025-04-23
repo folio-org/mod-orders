@@ -45,7 +45,6 @@ import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_EXPENSE_CLASS_NOT
 import static org.folio.rest.core.exceptions.ErrorCodes.CLAIMING_CONFIG_INVALID;
 import static org.folio.rest.core.exceptions.ErrorCodes.INACTIVE_EXPENSE_CLASS;
 import static org.folio.rest.core.exceptions.ErrorCodes.INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE;
-import static org.folio.rest.core.exceptions.ErrorCodes.ISBN_NOT_VALID;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_MATERIAL_TYPE;
 import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_CLOSED;
@@ -2458,24 +2457,22 @@ public class PurchaseOrdersApiTest {
       .getErrors()
       .get(0);
 
-    assertThat(err.getMessage(), equalTo(ISBN_NOT_VALID.getDescription()));
-    assertThat(err.getCode(), equalTo(ISBN_NOT_VALID.getCode()));
     assertThat(err.getParameters().get(0).getValue(), equalTo(isbn));
   }
 
   @Test
-  void testPostOrdersToConvertToIsbn13() throws Exception {
-    logger.info("=== testPostOrdersToConvertToIsbn13 ===");
+  void testPostOrdersToUseIsbnAsItWithoutConversion() throws Exception {
+    logger.info("=== testPostOrdersToUseIsbnAsItWithoutConversion ===");
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     prepareOrderForPostRequest(reqData);
-    String isbn = "0-19-852663-6";
+    String isbnWithoutConversion = "0-19-852663-6";
 
-    reqData.getCompositePoLines().get(0).getDetails().getProductIds().get(0).setProductId(isbn);
+    reqData.getCompositePoLines().get(0).getDetails().getProductIds().get(0).setProductId(isbnWithoutConversion);
     CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
-    assertThat(resp.getCompositePoLines().get(0).getDetails().getProductIds().get(0).getProductId(), equalTo("9780198526636"));
+    assertThat(resp.getCompositePoLines().get(0).getDetails().getProductIds().get(0).getProductId(), equalTo(isbnWithoutConversion));
   }
 
   @Test
@@ -2508,8 +2505,6 @@ public class PurchaseOrdersApiTest {
       .getErrors()
       .get(0);
 
-    assertThat(err.getMessage(), equalTo(ISBN_NOT_VALID.getDescription()));
-    assertThat(err.getCode(), equalTo(ISBN_NOT_VALID.getCode()));
     assertThat(err.getParameters().get(0).getValue(), equalTo(isbn));
   }
 

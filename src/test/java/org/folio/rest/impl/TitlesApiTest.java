@@ -422,7 +422,7 @@ public class TitlesApiTest {
     }
 
     @Bean PurchaseOrderLineService purchaseOrderLineService() {
-      return new PurchaseOrderLineService(restClient(), inventoryCache(), inventoryHoldingManager());
+      return new PurchaseOrderLineService(restClient(), inventoryHoldingManager());
     }
 
     @Bean

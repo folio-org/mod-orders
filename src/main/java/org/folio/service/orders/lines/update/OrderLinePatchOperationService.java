@@ -1,20 +1,10 @@
 package org.folio.service.orders.lines.update;
 
-import static org.folio.rest.core.exceptions.ErrorCodes.INSTANCE_INVALID_PRODUCT_ID_ERROR;
 import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_TITLE;
 import static org.folio.service.inventory.InventoryUtils.INSTANCE_RECORDS_BY_ID_ENDPOINT;
 import static org.folio.service.inventory.InventoryUtils.INVENTORY_LOOKUP_ENDPOINTS;
-import static org.folio.service.orders.utils.ProductIdUtils.buildSetOfProductIds;
-import static org.folio.service.orders.utils.ProductIdUtils.isISBN;
-import static org.folio.service.orders.utils.ProductIdUtils.removeISBNDuplicates;
-import static org.folio.service.orders.utils.ProductIdUtils.extractProductId;
-import static org.folio.service.orders.utils.ProductIdUtils.extractQualifier;
 
-import java.util.List;
 import java.util.Objects;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -22,23 +12,17 @@ import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.acq.model.StoragePatchOrderLineRequest;
 import org.folio.rest.core.RestClient;
-import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CreateInventoryType;
-import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.ProductId;
-import org.folio.service.caches.InventoryCache;
 import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryUtils;
 import org.folio.service.orders.PurchaseOrderLineService;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
-import org.folio.orders.utils.HelperUtils;
-
 
 public class OrderLinePatchOperationService {
   private static final Logger logger = LogManager.getLogger(OrderLinePatchOperationService.class);
@@ -52,18 +36,15 @@ public class OrderLinePatchOperationService {
 
   private final PurchaseOrderLineService purchaseOrderLineService;
 
-  private final InventoryCache inventoryCache;
   private final InventoryInstanceManager inventoryInstanceManager;
 
   public OrderLinePatchOperationService(RestClient restClient,
                                         OrderLineUpdateInstanceStrategyResolver orderLineUpdateInstanceStrategyResolver,
                                         PurchaseOrderLineService purchaseOrderLineService,
-                                        InventoryCache inventoryCache,
                                         InventoryInstanceManager inventoryInstanceManager) {
     this.restClient = restClient;
     this.orderLineUpdateInstanceStrategyResolver = orderLineUpdateInstanceStrategyResolver;
     this.purchaseOrderLineService = purchaseOrderLineService;
-    this.inventoryCache = inventoryCache;
     this.inventoryInstanceManager = inventoryInstanceManager;
   }
 
@@ -131,48 +112,19 @@ public class OrderLinePatchOperationService {
     poLine.setInstanceId(newInstanceId); // updating instance id in case of retrieval of poLine has old instance id because of race condition
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCE_RECORDS_BY_ID_ENDPOINT)).withId(newInstanceId);
     return restClient.getAsJsonObject(requestEntry, requestContext)
-      .compose(instanceRecord -> updatePoLineWithInstanceRecordInfo(instanceRecord, poLine, requestContext))
+      .map(instanceRecord -> updatePoLineWithInstanceRecordInfo(instanceRecord, poLine))
       .compose(updatePoLine -> purchaseOrderLineService.saveOrderLine(updatePoLine, requestContext))
       .onSuccess(v -> logger.info("updateInventoryInstanceInformation:: updated instance info for poLineId: {}", poLine.getId()))
       .onFailure(v -> logger.error("Error when updating retrieving instance record from inventory-storage request to by instanceId {}, poLineId {}", newInstanceId, poLine.getId()));
   }
 
-  private Future<PoLine> updatePoLineWithInstanceRecordInfo(JsonObject lookupObj, PoLine poLine, RequestContext requestContext) {
+  private PoLine updatePoLineWithInstanceRecordInfo(JsonObject lookupObj, PoLine poLine) {
     poLine.setTitleOrPackage(lookupObj.getString(INSTANCE_TITLE));
     poLine.setPublisher(InventoryUtils.getPublisher(lookupObj));
     poLine.setPublicationDate(InventoryUtils.getPublicationDate(lookupObj));
     poLine.setContributors(InventoryUtils.getContributors(lookupObj));
-
-    return inventoryCache.getISBNProductTypeId(requestContext)
-      .compose(isbnTypeId -> {
-        List<ProductId> productIds = InventoryUtils.getProductIds(lookupObj);
-        Set<String> setOfProductIds = buildSetOfProductIds(productIds, isbnTypeId);
-
-        return HelperUtils.executeWithSemaphores(setOfProductIds,
-            productId -> inventoryCache.convertToISBN13(extractProductId(productId), requestContext)
-              .map(normalizedId -> Map.entry(productId, normalizedId)), requestContext)
-          .map(result -> result
-            .stream()
-            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)))
-          .map(productIdsMap -> {
-            productIds.stream()
-              .filter(productId -> isISBN(isbnTypeId, productId))
-              .forEach(productId -> {
-                productId.withQualifier(extractQualifier(productId.getProductId()));
-                productId.setProductId(productIdsMap.get(productId.getProductId()));
-              });
-
-            if (Objects.isNull(poLine.getDetails())) {
-              poLine.setDetails(new Details());
-            }
-            poLine.getDetails().setProductIds(removeISBNDuplicates(productIds, isbnTypeId));
-            return poLine;
-          })
-          .recover(t -> {
-            logger.error("Failed update poLine {} with instance", poLine.getId(), t);
-            return Future.failedFuture(new HttpException(400, INSTANCE_INVALID_PRODUCT_ID_ERROR.toError()));
-          });
-      });
+    poLine.getDetails().setProductIds(InventoryUtils.getProductIds(lookupObj));
+    return poLine;
   }
 
 }

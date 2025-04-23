@@ -184,9 +184,8 @@ public class ApplicationConfig {
 
   @Bean
   PurchaseOrderLineService purchaseOrderLineService(RestClient restClient,
-                                                    InventoryCache inventoryCache,
                                                     InventoryHoldingManager inventoryHoldingManager) {
-    return new PurchaseOrderLineService(restClient, inventoryCache, inventoryHoldingManager);
+    return new PurchaseOrderLineService(restClient, inventoryHoldingManager);
   }
 
   @Bean
@@ -817,7 +816,7 @@ public class ApplicationConfig {
       InventoryCache inventoryCache,
       InventoryInstanceManager inventoryInstanceManager) {
     return new OrderLinePatchOperationService(restClient, orderLineUpdateInstanceStrategyResolver,
-      purchaseOrderLineService, inventoryCache, inventoryInstanceManager);
+      purchaseOrderLineService, inventoryInstanceManager);
   }
 
   @Bean OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy(InventoryInstanceManager inventoryInstanceManager,

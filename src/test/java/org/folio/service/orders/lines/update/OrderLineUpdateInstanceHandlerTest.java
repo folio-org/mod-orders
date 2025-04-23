@@ -87,7 +87,6 @@ public class OrderLineUpdateInstanceHandlerTest {
     okapiHeadersMock.put(X_OKAPI_TOKEN.getName(), X_OKAPI_TOKEN.getValue());
     okapiHeadersMock.put("x-okapi-tenant", X_OKAPI_TENANT.getValue());
     okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
-    String okapiURL = okapiHeadersMock.getOrDefault(OKAPI_URL, "");
     requestContext = new RequestContext(ctxMock, okapiHeadersMock);
     autowireDependencies(this);
     doReturn(succeededFuture(Lists.newArrayList())).when(pieceStorageService).getPiecesByPoLineId(any(), any());
@@ -282,8 +281,8 @@ public class OrderLineUpdateInstanceHandlerTest {
     }
 
     @Bean
-    PurchaseOrderLineService purchaseOrderLineService(RestClient restClient, InventoryCache inventoryCache, InventoryHoldingManager inventoryHoldingManager) {
-      return new PurchaseOrderLineService(restClient, inventoryCache, inventoryHoldingManager);
+    PurchaseOrderLineService purchaseOrderLineService(RestClient restClient, InventoryHoldingManager inventoryHoldingManager) {
+      return new PurchaseOrderLineService(restClient, inventoryHoldingManager);
     }
 
     @Bean
@@ -302,7 +301,7 @@ public class OrderLineUpdateInstanceHandlerTest {
         PurchaseOrderLineService purchaseOrderLineService,
         InventoryCache inventoryCache,
         InventoryInstanceManager inventoryInstanceManager) {
-      return new OrderLinePatchOperationService(restClient, orderLineUpdateInstanceStrategyResolver, purchaseOrderLineService, inventoryCache, inventoryInstanceManager);
+      return new OrderLinePatchOperationService(restClient, orderLineUpdateInstanceStrategyResolver, purchaseOrderLineService, inventoryInstanceManager);
     }
 
     @Bean OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy(InventoryInstanceManager inventoryInstanceManager,

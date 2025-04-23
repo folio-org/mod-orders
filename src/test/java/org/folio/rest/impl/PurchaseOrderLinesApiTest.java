@@ -59,7 +59,6 @@ import static org.folio.rest.core.exceptions.ErrorCodes.COST_UNIT_PRICE_INVALID;
 import static org.folio.rest.core.exceptions.ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH;
 import static org.folio.rest.core.exceptions.ErrorCodes.INACTIVE_EXPENSE_CLASS;
 import static org.folio.rest.core.exceptions.ErrorCodes.INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE;
-import static org.folio.rest.core.exceptions.ErrorCodes.ISBN_NOT_VALID;
 import static org.folio.rest.core.exceptions.ErrorCodes.LOCATION_CAN_NOT_BE_MODIFIER_AFTER_OPEN;
 import static org.folio.rest.core.exceptions.ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY;
 import static org.folio.rest.core.exceptions.ErrorCodes.NON_ZERO_COST_PHYSICAL_QTY;
@@ -1047,8 +1046,6 @@ public class PurchaseOrderLinesApiTest {
         .getErrors()
         .get(0);
 
-    assertThat(err.getMessage(), equalTo(ISBN_NOT_VALID.getDescription()));
-    assertThat(err.getCode(), equalTo(ISBN_NOT_VALID.getCode()));
     assertThat(err.getParameters().get(0).getValue(), equalTo(isbn));
   }
 
