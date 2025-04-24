@@ -407,9 +407,10 @@ public class PurchaseOrderLineHelper {
     logger.debug("handlePoLines start");
     List<Future<?>> futures = new ArrayList<>(processPoLinesCreation(compOrder, poLinesFromStorage, requestContext));
     if (!poLinesFromStorage.isEmpty()) {
-      futures.addAll(processPoLinesUpdate(compOrder, poLinesFromStorage, requestContext));
+      List<PoLine> linesToProcess = new ArrayList<>(poLinesFromStorage);
+      futures.addAll(processPoLinesUpdate(compOrder, linesToProcess, requestContext));
       // The remaining unprocessed PoLines should be removed
-      poLinesFromStorage.forEach(poLine -> futures.add(
+      linesToProcess.forEach(poLine -> futures.add(
         orderInvoiceRelationService.checkOrderInvoiceRelationship(compOrder.getId(), requestContext)
           .compose(v -> encumbranceService.deletePoLineEncumbrances(poLine, requestContext))
           .compose(v -> purchaseOrderLineService.deletePoLine(poLine, requestContext))));

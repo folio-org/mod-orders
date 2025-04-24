@@ -222,7 +222,7 @@ public class PurchaseOrderHelper {
     return purchaseOrderStorageService.getPurchaseOrderByIdAsJson(compPO.getId(), requestContext)
       .map(jsonPoFromStorage -> validateIfPOProtectedAndOngoingFieldsChanged(compPO, jsonPoFromStorage))
       .map(HelperUtils::convertToCompositePurchaseOrder)
-      .compose(lines -> purchaseOrderLineService.populateOrderLines(lines, requestContext))
+      .compose(poFromStorage -> purchaseOrderLineService.populateOrderLines(poFromStorage, requestContext))
       .compose(poFromStorage -> {
         CompositePurchaseOrder clonedPoFromStorage = JsonObject.mapFrom(poFromStorage).mapTo(CompositePurchaseOrder.class);
         boolean isTransitionToOpen = isTransitionToOpen(poFromStorage, compPO);
