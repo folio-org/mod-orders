@@ -15,6 +15,7 @@ import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CreateInventoryType;
+import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.service.inventory.InventoryInstanceManager;
@@ -123,6 +124,9 @@ public class OrderLinePatchOperationService {
     poLine.setPublisher(InventoryUtils.getPublisher(lookupObj));
     poLine.setPublicationDate(InventoryUtils.getPublicationDate(lookupObj));
     poLine.setContributors(InventoryUtils.getContributors(lookupObj));
+    if (Objects.isNull(poLine.getDetails())) {
+      poLine.setDetails(new Details());
+    }
     poLine.getDetails().setProductIds(InventoryUtils.getProductIds(lookupObj));
     return poLine;
   }
