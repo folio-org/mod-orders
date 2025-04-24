@@ -73,7 +73,7 @@ public class OrderValidationService {
   private final UnOpenCompositeOrderManager unOpenCompositeOrderManager;
 
   public OrderValidationService(
-    PoLineValidationService poLineValidationService,
+      PoLineValidationService poLineValidationService,
       ConfigurationEntriesCache configurationEntriesCache, OrganizationService organizationService,
       ProtectionService protectionService, PrefixService prefixService, PurchaseOrderLineHelper purchaseOrderLineHelper,
       PurchaseOrderLineService purchaseOrderLineService, SuffixService suffixService, PoNumberHelper poNumberHelper,
@@ -109,7 +109,6 @@ public class OrderValidationService {
       .compose(v -> validateOrderPoLines(compPO, requestContext))
       .map(errors::addAll)
       .map(v -> errors.addAll(validatePoLineLimit(compPO, tenantConfig)))
-      .compose(v -> purchaseOrderLineService.validateAndNormalizeISBN(compPO.getPoLines(), requestContext))
       .compose(v -> validateVendor(compPO, requestContext))
       .map(errors::addAll)
       .map(v -> {

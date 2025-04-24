@@ -262,7 +262,6 @@ public class PurchaseOrderLineHelper {
           return compOrder;
         })
         .compose(compOrder -> protectionService.isOperationRestricted(compOrder.getAcqUnitIds(), UPDATE, requestContext)
-          .compose(v -> purchaseOrderLineService.validateAndNormalizeISBNAndProductType(Collections.singletonList(poLine), requestContext))
           .compose(v -> validateAccessProviders(poLine, requestContext))
           .compose(v -> poLineValidationService.validateUserUnaffiliatedLocations(poLine.getId(), poLine.getLocations(), requestContext))
           .compose(v -> expenseClassValidationService.validateExpenseClassesForOpenedOrder(compOrder, Collections.singletonList(poLine), requestContext))
@@ -497,10 +496,8 @@ public class PurchaseOrderLineHelper {
           .compose(aErrors -> {
             if (isNotEmpty(aErrors)) {
               errors.addAll(aErrors);
-              return Future.succeededFuture(errors);
             }
-            return purchaseOrderLineService.validateAndNormalizeISBN(Collections.singletonList(poLine), requestContext)
-              .map(v -> errors);
+            return Future.succeededFuture(errors);
           });
       });
   }

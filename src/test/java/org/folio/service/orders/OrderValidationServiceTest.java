@@ -27,18 +27,14 @@ import static org.folio.rest.core.exceptions.ErrorCodes.ONGOING_NOT_ALLOWED;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.OrderType.ONE_TIME;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.OrderType.ONGOING;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 
 public class OrderValidationServiceTest {
-  static final String LISTED_PRINT_MONOGRAPH_PATH = "po_listed_print_monograph.json";
   @InjectMocks
   private OrderValidationService orderValidationService;
   @Mock
@@ -61,8 +57,6 @@ public class OrderValidationServiceTest {
       .when(purchaseOrderLineHelper).setTenantDefaultCreateInventoryValues(any(PoLine.class), any(JsonObject.class));
     doReturn(succeededFuture(List.of()))
       .when(poLineValidationService).validatePoLine(any(PoLine.class), eq(requestContext));
-    doReturn(succeededFuture(null))
-      .when(purchaseOrderLineService).validateAndNormalizeISBN(anyList(), eq(requestContext));
   }
 
   @AfterEach

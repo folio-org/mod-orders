@@ -288,8 +288,8 @@ public class OrderLineUpdateInstanceHandlerTest {
     }
 
     @Bean
-    PurchaseOrderLineService purchaseOrderLineService(RestClient restClient, InventoryCache inventoryCache, InventoryHoldingManager inventoryHoldingManager) {
-      return new PurchaseOrderLineService(restClient, inventoryCache, inventoryHoldingManager);
+    PurchaseOrderLineService purchaseOrderLineService(RestClient restClient, InventoryHoldingManager inventoryHoldingManager) {
+      return new PurchaseOrderLineService(restClient, inventoryHoldingManager);
     }
 
     @Bean
@@ -308,7 +308,7 @@ public class OrderLineUpdateInstanceHandlerTest {
         PurchaseOrderLineService purchaseOrderLineService,
         InventoryCache inventoryCache,
         InventoryInstanceManager inventoryInstanceManager) {
-      return new OrderLinePatchOperationService(restClient, orderLineUpdateInstanceStrategyResolver, purchaseOrderLineService, inventoryCache, inventoryInstanceManager);
+      return new OrderLinePatchOperationService(restClient, orderLineUpdateInstanceStrategyResolver, purchaseOrderLineService, inventoryInstanceManager);
     }
 
     @Bean OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy(InventoryInstanceManager inventoryInstanceManager,
