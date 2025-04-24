@@ -59,7 +59,6 @@ public enum ErrorCodes {
   USER_HAS_NO_REOPEN_PERMISSIONS("userHasNoOrderReopenPermission", "User does not have permissions to move order from closed to open - operation is restricted"),
   USER_HAS_MISSED_AFFILIATIONS("userHasMissedAffiliations", "User does not have all required affiliations to process - operation is restricted"),
   APPROVAL_REQUIRED_TO_OPEN("orderApprovalRequired","Approval is required to open order"),
-  ISBN_NOT_VALID("invalidISBN", "ISBN value is invalid"),
   FUNDS_NOT_FOUND("fundsNotFound", "The fund records are not found"),
   CURRENT_FISCAL_YEAR_NOT_FOUND("currentFYearNotFound", "Current fiscal year not found for ledger"),
   CURRENT_FISCAL_YEAR_ID_NOT_FOUND("currentFYearIdNotFound", "Current fiscal year id not found for POLine"),

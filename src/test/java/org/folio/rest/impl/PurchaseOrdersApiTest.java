@@ -46,7 +46,6 @@ import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_EXPENSE_CLASS_NOT
 import static org.folio.rest.core.exceptions.ErrorCodes.CLAIMING_CONFIG_INVALID;
 import static org.folio.rest.core.exceptions.ErrorCodes.INACTIVE_EXPENSE_CLASS;
 import static org.folio.rest.core.exceptions.ErrorCodes.INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE;
-import static org.folio.rest.core.exceptions.ErrorCodes.ISBN_NOT_VALID;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_MATERIAL_TYPE;
 import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_CLOSED;
@@ -355,7 +354,6 @@ public class PurchaseOrdersApiTest {
 
   @Test
   @Disabled
-    //
   void testPostOrderFailsWithExistingPONumber() {
     logger.info("=== Test Placement of minimal order failure with Existing PO Number===");
 
@@ -542,11 +540,7 @@ public class PurchaseOrdersApiTest {
       })
       .sum();
 
-    //PurchaseOrderHelper serviceSpy = spy(new PurchaseOrderHelper(httpClient, okapiHeadersMock, ctxMock, "en"));
-    //double expectedPrice = serviceSpy.calculateTotalEstimatedPrice(resp.getCompositePoLines()).result();
-
     assertThat(resp.getTotalItems(), equalTo(expectedQuantity));
-    //assertThat(resp.getTotalEstimatedPrice(), equalTo(expectedPrice));
 
     resp.getCompositePoLines().forEach(line -> assertThat(line.getCost().getPoLineEstimatedPrice(), greaterThan(0d)));
   }
@@ -883,7 +877,6 @@ public class PurchaseOrdersApiTest {
     request.put("poNumber", "1234");
 
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id), request, APPLICATION_JSON, 422);
-
   }
 
   @Test
@@ -979,7 +972,6 @@ public class PurchaseOrdersApiTest {
 
     assertThat(errors.getErrors().get(0).getCode(),is(BUDGET_EXPENSE_CLASS_NOT_FOUND.toError().getCode()));
   }
-
 
   @Test
   @Disabled
@@ -1143,7 +1135,6 @@ public class PurchaseOrdersApiTest {
     reqData.getCompositePoLines().forEach(compPoline -> assertThat(uuids.get(compPoline.getId()), is(compPoline.getInstanceId())));
     // Verify that new instances didn't created
     assertThat(MockServer.getCreatedInstances(), nullValue());
-
   }
 
   @Test
@@ -1533,7 +1524,6 @@ public class PurchaseOrdersApiTest {
 
   @Test
   @Disabled
-    //
   void testUpdateOrderToOpenWithPartialItemsCreation() throws Exception {
     logger.info("=== Test Order update to Open status - Inventory items expected to be created partially ===");
 
@@ -1570,7 +1560,6 @@ public class PurchaseOrdersApiTest {
     assertThat(items.size(), lessThan(calculateInventoryItemsQuantity(reqData.getCompositePoLines().get(0))));
   }
 
-
   @Test
   void testPutOrdersByIdToChangeStatusToOpenButWithFailureFromStorage() throws Exception {
     logger.info("=== Test Put Order By Id to change status of Order to Open - Storage errors expected and no interaction with Inventory===");
@@ -1594,7 +1583,6 @@ public class PurchaseOrdersApiTest {
 
   @Test
   @Disabled
-    //
   void testPutOrdersByIdToChangeStatusToOpenButWithErrorCreatingItemsForSecondPOL() throws Exception {
     logger.info("=== Test Put Order By Id to change Order's status to Open - Inventory errors expected on items creation for second POL ===");
 
@@ -1816,10 +1804,8 @@ public class PurchaseOrdersApiTest {
     assertEquals(NULL, resp.getErrors().get(0).getParameters().get(0).getValue());
   }
 
-
   @Test
   @Disabled
-    //
   void testGetOrdersNoParameters() {
     logger.info("=== Test Get Orders - With empty query ===");
 
@@ -1892,7 +1878,6 @@ public class PurchaseOrdersApiTest {
     String endpointQuery = String.format("%s?query=%s", COMPOSITE_ORDERS_PATH, BAD_QUERY);
 
     verifyGet(endpointQuery, APPLICATION_JSON, 400);
-
   }
 
   @Test
@@ -1902,7 +1887,6 @@ public class PurchaseOrdersApiTest {
     String endpointQuery = String.format("%s?query=%s", COMPOSITE_ORDERS_PATH, ID_FOR_INTERNAL_SERVER_ERROR);
 
     verifyGet(endpointQuery, APPLICATION_JSON, 500);
-
   }
 
   @Test
@@ -1921,36 +1905,6 @@ public class PurchaseOrdersApiTest {
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(Errors.class);
     assertThat(activeVendorActiveAccessProviderErrors.getErrors(), empty());
 
-    // Internal mod-vendor error
-//    reqData.setVendor(MOD_VENDOR_INTERNAL_ERROR_ID);
-//    reqData.getCompositePoLines().get(0).getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_A);
-//    reqData.getCompositePoLines().get(1).getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
-//    reqData.setPoNumber("268759");
-//    Errors internalServerError = verifyPostResponseErrors(1, JsonObject.mapFrom(reqData).toString());
-//    assertThat(internalServerError.getErrors().get(0).getCode(), equalTo(VENDOR_ISSUE.getCode()));
-//    assertThat(internalServerError.getErrors().get(0).getAdditionalProperties().get(ERROR_CAUSE), notNullValue());
-//
-//    // Non-existed vendor
-//    reqData.setVendor(NON_EXIST_VENDOR_ID);
-//    reqData.getCompositePoLines().get(0).getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_A);
-//    reqData.getCompositePoLines().get(1).getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
-//    Errors nonExistedVendorError = verifyPostResponseErrors(1, JsonObject.mapFrom(reqData).toString());
-//    checkExpectedError(NON_EXIST_VENDOR_ID, nonExistedVendorError, 0, ORDER_VENDOR_NOT_FOUND, reqData, 0);
-//
-//    // Active vendor and non-existed access provider
-//    reqData.setVendor(ACTIVE_VENDOR_ID);
-//    reqData.getCompositePoLines().get(0).getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_A);
-//    reqData.getCompositePoLines().get(1).getEresource().setAccessProvider(NON_EXIST_ACCESS_PROVIDER_A);
-//    Errors inactiveAccessProviderErrors = verifyPostResponseErrors(1, JsonObject.mapFrom(reqData).toString());
-//    checkExpectedError(NON_EXIST_ACCESS_PROVIDER_A, inactiveAccessProviderErrors, 0, POL_ACCESS_PROVIDER_NOT_FOUND, reqData, 1);
-//
-//    // Inactive access provider
-//    reqData.setVendor(ACTIVE_VENDOR_ID);
-//    reqData.getCompositePoLines().get(0).getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_A);
-//    reqData.getCompositePoLines().get(1).getEresource().setAccessProvider(INACTIVE_ACCESS_PROVIDER_A);
-//    Errors nonExistedAccessProviderErrors = verifyPostResponseErrors(1, JsonObject.mapFrom(reqData).toString());
-//    checkExpectedError(INACTIVE_ACCESS_PROVIDER_A, nonExistedAccessProviderErrors, 0, POL_ACCESS_PROVIDER_IS_INACTIVE, reqData, 1);
-
     // Inactive vendor and inactive access providers
     reqData.setVendor(INACTIVE_VENDOR_ID);
     reqData.getCompositePoLines().get(0).getEresource().setAccessProvider(INACTIVE_ACCESS_PROVIDER_A);
@@ -1959,7 +1913,6 @@ public class PurchaseOrdersApiTest {
     checkExpectedError(INACTIVE_VENDOR_ID, allInactiveErrors, 0, ORDER_VENDOR_IS_INACTIVE, reqData, 0);
     checkExpectedError(INACTIVE_ACCESS_PROVIDER_A, allInactiveErrors, 1, POL_ACCESS_PROVIDER_IS_INACTIVE, reqData, 1);
     checkExpectedError(INACTIVE_ACCESS_PROVIDER_B, allInactiveErrors, 2, POL_ACCESS_PROVIDER_IS_INACTIVE, reqData, 1);
-
   }
 
   @Test
@@ -2076,7 +2029,6 @@ public class PurchaseOrdersApiTest {
     assertThat(errors.getErrors(), hasSize(1));
 
     checkExpectedError(ORGANIZATION_NOT_VENDOR, errors, 0, ORGANIZATION_NOT_A_VENDOR, reqData, 0);
-
   }
 
   @Test
@@ -2320,7 +2272,6 @@ public class PurchaseOrdersApiTest {
     checkPreventProtectedFieldsModificationRule(COMPOSITE_ORDERS_BY_ID_PATH, reqData, allProtectedFieldsModification);
   }
 
-
   @Test
   void testUpdateOrderCloseOrderWithCloseReason() {
     logger.info("=== Test case: Able to Close Order with close Reason ===");
@@ -2424,7 +2375,6 @@ public class PurchaseOrdersApiTest {
 
   @Test
   void testPostOpenOrderCacheKayMustBeTenantSpecific() throws Exception {
-
     MockServer.serverRqRs.clear();
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     MockServer.addMockTitles(reqData.getCompositePoLines());
@@ -2445,7 +2395,6 @@ public class PurchaseOrdersApiTest {
     //Create order second time for tenant, cache contains contributor name type for this tenant
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(), headers, APPLICATION_JSON, 201);
 
-
     assertThat(getLoanTypesSearches(), nullValue());
     assertThat(getInstanceStatusesSearches(), nullValue());
     assertThat(getInstanceTypesSearches(), nullValue());
@@ -2460,12 +2409,10 @@ public class PurchaseOrdersApiTest {
     assertThat(getLoanTypesSearches().size() > 0, is(true));
     assertThat(getInstanceStatusesSearches(), hasSize(1));
     assertThat(getInstanceTypesSearches(), hasSize(1));
-
   }
 
   @Test
   void testInventoryHelperCacheDoesNotKeepEmptyValuesWhenFails() throws Exception {
-
     MockServer.serverRqRs.clear();
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     MockServer.addMockTitles(reqData.getCompositePoLines());
@@ -2496,12 +2443,10 @@ public class PurchaseOrdersApiTest {
     assertThat(getLoanTypesSearches(), nullValue());
     assertThat(getInstanceStatusesSearches(), hasSize(1));
     assertThat(getInstanceTypesSearches(), nullValue());
-
   }
 
   @Test
   void testInventoryHelperCacheContainsDifferentValuesForInstanceTypeAndInstanceStatusWithSameCode() throws Exception {
-
     MockServer.serverRqRs.clear();
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     MockServer.addMockTitles(reqData.getCompositePoLines());
@@ -2527,7 +2472,6 @@ public class PurchaseOrdersApiTest {
     String instanceStatusId = instance.getString(INSTANCE_STATUS_ID);
     String instanceTypeId = instance.getString(INSTANCE_TYPE_ID);
     assertThat(instanceStatusId, not(equalTo(instanceTypeId)));
-
   }
 
   @Test
@@ -2572,7 +2516,6 @@ public class PurchaseOrdersApiTest {
     verifyOpenOrderPiecesCreated(items, resp.getCompositePoLines(), createdPieces, 0);
   }
 
-
   @Test
   void testInventoryHelperMissingContributorNameTypeThrowsProperError() throws Exception {
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
@@ -2608,7 +2551,6 @@ public class PurchaseOrdersApiTest {
 
   @Test
   void testInventoryHelperEmptyLoanTypeThrowsProperError() throws Exception {
-
     Error err = verifyMissingInventoryEntryErrorHandling(NON_EXIST_LOAN_TYPE_TENANT_HEADER);
 
     assertThat(err.getCode(), equalTo(ErrorCodes.MISSING_LOAN_TYPE.getCode()));
@@ -2627,32 +2569,26 @@ public class PurchaseOrdersApiTest {
     reqData.getCompositePoLines().get(0).getDetails().getProductIds().get(0).setProductId(isbn);
 
 
-    Response resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 400);
-
-    Error err = resp.getBody()
-      .as(Errors.class)
-      .getErrors()
-      .get(0);
-
-    assertThat(err.getMessage(), equalTo(ISBN_NOT_VALID.getDescription()));
-    assertThat(err.getCode(), equalTo(ISBN_NOT_VALID.getCode()));
-    assertThat(err.getParameters().get(0).getValue(), equalTo(isbn));
-  }
-
-  @Test
-  void testPostOrdersToConvertToIsbn13() throws Exception {
-    logger.info("=== Test Post order to verify ISBN 10 is normalized to ISBN 13 ===");
-
-    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
-    prepareOrderForPostRequest(reqData);
-    String isbn = "0-19-852663-6";
-
-    reqData.getCompositePoLines().get(0).getDetails().getProductIds().get(0).setProductId(isbn);
     CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
-    assertThat(resp.getCompositePoLines().get(0).getDetails().getProductIds().get(0).getProductId(), equalTo("9780198526636"));
+    // there is no validation for isbn any more, all values are accepted
+    assertThat(resp.getCompositePoLines().get(0).getDetails().getProductIds().get(0).getProductId(), equalTo(isbn));
+  }
+
+  @Test
+  void testPostOrdersToUseIsbnAsItWithoutConversion() throws Exception {
+    logger.info("=== testPostOrdersToUseIsbnAsItWithoutConversion ===");
+
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    prepareOrderForPostRequest(reqData);
+    String isbnWithoutConversion = "0-19-852663-6";
+
+    reqData.getCompositePoLines().get(0).getDetails().getProductIds().get(0).setProductId(isbnWithoutConversion);
+    CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+
+    assertThat(resp.getCompositePoLines().get(0).getDetails().getProductIds().get(0).getProductId(), equalTo(isbnWithoutConversion));
   }
 
   @Test
@@ -2678,22 +2614,16 @@ public class PurchaseOrdersApiTest {
 
     reqData.getCompositePoLines().get(0).getDetails().getProductIds().get(0).setProductId(isbn);
 
-    Response resp = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), APPLICATION_JSON, 400);
+    CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
-    Error err = resp.getBody()
-      .as(Errors.class)
-      .getErrors()
-      .get(0);
-
-
-    assertThat(err.getMessage(), equalTo(ISBN_NOT_VALID.getDescription()));
-    assertThat(err.getCode(), equalTo(ISBN_NOT_VALID.getCode()));
-    assertThat(err.getParameters().get(0).getValue(), equalTo(isbn));
+    // there is no validation for isbn any more, all values are accepted
+    assertThat(resp.getCompositePoLines().get(0).getDetails().getProductIds().get(0).getProductId(), equalTo(isbn));
   }
 
   @Test
-  void testPutOrdersToConvertToIsbn13() throws Exception {
-    logger.info("=== Test Put order to verify ISBN 10 is normalized to ISBN 13 ===");
+  void testPutOrdersWithoutIsbn13Convertion() throws Exception {
+    logger.info("=== testPutOrdersWithoutIsbn13Convertion ===");
 
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
@@ -2704,9 +2634,8 @@ public class PurchaseOrdersApiTest {
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData)
       .encodePrettily(), "", 204);
 
-    assertThat(MockServer.getPoLineUpdates().get(0).mapTo(PoLine.class).getDetails().getProductIds().get(0).getProductId(), equalTo("9780198526636"));
+    assertThat(MockServer.getPoLineUpdates().get(0).mapTo(PoLine.class).getDetails().getProductIds().get(0).getProductId(), equalTo(isbn));
   }
-
 
   @Test
   void testPostOrderWithUserNotHavingApprovalPermissions() {
@@ -2829,7 +2758,6 @@ public class PurchaseOrdersApiTest {
     assertThat(responseData.getApprovedById(), notNullValue());
     assertThat(responseData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.PENDING));
 
-
     // -- test config set to "isApprovalRequired":false, approval details are not set when order is approved in PENDING state
 
     CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_PENDING_STATUS_WITHOUT_PO_LINES)
@@ -2846,7 +2774,6 @@ public class PurchaseOrdersApiTest {
     assertThat(respData.getApprovedById(), nullValue());
     assertThat(respData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.PENDING));
   }
-
 
   @Test
   void testPostOrderApprovalNotRequired() {
@@ -2970,7 +2897,6 @@ public class PurchaseOrdersApiTest {
     errorHeader = new Header(OKAPI_HEADER_TENANT, BUDGET_NOT_FOUND_FOR_TRANSACTION_TENANT);
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
       prepareHeaders(errorHeader, X_OKAPI_USER_ID), APPLICATION_JSON, 422);
-
   }
 
   private void prepareOrderForPostRequest(CompositePurchaseOrder reqData) {
@@ -2983,7 +2909,6 @@ public class PurchaseOrdersApiTest {
       poLine.getFundDistribution().forEach(fundDistribution -> fundDistribution.setEncumbrance(null))
     );
   }
-
 
   private Error verifyMissingInventoryEntryErrorHandling(Header header) throws Exception {
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
@@ -3086,7 +3011,6 @@ public class PurchaseOrdersApiTest {
     preparePiecesForCompositePo(putReq);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
 
-
     List<Error> errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, ORDER_WITHOUT_MATERIAL_TYPES_ID), JsonObject.mapFrom(putReq)
       .encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 422)
       .as(Errors.class)
@@ -3177,7 +3101,6 @@ public class PurchaseOrdersApiTest {
         assertThat(updatedEncumbrance1.getEncumbrance().getStatus(), equalTo(Encumbrance.Status.UNRELEASED));
         vertxTestContext.completeNow();
       });
-
   }
 
   @Test
