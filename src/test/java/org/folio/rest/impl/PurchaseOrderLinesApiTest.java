@@ -1034,21 +1034,17 @@ public class PurchaseOrderLinesApiTest {
 
     reqData.getDetails().getProductIds().getFirst().setProductId(isbn);
 
+    PoLine resp = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(PoLine.class);
 
-    Response resp = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
-        prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 400);
-
-    Error err = resp.getBody()
-        .as(Errors.class)
-        .getErrors()
-        .getFirst();
-
-    assertThat(err.getParameters().get(0).getValue(), equalTo(isbn));
+    // order should be placed even with invalid ISBN
+    assertThat(resp.getDetails().getProductIds(), hasSize(1));
+    assertEquals(isbn, reqData.getDetails().getProductIds().getFirst().getProductId());
   }
 
   @Test
-  void testPostOrderLineToConvertToIsbn13() {
-    logger.info("=== Test Post order line to verify ISBN 10 is normalized to ISBN 13 ===");
+  void testPostOrderLineProcessWithoutIsbnConvertion() {
+    logger.info("=== Test Post order line to verify that ISBN processed as it without convertion ===");
 
     PoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(PoLine.class);
     // To skip permission validation by units
@@ -1066,13 +1062,13 @@ public class PurchaseOrderLinesApiTest {
     PoLine resp = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
         prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(PoLine.class);
 
-    assertThat(resp.getDetails().getProductIds(), hasSize(1));
-    assertThat(resp.getDetails().getProductIds().getFirst().getProductId(), equalTo("9780198526636"));
+    assertThat(resp.getDetails().getProductIds(), hasSize(2));
+    assertThat(resp.getDetails().getProductIds().getFirst().getProductId(), equalTo(isbn));
   }
 
   @Test
-  void testPostOrderLineToRemoveISBNDuplicates() {
-    logger.info("=== Test Post order line to verify ISBN 13 is not repeated ===");
+  void testPostOrderLineShouldKeepISBNsWithoutRemovingDuplicates() {
+    logger.info("=== Test Post order line to verify that product ids are the same even if have duplicates ===");
 
     PoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(PoLine.class);
     // To skip permission validation by units
@@ -1104,18 +1100,8 @@ public class PurchaseOrderLinesApiTest {
     PoLine resp = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(PoLine.class);
 
-    assertThat(resp.getDetails().getProductIds(), hasSize(4));
-    assertThat(resp.getDetails().getProductIds().getFirst().getProductId(), equalTo(isbn1));
-    assertThat(resp.getDetails().getProductIds().getFirst().getQualifier(), equalTo(qualifier1));
-
-    assertThat(resp.getDetails().getProductIds().get(1).getProductId(), equalTo(isbn1));
-    assertThat(resp.getDetails().getProductIds().get(1).getQualifier(), equalTo(qualifier2));
-
-    assertThat(resp.getDetails().getProductIds().get(2).getProductId(), equalTo(isbn213));
-
-    assertThat(resp.getDetails().getProductIds().get(3).getQualifier(), nullValue());
-    assertThat(resp.getDetails().getProductIds().get(3).getProductId(), equalTo(INVALID_ISBN));
-
+    assertThat(resp.getDetails().getProductIds(), hasSize(8));
+    assertEquals(reqData.getDetails().getProductIds(), resp.getDetails().getProductIds());
   }
 
   @Test
