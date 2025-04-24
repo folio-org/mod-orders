@@ -22,7 +22,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.PoLineLocationsPair;
 import org.folio.okapi.common.GenericCompositeFuture;
-import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.ErrorCodes;
