@@ -3,13 +3,12 @@ package org.folio.di;
 import static org.folio.DataImportEventTypes.DI_COMPLETED;
 import static org.folio.DataImportEventTypes.DI_ERROR;
 import static org.junit.Assert.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 
-import java.io.IOException;
-import java.util.List;
 import java.util.UUID;
-
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.folio.DataImportEventPayload;
-import org.folio.rest.jaxrs.model.Event;
 import org.folio.verticle.consumers.DataImportKafkaHandler;
 import org.junit.Assert;
 import org.junit.Before;
@@ -21,7 +20,6 @@ import io.vertx.core.json.Json;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
-import net.mguenther.kafka.junit.SendKeyValues;
 
 // TODO: tests will be enabled in scope of the https://issues.folio.org/browse/MODORDERS-773
 @Ignore()
@@ -31,7 +29,7 @@ public class DataImportTest extends DiAbstractRestTest {
   DataImportKafkaHandler dataImportKafkaHandler;
 
   @Before
-  public void setUp(TestContext context) throws IOException {
+  public void setUp(TestContext context) {
     super.setUp(context);
 
     dataImportKafkaHandler = getBeanFromSpringContext(vertx, org.folio.verticle.consumers.DataImportKafkaHandler.class);
@@ -42,17 +40,15 @@ public class DataImportTest extends DiAbstractRestTest {
   public void sendAndReceiveEvent() throws InterruptedException {
 
     String message = "MESSAGE";
-    SendKeyValues<String, String> request =
+    ProducerRecord<String, String> request =
       prepareWithSpecifiedEventPayload(DI_ERROR.value(), Json.encode(message));
 
     // when
-    kafkaCluster.send(request);
+    send(request);
 
     //then
-    List<String> obtainedValues =
-      observeValuesAndFilterByPartOfMessage(message, DI_ERROR.value(), 1);
-    Event obtainedEvent = Json.decodeValue(obtainedValues.get(0), Event.class);
-    assertTrue(obtainedEvent.getEventPayload().contains(message));
+    var value = observeTopic(DI_ERROR.value());
+    assertThat(value, containsString(message));
   }
 
   @Test
