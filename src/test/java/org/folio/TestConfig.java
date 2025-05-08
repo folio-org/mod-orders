@@ -1,7 +1,5 @@
 package org.folio;
 
-import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
-import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
 import static org.folio.rest.impl.EventBusContextConfiguration.eventMessages;
 
 import java.util.Objects;
@@ -14,7 +12,8 @@ import org.folio.rest.RestVerticle;
 import org.folio.rest.impl.MockServer;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.folio.spring.SpringContextUtil;
-
+import org.testcontainers.kafka.KafkaContainer;
+import org.testcontainers.utility.DockerImageName;
 import com.github.tomakehurst.wiremock.admin.NotFoundException;
 
 import io.restassured.RestAssured;
@@ -26,7 +25,6 @@ import io.vertx.core.Verticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.impl.VertxImpl;
 import io.vertx.core.json.JsonObject;
-import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
 
 public final class TestConfig {
 
@@ -39,7 +37,8 @@ public final class TestConfig {
   private static final String KAFKA_ENV_VALUE = "test-env";
 
   private static MockServer mockServer;
-  public static EmbeddedKafkaCluster kafkaCluster;
+  public static final DockerImageName KAFKA_IMAGE_NAME = DockerImageName.parse("apache/kafka-native:3.8.0");
+  public static final KafkaContainer kafkaContainer = getKafkaContainer();
   private static final Vertx vertx = Vertx.vertx();
 
   private TestConfig() {}
@@ -56,9 +55,8 @@ public final class TestConfig {
 
     final DeploymentOptions opt = new DeploymentOptions().setConfig(conf);
     Promise<String> deploymentComplete = Promise.promise();
-    String[] hostAndPort = kafkaCluster.getBrokerList().split(":");
-    System.setProperty(KAFKA_HOST, hostAndPort[0]);
-    System.setProperty(KAFKA_PORT, hostAndPort[1]);
+    System.setProperty(KAFKA_HOST, kafkaContainer.getHost());
+    System.setProperty(KAFKA_PORT, kafkaContainer.getFirstMappedPort() + "");
     System.setProperty(KAFKA_ENV, KAFKA_ENV_VALUE);
 
     vertx.deployVerticle(RestVerticle.class.getName(), opt, res -> {
@@ -90,9 +88,8 @@ public final class TestConfig {
     mockServer.start();
   }
 
-  public static void startKafkaMockServer() throws InterruptedException, ExecutionException, TimeoutException {
-    kafkaCluster = provisionWith(defaultClusterConfig());
-    kafkaCluster.start();
+  public static void startKafkaMockServer() {
+    kafkaContainer.start();
   }
 
   public static Vertx getVertx() {
@@ -110,7 +107,7 @@ public final class TestConfig {
   }
 
   public static void closeKafkaMockServer() {
-    kafkaCluster.stop();
+    kafkaContainer.stop();
   }
 
   public static void closeVertx() {
@@ -119,6 +116,11 @@ public final class TestConfig {
 
   public static boolean isVerticleNotDeployed() {
     return vertx.deploymentIDs().isEmpty();
+  }
+
+  public static KafkaContainer getKafkaContainer() {
+    return new KafkaContainer(KAFKA_IMAGE_NAME)
+        .withStartupAttempts(3);
   }
 
   public static Context getFirstContextFromVertx(Vertx vertx) {

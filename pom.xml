@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.folio</groupId>
   <artifactId>mod-orders</artifactId>
-  <version>13.0.4-SNAPSHOT</version>
+  <version>13.0.5-SNAPSHOT</version>
 
   <name>Orders Business Logic</name>
   <description>Business logic to manage orders in FOLIO</description>
@@ -79,7 +79,7 @@
     <folio-di-support.version>3.0.0</folio-di-support.version>
     <folio-isbn-util.version>1.7.1</folio-isbn-util.version>
     <mod-di-converter-storage-client.version>2.3.1</mod-di-converter-storage-client.version>
-    <data-import-processing-core.version>4.4.0</data-import-processing-core.version>
+    <data-import-processing-core.version>4.4.3</data-import-processing-core.version>
 
     <!--Maven plugin dependencies-->
     <build-helper-maven-plugin.version>3.6.0</build-helper-maven-plugin.version>
@@ -358,31 +358,6 @@
       <groupId>org.testcontainers</groupId>
       <artifactId>kafka</artifactId>
       <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.kafka</groupId>
-      <artifactId>kafka-clients</artifactId>
-      <version>3.6.1</version>
-    </dependency>
-    <dependency>
-      <groupId>net.mguenther.kafka</groupId>
-      <artifactId>kafka-junit</artifactId>
-      <version>3.6.0</version>
-      <scope>test</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>org.slf4j</groupId>
-          <artifactId>slf4j-log4j12</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>log4j</groupId>
-          <artifactId>log4j</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.fasterxml.jackson.module</groupId>
-          <artifactId>jackson-module-scala_2.13</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.folio</groupId>
