@@ -7,10 +7,8 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import net.mguenther.kafka.junit.KeyValue;
-import net.mguenther.kafka.junit.ObserveKeyValues;
-import net.mguenther.kafka.junit.SendKeyValues;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.folio.AcquisitionsUnit;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
@@ -50,7 +48,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 import org.junit.runner.RunWith;
-
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -59,10 +57,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -253,10 +251,10 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
       }});
 
-    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    ProducerRecord<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
     // when
-    kafkaCluster.send(request);
+    send(request);
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
@@ -288,10 +286,10 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
       }});
 
-    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    ProducerRecord<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
     // when
-    kafkaCluster.send(request);
+    send(request);
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
@@ -354,10 +352,10 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
       }});
 
-    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    ProducerRecord<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
     // when
-    kafkaCluster.send(request);
+    send(request);
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
@@ -384,21 +382,16 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
       }});
 
-    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    ProducerRecord<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
     // when
-    kafkaCluster.send(request);
+    send(request);
 
     // then
     String topicToObserve = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_VALUE, getDefaultNameSpace(),
       TENANT_APPROVAL_REQUIRED, DI_COMPLETED.value());
-
-    List<KeyValue<String, String>> observedRecords = kafkaCluster.observe(ObserveKeyValues.on(topicToObserve, 1)
-      .with(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID)
-      .observeFor(30, TimeUnit.SECONDS)
-      .build());
-
-    Event obtainedEvent = Json.decodeValue(observedRecords.getFirst().getValue(), Event.class);
+    var value = observeTopic(topicToObserve);
+    Event obtainedEvent = Json.decodeValue(value, Event.class);
     DataImportEventPayload eventPayload = Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
     assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().getLast());
 
@@ -426,10 +419,10 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
       }});
 
-    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    ProducerRecord<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
     // when
-    kafkaCluster.send(request);
+    send(request);
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value());
@@ -492,10 +485,10 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
       }});
 
-    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    ProducerRecord<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
     // when
-    kafkaCluster.send(request);
+    send(request);
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_PENDING_ORDER_CREATED.value());
@@ -526,10 +519,10 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
       }});
 
-    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    ProducerRecord<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
     // when
-    kafkaCluster.send(request);
+    send(request);
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value());
@@ -561,21 +554,16 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         put(OKAPI_PERMISSIONS_HEADER, JsonArray.of("orders.item.approve").encode());
       }});
 
-    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    ProducerRecord<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
     // when
-    kafkaCluster.send(request);
+    send(request);
 
     // then
     String topicToObserve = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_VALUE, getDefaultNameSpace(),
       TENANT_APPROVAL_REQUIRED, DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value());
-
-    List<KeyValue<String, String>> observedRecords = kafkaCluster.observe(ObserveKeyValues.on(topicToObserve, 1)
-      .with(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID)
-      .observeFor(30, TimeUnit.SECONDS)
-      .build());
-
-    Event obtainedEvent = Json.decodeValue(observedRecords.getFirst().getValue(), Event.class);
+    var value = observeTopic(topicToObserve);
+    Event obtainedEvent = Json.decodeValue(value, Event.class);
     DataImportEventPayload eventPayload = Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
     assertEquals(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value(), eventPayload.getEventType());
 
@@ -604,20 +592,15 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
       }});
 
-    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    ProducerRecord<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
     // when
-    kafkaCluster.send(request);
+    send(request);
 
     // then
     String topicToObserve = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_VALUE, getDefaultNameSpace(), TENANT_APPROVAL_REQUIRED, DI_COMPLETED.value());
-
-    List<KeyValue<String, String>> observedRecords = kafkaCluster.observe(ObserveKeyValues.on(topicToObserve, 1)
-      .with(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID)
-      .observeFor(30, TimeUnit.SECONDS)
-      .build());
-
-    Event obtainedEvent = Json.decodeValue(observedRecords.getFirst().getValue(), Event.class);
+    var value = observeTopic(topicToObserve);
+    Event obtainedEvent = Json.decodeValue(value, Event.class);
     DataImportEventPayload eventPayload = Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
     assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().getLast());
 
@@ -677,20 +660,15 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
       }});
 
-    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    ProducerRecord<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
     // when
-    kafkaCluster.send(request);
+    send(request);
 
     // then
     String topicToObserve = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_VALUE, getDefaultNameSpace(), TENANT_APPROVAL_REQUIRED, DI_COMPLETED.value());
-
-    List<KeyValue<String, String>> observedRecords = kafkaCluster.observe(ObserveKeyValues.on(topicToObserve, 1)
-      .with(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID)
-      .observeFor(30, TimeUnit.SECONDS)
-      .build());
-
-    Event obtainedEvent = Json.decodeValue(observedRecords.getFirst().getValue(), Event.class);
+    var value = observeTopic(topicToObserve);
+    Event obtainedEvent = Json.decodeValue(value, Event.class);
     DataImportEventPayload eventPayload = Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
     assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().getLast());
     verifyOrder(eventPayload);
@@ -715,21 +693,16 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         put(OKAPI_PERMISSIONS_HEADER, JsonArray.of("orders.item.approve").encode());
       }});
 
-    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    ProducerRecord<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
     // when
-    kafkaCluster.send(request);
+    send(request);
 
     // then
     String topicToObserve = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_VALUE, getDefaultNameSpace(), TENANT_APPROVAL_REQUIRED,
       DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value());
-
-    List<KeyValue<String, String>> observedRecords = kafkaCluster.observe(ObserveKeyValues.on(topicToObserve, 1)
-      .with(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID)
-      .observeFor(30, TimeUnit.SECONDS)
-      .build());
-
-    Event obtainedEvent = Json.decodeValue(observedRecords.getFirst().getValue(), Event.class);
+    var value = observeTopic(topicToObserve);
+    Event obtainedEvent = Json.decodeValue(value, Event.class);
     DataImportEventPayload eventPayload = Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
 
     assertEquals(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value(), eventPayload.getEventType());
@@ -761,10 +734,10 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
       }});
 
-    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    ProducerRecord<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
     // when
-    kafkaCluster.send(request);
+    send(request);
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value());
@@ -790,10 +763,10 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
       }});
 
     Assert.assertFalse(dataImportEventPayload.getContext().containsKey(MARC_BIBLIOGRAPHIC.value()));
-    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    ProducerRecord<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
     // when
-    kafkaCluster.send(request);
+    send(request);
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_ERROR.value());
@@ -826,10 +799,10 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
       }});
 
-    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    ProducerRecord<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
     // when
-    kafkaCluster.send(request);
+    send(request);
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
@@ -862,10 +835,10 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
       }});
 
-    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    ProducerRecord<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
     // when
-    kafkaCluster.send(request);
+    send(request);
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
@@ -906,10 +879,10 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
       }});
 
-    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    ProducerRecord<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
     // when
-    kafkaCluster.send(request);
+    send(request);
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
@@ -1136,14 +1109,14 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
       }});
 
-    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    ProducerRecord<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
     // result event type depends on inventory action profiles existence
     DataImportEventTypes eventToObserve = inventoryActionProfiles.isEmpty()
       ? DI_ORDER_CREATED_READY_FOR_POST_PROCESSING : DI_PENDING_ORDER_CREATED;
 
     // when
-    kafkaCluster.send(request);
+    send(request);
 
     // then
     DataImportEventPayload eventPayload = observeEvent(eventToObserve.value());
@@ -1181,10 +1154,10 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
       }});
 
-    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    ProducerRecord<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
     // when
-    kafkaCluster.send(request);
+    send(request);
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
@@ -1217,10 +1190,10 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
       }});
 
-    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    ProducerRecord<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
     // when
-    kafkaCluster.send(request);
+    send(request);
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_ERROR.value());
@@ -1255,10 +1228,10 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
       }});
 
-    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    ProducerRecord<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
     // when
-    kafkaCluster.send(request);
+    send(request);
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_ERROR.value());
@@ -1292,10 +1265,10 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
       }});
 
-    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    ProducerRecord<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
     // when
-    kafkaCluster.send(request);
+    send(request);
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_ERROR.value());
@@ -1381,7 +1354,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
           put(RECORD_ID_HEADER, record.getId());
         }});
 
-      kafkaCluster.send(prepareKafkaRequest(dataImportEventPayload));
+      send(prepareKafkaRequest(dataImportEventPayload));
 
       dataImportEventPayload = observeEvent(DI_COMPLETED.value());
       ordersIds.add(getPurchaseOrderId(dataImportEventPayload));
@@ -1472,10 +1445,10 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
       }});
 
-    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    ProducerRecord<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
     // when
-    kafkaCluster.send(request);
+    send(request);
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
@@ -1530,10 +1503,10 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
       }});
 
-    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    ProducerRecord<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
     // when
-    kafkaCluster.send(request);
+    send(request);
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
@@ -1586,10 +1559,10 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
       }});
 
-    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    ProducerRecord<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
     // when
-    kafkaCluster.send(request);
+    send(request);
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
@@ -1727,42 +1700,41 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     return profileSnapshotWrapper;
   }
 
-  private SendKeyValues<String, String> prepareKafkaRequest(DataImportEventPayload payload) {
+  private ProducerRecord<String, String> prepareKafkaRequest(DataImportEventPayload payload) {
+    String topic = formatToKafkaTopicName(payload.getEventType());
     Event event = new Event().withEventPayload(Json.encode(payload));
-    KeyValue<String, String> kafkaRecord = new KeyValue<>("test-key", Json.encode(event));
+    ProducerRecord<String, String> producerRecord = new ProducerRecord<>(topic, "test-key", Json.encode(event));
     if (!isEmpty(payload.getContext().get(ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC.value()))) {
       Record record = new JsonObject(payload.getContext().get(MARC_BIBLIOGRAPHIC.value())).mapTo(Record.class);
-      kafkaRecord.addHeader(RECORD_ID_HEADER, record.getId(), UTF_8);
+      addHeader(producerRecord, RECORD_ID_HEADER, record.getId());
     } else {
-      kafkaRecord.addHeader(RECORD_ID_HEADER, record.getId(), UTF_8);
+      addHeader(producerRecord, RECORD_ID_HEADER, record.getId());
     }
-    kafkaRecord.addHeader(RestConstants.OKAPI_URL, payload.getOkapiUrl(), UTF_8);
-    kafkaRecord.addHeader(OKAPI_PERMISSIONS_HEADER, payload.getContext().getOrDefault(OKAPI_PERMISSIONS_HEADER, ""), UTF_8);
-    kafkaRecord.addHeader(OKAPI_USERID_HEADER, payload.getContext().getOrDefault(OKAPI_USERID_HEADER, ""), UTF_8);
-    String topic = formatToKafkaTopicName(payload.getEventType());
-    return SendKeyValues.to(topic, Collections.singletonList(kafkaRecord)).useDefaults();
+    addHeader(producerRecord, RestConstants.OKAPI_URL, payload.getOkapiUrl());
+    addHeader(producerRecord, OKAPI_PERMISSIONS_HEADER, payload.getContext().getOrDefault(OKAPI_PERMISSIONS_HEADER, ""));
+    addHeader(producerRecord, OKAPI_USERID_HEADER, payload.getContext().getOrDefault(OKAPI_USERID_HEADER, ""));
+    return producerRecord;
   }
 
-  private DataImportEventPayload observeEvent(String eventType) throws InterruptedException {
-    String topicToObserve = formatToKafkaTopicName(eventType);
-    List<KeyValue<String, String>> observedRecords;
-    try {
-      observedRecords = kafkaCluster.observe(ObserveKeyValues.on(topicToObserve, 1)
-        .with(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID)
-        .observeFor(30, TimeUnit.SECONDS)
-        .build());
-    } catch (AssertionError assertionError) {
-      String topicErrorToObserve = formatToKafkaTopicName("DI_ERROR");
-      observedRecords = kafkaCluster.observe(ObserveKeyValues.on(topicErrorToObserve, 1)
-        .with(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID)
-        .observeFor(15, TimeUnit.SECONDS)
-        .build());
-      String error = getCompositePurchaseOrder(observedRecords.getFirst().getValue()).getContext().get("ERROR");
-      throw new AssertionError(error);
+  private DataImportEventPayload observeEvent(String eventType) {
+    ConsumerRecords<String, String> observedRecords;
+    try (var kafkaConsumer = createKafkaConsumer()) {
+      String topicToObserve = formatToKafkaTopicName(eventType);
+      kafkaConsumer.subscribe(List.of(topicToObserve));
+      try {
+        observedRecords = kafkaConsumer.poll(Duration.ofSeconds(30));
+      } catch (AssertionError assertionError) {
+        String topicErrorToObserve = formatToKafkaTopicName("DI_ERROR");
+        kafkaConsumer.subscribe(List.of(topicErrorToObserve));
+        observedRecords = kafkaConsumer.poll(Duration.ofSeconds(15));
+        String error = getCompositePurchaseOrder(observedRecords.iterator().next().value()).getContext().get("ERROR");
+        throw new AssertionError(error);
+      }
     }
-
-    assertEquals(record.getId(), new String(observedRecords.getFirst().getHeaders().lastHeader(RECORD_ID_HEADER).value(), UTF_8));
-    Event obtainedEvent = Json.decodeValue(observedRecords.getFirst().getValue(), Event.class);
+    var firstRecord = observedRecords.iterator().next();
+    var recordIdHeader = firstRecord.headers().lastHeader(RECORD_ID_HEADER).value();
+    assertEquals(record.getId(), new String(recordIdHeader, UTF_8));
+    Event obtainedEvent = Json.decodeValue(firstRecord.value(), Event.class);
     return Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
   }
 
