@@ -1,27 +1,32 @@
 package org.folio.di;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Collections.singletonList;
-import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
-import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
 import static org.folio.dataimport.util.RestUtil.OKAPI_TENANT_HEADER;
 import static org.folio.dataimport.util.RestUtil.OKAPI_URL_HEADER;
 import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-
+import lombok.SneakyThrows;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import org.apache.commons.collections4.CollectionUtils;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.header.internals.RecordHeader;
+import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.folio.DataImportEventPayload;
+import org.folio.TestConfig;
 import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.postgres.testing.PostgresTesterContainer;
 import org.folio.processing.events.EventManager;
@@ -40,7 +45,7 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.runner.RunWith;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-
+import org.testcontainers.kafka.KafkaContainer;
 import com.github.tomakehurst.wiremock.admin.NotFoundException;
 import com.github.tomakehurst.wiremock.common.ConsoleNotifier;
 import com.github.tomakehurst.wiremock.common.FileSource;
@@ -62,11 +67,6 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.consumer.impl.KafkaConsumerRecordImpl;
-import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
-import net.mguenther.kafka.junit.KeyValue;
-import net.mguenther.kafka.junit.ObserveKeyValues;
-import net.mguenther.kafka.junit.ReadKeyValues;
-import net.mguenther.kafka.junit.SendKeyValues;
 
 @RunWith(VertxUnitRunner.class)
 public abstract class DiAbstractRestTest {
@@ -88,7 +88,8 @@ public abstract class DiAbstractRestTest {
   private static final String JOB_EXECUTION_ID_HEADER = "jobExecutionId";
   private static final String RECORDS_PROCESSED_TABLE = "processed_records";
 
-  public static EmbeddedKafkaCluster kafkaCluster;
+  public static KafkaContainer kafkaContainer = TestConfig.getKafkaContainer();
+  protected static KafkaProducer<String, String> kafkaProducer;
 
   @Rule
   public WireMockRule mockServer = new WireMockRule(
@@ -101,16 +102,32 @@ public abstract class DiAbstractRestTest {
   @BeforeClass
   public static void setUpClass(final TestContext context) {
     vertx = Vertx.vertx();
-    kafkaCluster = provisionWith(defaultClusterConfig());
-    kafkaCluster.start();
-    String[] hostAndPort = kafkaCluster.getBrokerList().split(":");
-
-    System.setProperty(KAFKA_HOST, hostAndPort[0]);
-    System.setProperty(KAFKA_PORT, hostAndPort[1]);
+    kafkaContainer.start();
+    System.setProperty(KAFKA_HOST, kafkaContainer.getHost());
+    System.setProperty(KAFKA_PORT, kafkaContainer.getFirstMappedPort() + "");
     System.setProperty(KAFKA_ENV, KAFKA_ENV_VALUE);
     System.setProperty(OKAPI_URL_ENV, OKAPI_URL);
+    kafkaProducer = createKafkaProducer();
     runDatabase();
     deployVerticle(context);
+  }
+
+  private static KafkaProducer<String, String> createKafkaProducer() {
+    Properties producerProperties = new Properties();
+    producerProperties.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaContainer.getBootstrapServers());
+    producerProperties.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+    producerProperties.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+    return new KafkaProducer<>(producerProperties);
+  }
+
+  protected KafkaConsumer<String, String> createKafkaConsumer() {
+    Properties consumerProperties = new Properties();
+    consumerProperties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaContainer.getBootstrapServers());
+    consumerProperties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+    consumerProperties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+    consumerProperties.put(ConsumerConfig.GROUP_ID_CONFIG, "test-group");
+    consumerProperties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+    return new KafkaConsumer<>(consumerProperties);
   }
 
   private static void runDatabase() {
@@ -123,7 +140,8 @@ public abstract class DiAbstractRestTest {
     Async async = context.async();
     EventManager.clearEventHandlers();
     vertx.close(context.asyncAssertSuccess(res -> {
-      kafkaCluster.stop();
+      kafkaContainer.stop();
+      kafkaProducer.close();
       async.complete();
     }));
   }
@@ -158,7 +176,7 @@ public abstract class DiAbstractRestTest {
   }
 
   @Before
-  public void setUp(TestContext context) throws IOException {
+  public void setUp(TestContext context) {
     clearTables(context);
     spec = new RequestSpecBuilder()
       .setContentType(ContentType.JSON)
@@ -174,16 +192,23 @@ public abstract class DiAbstractRestTest {
     return KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_VALUE, getDefaultNameSpace(), TENANT_ID, eventType);
   }
 
-  protected SendKeyValues<String, String> prepareWithSpecifiedEventPayload(String eventType, String eventPayload) {
-
-    Event event = new Event().withId(UUID.randomUUID().toString()).withEventPayload(eventPayload);
-    KeyValue<String, String> kafkaRecord = new KeyValue<>("key", Json.encode(event));
-    kafkaRecord.addHeader(OkapiConnectionParams.OKAPI_TENANT_HEADER, TENANT_ID, UTF_8);
-    kafkaRecord.addHeader(OKAPI_URL_HEADER, mockServer.baseUrl(), UTF_8);
-    kafkaRecord.addHeader(JOB_EXECUTION_ID_HEADER, UUID.randomUUID().toString(), UTF_8);
-
+  protected ProducerRecord<String, String> prepareWithSpecifiedEventPayload(String eventType, String eventPayload) {
     String topic = formatToKafkaTopicName(eventType);
-    return SendKeyValues.to(topic, singletonList(kafkaRecord)).useDefaults();
+    Event event = new Event().withId(UUID.randomUUID().toString()).withEventPayload(eventPayload);
+    ProducerRecord<String, String> kafkaRecord = new ProducerRecord<>(topic, "key", Json.encode(event));
+    addHeader(kafkaRecord, OkapiConnectionParams.OKAPI_TENANT_HEADER, TENANT_ID);
+    addHeader(kafkaRecord, OKAPI_URL_HEADER, mockServer.baseUrl());
+    addHeader(kafkaRecord, JOB_EXECUTION_ID_HEADER, UUID.randomUUID().toString());
+    return kafkaRecord;
+  }
+
+  protected static void addHeader(ProducerRecord<String, String> producerRecord, String key, String value) {
+    producerRecord.headers().add(key, value.getBytes(UTF_8));
+  }
+
+  @SneakyThrows
+  protected RecordMetadata send(ProducerRecord<String, String> producerRecord) {
+    return kafkaProducer.send(producerRecord).get();
   }
 
   protected KafkaConsumerRecord<String, String> buildKafkaConsumerRecord(DataImportEventPayload record) {
@@ -218,21 +243,13 @@ public abstract class DiAbstractRestTest {
     throw new NotFoundException(String.format("Couldn't find bean %s", clazz.getName()));
   }
 
-  public List<String> observeValuesAndFilterByPartOfMessage(String message, String eventType, Integer countToObserve) throws InterruptedException {
-    String topicToObserve = formatToKafkaTopicName(eventType);
-    List<String> result = new ArrayList<>();
-    List<String> observedValues = kafkaCluster.readValues(ReadKeyValues.from(topicToObserve).build());
-    if (CollectionUtils.isEmpty(observedValues)) {
-      observedValues = kafkaCluster.observeValues(ObserveKeyValues.on(topicToObserve, countToObserve)
-        .observeFor(30, TimeUnit.SECONDS)
-        .build());
+  public String observeTopic(String topic) {
+    ConsumerRecords<String, String> records;
+    try (var kafkaConsumer = createKafkaConsumer()) {
+      kafkaConsumer.subscribe(List.of(topic));
+      records = kafkaConsumer.poll(Duration.ofSeconds(30));
     }
-    for (String observedValue : observedValues) {
-      if (observedValue.contains(message)) {
-        result.add(observedValue);
-      }
-    }
-    return result;
+    return records.iterator().next().value();
   }
 
   private void clearTables(TestContext context) {

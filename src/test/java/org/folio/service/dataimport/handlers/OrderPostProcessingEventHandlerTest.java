@@ -7,10 +7,7 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
-import net.mguenther.kafka.junit.KeyValue;
-import net.mguenther.kafka.junit.ObserveKeyValues;
-import net.mguenther.kafka.junit.SendKeyValues;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.JobProfile;
@@ -43,10 +40,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.DataImportEventTypes.DI_COMPLETED;
 import static org.folio.DataImportEventTypes.DI_ERROR;
@@ -54,7 +49,6 @@ import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.TestConfig.closeMockServer;
 import static org.folio.helper.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoUpdate;
-import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE_BATCH;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
@@ -65,7 +59,6 @@ import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.folio.rest.impl.MockServer.getCreatedHoldings;
 import static org.folio.rest.impl.MockServer.getCreatedInstances;
 import static org.folio.rest.impl.MockServer.getCreatedItems;
-import static org.folio.rest.impl.MockServer.getCreatedPieces;
 import static org.folio.rest.impl.MockServer.getCreatedPiecesBatch;
 import static org.folio.rest.impl.MockServer.getPurchaseOrderUpdates;
 import static org.folio.rest.impl.TitlesApiTest.SAMPLE_TITLE_ID;
@@ -95,16 +88,13 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
 
   private static final String JOB_PROFILE_SNAPSHOT_ID_KEY = "JOB_PROFILE_SNAPSHOT_ID";
   private static final String PO_LINE_KEY = "PO_LINE";
-  private static final String GROUP_ID = "test-consumers-group";
   private static final String JOB_PROFILE_SNAPSHOTS_MOCK = "jobProfileSnapshots";
   private static final String OKAPI_URL = "http://localhost:" + TestConfig.mockPort;
   private static final String ID_FIELD = "id";
   private static final String ELECTRONIC_RESOURCE_MATERIAL_TYPE_ID = "615b8413-82d5-4203-aa6e-e37984cb5ac3";
-  private static final String PHYSICAL_RESOURCE_MATERIAL_TYPE_ID = "1a54b431-2e4f-452d-9cae-9cee66c9a892";
   private static final String HOLDINGS_ID = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d63";
   private static final String ITEM_ID = "86481a22-633e-4b97-8061-0dc5fdaaeabb";
   private static final String INSTANCE_ID = "5294d737-a04b-4158-857a-3f3c555bcc60";
-  private static final String HOLDING_ID_FIELD = "holdingId";
 
   private final JobProfile jobProfile = new JobProfile()
     .withId(UUID.randomUUID().toString())
@@ -199,11 +189,11 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
       .compose(v -> polProgressService.trackProcessedPoLine(order.getId(), TENANT_ID))
       .onComplete(context.asyncAssertSuccess(v -> future.complete(null)));
 
-    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    ProducerRecord<String, String> request = prepareKafkaRequest(dataImportEventPayload);
     future.join();
 
     // when
-    kafkaCluster.send(request);
+    send(request);
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
@@ -260,11 +250,11 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
       .compose(v -> polProgressService.trackProcessedPoLine(order.getId(), TENANT_ID))
       .onComplete(context.asyncAssertSuccess(v -> future.complete(null)));
 
-    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    ProducerRecord<String, String> request = prepareKafkaRequest(dataImportEventPayload);
     future.join();
 
     // when
-    kafkaCluster.send(request);
+    send(request);
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
@@ -304,11 +294,11 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
       .compose(v -> polProgressService.trackProcessedPoLine(order.getId(), TENANT_ID))
       .onComplete(context.asyncAssertSuccess(v -> future.complete(null)));
 
-    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    ProducerRecord<String, String> request = prepareKafkaRequest(dataImportEventPayload);
     future.join();
 
     // when
-    kafkaCluster.send(request);
+    send(request);
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
@@ -400,10 +390,10 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
       }});
 
     assertNull(dataImportEventPayload.getContext().get(PO_LINE_KEY));
-    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    ProducerRecord<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
     // when
-    kafkaCluster.send(request);
+    send(request);
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_ERROR.value());
@@ -428,10 +418,10 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
       }});
 
     assertNotEquals(Eresource.CreateInventory.NONE, poLine.getEresource().getCreateInventory());
-    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    ProducerRecord<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
     // when
-    kafkaCluster.send(request);
+    send(request);
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_ERROR.value());
@@ -500,24 +490,20 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
               .withContent(JsonObject.mapFrom(mappingProfile).getMap())))));
   }
 
-  private SendKeyValues<String, String> prepareKafkaRequest(DataImportEventPayload payload) {
-    Event event = new Event().withEventPayload(Json.encode(payload));
-    KeyValue<String, String> kafkaRecord = new KeyValue<>("test-key", Json.encode(event));
-    kafkaRecord.addHeader(RestConstants.OKAPI_URL, payload.getOkapiUrl(), UTF_8);
-    kafkaRecord.addHeader(OKAPI_PERMISSIONS_HEADER, payload.getContext().getOrDefault(OKAPI_PERMISSIONS_HEADER, ""), UTF_8);
-    kafkaRecord.addHeader(OKAPI_USERID_HEADER, payload.getContext().getOrDefault(OKAPI_USERID_HEADER, ""), UTF_8);
+  private ProducerRecord<String, String> prepareKafkaRequest(DataImportEventPayload payload) {
     String topic = formatToKafkaTopicName(payload.getEventType());
-    return SendKeyValues.to(topic, Collections.singletonList(kafkaRecord)).useDefaults();
+    Event event = new Event().withEventPayload(Json.encode(payload));
+    ProducerRecord<String, String> producerRecord = new ProducerRecord<>(topic, "test-key", Json.encode(event));
+    addHeader(producerRecord, RestConstants.OKAPI_URL, payload.getOkapiUrl());
+    addHeader(producerRecord, OKAPI_PERMISSIONS_HEADER, payload.getContext().getOrDefault(OKAPI_PERMISSIONS_HEADER, ""));
+    addHeader(producerRecord, OKAPI_USERID_HEADER, payload.getContext().getOrDefault(OKAPI_USERID_HEADER, ""));
+    return producerRecord;
   }
 
   private DataImportEventPayload observeEvent(String eventType) throws InterruptedException {
     String topicToObserve = formatToKafkaTopicName(eventType);
-    List<KeyValue<String, String>> observedRecords = kafkaCluster.observe(ObserveKeyValues.on(topicToObserve, 1)
-      .with(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID)
-      .observeFor(30, TimeUnit.SECONDS)
-      .build());
-
-    Event obtainedEvent = Json.decodeValue(observedRecords.get(0).getValue(), Event.class);
+    var value = observeTopic(topicToObserve);
+    Event obtainedEvent = Json.decodeValue(value, Event.class);
     return Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
   }
 
