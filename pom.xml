@@ -78,7 +78,7 @@
     <mod-configuration-client.version>5.11.0</mod-configuration-client.version>
     <folio-di-support.version>3.0.0</folio-di-support.version>
     <mod-di-converter-storage-client.version>2.3.1</mod-di-converter-storage-client.version>
-    <data-import-processing-core.version>4.4.0</data-import-processing-core.version>
+    <data-import-processing-core.version>4.4.3</data-import-processing-core.version>
 
     <!--Maven plugin dependencies-->
     <build-helper-maven-plugin.version>3.6.0</build-helper-maven-plugin.version>
