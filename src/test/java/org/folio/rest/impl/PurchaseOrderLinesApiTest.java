@@ -62,6 +62,7 @@ import static org.folio.rest.core.exceptions.ErrorCodes.NON_ZERO_COST_PHYSICAL_Q
 import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_CLOSED;
 import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_OPEN;
 import static org.folio.rest.core.exceptions.ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH;
+import static org.folio.rest.core.exceptions.ErrorCodes.PIECES_EXIST_FOR_POLINE;
 import static org.folio.rest.core.exceptions.ErrorCodes.POL_ACCESS_PROVIDER_IS_INACTIVE;
 import static org.folio.rest.core.exceptions.ErrorCodes.POL_LINES_LIMIT_EXCEEDED;
 import static org.folio.rest.core.exceptions.ErrorCodes.PROHIBITED_FIELD_CHANGING;
@@ -519,7 +520,7 @@ public class PurchaseOrderLinesApiTest {
     // Change to assumeThat because after correcting the Caffeine Cache we cannot assert to get a non-cached result
     assertThat(column, hasKey(USER_TENANTS_ENDPOINT));
     assertThat(column, hasKey(PO_LINES_STORAGE));
-    assertThat(column, not(hasKey(PIECES_STORAGE)));
+    assertThat(column, hasKey((PIECES_STORAGE)));
 
     column = MockServer.serverRqRs.column(HttpMethod.POST);
     assertEquals(0, column.size());
@@ -1315,6 +1316,37 @@ public class PurchaseOrderLinesApiTest {
       .collect(Collectors.toList());
 
     assertThat(errorCodes, containsInAnyOrder(LOCATION_CAN_NOT_BE_MODIFIER_AFTER_OPEN.getCode()));
+  }
+
+  @Test
+  void testUpdatePolineForPendingOrderWithRelatePieces() {
+    logger.info("=== Test update po line for pending order with related pieces ===");
+
+    PoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47").mapTo(PoLine.class);
+    String poLineId = "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47";
+    reqData.setId(poLineId);
+    reqData.setPurchaseOrderId("1ab7ef6a-d1d4-4a4f-90a2-882aed18af14");
+    reqData.getLocations().getFirst().setLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
+
+    addMockEntry(PIECES_STORAGE, new Piece()
+      .withPoLineId(reqData.getId())
+      .withLocationId(reqData.getLocations().getFirst().getLocationId()));
+
+    addMockEntry(PO_LINES_STORAGE, reqData);
+
+    String newLocationId = "fcd64ce1-6995-48f0-840e-89ffa2288371";
+    reqData.getLocations().getFirst().setLocationId(newLocationId);
+
+    Errors response = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 400).as(Errors.class);
+
+    assertThat(response.getErrors(), hasSize(1));
+    List<String> errorCodes = response.getErrors()
+      .stream()
+      .map(Error::getCode)
+      .collect(Collectors.toList());
+
+    assertThat(errorCodes, containsInAnyOrder(PIECES_EXIST_FOR_POLINE.getCode()));
   }
 
   @Test
