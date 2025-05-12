@@ -741,11 +741,12 @@ public class ApplicationConfig {
                                                   PurchaseOrderStorageService purchaseOrderStorageService,
                                                   RestClient restClient,
                                                   PoLineValidationService poLineValidationService,
-                                                  OrganizationService organizationService) {
+                                                  OrganizationService organizationService,
+                                                  PieceStorageService pieceStorageService) {
     return new PurchaseOrderLineHelper(itemStatusSyncService, inventoryInstanceManager, encumbranceService, expenseClassValidationService,
       encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, titlesService, protectionService,
       purchaseOrderLineService, purchaseOrderStorageService, restClient, poLineValidationService,
-      organizationService);
+      organizationService, pieceStorageService);
   }
 
   @Bean

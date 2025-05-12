@@ -16,6 +16,7 @@ import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.core.exceptions.ErrorCodes.LOCATION_CAN_NOT_BE_MODIFIER_AFTER_OPEN;
+import static org.folio.rest.core.exceptions.ErrorCodes.PIECES_EXIST_FOR_POLINE;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.CLOSED;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
@@ -79,6 +80,7 @@ import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.organization.OrganizationService;
+import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.titles.TitlesService;
 
 import io.vertx.core.Future;
@@ -109,6 +111,7 @@ public class PurchaseOrderLineHelper {
   private final RestClient restClient;
   private final PoLineValidationService poLineValidationService;
   private final OrganizationService organizationService;
+  private final PieceStorageService pieceStorageService;
 
   public PurchaseOrderLineHelper(InventoryItemStatusSyncService inventoryItemStatusSyncService,
                                  InventoryInstanceManager inventoryInstanceManager,
@@ -122,7 +125,8 @@ public class PurchaseOrderLineHelper {
                                  PurchaseOrderStorageService purchaseOrderStorageService,
                                  RestClient restClient,
                                  PoLineValidationService poLineValidationService,
-                                 OrganizationService organizationService) {
+                                 OrganizationService organizationService,
+                                 PieceStorageService pieceStorageService) {
 
     this.itemStatusSyncService = inventoryItemStatusSyncService;
     this.inventoryInstanceManager = inventoryInstanceManager;
@@ -137,6 +141,7 @@ public class PurchaseOrderLineHelper {
     this.restClient = restClient;
     this.poLineValidationService = poLineValidationService;
     this.organizationService = organizationService;
+    this.pieceStorageService = pieceStorageService;
   }
 
   /**
@@ -251,15 +256,14 @@ public class PurchaseOrderLineHelper {
    */
   public Future<Void> updateOrderLine(PoLine poLine, RequestContext requestContext) {
     return getPoLineByIdAndValidate(poLine.getPurchaseOrderId(), poLine.getId(), requestContext)
-      .map(lineFromStorage -> lineFromStorage.mapTo(PoLine.class))
       .compose(poLineFromStorage -> getCompositePurchaseOrder(poLine.getPurchaseOrderId(), requestContext)
         .map(compOrder -> addLineToCompOrder(compOrder, poLineFromStorage))
-        .map(compOrder -> {
+        .compose(compOrder -> {
           validatePOLineProtectedFieldsChanged(poLine, poLineFromStorage, compOrder);
           updateLocationsQuantity(poLine.getLocations());
           updateEstimatedPrice(poLine);
-          checkLocationCanBeModified(poLine, poLineFromStorage, compOrder);
-          return compOrder;
+          return checkLocationCanBeModified(poLine, poLineFromStorage, compOrder, requestContext)
+            .map(v -> compOrder);
         })
         .compose(compOrder -> protectionService.isOperationRestricted(compOrder.getAcqUnitIds(), UPDATE, requestContext)
           .compose(v -> validateAccessProviders(poLine, requestContext))
@@ -327,14 +331,14 @@ public class PurchaseOrderLineHelper {
 
 
   /**
-   * Retrieves PO line from storage by PO line id as JsonObject and validates order id match.
+   * Retrieves PO line from storage by PO line id as Po Line and validates order id match.
    */
-  private Future<JsonObject> getPoLineByIdAndValidate(String orderId, String lineId, RequestContext requestContext) {
+  private Future<PoLine> getPoLineByIdAndValidate(String orderId, String lineId, RequestContext requestContext) {
     return purchaseOrderLineService.getOrderLineById(lineId, requestContext)
       .map(poLine -> {
         logger.debug("Validating if the retrieved PO line corresponds to PO");
         validateOrderId(orderId, poLine);
-        return JsonObject.mapFrom(poLine);
+        return poLine;
       });
   }
 
@@ -453,13 +457,25 @@ public class PurchaseOrderLineHelper {
     return !StringUtils.equalsIgnoreCase(poFromStorage.getPoNumber(), updatedPo.getPoNumber());
   }
 
-  private void checkLocationCanBeModified(PoLine poLine, PoLine lineFromStorage, CompositePurchaseOrder order) {
+  private Future<Void> checkLocationCanBeModified(PoLine poLine, PoLine lineFromStorage, CompositePurchaseOrder order, RequestContext requestContext) {
+    boolean locationsChanged = !isEqualCollection(poLine.getLocations(), lineFromStorage.getLocations());
+    boolean synchronizedWorkflow = Boolean.FALSE.equals(poLine.getCheckinItems());
+
     if (order.getWorkflowStatus() == OPEN
       && !poLine.getSource().equals(PoLine.Source.EBSCONET)
-      && Boolean.FALSE.equals(poLine.getCheckinItems())
-      && !isEqualCollection(poLine.getLocations(), lineFromStorage.getLocations())) {
-      throw new HttpException(400, LOCATION_CAN_NOT_BE_MODIFIER_AFTER_OPEN);
+      && synchronizedWorkflow
+      && locationsChanged) {
+      return Future.failedFuture(new HttpException(400, LOCATION_CAN_NOT_BE_MODIFIER_AFTER_OPEN));
     }
+
+    if (synchronizedWorkflow && locationsChanged) {
+      return pieceStorageService.getPiecesByLineId(poLine.getId(), requestContext)
+        .compose(pieces -> CollectionUtils.isNotEmpty(pieces)
+          ? Future.failedFuture(new HttpException(400, PIECES_EXIST_FOR_POLINE))
+          : Future.succeededFuture());
+    }
+
+    return Future.succeededFuture();
   }
 
   private CompositePurchaseOrder validateOrderState(CompositePurchaseOrder po) {
