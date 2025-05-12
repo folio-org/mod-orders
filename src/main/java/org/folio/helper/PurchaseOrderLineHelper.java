@@ -333,7 +333,7 @@ public class PurchaseOrderLineHelper {
   /**
    * Retrieves PO line from storage by PO line id as Po Line and validates order id match.
    */
-  public Future<PoLine> getPoLineByIdAndValidate(String orderId, String lineId, RequestContext requestContext) {
+  private Future<PoLine> getPoLineByIdAndValidate(String orderId, String lineId, RequestContext requestContext) {
     return purchaseOrderLineService.getOrderLineById(lineId, requestContext)
       .map(poLine -> {
         logger.debug("Validating if the retrieved PO line corresponds to PO");
