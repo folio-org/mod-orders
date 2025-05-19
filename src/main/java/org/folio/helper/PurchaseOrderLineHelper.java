@@ -460,9 +460,12 @@ public class PurchaseOrderLineHelper {
   private Future<Void> checkLocationCanBeModified(PoLine poLine, PoLine lineFromStorage, CompositePurchaseOrder order, RequestContext requestContext) {
     boolean locationsChanged = !isEqualCollection(poLine.getLocations(), lineFromStorage.getLocations());
     boolean synchronizedWorkflow = Boolean.FALSE.equals(poLine.getCheckinItems());
+    if (PoLine.Source.EBSCONET == poLine.getSource()) {
+      logger.info("checkLocationCanBeModified:: skip validation for Ebsconet orders");
+      return Future.succeededFuture();
+    }
 
     if (order.getWorkflowStatus() == OPEN
-      && !poLine.getSource().equals(PoLine.Source.EBSCONET)
       && synchronizedWorkflow
       && locationsChanged) {
       return Future.failedFuture(new HttpException(400, LOCATION_CAN_NOT_BE_MODIFIER_AFTER_OPEN));
