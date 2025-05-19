@@ -1,6 +1,7 @@
 package org.folio.models.orders.lines.update;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.folio.rest.acq.model.StoragePatchOrderLineRequest;
 import org.folio.rest.acq.model.StorageReplaceOrderLineHoldingRefs;
@@ -9,9 +10,11 @@ import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.PoLine;
 
 public class OrderLineUpdateInstanceHolder {
+
   private PoLine storagePoLine;
   private PatchOrderLineRequest patchOrderLineRequest;
   private StoragePatchOrderLineRequest storagePatchOrderLineRequest;
+  private final List<String> deletedHoldingIds = new ArrayList<>();
 
   public OrderLineUpdateInstanceHolder withStoragePoLine(PoLine storagePoLine) {
     this.storagePoLine = storagePoLine;
@@ -27,6 +30,10 @@ public class OrderLineUpdateInstanceHolder {
     return this;
   }
 
+  public void addDeletedHoldingId(String holdingId) {
+    this.deletedHoldingIds.add(holdingId);
+  }
+
   public PatchOrderLineRequest getPatchOrderLineRequest() {
     return patchOrderLineRequest;
   }
@@ -35,17 +42,16 @@ public class OrderLineUpdateInstanceHolder {
     return storagePatchOrderLineRequest;
   }
 
-  public OrderLineUpdateInstanceHolder withStoragePathOrderLineRequest(StoragePatchOrderLineRequest storagePathOrderLineRequest) {
-    this.storagePatchOrderLineRequest = storagePathOrderLineRequest;
-    return this;
+  public List<String> getDeletedHoldingIds() {
+    return deletedHoldingIds;
   }
 
   public OrderLineUpdateInstanceHolder createStoragePatchOrderLineRequest(StoragePatchOrderLineRequest.PatchOrderLineOperationType patchOrderLineOperationType,
       String newInstanceId) {
     this.storagePatchOrderLineRequest = new StoragePatchOrderLineRequest()
-        .withOperation(patchOrderLineOperationType)
-        .withReplaceInstanceRef(new StorageReplaceOrderLineInstanceRef()
-            .withNewInstanceId(newInstanceId));
+      .withOperation(patchOrderLineOperationType)
+      .withReplaceInstanceRef(new StorageReplaceOrderLineInstanceRef()
+        .withNewInstanceId(newInstanceId));
     return this;
   }
 
@@ -54,10 +60,10 @@ public class OrderLineUpdateInstanceHolder {
       this.storagePatchOrderLineRequest.getReplaceInstanceRef().withHoldings(new ArrayList<>());
     }
     this.storagePatchOrderLineRequest
-        .getReplaceInstanceRef()
-        .getHoldings()
-        .add(new StorageReplaceOrderLineHoldingRefs()
-            .withFromHoldingId(holdingId)
-            .withToHoldingId(newHoldingId));
+      .getReplaceInstanceRef()
+      .getHoldings()
+      .add(new StorageReplaceOrderLineHoldingRefs()
+        .withFromHoldingId(holdingId)
+        .withToHoldingId(newHoldingId));
   }
 }

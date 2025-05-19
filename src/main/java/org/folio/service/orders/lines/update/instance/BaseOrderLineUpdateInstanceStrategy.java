@@ -40,21 +40,22 @@ public abstract class BaseOrderLineUpdateInstanceStrategy implements OrderLineUp
 
   abstract Future<Void> processHoldings(OrderLineUpdateInstanceHolder holder, RequestContext requestContext);
 
-  Future<Void> deleteAbandonedHoldings(boolean isDeleteAbandonedHoldings, PoLine poLine, RequestContext requestContext) {
+  Future<Void> deleteAbandonedHoldings(OrderLineUpdateInstanceHolder holder, boolean isDeleteAbandonedHoldings, RequestContext requestContext) {
     if (!isDeleteAbandonedHoldings) {
       return Future.succeededFuture();
     }
+    PoLine poLine = holder.getStoragePoLine();
     return GenericCompositeFuture.join(
-        poLine.getLocations()
-          .stream()
-          .filter(location -> StringUtils.isNotEmpty(location.getHoldingId()))
-          .map(location -> {
-            var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());
-            return deleteHoldingWithoutItems(location.getHoldingId(), locationContext)
-              .onSuccess(v -> logger.info("deleteAbandonedHoldings:: operation succeeded for holdingId: {}", location.getHoldingId()))
-              .onFailure(e -> logger.error("Failed to delete abandoned holdings for holdingId: {}", location.getHoldingId(), e));
-          }).toList()
-      )
+      poLine.getLocations()
+        .stream()
+        .filter(location -> StringUtils.isNotEmpty(location.getHoldingId()))
+        .map(location -> {
+          var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());
+          holder.addDeletedHoldingId(location.getHoldingId());
+          return deleteHoldingWithoutItems(location.getHoldingId(), locationContext)
+            .onSuccess(v -> logger.info("deleteAbandonedHoldings:: operation succeeded for holdingId: {}", location.getHoldingId()))
+            .onFailure(e -> logger.error("Failed to delete abandoned holdings for holdingId: {}", location.getHoldingId(), e));
+        }).toList())
       .mapEmpty();
   }
 
