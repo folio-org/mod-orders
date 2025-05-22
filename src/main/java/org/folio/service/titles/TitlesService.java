@@ -203,12 +203,12 @@ public class TitlesService {
         .map(holder::setAllHoldingIdsByTenant))
       .compose(holder -> getHoldingsToDeleteWithTenants(holder, requestContext)
         .map(holder::setHoldingIdsToDeleteByTenant))
-      .compose(holder -> processHoldingItemPieces(holder, deleteHoldings, requestContext)
+      .compose(holder -> processItemsPiecesHoldings(holder, deleteHoldings, requestContext)
         .map(v -> holder))
       .compose(holder -> deleteTitle(holder.getTitleId(), requestContext));
   }
 
-  private Future<Void> processHoldingItemPieces(TitleHolder holder, String deleteHoldings, RequestContext requestContext) {
+  private Future<Void> processItemsPiecesHoldings(TitleHolder holder, String deleteHoldings, RequestContext requestContext) {
     if (CollectionUtils.isEmpty(holder.getAllHoldings())) {
       return Future.succeededFuture();
     }
@@ -331,23 +331,21 @@ public class TitlesService {
       return Future.succeededFuture();
     }
 
-    return pieceStorageService.getPiecesByLineIdAndTitleId(holder.getPoLineId(), holder.getTitleId(), centralContext)
-      .compose(pieces -> {
-        var pieceIdsToDelete = pieces.stream()
-          .filter(piece -> allHoldings.contains(piece.getHoldingId())
-            && (tenantId == null || tenantId.equals(piece.getReceivingTenantId()))
-            && !piece.getReceivingStatus().equals(Piece.ReceivingStatus.RECEIVED))
-          .map(Piece::getId)
-          .toList();
+    var pieces = holder.getPieces();
+    var pieceIdsToDelete = pieces.stream()
+      .filter(piece -> allHoldings.contains(piece.getHoldingId())
+        && (tenantId == null || tenantId.equals(piece.getReceivingTenantId()))
+        && !piece.getReceivingStatus().equals(Piece.ReceivingStatus.RECEIVED))
+      .map(Piece::getId)
+      .toList();
 
-        if (pieceIdsToDelete.isEmpty()) {
-          return Future.succeededFuture();
-        }
+    if (pieceIdsToDelete.isEmpty()) {
+      return Future.succeededFuture();
+    }
 
-        return pieceStorageService.deletePiecesByIds(pieceIdsToDelete, centralContext)
-          .onSuccess(v -> log.info("deletePiecesForPoLine:: Pieces were deleted successfully for poLineId: {}", holder.getPoLineId()))
-          .onFailure(t -> log.error("deletePiecesForPoLine:: Failed to delete pieces for poLineId: {}", holder.getPoLineId(), t));
-      });
+    return pieceStorageService.deletePiecesByIds(pieceIdsToDelete, centralContext)
+      .onSuccess(v -> log.info("deletePiecesForPoLine:: Pieces were deleted successfully for poLineId: {}", holder.getPoLineId()))
+      .onFailure(t -> log.error("deletePiecesForPoLine:: Failed to delete pieces for poLineId: {}", holder.getPoLineId(), t));
   }
 
   private Future<Void> deleteHoldings(TitleHolder holder, RequestContext tenantContext) {
