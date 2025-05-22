@@ -54,8 +54,10 @@ public class TitlesServiceTest {
   private static final String POLINE_ID = "test-poline-id";
   private static final String HOLDING_ID_1 = "holding-1";
   private static final String HOLDING_ID_2 = "holding-2";
+  private static final String HOLDING_ID_3 = "holding-3";
   private static final String PIECE_ID_1 = "piece-1";
   private static final String PIECE_ID_2 = "piece-2";
+  private static final String PIECE_ID_3 = "piece-3";
   private static final String ITEM_ID_1 = "item-1";
   private static final String ITEM_ID_2 = "item-2";
   private static final String TENANT_ID = "tenant-id";
@@ -275,9 +277,10 @@ public class TitlesServiceTest {
   void positive_testUnlinkTitleFromPackage_holdingWithItemsWithDifferentStatusOrDifferentPoLine() {
     List<Piece> pieces = List.of(
       new Piece().withId(PIECE_ID_1).withHoldingId(HOLDING_ID_1).withReceivingTenantId("college").withTitleId(TITLE_ID),
-      new Piece().withId(PIECE_ID_2).withHoldingId(HOLDING_ID_2).withReceivingTenantId("college").withTitleId(TITLE_ID)
+      new Piece().withId(PIECE_ID_2).withHoldingId(HOLDING_ID_2).withReceivingTenantId("college").withTitleId(TITLE_ID),
+      new Piece().withId(PIECE_ID_3).withHoldingId(HOLDING_ID_3).withReceivingTenantId("college").withTitleId(TITLE_ID)
     );
-    var item1 = getItem(ITEM_ID_1, POLINE_ID, ItemStatus.ON_ORDER);
+    var item1 = getItem(ITEM_ID_1, POLINE_ID, ItemStatus.ORDER_CLOSED);
     var item2 = getItem(ITEM_ID_2, POLINE_ID, ItemStatus.AVAILABLE); // Will not be deleted
     var item3 = getItem(UUID.randomUUID().toString(), UUID.randomUUID().toString()); // Will not be deleted
 
@@ -290,9 +293,13 @@ public class TitlesServiceTest {
       .thenReturn(Future.succeededFuture(List.of(item1, item2)));
     when(inventoryItemManager.getItemsByHoldingId(eq(HOLDING_ID_2), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture(List.of(item3)));
+    when(inventoryItemManager.getItemsByHoldingId(eq(HOLDING_ID_3), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(List.of()));
     when(inventoryItemManager.deleteItems(eq(Collections.singletonList(ITEM_ID_1)), eq(true), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture(Collections.emptyList()));
-    when(pieceStorageService.deletePiecesByIds(eq(List.of(PIECE_ID_1, PIECE_ID_2)), any(RequestContext.class)))
+    when(pieceStorageService.deletePiecesByIds(eq(List.of(PIECE_ID_1, PIECE_ID_2, PIECE_ID_3)), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture());
+    when(inventoryHoldingManager.deleteHoldingById(eq(HOLDING_ID_3), eq(true), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture());
     when(restClient.delete(eq(DELETE_TITLE_ENDPOINT), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture());
@@ -307,9 +314,10 @@ public class TitlesServiceTest {
       assertTrue(ar.succeeded());
       verify(consortiumConfigurationService).isCentralOrderingEnabled(any(RequestContext.class));
       verify(inventoryItemManager).deleteItems(eq(Collections.singletonList(ITEM_ID_1)), eq(true), any(RequestContext.class));
-      verify(pieceStorageService).deletePiecesByIds(eq(List.of(PIECE_ID_1, PIECE_ID_2)), any(RequestContext.class));
+      verify(pieceStorageService).deletePiecesByIds(eq(List.of(PIECE_ID_1, PIECE_ID_2, PIECE_ID_3)), any(RequestContext.class));
       verify(inventoryHoldingManager, times(0)).deleteHoldingById(eq(HOLDING_ID_1), eq(true), any(RequestContext.class));
       verify(inventoryHoldingManager, times(0)).deleteHoldingById(eq(HOLDING_ID_2), eq(true), any(RequestContext.class));
+      verify(inventoryHoldingManager, times(1)).deleteHoldingById(eq(HOLDING_ID_3), eq(true), any(RequestContext.class));
       verify(restClient).delete(eq(DELETE_TITLE_ENDPOINT), any(RequestContext.class));
     });
   }
