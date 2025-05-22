@@ -3,6 +3,7 @@ package org.folio.service.titles;
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestUtils.getItem;
 import static org.folio.rest.core.exceptions.ErrorCodes.EXISTING_HOLDINGS_FOR_DELETE_CONFIRMATION;
+import static org.folio.rest.core.exceptions.ErrorCodes.EXISTING_RECEIVED_PIECES_TITLE_REMOVAL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -14,6 +15,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -23,7 +25,7 @@ import java.util.List;
 import java.util.UUID;
 
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
+import org.folio.models.ItemStatus;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
@@ -53,7 +55,9 @@ public class TitlesServiceTest {
   private static final String HOLDING_ID_1 = "holding-1";
   private static final String HOLDING_ID_2 = "holding-2";
   private static final String PIECE_ID_1 = "piece-1";
+  private static final String PIECE_ID_2 = "piece-2";
   private static final String ITEM_ID_1 = "item-1";
+  private static final String ITEM_ID_2 = "item-2";
   private static final String TENANT_ID = "tenant-id";
 
   @Mock
@@ -268,6 +272,49 @@ public class TitlesServiceTest {
   }
 
   @Test
+  void positive_testUnlinkTitleFromPackage_holdingWithItemsWithDifferentStatusOrDifferentPoLine() {
+    List<Piece> pieces = List.of(
+      new Piece().withId(PIECE_ID_1).withHoldingId(HOLDING_ID_1).withReceivingTenantId("college").withTitleId(TITLE_ID),
+      new Piece().withId(PIECE_ID_2).withHoldingId(HOLDING_ID_2).withReceivingTenantId("college").withTitleId(TITLE_ID)
+    );
+    var item1 = getItem(ITEM_ID_1, POLINE_ID, ItemStatus.ON_ORDER);
+    var item2 = getItem(ITEM_ID_2, POLINE_ID, ItemStatus.AVAILABLE); // Will not be deleted
+    var item3 = getItem(UUID.randomUUID().toString(), UUID.randomUUID().toString()); // Will not be deleted
+
+    doReturn(Future.succeededFuture(title)).when(titlesService).getTitleById(eq(TITLE_ID), any(RequestContext.class));
+    when(purchaseOrderLineService.getOrderLineById(eq(POLINE_ID), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(poLine));
+    when(pieceStorageService.getPiecesByLineIdAndTitleId(eq(POLINE_ID), eq(TITLE_ID), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(pieces));
+    when(inventoryItemManager.getItemsByHoldingId(eq(HOLDING_ID_1), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(List.of(item1, item2)));
+    when(inventoryItemManager.getItemsByHoldingId(eq(HOLDING_ID_2), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(List.of(item3)));
+    when(inventoryItemManager.deleteItems(eq(Collections.singletonList(ITEM_ID_1)), eq(true), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(Collections.emptyList()));
+    when(pieceStorageService.deletePiecesByIds(eq(List.of(PIECE_ID_1, PIECE_ID_2)), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture());
+    when(restClient.delete(eq(DELETE_TITLE_ENDPOINT), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture());
+    when(consortiumConfigurationService.isCentralOrderingEnabled(any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(true));
+    when(protectionService.isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext)))
+      .thenReturn(succeededFuture(null));
+
+    var result = titlesService.deleteTitle(TITLE_ID, "true", requestContext);
+
+    result.onComplete(ar -> {
+      assertTrue(ar.succeeded());
+      verify(consortiumConfigurationService).isCentralOrderingEnabled(any(RequestContext.class));
+      verify(inventoryItemManager).deleteItems(eq(Collections.singletonList(ITEM_ID_1)), eq(true), any(RequestContext.class));
+      verify(pieceStorageService).deletePiecesByIds(eq(List.of(PIECE_ID_1, PIECE_ID_2)), any(RequestContext.class));
+      verify(inventoryHoldingManager, times(0)).deleteHoldingById(eq(HOLDING_ID_1), eq(true), any(RequestContext.class));
+      verify(inventoryHoldingManager, times(0)).deleteHoldingById(eq(HOLDING_ID_2), eq(true), any(RequestContext.class));
+      verify(restClient).delete(eq(DELETE_TITLE_ENDPOINT), any(RequestContext.class));
+    });
+  }
+
+  @Test
   void negative_testUnlinkTitleFromPackage_throwExceptionWhenDeleteHoldingIsInvalid() {
     List<Piece> pieces = Collections.singletonList(
       new Piece().withId(PIECE_ID_1).withHoldingId(HOLDING_ID_1).withReceivingTenantId("college").withTitleId(TITLE_ID)
@@ -342,5 +389,37 @@ public class TitlesServiceTest {
     });
   }
 
+  @Test
+  void negative_testUnlinkTitleFromPackage_receivedPieceExists() {
+    List<Piece> pieces = List.of(
+      new Piece().withId(PIECE_ID_1).withHoldingId(HOLDING_ID_1).withReceivingTenantId("college").withTitleId(TITLE_ID).withReceivingStatus(Piece.ReceivingStatus.EXPECTED),
+      new Piece().withId(PIECE_ID_2).withHoldingId(HOLDING_ID_1).withReceivingTenantId("college").withTitleId(TITLE_ID).withReceivingStatus(Piece.ReceivingStatus.RECEIVED)
+    );
+
+    when(titlesService.getTitleById(eq(TITLE_ID), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(title));
+    when(protectionService.isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext)))
+      .thenReturn(succeededFuture(null));
+    when(purchaseOrderLineService.getOrderLineById(eq(POLINE_ID), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(poLine));
+    when(pieceStorageService.getPiecesByLineIdAndTitleId(eq(POLINE_ID), eq(TITLE_ID), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(pieces));
+    when(consortiumConfigurationService.isCentralOrderingEnabled(any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(true));
+    when(inventoryItemManager.getItemsByHoldingId(eq(HOLDING_ID_1), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(List.of()));
+
+    var result = titlesService.deleteTitle(TITLE_ID, "true", requestContext);
+
+    result.onComplete(ar -> {
+      assertTrue(ar.failed());
+      assertInstanceOf(HttpException.class, ar.cause());
+
+      var error = ((HttpException) ar.cause()).getError();
+      assertEquals(EXISTING_RECEIVED_PIECES_TITLE_REMOVAL.getCode(), error.getCode());
+
+      verify(restClient, never()).delete(eq(DELETE_TITLE_ENDPOINT), any(RequestContext.class));
+    });
+  }
 
 }
