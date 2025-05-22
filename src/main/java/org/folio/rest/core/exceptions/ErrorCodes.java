@@ -145,7 +145,8 @@ public enum ErrorCodes {
   CANNOT_FIND_PIECE_BY_ID("cannotFindPieceById", "Cannot find a piece by '%s' id"),
   UNABLE_TO_GENERATE_CLAIMS_FOR_ORG_NO_INTEGRATION_DETAILS("unableToGenerateClaimsForOrgNoIntegrationDetails", "Unable to generate claims for %s because no claim integrations exist"),
   ALL_PIECES_MUST_HAVE_THE_SAME_POLINE_ID_AND_TITLE_ID("allPiecesMustHaveTheSamePoLineIdAndTitleId", "All pieces in the batch should have the same titleId and poLineId"),
-  EXISTING_HOLDINGS_FOR_DELETE_CONFIRMATION("existingHoldingsForDeleteConfirmation", "There are existing holdings to delete, Try again with 'deleteHoldings' param");
+  EXISTING_HOLDINGS_FOR_DELETE_CONFIRMATION("existingHoldingsForDeleteConfirmation", "There are existing holdings to delete, Try again with 'deleteHoldings' param"),
+  EXISTING_RECEIVED_PIECES_TITLE_REMOVAL("existingReceivedPiecesTitleRemoval", "Unable to remove the title as there are pieces with a 'Received' status associated with it");
 
   private final String code;
   private final String description;
