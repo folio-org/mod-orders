@@ -5,9 +5,9 @@ import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import java.util.Objects;
+import lombok.experimental.UtilityClass;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.folio.models.ItemStatus;
 import org.folio.models.pieces.PiecesHolder;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
@@ -50,12 +50,12 @@ import static org.folio.service.inventory.InventoryItemManager.ITEM_DISCOVERY_SU
 import static org.folio.service.inventory.InventoryItemManager.ITEM_DISPLAY_SUMMARY;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_ENUMERATION;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_LEVEL_CALL_NUMBER;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
 
+@UtilityClass
 public class InventoryUtils {
-
-  protected static final Logger logger = LogManager.getLogger();
 
   // mod-configuration: config names and default values
   public static final String CONFIG_NAME_HOLDINGS_SOURCE_NAME = "inventory-holdingsSourceName";
@@ -81,9 +81,6 @@ public class InventoryUtils {
   public static final String INSTANCE_RECORDS_BY_ID_ENDPOINT = "instanceRecordsById";
 
   public static final Map<String, String> INVENTORY_LOOKUP_ENDPOINTS;
-
-  private InventoryUtils() {
-  }
 
   static {
     INVENTORY_LOOKUP_ENDPOINTS = Map.ofEntries(
@@ -309,5 +306,35 @@ public class InventoryUtils {
     return Objects.nonNull(srcTenantId) && Objects.nonNull(dstTenantId) && !srcTenantId.equals(dstTenantId);
   }
 
+  /**
+   * Only consider the holding for deletion if either:
+   * - It has no items
+   * - All items are associated with the current POL being processed and have status "On order" or "Order closed"
+   *
+   * @param items    List of item json objects
+   * @param poLineId POL id of the title being deleted
+   * @return true if all the items can be deleted
+   */
+  public static boolean canDeleteHoldingForTitleRemoval(List<JsonObject> items, String poLineId) {
+    return items.isEmpty() || items.stream().allMatch(item -> canDeleteItemForTitleRemoval(item, poLineId));
+  }
+
+  /**
+   * Only consider the item for deletion if both:
+   * - It is associated with the current POL being processed
+   * - It has status "On order" or "Order closed"
+   *
+   * @param item     Item json object
+   * @param poLineId POL id of the title being deleted
+   * @return true if all the items can be deleted
+   */
+  public static boolean canDeleteItemForTitleRemoval(JsonObject item, String poLineId) {
+    var itemPolId = item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER);
+    var itemStatus = item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME);
+    return StringUtils.equals(poLineId, itemPolId)
+      && List.of(ItemStatus.ON_ORDER.value(), ItemStatus.ORDER_CLOSED.value()).contains(itemStatus);
+  }
+
   public record ItemRecreateConfig(String tenantId, RequestContext context) {}
+
 }

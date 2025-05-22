@@ -4,22 +4,19 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.With;
+import lombok.experimental.Accessors;
+import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Title;
 
 @Data
-@Builder
-@With
-@AllArgsConstructor
-@NoArgsConstructor
+@Accessors(chain = true)
 public class TitleHolder {
+
   private Title title;
   private PoLine poLine;
+  private List<Piece> pieces;
   private Map<String, List<String>> holdingIdsToDeleteByTenant;
   private Map<String, List<String>> allHoldingIdsByTenant;
   private boolean isCentralEnabled;
@@ -46,7 +43,9 @@ public class TitleHolder {
   public String getTitleId() {
     return title.getId();
   }
+
   public String getPoLineId() {
     return poLine.getId();
   }
+
 }

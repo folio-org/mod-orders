@@ -10,15 +10,20 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import lombok.experimental.UtilityClass;
 import org.folio.models.pieces.PieceBatchStatusUpdateHolder;
 import org.folio.orders.utils.PoLineCommonUtil;
+import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.tools.utils.TenantTool;
 
+@UtilityClass
 public class PieceUtil {
+
   public static List<Location> findOrderPieceLineLocation(Piece piece, PoLine poLine) {
     if ((piece.getFormat() == Piece.Format.ELECTRONIC || piece.getFormat() == Piece.Format.PHYSICAL) &&
       (PoLine.OrderFormat.P_E_MIX == poLine.getOrderFormat())) {
@@ -93,6 +98,11 @@ public class PieceUtil {
     piece.setInternalNote(holder.getInternalNote());
     piece.setExternalNote(holder.getExternalNote());
     return isStatusChanged;
+  }
+
+  public static String getPieceTenantId(Piece piece, RequestContext requestContext) {
+    return Optional.ofNullable(piece.getReceivingTenantId())
+      .orElse(TenantTool.tenantId(requestContext.getHeaders()));
   }
 
 }
