@@ -1,6 +1,7 @@
-package org.folio.service;
+package org.folio.service.titles;
 
 import static io.vertx.core.Future.succeededFuture;
+import static org.folio.TestUtils.getItem;
 import static org.folio.rest.core.exceptions.ErrorCodes.EXISTING_HOLDINGS_FOR_DELETE_CONFIRMATION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -30,13 +31,12 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Title;
+import org.folio.service.ProtectionService;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.pieces.PieceStorageService;
-import org.folio.service.titles.TitleInstanceService;
-import org.folio.service.titles.TitlesService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -131,8 +131,8 @@ public class TitlesServiceTest {
       new Piece().withId(PIECE_ID_1).withHoldingId(HOLDING_ID_1).withReceivingTenantId(TENANT_ID).withTitleId(TITLE_ID),
       new Piece().withHoldingId(HOLDING_ID_2).withReceivingTenantId(TENANT_ID).withTitleId(TITLE_ID)
     );
-    var item1 = new JsonObject().put("id", ITEM_ID_1).put("purchaseOrderLineIdentifier", POLINE_ID);
-    var item2 = new JsonObject().put("id", UUID.randomUUID().toString()).put("purchaseOrderLineIdentifier", UUID.randomUUID().toString());
+    var item1 = getItem(ITEM_ID_1, POLINE_ID);
+    var item2 = getItem(UUID.randomUUID().toString(), UUID.randomUUID().toString());
 
     doReturn(Future.succeededFuture(title)).when(titlesService).getTitleById(eq(TITLE_ID), any(RequestContext.class));
     when(purchaseOrderLineService.getOrderLineById(eq(POLINE_ID), any(RequestContext.class)))
@@ -165,7 +165,7 @@ public class TitlesServiceTest {
     List<Piece> pieces = Collections.singletonList(
       new Piece().withId(PIECE_ID_1).withHoldingId(HOLDING_ID_1).withReceivingTenantId(TENANT_ID).withTitleId(TITLE_ID)
     );
-    var item = new JsonObject().put("id", ITEM_ID_1).put("purchaseOrderLineIdentifier", POLINE_ID);
+    var item = getItem(ITEM_ID_1, POLINE_ID);
 
     doReturn(Future.succeededFuture(title)).when(titlesService).getTitleById(eq(TITLE_ID), any(RequestContext.class));
     when(purchaseOrderLineService.getOrderLineById(eq(POLINE_ID), any(RequestContext.class)))
@@ -201,7 +201,7 @@ public class TitlesServiceTest {
     List<Piece> pieces = Collections.singletonList(
       new Piece().withId(PIECE_ID_1).withHoldingId(HOLDING_ID_1).withReceivingTenantId("college").withTitleId(TITLE_ID)
     );
-    var item = new JsonObject().put("id", ITEM_ID_1).put("purchaseOrderLineIdentifier", POLINE_ID);
+    var item = getItem(ITEM_ID_1, POLINE_ID);
 
     doReturn(Future.succeededFuture(title)).when(titlesService).getTitleById(eq(TITLE_ID), any(RequestContext.class));
     when(purchaseOrderLineService.getOrderLineById(eq(POLINE_ID), any(RequestContext.class)))
@@ -238,7 +238,7 @@ public class TitlesServiceTest {
     List<Piece> pieces = Collections.singletonList(
       new Piece().withId(PIECE_ID_1).withHoldingId(HOLDING_ID_1).withReceivingTenantId("college").withTitleId(TITLE_ID)
     );
-    var item = new JsonObject().put("id", ITEM_ID_1).put("purchaseOrderLineIdentifier", POLINE_ID);
+    var item = getItem(ITEM_ID_1, POLINE_ID);
 
     doReturn(Future.succeededFuture(title)).when(titlesService).getTitleById(eq(TITLE_ID), any(RequestContext.class));
     when(purchaseOrderLineService.getOrderLineById(eq(POLINE_ID), any(RequestContext.class)))
@@ -272,7 +272,7 @@ public class TitlesServiceTest {
     List<Piece> pieces = Collections.singletonList(
       new Piece().withId(PIECE_ID_1).withHoldingId(HOLDING_ID_1).withReceivingTenantId("college").withTitleId(TITLE_ID)
     );
-    var item = new JsonObject().put("id", ITEM_ID_1).put("purchaseOrderLineIdentifier", POLINE_ID);
+    var item = getItem(ITEM_ID_1, POLINE_ID);
 
     doReturn(Future.succeededFuture(title)).when(titlesService).getTitleById(eq(TITLE_ID), any(RequestContext.class));
     when(purchaseOrderLineService.getOrderLineById(eq(POLINE_ID), any(RequestContext.class)))
@@ -328,6 +328,8 @@ public class TitlesServiceTest {
     doReturn(Future.succeededFuture(title)).when(titlesService).getTitleById(eq(TITLE_ID), any(RequestContext.class));
     when(purchaseOrderLineService.getOrderLineById(eq(POLINE_ID), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture(poLine));
+    when(pieceStorageService.getPiecesByLineIdAndTitleId(eq(POLINE_ID), eq(TITLE_ID), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(List.of()));
     when(consortiumConfigurationService.isCentralOrderingEnabled(any(RequestContext.class)))
       .thenReturn(Future.failedFuture(new RuntimeException("Consortium configuration error")));
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
@@ -339,4 +341,6 @@ public class TitlesServiceTest {
       assertEquals("Consortium configuration error", ar.cause().getMessage());
     });
   }
+
+
 }
