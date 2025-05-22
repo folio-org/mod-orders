@@ -105,4 +105,10 @@ public class PieceUtil {
       .orElse(TenantTool.tenantId(requestContext.getHeaders()));
   }
 
+  public static boolean canDeletePieceForTitleRemoval(Piece piece, List<String> holdingIds, String tenantId) {
+    return holdingIds.contains(piece.getHoldingId())
+      && (tenantId == null || tenantId.equals(piece.getReceivingTenantId()))
+      && !piece.getReceivingStatus().equals(Piece.ReceivingStatus.RECEIVED);
+  }
+
 }

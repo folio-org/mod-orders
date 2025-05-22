@@ -99,6 +99,8 @@ public class InventoryUtils {
     );
   }
 
+  private static final List<String> ITEM_STATUSES_FOR_TITLE_DELETE = List.of(ItemStatus.ON_ORDER.value(), ItemStatus.ORDER_CLOSED.value());
+
   public static Future<String> getLoanTypeId(ConfigurationEntriesCache configurationEntriesCache,
                                              InventoryCache inventoryCache,
                                              RequestContext requestContext) {
@@ -332,7 +334,7 @@ public class InventoryUtils {
     var itemPolId = item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER);
     var itemStatus = item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME);
     return StringUtils.equals(poLineId, itemPolId)
-      && List.of(ItemStatus.ON_ORDER.value(), ItemStatus.ORDER_CLOSED.value()).contains(itemStatus);
+      && ITEM_STATUSES_FOR_TITLE_DELETE.contains(itemStatus);
   }
 
   public record ItemRecreateConfig(String tenantId, RequestContext context) {}

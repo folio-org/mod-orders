@@ -18,6 +18,7 @@ import static org.folio.rest.core.exceptions.ErrorCodes.EXISTING_HOLDINGS_FOR_DE
 import static org.folio.rest.core.exceptions.ErrorCodes.EXISTING_RECEIVED_PIECES_TITLE_REMOVAL;
 import static org.folio.service.inventory.InventoryUtils.canDeleteHoldingForTitleRemoval;
 import static org.folio.service.inventory.InventoryUtils.canDeleteItemForTitleRemoval;
+import static org.folio.service.pieces.PieceUtil.canDeletePieceForTitleRemoval;
 import static org.folio.service.pieces.PieceUtil.getPieceTenantId;
 
 import java.util.ArrayList;
@@ -333,9 +334,7 @@ public class TitlesService {
 
     var pieces = holder.getPieces();
     var pieceIdsToDelete = pieces.stream()
-      .filter(piece -> allHoldings.contains(piece.getHoldingId())
-        && (tenantId == null || tenantId.equals(piece.getReceivingTenantId()))
-        && !piece.getReceivingStatus().equals(Piece.ReceivingStatus.RECEIVED))
+      .filter(piece -> canDeletePieceForTitleRemoval(piece, allHoldings, tenantId))
       .map(Piece::getId)
       .toList();
 
