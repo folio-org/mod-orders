@@ -2,6 +2,7 @@ package org.folio;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.folio.TestConstants.EXISTED_ITEM_ID;
+import static org.folio.TestConstants.ID;
 import static org.folio.TestConstants.LOCATION_ID;
 import static org.folio.TestConstants.MIN_PO_ID;
 import static org.folio.TestConstants.MIN_PO_LINE_ID;
@@ -11,6 +12,9 @@ import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.serverRqRs;
 import static org.folio.rest.impl.TitlesApiTest.SAMPLE_TITLE_ID;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -30,6 +34,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 import org.apache.commons.io.IOUtils;
+import org.folio.models.ItemStatus;
 import org.folio.rest.impl.MockServer;
 import org.folio.rest.jaxrs.model.BindItem;
 import org.folio.rest.jaxrs.model.CheckInPiece;
@@ -246,6 +251,16 @@ public final class TestUtils {
       .withLocationId(UUID.randomUUID().toString())
       .withQuantityPhysical(n)
       .withQuantity(n));
+  }
+
+  public static JsonObject getItem(String id, String poLineId) {
+    return getItem(id, poLineId, ItemStatus.ON_ORDER);
+  }
+
+  public static JsonObject getItem(String id, String poLineId, ItemStatus status) {
+    return JsonObject.of(ID, id,
+      ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLineId,
+      ITEM_STATUS, JsonObject.of(ITEM_STATUS_NAME, status.value()));
   }
 
   public static List<Location> getLocationsForTenants(List<String> tenantIds) {
