@@ -1,7 +1,9 @@
-package org.folio.service;
+package org.folio.service.titles;
 
 import static io.vertx.core.Future.succeededFuture;
+import static org.folio.TestUtils.getItem;
 import static org.folio.rest.core.exceptions.ErrorCodes.EXISTING_HOLDINGS_FOR_DELETE_CONFIRMATION;
+import static org.folio.rest.core.exceptions.ErrorCodes.EXISTING_RECEIVED_PIECES_TITLE_REMOVAL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -13,6 +15,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -22,7 +25,7 @@ import java.util.List;
 import java.util.UUID;
 
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
+import org.folio.models.ItemStatus;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
@@ -30,13 +33,12 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Title;
+import org.folio.service.ProtectionService;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.pieces.PieceStorageService;
-import org.folio.service.titles.TitleInstanceService;
-import org.folio.service.titles.TitlesService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -52,8 +54,12 @@ public class TitlesServiceTest {
   private static final String POLINE_ID = "test-poline-id";
   private static final String HOLDING_ID_1 = "holding-1";
   private static final String HOLDING_ID_2 = "holding-2";
+  private static final String HOLDING_ID_3 = "holding-3";
   private static final String PIECE_ID_1 = "piece-1";
+  private static final String PIECE_ID_2 = "piece-2";
+  private static final String PIECE_ID_3 = "piece-3";
   private static final String ITEM_ID_1 = "item-1";
+  private static final String ITEM_ID_2 = "item-2";
   private static final String TENANT_ID = "tenant-id";
 
   @Mock
@@ -131,8 +137,8 @@ public class TitlesServiceTest {
       new Piece().withId(PIECE_ID_1).withHoldingId(HOLDING_ID_1).withReceivingTenantId(TENANT_ID).withTitleId(TITLE_ID),
       new Piece().withHoldingId(HOLDING_ID_2).withReceivingTenantId(TENANT_ID).withTitleId(TITLE_ID)
     );
-    var item1 = new JsonObject().put("id", ITEM_ID_1).put("purchaseOrderLineIdentifier", POLINE_ID);
-    var item2 = new JsonObject().put("id", UUID.randomUUID().toString()).put("purchaseOrderLineIdentifier", UUID.randomUUID().toString());
+    var item1 = getItem(ITEM_ID_1, POLINE_ID);
+    var item2 = getItem(UUID.randomUUID().toString(), UUID.randomUUID().toString());
 
     doReturn(Future.succeededFuture(title)).when(titlesService).getTitleById(eq(TITLE_ID), any(RequestContext.class));
     when(purchaseOrderLineService.getOrderLineById(eq(POLINE_ID), any(RequestContext.class)))
@@ -165,7 +171,7 @@ public class TitlesServiceTest {
     List<Piece> pieces = Collections.singletonList(
       new Piece().withId(PIECE_ID_1).withHoldingId(HOLDING_ID_1).withReceivingTenantId(TENANT_ID).withTitleId(TITLE_ID)
     );
-    var item = new JsonObject().put("id", ITEM_ID_1).put("purchaseOrderLineIdentifier", POLINE_ID);
+    var item = getItem(ITEM_ID_1, POLINE_ID);
 
     doReturn(Future.succeededFuture(title)).when(titlesService).getTitleById(eq(TITLE_ID), any(RequestContext.class));
     when(purchaseOrderLineService.getOrderLineById(eq(POLINE_ID), any(RequestContext.class)))
@@ -201,7 +207,7 @@ public class TitlesServiceTest {
     List<Piece> pieces = Collections.singletonList(
       new Piece().withId(PIECE_ID_1).withHoldingId(HOLDING_ID_1).withReceivingTenantId("college").withTitleId(TITLE_ID)
     );
-    var item = new JsonObject().put("id", ITEM_ID_1).put("purchaseOrderLineIdentifier", POLINE_ID);
+    var item = getItem(ITEM_ID_1, POLINE_ID);
 
     doReturn(Future.succeededFuture(title)).when(titlesService).getTitleById(eq(TITLE_ID), any(RequestContext.class));
     when(purchaseOrderLineService.getOrderLineById(eq(POLINE_ID), any(RequestContext.class)))
@@ -238,7 +244,7 @@ public class TitlesServiceTest {
     List<Piece> pieces = Collections.singletonList(
       new Piece().withId(PIECE_ID_1).withHoldingId(HOLDING_ID_1).withReceivingTenantId("college").withTitleId(TITLE_ID)
     );
-    var item = new JsonObject().put("id", ITEM_ID_1).put("purchaseOrderLineIdentifier", POLINE_ID);
+    var item = getItem(ITEM_ID_1, POLINE_ID);
 
     doReturn(Future.succeededFuture(title)).when(titlesService).getTitleById(eq(TITLE_ID), any(RequestContext.class));
     when(purchaseOrderLineService.getOrderLineById(eq(POLINE_ID), any(RequestContext.class)))
@@ -268,11 +274,60 @@ public class TitlesServiceTest {
   }
 
   @Test
+  void positive_testUnlinkTitleFromPackage_holdingWithItemsWithDifferentStatusOrDifferentPoLine() {
+    List<Piece> pieces = List.of(
+      new Piece().withId(PIECE_ID_1).withHoldingId(HOLDING_ID_1).withReceivingTenantId("college").withTitleId(TITLE_ID),
+      new Piece().withId(PIECE_ID_2).withHoldingId(HOLDING_ID_2).withReceivingTenantId("college").withTitleId(TITLE_ID),
+      new Piece().withId(PIECE_ID_3).withHoldingId(HOLDING_ID_3).withReceivingTenantId("college").withTitleId(TITLE_ID)
+    );
+    var item1 = getItem(ITEM_ID_1, POLINE_ID, ItemStatus.ORDER_CLOSED);
+    var item2 = getItem(ITEM_ID_2, POLINE_ID, ItemStatus.AVAILABLE); // Will not be deleted
+    var item3 = getItem(UUID.randomUUID().toString(), UUID.randomUUID().toString()); // Will not be deleted
+
+    doReturn(Future.succeededFuture(title)).when(titlesService).getTitleById(eq(TITLE_ID), any(RequestContext.class));
+    when(purchaseOrderLineService.getOrderLineById(eq(POLINE_ID), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(poLine));
+    when(pieceStorageService.getPiecesByLineIdAndTitleId(eq(POLINE_ID), eq(TITLE_ID), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(pieces));
+    when(inventoryItemManager.getItemsByHoldingId(eq(HOLDING_ID_1), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(List.of(item1, item2)));
+    when(inventoryItemManager.getItemsByHoldingId(eq(HOLDING_ID_2), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(List.of(item3)));
+    when(inventoryItemManager.getItemsByHoldingId(eq(HOLDING_ID_3), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(List.of()));
+    when(inventoryItemManager.deleteItems(eq(Collections.singletonList(ITEM_ID_1)), eq(true), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(Collections.emptyList()));
+    when(pieceStorageService.deletePiecesByIds(eq(List.of(PIECE_ID_1, PIECE_ID_2, PIECE_ID_3)), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture());
+    when(inventoryHoldingManager.deleteHoldingById(eq(HOLDING_ID_3), eq(true), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture());
+    when(restClient.delete(eq(DELETE_TITLE_ENDPOINT), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture());
+    when(consortiumConfigurationService.isCentralOrderingEnabled(any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(true));
+    when(protectionService.isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext)))
+      .thenReturn(succeededFuture(null));
+
+    var result = titlesService.deleteTitle(TITLE_ID, "true", requestContext);
+
+    result.onComplete(ar -> {
+      assertTrue(ar.succeeded());
+      verify(consortiumConfigurationService).isCentralOrderingEnabled(any(RequestContext.class));
+      verify(inventoryItemManager).deleteItems(eq(Collections.singletonList(ITEM_ID_1)), eq(true), any(RequestContext.class));
+      verify(pieceStorageService).deletePiecesByIds(eq(List.of(PIECE_ID_1, PIECE_ID_2, PIECE_ID_3)), any(RequestContext.class));
+      verify(inventoryHoldingManager, times(0)).deleteHoldingById(eq(HOLDING_ID_1), eq(true), any(RequestContext.class));
+      verify(inventoryHoldingManager, times(0)).deleteHoldingById(eq(HOLDING_ID_2), eq(true), any(RequestContext.class));
+      verify(inventoryHoldingManager, times(1)).deleteHoldingById(eq(HOLDING_ID_3), eq(true), any(RequestContext.class));
+      verify(restClient).delete(eq(DELETE_TITLE_ENDPOINT), any(RequestContext.class));
+    });
+  }
+
+  @Test
   void negative_testUnlinkTitleFromPackage_throwExceptionWhenDeleteHoldingIsInvalid() {
     List<Piece> pieces = Collections.singletonList(
       new Piece().withId(PIECE_ID_1).withHoldingId(HOLDING_ID_1).withReceivingTenantId("college").withTitleId(TITLE_ID)
     );
-    var item = new JsonObject().put("id", ITEM_ID_1).put("purchaseOrderLineIdentifier", POLINE_ID);
+    var item = getItem(ITEM_ID_1, POLINE_ID);
 
     doReturn(Future.succeededFuture(title)).when(titlesService).getTitleById(eq(TITLE_ID), any(RequestContext.class));
     when(purchaseOrderLineService.getOrderLineById(eq(POLINE_ID), any(RequestContext.class)))
@@ -328,6 +383,8 @@ public class TitlesServiceTest {
     doReturn(Future.succeededFuture(title)).when(titlesService).getTitleById(eq(TITLE_ID), any(RequestContext.class));
     when(purchaseOrderLineService.getOrderLineById(eq(POLINE_ID), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture(poLine));
+    when(pieceStorageService.getPiecesByLineIdAndTitleId(eq(POLINE_ID), eq(TITLE_ID), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(List.of()));
     when(consortiumConfigurationService.isCentralOrderingEnabled(any(RequestContext.class)))
       .thenReturn(Future.failedFuture(new RuntimeException("Consortium configuration error")));
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
@@ -339,4 +396,38 @@ public class TitlesServiceTest {
       assertEquals("Consortium configuration error", ar.cause().getMessage());
     });
   }
+
+  @Test
+  void negative_testUnlinkTitleFromPackage_receivedPieceExists() {
+    List<Piece> pieces = List.of(
+      new Piece().withId(PIECE_ID_1).withHoldingId(HOLDING_ID_1).withReceivingTenantId("college").withTitleId(TITLE_ID).withReceivingStatus(Piece.ReceivingStatus.EXPECTED),
+      new Piece().withId(PIECE_ID_2).withHoldingId(HOLDING_ID_1).withReceivingTenantId("college").withTitleId(TITLE_ID).withReceivingStatus(Piece.ReceivingStatus.RECEIVED)
+    );
+
+    when(titlesService.getTitleById(eq(TITLE_ID), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(title));
+    when(protectionService.isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext)))
+      .thenReturn(succeededFuture(null));
+    when(purchaseOrderLineService.getOrderLineById(eq(POLINE_ID), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(poLine));
+    when(pieceStorageService.getPiecesByLineIdAndTitleId(eq(POLINE_ID), eq(TITLE_ID), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(pieces));
+    when(consortiumConfigurationService.isCentralOrderingEnabled(any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(true));
+    when(inventoryItemManager.getItemsByHoldingId(eq(HOLDING_ID_1), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(List.of()));
+
+    var result = titlesService.deleteTitle(TITLE_ID, "true", requestContext);
+
+    result.onComplete(ar -> {
+      assertTrue(ar.failed());
+      assertInstanceOf(HttpException.class, ar.cause());
+
+      var error = ((HttpException) ar.cause()).getError();
+      assertEquals(EXISTING_RECEIVED_PIECES_TITLE_REMOVAL.getCode(), error.getCode());
+
+      verify(restClient, never()).delete(eq(DELETE_TITLE_ENDPOINT), any(RequestContext.class));
+    });
+  }
+
 }

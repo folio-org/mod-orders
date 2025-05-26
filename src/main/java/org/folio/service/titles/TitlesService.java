@@ -5,6 +5,7 @@ import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.AcqDesiredPermissions.TITLES_ASSIGN;
 import static org.folio.orders.utils.AcqDesiredPermissions.TITLES_MANAGE;
+import static org.folio.orders.utils.FutureUtils.asFuture;
 import static org.folio.orders.utils.HelperUtils.ID;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
@@ -14,15 +15,17 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.BAD_REQUEST;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.core.exceptions.ErrorCodes.EXISTING_HOLDINGS_FOR_DELETE_CONFIRMATION;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
+import static org.folio.rest.core.exceptions.ErrorCodes.EXISTING_RECEIVED_PIECES_TITLE_REMOVAL;
+import static org.folio.service.inventory.InventoryUtils.canDeleteHoldingForTitleRemoval;
+import static org.folio.service.inventory.InventoryUtils.canDeleteItemForTitleRemoval;
+import static org.folio.service.pieces.PieceUtil.canDeletePieceForTitleRemoval;
+import static org.folio.service.pieces.PieceUtil.getPieceTenantId;
 
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import com.google.common.collect.Sets;
 
@@ -31,6 +34,7 @@ import lombok.extern.log4j.Log4j2;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.folio.models.TitleHolder;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.orders.utils.QueryUtils;
@@ -44,7 +48,6 @@ import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.TitleCollection;
-import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.ProtectionService;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.inventory.InventoryHoldingManager;
@@ -192,125 +195,104 @@ public class TitlesService {
       .compose(holder -> protectionService.isOperationRestricted(holder.getTitle().getAcqUnitIds(), DELETE, requestContext)
         .map(v -> holder))
       .compose(holder -> purchaseOrderLineService.getOrderLineById(holder.getTitle().getPoLineId(), requestContext)
-        .map(holder::withPoLine))
+        .map(holder::setPoLine))
+      .compose(holder -> pieceStorageService.getPiecesByLineIdAndTitleId(holder.getPoLineId(), holder.getTitleId(), requestContext)
+        .map(holder::setPieces))
       .compose(holder -> consortiumConfigurationService.isCentralOrderingEnabled(requestContext)
-        .map(holder::withCentralEnabled))
+        .map(holder::setCentralEnabled))
       .compose(holder -> getHoldingIdsGroupedByTenantId(holder, requestContext)
-        .map(holder::withAllHoldingIdsByTenant))
+        .map(holder::setAllHoldingIdsByTenant))
       .compose(holder -> getHoldingsToDeleteWithTenants(holder, requestContext)
-        .map(holder::withHoldingIdsToDeleteByTenant))
-      .compose(holder -> processHoldingItemPieces(holder, deleteHoldings, requestContext)
+        .map(holder::setHoldingIdsToDeleteByTenant))
+      .compose(holder -> processItemsPiecesHoldings(holder, deleteHoldings, requestContext)
         .map(v -> holder))
       .compose(holder -> deleteTitle(holder.getTitleId(), requestContext));
   }
 
-  private Future<Void> processHoldingItemPieces(TitleHolder holder, String deleteHoldings, RequestContext requestContext) {
-    List<String> allHoldings = holder.getAllHoldings();
-    List<String> holdingIdsToDelete = holder.getHoldingIdsToDelete();
-
-    if (CollectionUtils.isEmpty(allHoldings)) {
+  private Future<Void> processItemsPiecesHoldings(TitleHolder holder, String deleteHoldings, RequestContext requestContext) {
+    if (CollectionUtils.isEmpty(holder.getAllHoldings())) {
       return Future.succeededFuture();
     }
 
-    if (StringUtils.isEmpty(deleteHoldings) && CollectionUtils.isNotEmpty(holdingIdsToDelete)) {
-      log.info("processHoldings:: Holdings in poLine '{}' will not be deleted", holder.getPoLine().getId());
-      var param = new Parameter().withKey("holdingIds").withValue(holdingIdsToDelete.toString());
-      var error = EXISTING_HOLDINGS_FOR_DELETE_CONFIRMATION.toError().withParameters(List.of(param));
+    if (holder.getPieces().stream().anyMatch(piece -> piece.getReceivingStatus() == Piece.ReceivingStatus.RECEIVED)) {
+      var error = EXISTING_RECEIVED_PIECES_TITLE_REMOVAL.toError();
       throw new HttpException(BAD_REQUEST, error);
     }
 
-    if (!"true".equalsIgnoreCase(deleteHoldings) && !"false".equalsIgnoreCase(deleteHoldings)) {
-      throw new IllegalArgumentException("deleteHolding must be either 'true' or 'false'");
+    // The parameter "deleteHoldings" is required if there are any holdings found for deletion
+    if (CollectionUtils.isNotEmpty(holder.getHoldingIdsToDelete())) {
+      if (StringUtils.isEmpty(deleteHoldings)) {
+        log.info("processHoldings:: Holdings in poLine '{}' will not be deleted", holder.getPoLine().getId());
+        var param = new Parameter().withKey("holdingIds").withValue(holder.getHoldingIdsToDelete().toString());
+        var error = EXISTING_HOLDINGS_FOR_DELETE_CONFIRMATION.toError().withParameters(List.of(param));
+        throw new HttpException(BAD_REQUEST, error);
+      }
+      if (!"true".equalsIgnoreCase(deleteHoldings) && !"false".equalsIgnoreCase(deleteHoldings)) {
+        throw new IllegalArgumentException("deleteHolding must be either 'true' or 'false'");
+      }
     }
 
     holder.setDeleteHoldings(Boolean.parseBoolean(deleteHoldings));
-    return deleteHoldingItemPieces(holder, requestContext);
+    return deleteItemsPiecesHoldings(holder, requestContext);
   }
 
   private Future<Map<String, List<String>>> getHoldingIdsGroupedByTenantId(TitleHolder holder, RequestContext requestContext) {
-    return pieceStorageService.getPiecesByLineIdAndTitleId(holder.getPoLineId(), holder.getTitleId(), requestContext)
-      .map(pieces -> pieces.stream()
+    return asFuture(() -> StreamEx.of(holder.getPieces())
         .filter(piece -> StringUtils.isNotEmpty(piece.getHoldingId()))
-        .collect(groupingBy(
-          piece ->
-            piece.getReceivingTenantId() != null
-              ? piece.getReceivingTenantId()
-              : TenantTool.tenantId(requestContext.getHeaders()),
-          mapping(Piece::getHoldingId, toList())
-        ))
-      );
+        .groupingBy(piece -> getPieceTenantId(piece, requestContext), mapping(Piece::getHoldingId, toList())));
   }
 
-  private Future<Map<String, List<String>>> getHoldingsToDeleteWithTenants(TitleHolder holder,
-                                                                     RequestContext requestContext) {
-    var holdingIdsGroupByTenant = holder.getAllHoldingIdsByTenant();
-    if (holdingIdsGroupByTenant.isEmpty()) {
+  private Future<Map<String, List<String>>> getHoldingsToDeleteWithTenants(TitleHolder holder, RequestContext requestContext) {
+    if (holder.getAllHoldingIdsByTenant().isEmpty()) {
       return Future.succeededFuture(Map.of());
     }
 
-    List<Future<AbstractMap.SimpleEntry<String, String>>> deletableHoldingsFuture = new ArrayList<>();
-    holdingIdsGroupByTenant.forEach((tenantId, holdingIds) -> {
+    List<Future<Pair<String, String>>> deletableHoldingsFuture = new ArrayList<>();
+    holder.getAllHoldingIdsByTenant().forEach((tenantId, holdingIds) -> {
       var tenantContext = holder.isCentralEnabled()
         ? createContextWithNewTenantId(requestContext, tenantId)
         : requestContext;
 
       holdingIds.forEach(holdingId -> deletableHoldingsFuture.add(
         inventoryItemManager.getItemsByHoldingId(holdingId, tenantContext)
-          .map(items -> {
-            /* Only consider the holding for deletion if:
-              1. it has no items, or
-              2. All items are associated with the current PO line being processed */
-            boolean canDelete = items.isEmpty() ||
-              items.stream()
-                .allMatch(item -> {
-                  String itemPoLineId = item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER);
-                  return itemPoLineId == null || holder.getPoLineId().equals(itemPoLineId);
-                });
-            return canDelete ? new AbstractMap.SimpleEntry<>(tenantId, holdingId) : null;
-          })
+          .map(items -> canDeleteHoldingForTitleRemoval(items, holder.getPoLineId())
+            ? Pair.of(tenantId, holdingId)
+            : null)
       ));
     });
 
     return collectResultsOnSuccess(deletableHoldingsFuture)
-      .map(cf -> deletableHoldingsFuture.stream()
+      .map(cf -> StreamEx.of(deletableHoldingsFuture)
         .map(Future::result)
-        .filter(Objects::nonNull)
+        .nonNull()
         .distinct()
-        .collect(Collectors.groupingBy(
-          AbstractMap.SimpleEntry::getKey,
-          Collectors.mapping(AbstractMap.SimpleEntry::getValue, Collectors.toList())
-        ))
-      );
+        .groupingBy(Pair::getKey, mapping(Pair::getValue, toList())));
   }
 
-  private Future<Void> deleteHoldingItemPieces(TitleHolder holder, RequestContext centralContext) {
+  private Future<Void> deleteItemsPiecesHoldings(TitleHolder holder, RequestContext centralContext) {
     return holder.isCentralEnabled()
-      ? deleteWithMultipleTenants(holder, centralContext)
-      : deleteWithSingleTenant(holder, centralContext);
+      ? deleteItemsPiecesHoldingsForMultipleTenants(holder, centralContext)
+      : deleteItemsPiecesHoldingsForTenant(holder, null, centralContext);
   }
 
-  private Future<Void> deleteWithMultipleTenants(TitleHolder holder, RequestContext centralContext) {
-    var tenantOperationFutures = new ArrayList<Future<Void>>();
-    holder.getHoldingIdsToDeleteByTenant().forEach((tenantId, holdingIds) -> {
-      var tenantContext = createContextWithNewTenantId(centralContext, tenantId);
-
-      tenantOperationFutures.add(
-        deleteItemsForHolding(holder, tenantContext)
-          .compose(v -> deletePiecesForHoldingsInTenant(holder, tenantId, centralContext))
-          .compose(v -> deleteHoldings(holder, tenantContext))
-      );
-    });
-
-    return collectResultsOnSuccess(tenantOperationFutures).mapEmpty();
+  private Future<Void> deleteItemsPiecesHoldingsForMultipleTenants(TitleHolder holder, RequestContext centralContext) {
+    return collectResultsOnSuccess(holder.getAllHoldingIdsByTenant()
+      .keySet().stream()
+      .map(tenantId -> deleteItemsPiecesHoldingsForTenant(holder, tenantId, centralContext))
+      .toList())
+      .mapEmpty();
   }
 
-  private Future<Void> deleteWithSingleTenant(TitleHolder holder, RequestContext requestContext) {
-    return deleteItemsForHolding(holder, requestContext)
-      .compose(v -> deletePiecesForHoldingsInTenant(holder, null, requestContext))
-      .compose(v -> deleteHoldings(holder, requestContext));
+  private Future<Void> deleteItemsPiecesHoldingsForTenant(TitleHolder holder, String tenantId, RequestContext centralContext) {
+    var tenantContext = Optional.ofNullable(tenantId)
+      .map(tId -> createContextWithNewTenantId(centralContext, tId))
+      .orElse(centralContext);
+    return deleteItems(holder, tenantContext)
+      .compose(v -> deletePieces(holder, tenantId, centralContext))
+      .compose(v -> deleteHoldings(holder, tenantContext));
   }
 
-  private Future<Void> deleteItemsForHolding(TitleHolder holder, RequestContext tenantContext) {
+  private Future<Void> deleteItems(TitleHolder holder, RequestContext tenantContext) {
     var holdingIds = holder.getAllHoldings();
     if (CollectionUtils.isEmpty(holdingIds)) {
       return Future.succeededFuture();
@@ -325,7 +307,7 @@ public class TitlesService {
           }
 
           var itemIds = items.stream()
-            .filter(item -> holder.getPoLineId().equals(item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER)))
+            .filter(item -> canDeleteItemForTitleRemoval(item, holder.getPoLineId()))
             .map(item -> item.getString(ID))
             .toList();
 
@@ -344,29 +326,25 @@ public class TitlesService {
       .mapEmpty();
   }
 
-  private Future<Void> deletePiecesForHoldingsInTenant(TitleHolder holder, String tenantId,
-                                                       RequestContext centralContext) {
+  private Future<Void> deletePieces(TitleHolder holder, String tenantId, RequestContext centralContext) {
     var allHoldings = holder.getAllHoldings();
     if (CollectionUtils.isEmpty(allHoldings)) {
       return Future.succeededFuture();
     }
 
-    return pieceStorageService.getPiecesByLineIdAndTitleId(holder.getPoLineId(), holder.getTitleId(), centralContext)
-      .compose(pieces -> {
-        var pieceIdsToDelete = pieces.stream()
-          .filter(piece ->
-            allHoldings.contains(piece.getHoldingId())
-              && (tenantId == null || tenantId.equals(piece.getReceivingTenantId())))
-          .map(Piece::getId).toList();
+    var pieces = holder.getPieces();
+    var pieceIdsToDelete = pieces.stream()
+      .filter(piece -> canDeletePieceForTitleRemoval(piece, allHoldings, tenantId))
+      .map(Piece::getId)
+      .toList();
 
-        if (pieceIdsToDelete.isEmpty()) {
-          return Future.succeededFuture();
-        }
+    if (pieceIdsToDelete.isEmpty()) {
+      return Future.succeededFuture();
+    }
 
-        return pieceStorageService.deletePiecesByIds(pieceIdsToDelete, centralContext)
-          .onSuccess(v -> log.info("deletePiecesForPoLine:: Pieces were deleted successfully for poLineId: {}", holder.getPoLineId()))
-          .onFailure(t -> log.error("deletePiecesForPoLine:: Failed to delete pieces for poLineId: {}", holder.getPoLineId(), t));
-      });
+    return pieceStorageService.deletePiecesByIds(pieceIdsToDelete, centralContext)
+      .onSuccess(v -> log.info("deletePiecesForPoLine:: Pieces were deleted successfully for poLineId: {}", holder.getPoLineId()))
+      .onFailure(t -> log.error("deletePiecesForPoLine:: Failed to delete pieces for poLineId: {}", holder.getPoLineId(), t));
   }
 
   private Future<Void> deleteHoldings(TitleHolder holder, RequestContext tenantContext) {
