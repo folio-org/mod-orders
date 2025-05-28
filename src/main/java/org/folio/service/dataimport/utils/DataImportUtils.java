@@ -68,7 +68,8 @@ public class DataImportUtils {
    * @return {@code true} if the system user is set for Eureka env; otherwise {@code false}.
    */
   private static boolean isSystemUserEnabled() {
-    return !Boolean.parseBoolean(System.getProperty("SYSTEM_USER_ENABLED", "true"));
+    return !Boolean.parseBoolean(System.getenv().getOrDefault("SYSTEM_USER_ENABLED",
+      System.getProperty("SYSTEM_USER_ENABLED", "true")));
   }
 
 }
