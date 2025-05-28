@@ -145,6 +145,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -1929,7 +1930,9 @@ public class MockServer {
         try {
           List<Piece> piecesList = getMockEntries(PIECES_STORAGE, Piece.class).get();
           if (!isClaimingTenant) {
-            pieces = new PieceCollection().withPieces(piecesList);
+            pieces = requestQuery != null && requestQuery.contains("poLineId")
+              ? getPiecesByPolAndStatus(requestQuery, polId -> piecesList.stream().filter(piece -> piece.getPoLineId().equals(polId)).collect(Collectors.toList()))
+              : new PieceCollection().withPieces(piecesList);
           } else {
             pieces = new PieceCollection().withPieces(piecesList.stream().filter(piece -> piece.getReceivingStatus() == LATE).toList());
           }
@@ -1940,31 +1943,14 @@ public class MockServer {
       } else {
         try {
           if (requestQuery.contains("poLineId==")) {
-            logger.info("handleGetPieces (by poLineId)");
-            List<String> conditions = StreamEx
-              .split(requestQuery, " or ")
-              .flatMap(s -> StreamEx.split(s, " and "))
-              .toList();
-
-            String polId = EMPTY;
-            String status = EMPTY;
-            for (String condition : conditions) {
-              if (condition.startsWith("poLineId")) {
-                polId = condition.split("poLineId==")[1];
-              } else if (condition.startsWith("receivingStatus")) {
-                status = condition.split("receivingStatus==")[1];
+            pieces = getPiecesByPolAndStatus(requestQuery, polId -> {
+              try {
+                String path = PIECE_RECORDS_MOCK_DATA_PATH + String.format("pieceRecords-%s.json", polId);
+                return new JsonObject(getMockData(path)).mapTo(PieceCollection.class).getPieces();
+              } catch (IOException e) {
+                throw new RuntimeException(e);
               }
-            }
-            logger.info("poLineId: {}", polId);
-            logger.info("receivingStatus: {}", status);
-
-            String path = PIECE_RECORDS_MOCK_DATA_PATH + String.format("pieceRecords-%s.json", polId);
-            pieces = new JsonObject(getMockData(path)).mapTo(PieceCollection.class);
-            // Filter piece records by receiving status
-            if (StringUtils.isNotEmpty(status)) {
-              Piece.ReceivingStatus receivingStatus = Piece.ReceivingStatus.fromValue(status);
-              pieces.getPieces().removeIf(piece -> receivingStatus != piece.getReceivingStatus());
-            }
+            });
           } else if (requestQuery.contains("id==")) {
             logger.info("handleGetPieces (by id)");
             pieces = new JsonObject(getMockData(PIECES_COLLECTION)).mapTo(PieceCollection.class);
@@ -1986,7 +1972,7 @@ public class MockServer {
 
           pieces.setTotalRecords(pieces.getPieces().size());
         } catch (Exception e) {
-          logger.info("handleGetPieces (with empty piece collection on exception)");
+          logger.info("handleGetPieces (with empty piece collection on exception)", e);
           pieces = new PieceCollection();
           pieces.setTotalRecords(0);
         }
@@ -2001,6 +1987,43 @@ public class MockServer {
         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
         .end(data.encodePrettily());
     }
+  }
+
+  private PieceCollection getPiecesByPolAndStatus(String requestQuery, Function<String, List<Piece>> piecesGetter) {
+    logger.info("handleGetPieces (by poLineId)");
+
+    var pieces = new PieceCollection();
+    List<String> conditions = StreamEx
+      .split(requestQuery, " or ")
+      .flatMap(s -> StreamEx.split(s, " and "))
+      .toList();
+
+    String polId = EMPTY;
+    String status = EMPTY;
+    String statusNot = EMPTY;
+    for (String condition : conditions) {
+      if (condition.startsWith("poLineId")) {
+        polId = condition.split("poLineId==")[1];
+      } else if (condition.startsWith("receivingStatus==")) {
+        status = condition.split("receivingStatus==")[1];
+      } else if (condition.startsWith("receivingStatus<>")) {
+        statusNot = condition.split("receivingStatus<>")[1];
+      }
+    }
+    logger.info("poLineId: {}", polId);
+    logger.info("receivingStatus: {}", status);
+
+    pieces.setPieces(piecesGetter.apply(polId));
+    // Filter piece records by receiving status
+    if (StringUtils.isNotEmpty(status)) {
+      Piece.ReceivingStatus receivingStatus = Piece.ReceivingStatus.fromValue(status);
+      pieces.getPieces().removeIf(piece -> receivingStatus != piece.getReceivingStatus());
+    } else if (statusNot.equals(Piece.ReceivingStatus.RECEIVED.value())) {
+      Piece.ReceivingStatus receivingStatus = Piece.ReceivingStatus.RECEIVED;
+      pieces.getPieces().removeIf(piece -> receivingStatus == piece.getReceivingStatus());
+    }
+
+    return pieces.withTotalRecords(pieces.getPieces().size());
   }
 
   private void handleGetTitles(RoutingContext ctx) {
