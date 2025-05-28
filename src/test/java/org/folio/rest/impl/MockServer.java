@@ -1930,7 +1930,7 @@ public class MockServer {
         try {
           List<Piece> piecesList = getMockEntries(PIECES_STORAGE, Piece.class).get();
           if (!isClaimingTenant) {
-            pieces = requestQuery != null && requestQuery.contains("poLineId")
+            pieces = requestQuery != null && requestQuery.contains("poLineId") && requestQuery.contains("receivingStatus")
               ? getPiecesByPolAndStatus(requestQuery, polId -> piecesList.stream().filter(piece -> piece.getPoLineId().equals(polId)).collect(Collectors.toList()))
               : new PieceCollection().withPieces(piecesList);
           } else {
