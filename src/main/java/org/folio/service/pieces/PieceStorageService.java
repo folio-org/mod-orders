@@ -37,7 +37,7 @@ import org.folio.service.settings.util.SettingKey;
 @Log4j2
 public class PieceStorageService {
 
-  private static final String PIECES_BY_POL_ID_AND_STATUS_QUERY = "poLineId==%s and receivingStatus==%s";
+  private static final String PIECES_BY_POL_ID_AND_NOT_STATUS_QUERY = "poLineId==%s and receivingStatus<>%s";
   private static final String PIECES_BY_HOLDING_ID_QUERY = "holdingId==%s";
   private static final String PIECE_STORAGE_ENDPOINT = resourcesPath(PIECES_STORAGE);
   private static final String PIECE_STORAGE_BY_ID_ENDPOINT = PIECE_STORAGE_ENDPOINT + "/{id}";
@@ -136,7 +136,7 @@ public class PieceStorageService {
   }
 
   public Future<PieceCollection> getExpectedPiecesByLineId(String poLineId, RequestContext requestContext) {
-    String query = String.format(PIECES_BY_POL_ID_AND_STATUS_QUERY, poLineId, Piece.ReceivingStatus.EXPECTED.value());
+    String query = String.format(PIECES_BY_POL_ID_AND_NOT_STATUS_QUERY, poLineId, Piece.ReceivingStatus.RECEIVED.value());
     return getAllPieces(query, requestContext);
   }
 
