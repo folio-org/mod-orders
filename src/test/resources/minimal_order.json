@@ -23,11 +23,13 @@
       "locations": [
         {
           "locationId": "758258bc-ecc1-41b8-abca-f7b610822ffd",
-          "quantityPhysical": 1
+          "quantityPhysical": 1,
+          "quantity": 1
         },
         {
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
-          "quantityPhysical": 1
+          "quantityPhysical": 1,
+          "quantity": 1
         }
       ],
       "orderFormat" : "Physical Resource",
