@@ -3,6 +3,7 @@ package org.folio.service.finance.transaction;
 import static org.folio.orders.utils.FundDistributionUtils.validateFundDistributionTotal;
 
 import java.util.List;
+import java.util.Objects;
 
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.rest.core.models.RequestContext;
@@ -35,29 +36,36 @@ public class PendingToOpenEncumbranceStrategy implements EncumbranceWorkflowStra
   }
 
   @Override
-  public Future<List<EncumbranceRelationsHolder>> prepareProcessEncumbrancesAndValidate(CompositePurchaseOrder compPO,
-      CompositePurchaseOrder poAndLinesFromStorage, RequestContext requestContext) {
-    validateFundDistributionTotal(compPO.getPoLines());
-
-    List<EncumbranceRelationsHolder> holders = encumbranceRelationsHoldersBuilder.buildBaseHolders(compPO);
-
-    return encumbranceRelationsHoldersBuilder.withFinances(holders, requestContext)
-      .compose(v -> encumbranceRelationsHoldersBuilder.withExistingTransactions(holders, poAndLinesFromStorage, requestContext))
-      .map(v -> fundsDistributionService.distributeFunds(holders))
-      .map(dataHolders -> {
-        budgetRestrictionService.checkEncumbranceRestrictions(dataHolders);
-        return null;
-      })
-      .map(v -> holders);
-  }
-
-  @Override
   public Future<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
                                           RequestContext requestContext) {
     return prepareProcessEncumbrancesAndValidate(compPO, poAndLinesFromStorage, requestContext)
       .map(encumbrancesProcessingHolderBuilder::distributeHoldersByOperation)
       .compose(holder -> polInvoiceLineRelationService.manageInvoiceRelation(holder, requestContext))
       .compose(holder -> encumbranceService.createOrUpdateEncumbrances(holder, requestContext));
+  }
+
+  @Override
+  public Future<List<EncumbranceRelationsHolder>> prepareProcessEncumbrancesAndValidate(CompositePurchaseOrder compPO,
+                                                                                        CompositePurchaseOrder poAndLinesFromStorage, RequestContext requestContext) {
+    validateFundDistributionTotal(compPO.getPoLines());
+
+    List<EncumbranceRelationsHolder> holders = encumbranceRelationsHoldersBuilder.buildBaseHolders(compPO);
+
+    return encumbranceRelationsHoldersBuilder.withFinances(holders, requestContext)
+      .compose(v -> {
+        holders.stream()
+          .filter(Objects::nonNull)
+          .filter(holder -> Objects.nonNull(holder.getCurrentFiscalYearId()))
+          .findFirst()
+          .ifPresent(fiscalYearId -> compPO.withFiscalYearId(holders.getFirst().getCurrentFiscalYearId()));
+        return encumbranceRelationsHoldersBuilder.withExistingTransactions(holders, poAndLinesFromStorage, requestContext);
+      })
+      .map(v -> fundsDistributionService.distributeFunds(holders))
+      .map(dataHolders -> {
+        budgetRestrictionService.checkEncumbranceRestrictions(dataHolders);
+        return null;
+      })
+      .map(v -> holders);
   }
 
   @Override
