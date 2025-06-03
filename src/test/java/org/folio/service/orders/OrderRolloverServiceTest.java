@@ -101,6 +101,7 @@ public class OrderRolloverServiceTest {
   private RequestContext requestContext;
   private final String systemCurrency = "USD";
   private AutoCloseable mockitoMocks;
+  private CurrencyConversionMockHelper conversionHelper;
 
   @BeforeEach
   public void initMocks() {
@@ -111,6 +112,8 @@ public class OrderRolloverServiceTest {
     okapiHeadersMock.put(X_OKAPI_TENANT.getName(), X_OKAPI_TENANT.getValue());
     okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
     requestContext = new RequestContext(Vertx.vertx().getOrCreateContext(), okapiHeadersMock);
+    conversionHelper = new CurrencyConversionMockHelper(configurationEntriesCache, cacheableExchangeRateService,
+      systemCurrency, requestContext);
   }
 
   @AfterEach
@@ -269,7 +272,6 @@ public class OrderRolloverServiceTest {
     List<Transaction> encumbrances = List.of(transactionOneTime, transactionOngoing2, transactionOngoing3);
     doReturn(succeededFuture(encumbrances)).when(transactionService).getTransactions(anyString(), any());
 
-    var conversionHelper = new CurrencyConversionMockHelper(configurationEntriesCache, cacheableExchangeRateService, requestContext);
     conversionHelper.mockExchangeRateProviderResolver(systemCurrency, systemCurrency, nopExchangeRate);
 
     Future<Void> future = orderRolloverService.startRollover(ledgerFiscalYearRollover, progress, requestContext);
@@ -371,7 +373,6 @@ public class OrderRolloverServiceTest {
     List<Transaction> encumbrances = List.of(transactionOneTime);
     doReturn(succeededFuture(encumbrances)).when(transactionService).getTransactions(anyString(), any());
 
-    var conversionHelper = new CurrencyConversionMockHelper(configurationEntriesCache, cacheableExchangeRateService, requestContext);
     conversionHelper.mockExchangeRateProviderResolver(systemCurrency, systemCurrency, nopExchangeRate);
 
     Future<Void> future = orderRolloverService.startRollover(ledgerFiscalYearRollover, progress, requestContext);
@@ -491,7 +492,6 @@ public class OrderRolloverServiceTest {
     List<Transaction> encumbrances = List.of(transactionOneTime, transactionOngoing2, transactionOngoing3);
     doReturn(succeededFuture(encumbrances)).when(transactionService).getTransactions(anyString(), any());
 
-    var conversionHelper = new CurrencyConversionMockHelper(configurationEntriesCache, cacheableExchangeRateService, requestContext);
     conversionHelper.mockExchangeRateProviderResolver(systemCurrency, polCurrency, exchangeAudToUsdRate);
 
     Future<Void> future = orderRolloverService.startRollover(ledgerFiscalYearRollover, progress, requestContext);
@@ -599,7 +599,6 @@ public class OrderRolloverServiceTest {
 
     doReturn(succeededFuture(null)).when(transactionService).batchDelete(anyList(), any());
 
-    var conversionHelper = new CurrencyConversionMockHelper(configurationEntriesCache, cacheableExchangeRateService, requestContext);
     conversionHelper.mockExchangeRateProviderResolver(systemCurrency, poLineCurrency, 1d);
 
     Future<Void> future = orderRolloverService.startRollover(ledgerFiscalYearRollover, progress, requestContext);
@@ -719,7 +718,6 @@ public class OrderRolloverServiceTest {
       .withCurrency(fromCurrency)
       .withEncumbrance(encumbrance);
 
-    var conversionHelper = new CurrencyConversionMockHelper(configurationEntriesCache, cacheableExchangeRateService, requestContext);
     conversionHelper.mockExchangeRateProviderResolver(fromCurrency, toCurrency, exchangeRateAmount);
 
     var currencyConversion = orderRolloverService.retrieveCurrencyConversion(fromCurrency, poLine.getCost().getCurrency(), exchangeRateAmount, customExchangeRate);
