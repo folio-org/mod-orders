@@ -160,7 +160,7 @@ public class OpenCompositeOrderManager {
 
   private void updateIncomingOrder(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
     compPO.setWorkflowStatus(OPEN);
-    compPO.setOrderedById(getCurrentUserId(requestContext.getHeaders()));
+    compPO.setOpenedById(getCurrentUserId(requestContext.getHeaders()));
     compPO.setDateOrdered(new Date());
     if (CollectionUtils.isEmpty(compPO.getPoLines())) {
       CompositePurchaseOrder clonedPoFromStorage = JsonObject.mapFrom(poFromStorage).mapTo(CompositePurchaseOrder.class);

@@ -56,8 +56,8 @@ public class PendingToOpenEncumbranceStrategy implements EncumbranceWorkflowStra
         holders.stream()
           .filter(Objects::nonNull)
           .filter(holder -> Objects.nonNull(holder.getCurrentFiscalYearId()))
-          .findFirst()
-          .ifPresent(fiscalYearId -> compPO.withFiscalYearId(holders.getFirst().getCurrentFiscalYearId()));
+          .findFirst().map(EncumbranceRelationsHolder::getCurrentFiscalYearId)
+          .ifPresent(compPO::withFiscalYearId);
         return encumbranceRelationsHoldersBuilder.withExistingTransactions(holders, poAndLinesFromStorage, requestContext);
       })
       .map(v -> fundsDistributionService.distributeFunds(holders))
