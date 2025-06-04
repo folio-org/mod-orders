@@ -28,6 +28,8 @@ import java.util.UUID;
 
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.folio.CopilotGenerated;
+import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.rest.acq.model.finance.AwaitingPayment;
 import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.Encumbrance;
@@ -267,7 +269,7 @@ public class PendingToOpenEncumbranceStrategyTest {
     doReturn(succeededFuture(null))
       .when(transactionService).batchAllOrNothing(any(), any(), any(), any(), eq(requestContext));
     doReturn(succeededFuture(TRUE))
-      .when(orderInvoiceRelationService).isOrderLinkedToAnInvoice(eq(order.getId()), eq(requestContext));
+      .when(orderInvoiceRelationService).isOrderLinkedToAnInvoice(order.getId(), requestContext);
     doReturn(succeededFuture(null))
       .when(invoiceLineService).removeEncumbranceLinks(anyList(), anyList(), eq(requestContext));
     getDefaultRounding();
@@ -352,5 +354,79 @@ public class PendingToOpenEncumbranceStrategyTest {
         assertEquals(DELETE_WITH_EXPENDED_AMOUNT.toError().withParameters(expectedParameters), exception.getError());
         vertxTestContext.completeNow();
       });
+  }
+
+  @Test
+  @CopilotGenerated(model = "Claude 3.5 Sonnet")
+  void testPrepareProcessEncumbrancesAndValidateShouldSetFiscalYearId(VertxTestContext vertxTestContext) {
+    // Given
+    var order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+    var poLine = order.getPoLines().getFirst();
+    var fd = poLine.getFundDistribution().getFirst();
+    var fundId = fd.getFundId();
+    var fiscalYearId = UUID.randomUUID().toString();
+    var encumbranceId = fd.getEncumbrance();
+
+    var orderFromStorage = JsonObject.mapFrom(order).mapTo(CompositePurchaseOrder.class);
+
+    var fund = new Fund().withId(fundId)
+      .withLedgerId(UUID.randomUUID().toString());
+    var ledger = new Ledger().withId(fund.getLedgerId())
+      .withRestrictEncumbrance(true);
+    var fiscalYear = new FiscalYear().withId(fiscalYearId)
+      .withCurrency("USD");
+    var budget = new Budget().withId(UUID.randomUUID().toString())
+      .withFundId(fundId)
+      .withFiscalYearId(fiscalYearId);
+
+    // Create a sample transaction with all required fields
+    var encumbrance = new Encumbrance()
+      .withSourcePurchaseOrderId(order.getId())
+      .withSourcePoLineId(poLine.getId())
+      .withStatus(Encumbrance.Status.UNRELEASED)
+      .withAmountExpended(0.0)
+      .withAmountAwaitingPayment(0.0)
+      .withInitialAmountEncumbered(100.0)
+      .withOrderType(Encumbrance.OrderType.fromValue(order.getOrderType().value()));
+
+    var transaction = new Transaction()
+      .withId(encumbranceId)
+      .withTransactionType(Transaction.TransactionType.ENCUMBRANCE)
+      .withFromFundId(fundId)
+      .withAmount(100.0)
+      .withCurrency("USD")
+      .withFiscalYearId(fiscalYearId)
+      .withSource(Transaction.Source.PO_LINE)
+      .withEncumbrance(encumbrance)
+      .withMetadata(new Metadata());
+
+    // Setup mocks
+    doReturn(Future.succeededFuture(List.of(fund)))
+      .when(fundService).getAllFunds(anyCollection(), any());
+    doReturn(Future.succeededFuture(List.of(ledger)))
+      .when(ledgerService).getLedgersByIds(anyCollection(), any());
+    doReturn(Future.succeededFuture(fiscalYear))
+      .when(fiscalYearService).getCurrentFiscalYear(anyString(), any());
+    doReturn(Future.succeededFuture(List.of(budget)))
+      .when(budgetService).getBudgetsByQuery(anyString(), any());
+    doReturn(Future.succeededFuture(exchangeRate))
+      .when(cacheableExchangeRateService).getExchangeRate(any(), any(), any(), eq(requestContext));
+    doReturn(Future.succeededFuture(List.of(transaction)))
+      .when(transactionService).getTransactionsByIds(anyList(), eq(requestContext));
+
+    // When
+    Future<List<EncumbranceRelationsHolder>> future = pendingToOpenEncumbranceStrategy
+      .prepareProcessEncumbrancesAndValidate(order, orderFromStorage, requestContext);
+
+    // Then
+    vertxTestContext.assertComplete(future)
+      .onSuccess(holders -> vertxTestContext.verify(() -> {
+        assertEquals(fiscalYearId, order.getFiscalYearId());
+        assertEquals(1, holders.size());
+        var holder = holders.getFirst();
+        assertEquals(fiscalYearId, holder.getCurrentFiscalYearId());
+        vertxTestContext.completeNow();
+      }))
+      .onFailure(vertxTestContext::failNow);
   }
 }
