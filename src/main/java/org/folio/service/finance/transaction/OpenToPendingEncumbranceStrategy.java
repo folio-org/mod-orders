@@ -24,9 +24,12 @@ public class OpenToPendingEncumbranceStrategy implements EncumbranceWorkflowStra
   @Override
   public Future<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
       RequestContext requestContext) {
-
     return getOrderEncumbrances(compPO, poAndLinesFromStorage, requestContext)
       .map(this::makeEncumbrancesPending)
+      .map(encumbrances -> {
+        compPO.withFiscalYearId(null);
+        return encumbrances;
+      })
       .compose(transactions -> encumbranceService.updateEncumbrances(transactions, requestContext));
   }
 
