@@ -407,8 +407,11 @@ public class ApplicationConfig {
 
   @Bean
   CompositeOrderDynamicDataPopulateService totalExpendedPopulateService(TransactionService transactionService, InvoiceService invoiceService,
-                                                                        InvoiceLineService invoiceLineService, FiscalYearService fiscalYearService) {
-    return new CompositeOrderTotalFieldsPopulateService(transactionService, invoiceService, invoiceLineService, fiscalYearService);
+                                                                        InvoiceLineService invoiceLineService, FiscalYearService fiscalYearService,
+                                                                        ConfigurationEntriesCache configurationEntriesCache,
+                                                                        CacheableExchangeRateService cacheableExchangeRateService) {
+    return new CompositeOrderTotalFieldsPopulateService(transactionService, invoiceService, invoiceLineService,
+      fiscalYearService, configurationEntriesCache, cacheableExchangeRateService);
   }
 
   @Bean("orderLinesSummaryPopulateService")
