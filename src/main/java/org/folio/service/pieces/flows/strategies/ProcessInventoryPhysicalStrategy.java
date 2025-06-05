@@ -6,6 +6,8 @@ import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
@@ -19,6 +21,7 @@ import org.folio.service.inventory.InventoryItemManager;
 import io.vertx.core.Future;
 
 public class ProcessInventoryPhysicalStrategy extends ProcessInventoryStrategy {
+  private static final Logger logger = LogManager.getLogger();
 
   public ProcessInventoryPhysicalStrategy(ConsortiumConfigurationService consortiumConfigurationService) {
     super(consortiumConfigurationService);
@@ -30,6 +33,7 @@ public class ProcessInventoryPhysicalStrategy extends ProcessInventoryStrategy {
                                                            InventoryHoldingManager inventoryHoldingManager,
                                                            RestClient restClient,
                                                            RequestContext requestContext) {
+    logger.debug("ProcessInventoryPhysicalStrategy.handleHoldingsAndItemsRecords");
     List<Future<List<Piece>>> itemsPerHolding = new ArrayList<>();
 
     // Group all locations by location id because the holding should be unique for different locations

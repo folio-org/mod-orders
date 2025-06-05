@@ -11,6 +11,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
@@ -26,6 +28,7 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 public class ProcessInventoryMixedStrategy extends ProcessInventoryStrategy {
+  private static final Logger logger = LogManager.getLogger();
 
   public ProcessInventoryMixedStrategy(ConsortiumConfigurationService consortiumConfigurationService) {
     super(consortiumConfigurationService);
@@ -37,6 +40,7 @@ public class ProcessInventoryMixedStrategy extends ProcessInventoryStrategy {
                                                            InventoryHoldingManager inventoryHoldingManager,
                                                            RestClient restClient,
                                                            RequestContext requestContext) {
+    logger.debug("ProcessInventoryMixedStrategy.handleHoldingsAndItemsRecords poLine.id={}", poLine.getId());
     List<Future<JsonObject>> itemsPerHolding = updateMixedHolding(poLine, inventoryHoldingManager, restClient, requestContext);
     return collectResultsOnSuccess(itemsPerHolding)
       .map(aVoid -> {
@@ -63,6 +67,7 @@ public class ProcessInventoryMixedStrategy extends ProcessInventoryStrategy {
 
   private List<Future<JsonObject>> updateMixedHolding(PoLine poLine, InventoryHoldingManager inventoryHoldingManager,
                                                       RestClient restClient, RequestContext requestContext) {
+    logger.debug("ProcessInventoryMixedStrategy.updateMixedHolding poLine.id={}", poLine.getId());
     List<Future<JsonObject>> itemsPerHolding = new ArrayList<>();
     poLine.getLocations().forEach(location -> itemsPerHolding.add(
       findHoldingsId(poLine, location, restClient, requestContext)

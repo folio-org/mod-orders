@@ -166,11 +166,13 @@ public class InventoryInstanceManager {
    * @return future with Instance Id
    */
   private Future<String> getInstanceRecord(PoLine poLine, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+    logger.debug("InventoryInstanceManager.getInstanceRecord poLine.id={}", poLine.getId());
     if (poLine.getInstanceId() != null) {
       return Future.succeededFuture(poLine.getInstanceId());
     }
     // proceed with new Instance Record creation if no productId is provided
     if (!isProductIdsExist(poLine) || isInstanceMatchingDisabled) {
+      logger.debug("getInstanceRecord:: no productId is provided - create instance record");
       return createInstanceRecord(poLine, requestContext);
     }
 
@@ -184,6 +186,7 @@ public class InventoryInstanceManager {
         if (!instances.getJsonArray(INSTANCES).isEmpty()) {
           return Future.succeededFuture(extractId(getFirstObjectFromResponse(instances, INSTANCES)));
         }
+        logger.debug("getInstanceRecord:: instance not found - create it");
         return createInstanceRecord(poLine, requestContext);
       });
   }
@@ -195,7 +198,7 @@ public class InventoryInstanceManager {
    * @return id of newly created Instance Record
    */
   private Future<String> createInstanceRecord(PoLine poLine, RequestContext requestContext) {
-    logger.debug("Start processing instance record");
+    logger.debug("InventoryInstanceManager.createInstanceRecord poLine.id={}", poLine.getId());
     JsonObject lookupObj = new JsonObject();
     Future<Void> instanceTypeFuture = InventoryUtils.getEntryId(configurationEntriesCache, inventoryCache, INSTANCE_TYPES, MISSING_INSTANCE_TYPE, requestContext)
       .onSuccess(lookupObj::mergeIn)
@@ -212,7 +215,9 @@ public class InventoryInstanceManager {
       .compose(instanceRecJson -> {
         RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCES));
         return restClient.postJsonObjectAndGetId(requestEntry, instanceRecJson, requestContext);
-      });
+      })
+      .onSuccess(id -> logger.info("createInstanceRecord:: Created instance with id {}", id))
+      .onFailure(t -> logger.error("createInstanceRecord:: Failed to create instance", t));
   }
 
   private JsonObject buildInstanceRecordJsonObject(PoLine poLine, JsonObject lookupObj) {
@@ -311,6 +316,7 @@ public class InventoryInstanceManager {
   }
 
   public Future<String> getOrCreateInstanceRecord(Title title, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+    logger.debug("InventoryInstanceManager.getOrCreateInstanceRecord title.id={}", title.getId());
     if (CollectionUtils.isEmpty(title.getProductIds()) || isInstanceMatchingDisabled) {
       return createInstanceRecord(title, requestContext);
     }
@@ -326,6 +332,7 @@ public class InventoryInstanceManager {
   }
 
   public Future<String> createInstanceRecord(Title title, RequestContext requestContext) {
+    logger.debug("InventoryInstanceManager.createInstanceRecord title.id={}", title.getId());
     JsonObject lookupObj = new JsonObject();
     Future<Void> instanceTypeFuture = InventoryUtils.getEntryId(configurationEntriesCache, inventoryCache, INSTANCE_TYPES, MISSING_INSTANCE_TYPE, requestContext)
       .onSuccess(lookupObj::mergeIn)
@@ -344,10 +351,13 @@ public class InventoryInstanceManager {
 
   private Future<String> createInstance(JsonObject instanceRecJson, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCES));
-    return restClient.postJsonObjectAndGetId(requestEntry, instanceRecJson, requestContext);
+    return restClient.postJsonObjectAndGetId(requestEntry, instanceRecJson, requestContext)
+      .onSuccess(id -> logger.info("createInstance:: Created instance with id {}", id))
+      .onFailure(t -> logger.error("createInstance:: Failed to create instance", t));
   }
 
   public Future<PoLine> openOrderHandleInstance(PoLine poLine, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+    logger.debug("InventoryInstanceManager.openOrderHandleInstance");
     return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
       .compose(configuration ->
         getInstanceRecord(poLine, isInstanceMatchingDisabled, requestContext)
