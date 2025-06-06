@@ -68,11 +68,13 @@ public abstract class ProcessInventoryStrategy {
                                        OpenCompositeOrderPieceService openCompositeOrderPieceService,
                                        RestClient restClient,
                                        RequestContext requestContext) {
+    logger.debug("ProcessInventoryStrategy.processInventory");
     if (Boolean.TRUE.equals(poLine.getIsPackage())) {
       return Future.succeededFuture();
     }
 
     if (PoLineCommonUtil.isInventoryUpdateNotRequired(poLine)) {
+      logger.debug("processInventory:: inventory update not required");
       return handlePieces(poLine, titleId, Collections.emptyList(), isInstanceMatchingDisabled, requestContext,
         openCompositeOrderPieceService);
     }
@@ -90,6 +92,7 @@ public abstract class ProcessInventoryStrategy {
                                                     InventoryHoldingManager inventoryHoldingManager,
                                                     RestClient restClient,
                                                     RequestContext requestContext) {
+    logger.debug("ProcessInventoryStrategy.updateHolding");
     List<Future<List<Piece>>> itemsPerHolding = new ArrayList<>();
     poLine.getLocations().forEach(location -> itemsPerHolding.add(
       findHoldingsId(poLine, location, restClient, requestContext)
@@ -145,6 +148,7 @@ public abstract class ProcessInventoryStrategy {
   private Future<Void> handlePieces(PoLine poLine, String titleId, List<Piece> piecesWithItemId,
                                                  boolean isInstanceMatchingDisabled, RequestContext requestContext,
                                                  OpenCompositeOrderPieceService openCompositeOrderPieceService) {
+    logger.debug("ProcessInventoryStrategy.handlePieces poLine.id={}", poLine.getId());
     // don't create pieces, if no inventory updates and receiving not required
     if (PoLineCommonUtil.isReceiptNotRequired(poLine.getReceiptStatus())) {
       return Future.succeededFuture();

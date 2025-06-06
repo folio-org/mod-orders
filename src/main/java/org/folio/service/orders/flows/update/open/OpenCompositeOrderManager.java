@@ -60,6 +60,7 @@ public class OpenCompositeOrderManager {
    * @return CompletableFuture that indicates when transition is completed
    */
   public Future<Void> process(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, JsonObject config, RequestContext requestContext) {
+    logger.debug("OpenCompositeOrderManager.process compPO.id={}", compPO.getId());
     updateIncomingOrder(compPO, poFromStorage, requestContext);
     return openCompositeOrderFlowValidator.validate(compPO, poFromStorage, requestContext)
       .compose(aCompPO -> titlesService.fetchNonPackageTitles(compPO, requestContext))
@@ -82,6 +83,7 @@ public class OpenCompositeOrderManager {
   }
 
   public Future<Void> openOrderUpdatePoLinesSummary(List<PoLine> poLines, RequestContext requestContext) {
+    logger.debug("OpenCompositeOrderManager.openOrderUpdatePoLinesSummary");
     return GenericCompositeFuture.join(poLines.stream()
       .map(this::removeLocationId)
       .map(line -> purchaseOrderLineService.saveOrderLine(line, requestContext))
@@ -144,6 +146,7 @@ public class OpenCompositeOrderManager {
 
   private Future<Void> finishProcessingEncumbrancesForOpenOrder(CompositePurchaseOrder compPO,
       CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
+    logger.debug("OpenCompositeOrderManager.finishProcessingEncumbrancesForOpenOrder compPO.id={}", compPO.getId());
     EncumbranceWorkflowStrategy strategy = encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.PENDING_TO_OPEN);
     return strategy.processEncumbrances(compPO, poFromStorage, requestContext)
       .onSuccess(v -> logger.info("Finished processing encumbrances to open the order, order id={}", compPO.getId()))

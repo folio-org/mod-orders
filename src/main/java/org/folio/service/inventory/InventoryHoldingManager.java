@@ -71,6 +71,7 @@ public class InventoryHoldingManager {
   }
 
   public Future<String> getOrCreateHoldingsRecord(String instanceId, Location location, RequestContext requestContext) {
+    logger.debug("InventoryHoldingManager.getOrCreateHoldingsRecord instanceId={}", instanceId);
     if (Objects.nonNull(location.getHoldingId())) {
       return getFromCacheOrCreateHolding(location.getHoldingId(), requestContext);
     } else {
@@ -79,6 +80,7 @@ public class InventoryHoldingManager {
   }
 
   public Future<String> getFromCacheOrCreateHolding(String holdingId, RequestContext requestContext) {
+    logger.debug("InventoryHoldingManager.getFromCacheOrCreateHolding holdingId={}", holdingId);
     Context ctx = requestContext.getContext();
     String tenantId = TenantTool.tenantId(requestContext.getHeaders());
 
@@ -107,6 +109,7 @@ public class InventoryHoldingManager {
   }
 
   public Future<JsonObject> getOrCreateHoldingsJsonRecord(Eresource eresource, String instanceId, Location location, RequestContext requestContext) {
+    logger.debug("InventoryHoldingManager.getOrCreateHoldingsJsonRecord instanceId={}", instanceId);
     if (StringUtils.isNotEmpty(location.getHoldingId())) {
       String holdingId = location.getHoldingId();
       RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT))
@@ -208,6 +211,7 @@ public class InventoryHoldingManager {
   }
 
   private Future<JsonObject> createHolding(String instanceId, String locationId, RequestContext requestContext) {
+    logger.debug("InventoryHoldingManager.createHolding instanceId={}", instanceId);
     return InventoryUtils.getSourceId(configurationEntriesCache, inventoryCache, requestContext)
       .map(sourceId -> {
         JsonObject holdingsRecJson = new JsonObject();
@@ -220,10 +224,13 @@ public class InventoryHoldingManager {
       .compose(holdingsRecJson -> {
         RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS));
         return restClient.postJsonObject(requestEntry, holdingsRecJson, requestContext);
-      });
+      })
+      .onSuccess(holding -> logger.info("createHolding:: Created holding with id {}", holding.getString(ID)))
+      .onFailure(t -> logger.error("createHolding:: Failed to create holding", t));
   }
 
   public Future<String> createHoldingAndReturnId(String instanceId, String locationId, RequestContext requestContext) {
+    logger.debug("InventoryHoldingManager.createHoldingAndReturnId instanceId={}", instanceId);
     return createHolding(instanceId, locationId, requestContext)
       .map(holding -> holding.getString(ID));
   }

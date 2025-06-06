@@ -74,7 +74,7 @@ public class OpenCompositeOrderPieceService {
    */
   public Future<List<Piece>> handlePieces(PoLine poLine, String titleId, List<Piece> expectedPiecesWithItem,
                                           boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    logger.debug("handlePieces:: Get pieces by poLine ID - {}", poLine.getId());
+    logger.debug("OpenCompositeOrderPieceService.handlePieces:: Get pieces by poLine ID - {}", poLine.getId());
     return openCompositeOrderHolderBuilder.buildHolder(poLine, titleId, expectedPiecesWithItem, requestContext)
       .compose(holder -> {
         var piecesWithChangedLocation = holder.getPiecesWithChangedLocation();
@@ -169,6 +169,7 @@ public class OpenCompositeOrderPieceService {
    */
   public Future<Void> openOrderUpdateInventory(CompositePurchaseOrder compPO, PoLine poLine,
                                                Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+    logger.debug("OpenCompositeOrderPieceService.openOrderUpdateInventory poLine.id={}", poLine.getId());
     if (!Boolean.TRUE.equals(poLine.getIsPackage())) {
       return inventoryItemManager.updateItemWithPieceFields(piece, requestContext);
     }
@@ -182,6 +183,7 @@ public class OpenCompositeOrderPieceService {
   }
 
   private Future<String> getOrCreateHolding(PoLine poLine, Piece piece, Title title, RequestContext locationContext) {
+    logger.debug("OpenCompositeOrderPieceService.getOrCreateHolding poLine.id={}", poLine.getId());
     if (piece.getHoldingId() != null || !PoLineCommonUtil.isHoldingsUpdateRequired(poLine)) {
       return Future.succeededFuture(piece.getHoldingId());
     }
