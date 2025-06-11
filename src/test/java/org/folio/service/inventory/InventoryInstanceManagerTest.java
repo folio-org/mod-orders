@@ -1,18 +1,23 @@
 package org.folio.service.inventory;
 
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import org.folio.models.consortium.ConsortiumConfiguration;
 import org.folio.models.consortium.SharingInstance;
 import org.folio.models.consortium.SharingInstanceCollection;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
+import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.caches.InventoryCache;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.consortium.SharingInstanceService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -65,13 +70,36 @@ public class InventoryInstanceManagerTest {
     inventoryInstanceManager = new InventoryInstanceManager(restClient, configurationEntriesCache, inventoryCache, sharingInstanceService, consortiumConfigurationService);
   }
 
+  @AfterEach
+  public void afterEach() throws Exception {
+    mockitoMocks.close();
+  }
+
   @Test
-  void shouldNoShareInstanceWhenNonEcsMode() {
+  void shouldUseExistingInstanceId() {
     String instanceId = UUID.randomUUID().toString();
     PoLine poLine = getPoLine(instanceId, List.of(
       new Location().withTenantId(MEMBER_TENANT_1),
       new Location().withTenantId(CENTRAL_TENANT)));
     doReturn(succeededFuture(Optional.empty())).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
+
+    inventoryInstanceManager.openOrderHandleInstance(poLine, false, requestContext).result();
+
+    verifyNoInteractions(restClient);
+    verifyNoInteractions(sharingInstanceService);
+  }
+
+  @Test
+  void shouldNotShareInstanceWhenNonEcsMode() {
+    PoLine poLine = getPoLine(null, List.of(
+      new Location().withTenantId(MEMBER_TENANT_1),
+      new Location().withTenantId(CENTRAL_TENANT)));
+    doReturn(succeededFuture(Optional.empty())).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
+
+    JsonObject emptyInstanceCollection = new JsonObject();
+    emptyInstanceCollection.put("instances", new JsonArray());
+    doReturn(succeededFuture(emptyInstanceCollection))
+      .when(restClient).getAsJsonObject(any(RequestEntry.class), any(RequestContext.class));
 
     inventoryInstanceManager.openOrderHandleInstance(poLine, false, requestContext).result();
 
@@ -81,11 +109,22 @@ public class InventoryInstanceManagerTest {
   @Test
   void shouldNotShareInstanceAmongTenantsWhenInstancesAlreadyShared() {
     String instanceId = UUID.randomUUID().toString();
-    PoLine poLine = getPoLine(instanceId, List.of(
+    PoLine poLine = getPoLine(null, List.of(
       new Location().withTenantId(MEMBER_TENANT_1),
       new Location().withTenantId(CENTRAL_TENANT)));
     Optional<ConsortiumConfiguration> configuration = Optional.of(new ConsortiumConfiguration(CENTRAL_TENANT, UUID.randomUUID().toString()));
     doReturn(succeededFuture(configuration)).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
+
+    JsonObject emptyInstanceCollection = new JsonObject();
+    emptyInstanceCollection.put("instances", new JsonArray());
+    JsonObject instanceCollection = new JsonObject();
+    JsonObject instanceAsJson = new JsonObject();
+    instanceAsJson.put("id", instanceId);
+    instanceCollection.put("instances", JsonArray.of(instanceAsJson));
+    doReturn(succeededFuture(emptyInstanceCollection))
+      .doReturn(succeededFuture(instanceCollection))
+      .when(restClient).getAsJsonObject(any(RequestEntry.class), any(RequestContext.class));
+
 
     SharingInstanceCollection collection = getSharingInstanceCollection(instanceId, MEMBER_TENANT_1, CENTRAL_TENANT);
     doReturn(succeededFuture(collection)).when(sharingInstanceService).getSharingInstances(instanceId, configuration.get(), requestContext);
@@ -96,36 +135,54 @@ public class InventoryInstanceManagerTest {
   }
 
   @Test
-  void shouldShareInstance() {
-    String instanceId = UUID.randomUUID().toString();
-    PoLine poLine = getPoLine(instanceId, List.of(
+  void shouldShareInstanceWhenFoundInCentralTenant() {
+    String centralInstanceId = UUID.randomUUID().toString();
+    PoLine poLine = getPoLine(null, List.of(
       new Location().withTenantId(MEMBER_TENANT_1),
       new Location().withTenantId(MEMBER_TENANT_2)));
+    JsonObject emptyInstanceCollection = new JsonObject();
+    emptyInstanceCollection.put("instances", new JsonArray());
+    JsonObject instanceCollection = new JsonObject();
+    JsonObject instanceAsJson = new JsonObject();
+    instanceAsJson.put("id", centralInstanceId);
+    instanceCollection.put("instances", JsonArray.of(instanceAsJson));
     Optional<ConsortiumConfiguration> configuration = Optional.of(new ConsortiumConfiguration(CENTRAL_TENANT, UUID.randomUUID().toString()));
-    doReturn(succeededFuture(configuration)).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
-    doReturn(succeededFuture(null)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(true), any(RequestContext.class));
+
+    doReturn(succeededFuture(configuration))
+      .when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
+    doReturn(succeededFuture(emptyInstanceCollection))
+      .doReturn(succeededFuture(instanceCollection))
+      .when(restClient).getAsJsonObject(any(RequestEntry.class), any(RequestContext.class));
+    doReturn(succeededFuture(null))
+      .when(restClient).getAsJsonObject(any(RequestEntry.class), eq(true), any(RequestContext.class));
 
     SharingInstanceCollection collection = new SharingInstanceCollection();
-    SharingInstance sharingInstance = new SharingInstance(UUID.fromString(instanceId), MEMBER_TENANT_1, CENTRAL_TENANT);
+    SharingInstance sharingInstance = new SharingInstance(UUID.fromString(centralInstanceId), MEMBER_TENANT_2, CENTRAL_TENANT);
     collection.setSharingInstances(List.of(sharingInstance));
 
-    doReturn(succeededFuture(collection)).when(sharingInstanceService).getSharingInstances(instanceId, configuration.get(), requestContext);
+    doReturn(succeededFuture(collection))
+      .when(sharingInstanceService).getSharingInstances(centralInstanceId, configuration.get(), requestContext);
 
     ArgumentCaptor<RequestContext> requestContextCaptor = ArgumentCaptor.forClass(RequestContext.class);
 
     inventoryInstanceManager.openOrderHandleInstance(poLine, false, requestContext).result();
 
-    verify(sharingInstanceService, times(1)).createShadowInstance(eq(instanceId), eq(configuration.get()), requestContextCaptor.capture());
+    verify(sharingInstanceService, times(1))
+      .createShadowInstance(eq(centralInstanceId), eq(configuration.get()), requestContextCaptor.capture());
 
     RequestContext requestContextForSharing = requestContextCaptor.getValue();
     String tenantId = TenantTool.tenantId(requestContextForSharing.getHeaders());
-    assertEquals(MEMBER_TENANT_2, tenantId);
+    assertEquals(MEMBER_TENANT_1, tenantId);
   }
 
   private PoLine getPoLine(String instanceId, List<Location> locations) {
     PoLine result = getMockAsJson(PO_LINE_MIN_CONTENT_PATH).mapTo(PoLine.class);
     result.setInstanceId(instanceId);
     result.setLocations(locations);
+    result.setDetails(
+      new Details().withProductIds(
+        List.of(
+          new ProductId().withProductId("10407849").withProductIdType("913300b2-03ed-469a-8179-c1092c991227"))));
     return result;
   }
 
