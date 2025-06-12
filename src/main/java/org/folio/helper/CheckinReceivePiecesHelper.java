@@ -356,7 +356,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
           .filter(poLine -> !PoLineCommonUtil.isCancelledOrOngoingStatus(poLine))
           .toList();
         updateOrderStatus.accept(notCancelledOrOngoingPoLines);
-        return null;
+        return Future.succeededFuture();
       }));
   }
 
