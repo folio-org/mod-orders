@@ -185,7 +185,6 @@
             "inventory.instances.item.get",
             "inventory-storage.identifier-types.collection.get",
             "inventory-storage.holdings.collection.get",
-            "isbn-utils.convert-to-13.get",
             "finance-storage.budget-expense-classes.collection.get",
             "user-tenants.collection.get",
             "consortia.sharing-instances.item.post"
@@ -262,7 +261,6 @@
             "inventory-storage.identifier-types.collection.get",
             "inventory.items.item.put",
             "inventory.items.collection.get",
-            "isbn-utils.convert-to-13.get",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
             "organizations-storage.organizations.collection.get",
@@ -1265,10 +1263,6 @@
       "version": "1.2"
     },
     {
-      "id": "isbn-utils",
-      "version": "2.0"
-    },
-    {
       "id": "loan-types",
       "version": "2.2"
     },
@@ -2094,7 +2088,6 @@
         "invoices.acquisition-units.bypass.execute",
         "organizations-storage.organizations.collection.get",
         "organizations-storage.organizations.item.get",
-        "isbn-utils.convert-to-13.get",
         "orders-storage.settings.collection.get",
         "consortia.user-tenants.collection.get",
         "user-tenants.collection.get",
@@ -2162,7 +2155,6 @@
         "acquisitions-units-storage.units.collection.get",
         "acquisitions-units-storage.memberships.collection.get",
         "inventory-storage.identifier-types.collection.get",
-        "isbn-utils.convert-to-13.get",
         "tags.collection.get",
         "tags.item.post",
         "user-tenants.collection.get",
