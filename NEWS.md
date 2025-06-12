@@ -1,5 +1,13 @@
 ## 13.1.0 - Unreleased
 
+## 13.0.5 - Released (Sunflower R1 2025 Bug Fix)
+Remove ISBN validation/normalization logic.
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v13.0.4...v13.0.5)
+
+### Bug Fixes
+* [MODORDERS-1315](https://issues.folio.org/browse/MODORDERS-1315) - Remove ISBN validation/normalization logic
+
 ## 13.0.4 - Released (Sunflower R1 2025 Bug Fix)
 
 Bump vulnerable dependencies.
