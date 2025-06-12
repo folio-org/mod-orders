@@ -59,7 +59,6 @@ import static org.folio.rest.core.exceptions.ErrorCodes.COST_UNIT_PRICE_INVALID;
 import static org.folio.rest.core.exceptions.ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH;
 import static org.folio.rest.core.exceptions.ErrorCodes.INACTIVE_EXPENSE_CLASS;
 import static org.folio.rest.core.exceptions.ErrorCodes.INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE;
-import static org.folio.rest.core.exceptions.ErrorCodes.ISBN_NOT_VALID;
 import static org.folio.rest.core.exceptions.ErrorCodes.LOCATION_CAN_NOT_BE_MODIFIER_AFTER_OPEN;
 import static org.folio.rest.core.exceptions.ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY;
 import static org.folio.rest.core.exceptions.ErrorCodes.NON_ZERO_COST_PHYSICAL_QTY;
@@ -1039,22 +1038,17 @@ public class PurchaseOrderLinesApiTest {
     reqData.getDetails().getProductIds().get(0).setProductId(isbn);
 
 
-    Response resp = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
-        prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 400);
+    CompositePoLine resp = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePoLine.class);
 
-    Error err = resp.getBody()
-        .as(Errors.class)
-        .getErrors()
-        .get(0);
-
-    assertThat(err.getMessage(), equalTo(ISBN_NOT_VALID.getDescription()));
-    assertThat(err.getCode(), equalTo(ISBN_NOT_VALID.getCode()));
-    assertThat(err.getParameters().get(0).getValue(), equalTo(isbn));
+    // order should be placed even with invalid ISBN
+    assertThat(resp.getDetails().getProductIds(), hasSize(1));
+    assertEquals(isbn, reqData.getDetails().getProductIds().getFirst().getProductId());
   }
 
   @Test
-  void testPostOrderLineToConvertToIsbn13() {
-    logger.info("=== Test Post order line to verify ISBN 10 is normalized to ISBN 13 ===");
+  void testPostOrderLineProcessWithoutIsbnConvertion() {
+    logger.info("=== Test Post order line to verify that ISBN processed as it without convertion ===");
 
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
     // To skip permission validation by units
@@ -1072,13 +1066,13 @@ public class PurchaseOrderLinesApiTest {
     CompositePoLine resp = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
         prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePoLine.class);
 
-    assertThat(resp.getDetails().getProductIds(), hasSize(1));
-    assertThat(resp.getDetails().getProductIds().get(0).getProductId(), equalTo("9780198526636"));
+    assertThat(resp.getDetails().getProductIds(), hasSize(2));
+    assertThat(resp.getDetails().getProductIds().getFirst().getProductId(), equalTo(isbn));
   }
 
   @Test
-  void testPostOrderLineToRemoveISBNDuplicates() {
-    logger.info("=== Test Post order line to verify ISBN 13 is not repeated ===");
+  void testPostOrderLineShouldKeepISBNsWithoutRemovingDuplicates() {
+    logger.info("=== Test Post order line to verify that product ids are the same even if have duplicates ===");
 
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
     // To skip permission validation by units
@@ -1110,18 +1104,8 @@ public class PurchaseOrderLinesApiTest {
     CompositePoLine resp = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePoLine.class);
 
-    assertThat(resp.getDetails().getProductIds(), hasSize(4));
-    assertThat(resp.getDetails().getProductIds().get(0).getProductId(), equalTo(isbn1));
-    assertThat(resp.getDetails().getProductIds().get(0).getQualifier(), equalTo(qualifier1));
-
-    assertThat(resp.getDetails().getProductIds().get(1).getProductId(), equalTo(isbn1));
-    assertThat(resp.getDetails().getProductIds().get(1).getQualifier(), equalTo(qualifier2));
-
-    assertThat(resp.getDetails().getProductIds().get(2).getProductId(), equalTo(isbn213));
-
-    assertThat(resp.getDetails().getProductIds().get(3).getQualifier(), nullValue());
-    assertThat(resp.getDetails().getProductIds().get(3).getProductId(), equalTo(INVALID_ISBN));
-
+    assertThat(resp.getDetails().getProductIds(), hasSize(8));
+    assertEquals(reqData.getDetails().getProductIds(), resp.getDetails().getProductIds());
   }
 
   @Test

@@ -1,5 +1,15 @@
 ## 13.1.0 - Unreleased
 
+## 13.0.5 - Released (Sunflower R1 2025 Bug Fix)
+The primary focus of this release was to fix issue with instance matching in ECS envs and remove ISBN validation/normalization.
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v13.0.4...v13.0.5)
+
+### Bug Fixes
+* [MODORDERS-1315](https://issues.folio.org/browse/MODORDERS-1315) - Remove ISBN validation/normalization logic
+* [MODORDERS-1310](https://issues.folio.org/browse/MODORDERS-1310) - Make Local order matching ECS aware such that shadows will be created for shared instances before local instances will be created.
+
+
 ## 13.0.4 - Released (Sunflower R1 2025 Bug Fix)
 
 Bump vulnerable dependencies.

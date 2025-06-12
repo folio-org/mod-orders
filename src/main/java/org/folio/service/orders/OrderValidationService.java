@@ -109,7 +109,6 @@ public class OrderValidationService {
       .compose(v -> validateOrderPoLines(compPO, requestContext))
       .map(errors::addAll)
       .map(v -> errors.addAll(validatePoLineLimit(compPO, tenantConfig)))
-      .compose(v -> purchaseOrderLineService.validateAndNormalizeISBN(compPO.getCompositePoLines(), requestContext))
       .compose(v -> validateVendor(compPO, requestContext))
       .map(errors::addAll)
       .map(v -> {

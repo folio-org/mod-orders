@@ -95,6 +95,53 @@ public class InventoryInstanceManager {
     this.consortiumConfigurationService = consortiumConfigurationService;
   }
 
+  public Future<SharingInstance> createShadowInstanceIfNeeded(String instanceId, RequestContext requestContext) {
+    return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
+      .compose(consortiumConfiguration -> createShadowInstanceIfNeeded(instanceId, consortiumConfiguration.orElse(null), requestContext));
+  }
+
+  public Future<String> getOrCreateInstanceRecord(Title title, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+    logger.debug("InventoryInstanceManager.getOrCreateInstanceRecord title.id={}", title.getId());
+    if (CollectionUtils.isEmpty(title.getProductIds()) || isInstanceMatchingDisabled) {
+      return createInstanceRecord(title, requestContext);
+    }
+
+    return searchInstancesByProducts(title.getProductIds(), requestContext)
+      .compose(instances -> {
+        if (!instances.getJsonArray(INSTANCES).isEmpty()) {
+          String instanceId = getFirstObjectFromResponse(instances, INSTANCES).getString(ID);
+          return Future.succeededFuture(instanceId);
+        }
+        return createInstanceRecord(title, requestContext);
+      });
+  }
+
+  public Future<CompositePoLine> openOrderHandleInstance(CompositePoLine poLine, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+    logger.debug("InventoryInstanceManager.openOrderHandleInstance");
+    return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
+      .compose(configuration ->
+        getOrCreateInstanceRecordForPoLine(poLine, isInstanceMatchingDisabled, configuration.orElse(null), requestContext))
+      .map(poLine::withInstanceId);
+  }
+
+  public Future<String> createInstanceRecord(Title title, RequestContext requestContext) {
+    logger.debug("InventoryInstanceManager.createInstanceRecord title.id={}", title.getId());
+    JsonObject lookupObj = new JsonObject();
+    Future<Void> instanceTypeFuture = InventoryUtils.getEntryId(configurationEntriesCache, inventoryCache, INSTANCE_TYPES, MISSING_INSTANCE_TYPE, requestContext)
+      .onSuccess(lookupObj::mergeIn)
+      .mapEmpty();
+
+    Future<Void> statusFuture = InventoryUtils.getEntryId(configurationEntriesCache, inventoryCache, INSTANCE_STATUSES, MISSING_INSTANCE_STATUS, requestContext)
+      .onSuccess(lookupObj::mergeIn)
+      .mapEmpty();
+
+    Future<Void> contributorNameTypeIdFuture = verifyContributorNameTypesExist(title.getContributors(), requestContext);
+
+    return GenericCompositeFuture.join(List.of(instanceTypeFuture, statusFuture, contributorNameTypeIdFuture))
+      .map(cf -> buildInstanceRecordJsonObject(title, lookupObj))
+      .compose(instanceJson -> createInstance(instanceJson, requestContext));
+  }
+
   Future<JsonObject> searchInstancesByProducts(List<ProductId> productIds, RequestContext requestContext) {
     String query = productIds.stream()
       .map(this::buildProductIdQuery)
@@ -153,38 +200,73 @@ public class InventoryInstanceManager {
     return instance;
   }
 
-  Future<JsonObject> getInstanceById(String instanceId, boolean skipNotFoundException, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCE_RECORDS_BY_ID_ENDPOINT)).withId(instanceId);
-    return restClient.getAsJsonObject(requestEntry, skipNotFoundException, requestContext);
-  }
-
   /**
-   * Returns Id of the Instance Record corresponding to given PO line.
-   * Instance record is either retrieved from Inventory or a new one is created if no corresponding Record exists.
+   * Returns the id of the instance record corresponding to given PO line.
+   * The instance record is either retrieved from inventory or a new one is created if no corresponding record exists.
+   * If the instance is not found in the member tenant but is found in the central tenant, create shadow copies
+   * in tenants where it is missing.
    *
-   * @param compPOL PO line to retrieve Instance Record Id for
-   * @return future with Instance Id
+   * @param compPOL - PO line to retrieve instance record id for
+   * @param isInstanceMatchingDisabled - If true, do not look for instance in inventory, always create it if missing
+   * @param configuration - consortium configuration (null in a non-ECS environment)
+   * @return Future with instance id
    */
-  private Future<String> getInstanceRecord(CompositePoLine compPOL, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+  private Future<String> getOrCreateInstanceRecordForPoLine(CompositePoLine compPOL, boolean isInstanceMatchingDisabled,
+      ConsortiumConfiguration configuration, RequestContext requestContext) {
+    logger.debug("getOrCreateInstanceRecordForPoLine:: poLine.id={}", compPOL.getId());
     if (compPOL.getInstanceId() != null) {
       return Future.succeededFuture(compPOL.getInstanceId());
     }
-    // proceed with new Instance Record creation if no productId is provided
+    // proceed with new instance record creation if no productId is provided
     if (!isProductIdsExist(compPOL) || isInstanceMatchingDisabled) {
+      logger.debug("getOrCreateInstanceRecordForPoLine:: no productId is provided - create instance record");
       return createInstanceRecord(compPOL, requestContext);
     }
-
     String query = compPOL.getDetails().getProductIds().stream()
       .map(this::buildProductIdQuery)
       .collect(joining(" or "));
+    return getInstanceRecordAndShareIfNeeded(query, compPOL, configuration, requestContext)
+      .compose(id -> {
+        if (id != null) {
+          return Future.succeededFuture(id);
+        }
+        logger.debug("getOrCreateInstanceRecordForPoLine:: instance not found - create it");
+        return createInstanceRecord(compPOL, requestContext);
+      });
+  }
+
+  private Future<String> getInstanceRecordAndShareIfNeeded(String query, CompositePoLine poLine,
+      ConsortiumConfiguration configuration, RequestContext requestContext) {
+    return getInstanceIdByQuery(query, requestContext)
+      .compose(instanceId1 -> {
+        if (instanceId1 != null) {
+          logger.debug("getInstanceRecordAndShareIfNeeded:: instance found in local tenant: {}", instanceId1);
+          return Future.succeededFuture(instanceId1);
+        }
+        if (configuration == null) {
+          return Future.succeededFuture(null);
+        }
+        logger.debug("getInstanceRecordAndShareIfNeeded:: instance not found - look for it in central tenant");
+        return getInstanceIdByQuery(query, createContextWithNewTenantId(requestContext, configuration.centralTenantId()))
+          .compose(instanceId2 -> {
+            if (instanceId2 == null) {
+              return Future.succeededFuture(null);
+            }
+            logger.debug("getInstanceRecordAndShareIfNeeded:: instance found in central tenant: {}", instanceId2);
+            return shareInstanceAmongTenantsIfNeeded(instanceId2, configuration, poLine.getLocations(), requestContext);
+          });
+      });
+  }
+
+  private Future<String> getInstanceIdByQuery(String query, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCES))
       .withQuery(query).withOffset(0).withLimit(Integer.MAX_VALUE);
     return restClient.getAsJsonObject(requestEntry, requestContext)
-      .compose(instances -> {
-        if (!instances.getJsonArray(INSTANCES).isEmpty()) {
-          return Future.succeededFuture(extractId(getFirstObjectFromResponse(instances, INSTANCES)));
+      .map(instances -> {
+        if (instances.getJsonArray(INSTANCES).isEmpty()) {
+          return null;
         }
-        return createInstanceRecord(compPOL, requestContext);
+        return extractId(getFirstObjectFromResponse(instances, INSTANCES));
       });
   }
 
@@ -268,7 +350,7 @@ public class InventoryInstanceManager {
       productId.getProductIdType(), productId.getProductId());
   }
 
-  public Future<Void> verifyContributorNameTypesExist(List<Contributor> contributors, RequestContext requestContext) {
+  private Future<Void> verifyContributorNameTypesExist(List<Contributor> contributors, RequestContext requestContext) {
     List<String> ids = contributors.stream()
       .map(contributor -> contributor.getContributorNameTypeId().toLowerCase())
       .distinct()
@@ -309,56 +391,14 @@ public class InventoryInstanceManager {
         throw new CompletionException(e.getCause());
       });
   }
-
-  public Future<String> getOrCreateInstanceRecord(Title title, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    if (CollectionUtils.isEmpty(title.getProductIds()) || isInstanceMatchingDisabled) {
-      return createInstanceRecord(title, requestContext);
-    }
-
-    return searchInstancesByProducts(title.getProductIds(), requestContext)
-      .compose(instances -> {
-        if (!instances.getJsonArray(INSTANCES).isEmpty()) {
-          String instanceId = getFirstObjectFromResponse(instances, INSTANCES).getString(ID);
-          return Future.succeededFuture(instanceId);
-        }
-        return createInstanceRecord(title, requestContext);
-      });
-  }
-
-  public Future<String> createInstanceRecord(Title title, RequestContext requestContext) {
-    JsonObject lookupObj = new JsonObject();
-    Future<Void> instanceTypeFuture = InventoryUtils.getEntryId(configurationEntriesCache, inventoryCache, INSTANCE_TYPES, MISSING_INSTANCE_TYPE, requestContext)
-      .onSuccess(lookupObj::mergeIn)
-      .mapEmpty();
-
-    Future<Void> statusFuture = InventoryUtils.getEntryId(configurationEntriesCache, inventoryCache, INSTANCE_STATUSES, MISSING_INSTANCE_STATUS, requestContext)
-      .onSuccess(lookupObj::mergeIn)
-      .mapEmpty();
-
-    Future<Void> contributorNameTypeIdFuture = verifyContributorNameTypesExist(title.getContributors(), requestContext);
-
-    return GenericCompositeFuture.join(List.of(instanceTypeFuture, statusFuture, contributorNameTypeIdFuture))
-      .map(cf -> buildInstanceRecordJsonObject(title, lookupObj))
-      .compose(instanceJson -> createInstance(instanceJson, requestContext));
-  }
-
   private Future<String> createInstance(JsonObject instanceRecJson, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCES));
     return restClient.postJsonObjectAndGetId(requestEntry, instanceRecJson, requestContext);
   }
 
-  public Future<CompositePoLine> openOrderHandleInstance(CompositePoLine compPOL, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
-      .compose(configuration ->
-        getInstanceRecord(compPOL, isInstanceMatchingDisabled, requestContext)
-          .compose(instanceId -> configuration
-            .map(consortiumConfiguration -> shareInstanceAmongTenantsIfNeeded(instanceId, consortiumConfiguration, compPOL.getLocations(), requestContext))
-            .orElse(Future.succeededFuture(instanceId))))
-      .map(compPOL::withInstanceId);
-  }
-
   private Future<String> shareInstanceAmongTenantsIfNeeded(String instanceId, ConsortiumConfiguration consortiumConfiguration,
                                                            List<Location> locations, RequestContext requestContext) {
+    logger.debug("InventoryInstanceManager.shareInstanceAmongTenantsIfNeeded");
     return getTenantIdsWithoutShadowInstances(instanceId, consortiumConfiguration, locations, requestContext)
       .map(tenantIds -> tenantIds.stream()
         .map(tenantId -> createShadowInstanceIfNeeded(instanceId, consortiumConfiguration, createContextWithNewTenantId(requestContext, tenantId)))
@@ -390,11 +430,6 @@ public class InventoryInstanceManager {
       });
   }
 
-  public Future<SharingInstance> createShadowInstanceIfNeeded(String instanceId, RequestContext requestContext) {
-    return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
-      .compose(consortiumConfiguration -> createShadowInstanceIfNeeded(instanceId, consortiumConfiguration.orElse(null), requestContext));
-  }
-
   private Future<SharingInstance> createShadowInstanceIfNeeded(String instanceId, ConsortiumConfiguration consortiumConfiguration, RequestContext requestContext) {
     if (consortiumConfiguration == null) {
       logger.debug("createShadowInstanceIfNeeded:: Skipping creating shadow instance for non ECS mode.");
@@ -415,6 +450,11 @@ public class InventoryInstanceManager {
         logger.info("createShadowInstanceIfNeeded:: Creating shadow instance with instanceId: {} in tenant: {}", instanceId, targetTenant);
         return sharingInstanceService.createShadowInstance(instanceId, consortiumConfiguration, requestContext);
       });
+  }
+
+  private Future<JsonObject> getInstanceById(String instanceId, boolean skipNotFoundException, RequestContext requestContext) {
+    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCE_RECORDS_BY_ID_ENDPOINT)).withId(instanceId);
+    return restClient.getAsJsonObject(requestEntry, skipNotFoundException, requestContext);
   }
 
 }
