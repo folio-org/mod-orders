@@ -341,7 +341,7 @@ public class PoLineValidationService extends BaseValidationService {
   }
 
   private List<Error> validateReceivingWorkflowForReceiptNotRequired(PoLine poLine) {
-    return poLine.getReceiptStatus().equals(PoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED) && BooleanUtils.isNotTrue(poLine.getCheckinItems())
+    return PoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED.equals(poLine.getReceiptStatus()) && BooleanUtils.isNotTrue(poLine.getCheckinItems())
       ? List.of(RECEIVING_WORKFLOW_INCORRECT_FOR_RECEIPT_NOT_REQUIRED.toError())
       : Collections.emptyList();
   }
