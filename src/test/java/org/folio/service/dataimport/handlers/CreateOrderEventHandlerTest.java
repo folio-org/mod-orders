@@ -27,6 +27,8 @@ import org.folio.orders.utils.AcqDesiredPermissions;
 import org.folio.processing.events.EventManager;
 import org.folio.rest.RestConstants;
 import org.folio.rest.client.TenantClient;
+import org.folio.rest.core.exceptions.ErrorCodes;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.impl.MockServer;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -57,11 +59,11 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Stream;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.commons.lang.StringUtils.isEmpty;
@@ -150,6 +152,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         new MappingRule().withPath("order.poLine.cost.currency").withValue("\"USD\"").withEnabled("true"),
         new MappingRule().withPath("order.poLine.orderFormat").withValue("\"Physical Resource\"").withEnabled("true"),
         new MappingRule().withPath("order.poLine.checkinItems").withValue("\"true\"").withEnabled("true"),
+        new MappingRule().withPath("order.poLine.receiptStatus").withValue("\"Receipt Not Required\"").withEnabled("true"),
         new MappingRule().withPath("order.poLine.acquisitionMethod").withValue("\"Purchase\"").withEnabled("true")
           .withAcceptedValues(new HashMap<>(Map.of(
             "df26d81b-9d63-4ff8-bf41-49bf75cfa70e", "Purchase"
@@ -1640,6 +1643,61 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
       })
       .onComplete(context.asyncAssertSuccess(th -> {
         context.assertEquals(th.getContext().get(RECORD_ID_HEADER), newRecordId);
+        async.complete();
+      })));
+  }
+
+  @Test
+  public void shouldFailValidationWhenImportingOrderWithReceiptNotRequiredAndCheckinItemsFalse(TestContext context) throws InterruptedException {
+    // given
+    List<MappingRule> mappingRules = new ArrayList<>(Stream.concat(
+      // Exclude checkinItems rule from original mapping profile
+      mappingProfile.getMappingDetails().getMappingFields().stream()
+        .filter(rule -> !rule.getPath().equals("order.poLine.checkinItems")),
+      // Add new rules for receiptStatus and checkinItems
+      Stream.of(
+        new MappingRule().withPath("order.poLine.checkinItems").withValue("\"false\"").withEnabled("false"),
+        new MappingRule().withPath("order.poLine.receiptStatus").withValue("\"Receipt Not Required\"").withEnabled("true"),
+        new MappingRule().withPath("order.poLine.cost.listUnitPrice").withValue("\"1\"").withEnabled("true"),
+        new MappingRule().withPath("order.poLine.cost.quantityPhysical").withValue("\"1\"").withEnabled("true"),
+        new MappingRule().withPath("order.poLine.locations[]").withRepeatableFieldAction(EXTEND_EXISTING).withEnabled("true")
+          .withSubfields(List.of(new RepeatableSubfieldMapping().withPath("order.poLine.locations[]").withOrder(0)
+            .withFields(List.of(
+              new MappingRule().withPath("order.poLine.locations[].locationId").withValue("\"" + UUID.randomUUID() + "\""),
+              new MappingRule().withPath("order.poLine.locations[].quantityPhysical").withValue("\"1\"")
+          ))))
+      )).toList());
+
+    MappingProfile mappingProfileReceiptNotRequiredCheckinItemsFalse = new MappingProfile()
+      .withId(UUID.randomUUID().toString())
+      .withIncomingRecordType(MARC_BIBLIOGRAPHIC)
+      .withExistingRecordType(ORDER)
+      .withMappingDetails(new MappingDetail().withMappingFields(mappingRules));
+
+    Async async = context.async();
+    ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfileReceiptNotRequiredCheckinItemsFalse);
+    addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
+      .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(OKAPI_URL)
+      .withToken(TOKEN)
+      .withContext(new HashMap<>() {{
+        put(RECORD_ID_HEADER, UUID.randomUUID().toString());
+        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+        put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+      }});
+
+    CreateOrderEventHandler createOrderHandler = getBeanFromSpringContext(vertx, CreateOrderEventHandler.class);
+    vertx.runOnContext(event -> Future.fromCompletionStage(createOrderHandler.handle(dataImportEventPayload))
+      .onComplete(context.asyncAssertFailure(th -> {
+        context.assertTrue(th instanceof HttpException);
+        HttpException httpException = (HttpException) th;
+        context.assertEquals(httpException.getErrors().getTotalRecords(), 1);
+        context.assertEquals(httpException.getErrors().getErrors().getFirst(), ErrorCodes.RECEIVING_WORKFLOW_INCORRECT_FOR_RECEIPT_NOT_REQUIRED.toError());
         async.complete();
       })));
   }
