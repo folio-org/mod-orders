@@ -23,6 +23,7 @@
       "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "ABCDEFGHIJKLMNOPQRSTUVW",
+      "checkinItems": true,
       "claims": [
         {
           "claimed": false,

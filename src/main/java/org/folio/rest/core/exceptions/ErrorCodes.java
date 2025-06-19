@@ -134,6 +134,7 @@ public enum ErrorCodes {
   ORDER_FORMAT_INCORRECT_FOR_BINDARY_ACTIVE("orderFormatIncorrectForBindaryActive", "When PoLine is bindery active, its format must be 'P/E Mix' or 'Physical Resource'"),
   CREATE_INVENTORY_INCORRECT_FOR_BINDARY_ACTIVE("createInventoryIncorrectForBindaryActive", "When PoLine is bindery active, Create Inventory must be 'Instance, Holding, Item'"),
   RECEIVING_WORKFLOW_INCORRECT_FOR_BINDARY_ACTIVE("receivingWorkflowIncorrectForBindaryActive", "When PoLine is bindery active, its receiving workflow must be set to 'Independent order and receipt quantity'"),
+  RECEIVING_WORKFLOW_INCORRECT_FOR_RECEIPT_NOT_REQUIRED("receivingWorkflowIncorrectForReceiptNotRequired", "When POL's receipt status is 'Receipt Not Required', its receiving workflow must be set to 'Independent order and receipt quantity'"),
   BIND_ITEM_MUST_INCLUDE_EITHER_HOLDING_ID_OR_LOCATION_ID("bindItemMustIncludeEitherHoldingIdOrLocationId", "During binding pieces, the bindItem object must have either holdingId or locationId field populated"),
   BUDGET_NOT_FOUND_FOR_FISCAL_YEAR("budgetNotFoundForFiscalYear", "Could not find an active budget for a fund with the current fiscal year of another fund in the fund distribution"),
   LAST_PIECE("lastPiece", "The piece cannot be deleted because it is the last piece for the poLine with Receiving Workflow 'Synchronized order and receipt quantity' and cost quantity '1'"),

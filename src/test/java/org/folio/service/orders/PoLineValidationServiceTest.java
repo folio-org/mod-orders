@@ -7,6 +7,7 @@ import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.P_E_MIX;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -377,6 +378,38 @@ public class PoLineValidationServiceTest {
     }
     List<Error> errors = future.result();
     assertThat(errors, hasSize(0));
+  }
+
+
+  @Test
+  @DisplayName("Test validatePoLine with checkinItems = false and receivingStatus = 'Receipt Not Required'")
+  void testValidatePoLineWithCheckinItemsFalseAndReceiptNotRequired() {
+    // Given
+    Cost cost = new Cost()
+      .withQuantityPhysical(1)
+      .withListUnitPrice(1.0);
+    Location location = new Location()
+      .withLocationId(UUID.randomUUID().toString())
+      .withQuantityPhysical(1);
+    PoLine poLine = new PoLine()
+      .withReceiptStatus(PoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED)
+      .withCheckinItems(false)
+      .withCost(cost)
+      .withLocations(List.of(location));
+
+    when(expenseClassValidationService.validateExpenseClasses(eq(List.of(poLine)), eq(false), eq(requestContext)))
+      .thenReturn(succeededFuture(null));
+
+    // When
+    Future<List<Error>> future = poLineValidationService.validatePoLine(poLine, requestContext);
+
+    // Then
+    if (future.failed()) {
+      fail(future.cause());
+    }
+    List<Error> errors = future.result();
+    assertThat(errors, hasSize(1));
+    assertThat(errors.getFirst().getCode(), is(RECEIVING_WORKFLOW_INCORRECT_FOR_RECEIPT_NOT_REQUIRED.getCode()));
   }
 
   private Set<String> errorsToCodes(List<Error> errors) {

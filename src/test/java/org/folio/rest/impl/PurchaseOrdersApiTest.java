@@ -2693,6 +2693,7 @@ public class PurchaseOrdersApiTest {
     // Set CreateInventory value to create inventory instances and holdings
     reqData.getPoLines().get(0).getEresource().setCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
     reqData.getPoLines().get(0).setReceiptStatus(ReceiptStatus.RECEIPT_NOT_REQUIRED);
+    reqData.getPoLines().get(0).setCheckinItems(true);
 
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
@@ -2738,6 +2739,7 @@ public class PurchaseOrdersApiTest {
     reqData.getPoLines().get(0).getPhysical().setCreateInventory(Physical.CreateInventory.NONE);
     reqData.getPoLines().get(0).getEresource().setCreateInventory(Eresource.CreateInventory.NONE);
     reqData.getPoLines().get(0).setReceiptStatus(ReceiptStatus.RECEIPT_NOT_REQUIRED);
+    reqData.getPoLines().get(0).setCheckinItems(true);
 
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
