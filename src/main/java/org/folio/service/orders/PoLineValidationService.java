@@ -12,6 +12,7 @@ import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.rest.core.exceptions.ErrorCodes.CREATE_INVENTORY_INCORRECT_FOR_BINDARY_ACTIVE;
 import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_FORMAT_INCORRECT_FOR_BINDARY_ACTIVE;
 import static org.folio.rest.core.exceptions.ErrorCodes.RECEIVING_WORKFLOW_INCORRECT_FOR_BINDARY_ACTIVE;
+import static org.folio.rest.core.exceptions.ErrorCodes.RECEIVING_WORKFLOW_INCORRECT_FOR_RECEIPT_NOT_REQUIRED;
 import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.ELECTRONIC_RESOURCE;
 import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.P_E_MIX;
 
@@ -23,6 +24,7 @@ import java.util.Optional;
 
 import io.vertx.core.Future;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
@@ -70,6 +72,7 @@ public class PoLineValidationService extends BaseValidationService {
 
     return expenseClassValidationService.validateExpenseClasses(List.of(poLine), false, requestContext)
       .map(v -> errors.addAll(validatePoLineFormats(poLine)))
+      .map(v -> errors.addAll(validateReceivingWorkflowForReceiptNotRequired(poLine)))
       .map(v -> errors.addAll(validateForBinadryActive(poLine)))
       .map(b -> errors.addAll(validateLocations(poLine)))
       .map(b -> {
@@ -335,6 +338,12 @@ public class PoLineValidationService extends BaseValidationService {
       var error = CREATE_INVENTORY_INCORRECT_FOR_BINDARY_ACTIVE.toError().withParameters(List.of(param));
       errors.add(error);
     }
+  }
+
+  private List<Error> validateReceivingWorkflowForReceiptNotRequired(PoLine poLine) {
+    return PoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED.equals(poLine.getReceiptStatus()) && BooleanUtils.isNotTrue(poLine.getCheckinItems())
+      ? List.of(RECEIVING_WORKFLOW_INCORRECT_FOR_RECEIPT_NOT_REQUIRED.toError())
+      : Collections.emptyList();
   }
 
   private void validateReceivingWorkflowForBindary(PoLine poLine, List<Error> errors) {
