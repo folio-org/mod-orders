@@ -1,7 +1,6 @@
 package org.folio.orders.utils;
 
 import static org.folio.orders.utils.POLineFieldNames.ACQUISITION_METHOD;
-import static org.folio.orders.utils.POLineFieldNames.CHECKIN_ITEMS;
 import static org.folio.orders.utils.POLineFieldNames.COLLECTION;
 import static org.folio.orders.utils.POLineFieldNames.CONTRIBUTORS;
 import static org.folio.orders.utils.POLineFieldNames.DETAILS_PRODUCT_IDS;
