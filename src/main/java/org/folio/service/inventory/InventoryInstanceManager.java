@@ -32,7 +32,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletionException;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
@@ -54,6 +53,7 @@ import static org.folio.service.inventory.InventoryUtils.INSTANCE_RECORDS_BY_ID_
 import static org.folio.service.inventory.InventoryUtils.INVENTORY_LOOKUP_ENDPOINTS;
 
 public class InventoryInstanceManager {
+
   private static final Logger logger = LogManager.getLogger(InventoryInstanceManager.class);
 
   public static final String ID = "id";
@@ -100,10 +100,11 @@ public class InventoryInstanceManager {
       .compose(consortiumConfiguration -> createShadowInstanceIfNeeded(instanceId, consortiumConfiguration.orElse(null), requestContext));
   }
 
-  public Future<String> getOrCreateInstanceRecord(Title title, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+  public Future<String> getOrCreateInstanceRecord(Title title, boolean isInstanceMatchingDisabled,
+                                                  boolean suppressDiscovery, RequestContext requestContext) {
     logger.debug("InventoryInstanceManager.getOrCreateInstanceRecord title.id={}", title.getId());
     if (CollectionUtils.isEmpty(title.getProductIds()) || isInstanceMatchingDisabled) {
-      return createInstanceRecord(title, requestContext);
+      return createInstanceRecord(title, suppressDiscovery, requestContext);
     }
 
     return searchInstancesByProducts(title.getProductIds(), requestContext)
@@ -112,7 +113,7 @@ public class InventoryInstanceManager {
           String instanceId = getFirstObjectFromResponse(instances, INSTANCES).getString(ID);
           return Future.succeededFuture(instanceId);
         }
-        return createInstanceRecord(title, requestContext);
+        return createInstanceRecord(title, suppressDiscovery, requestContext);
       });
   }
 
@@ -124,7 +125,7 @@ public class InventoryInstanceManager {
       .map(poLine::withInstanceId);
   }
 
-  public Future<String> createInstanceRecord(Title title, RequestContext requestContext) {
+  public Future<String> createInstanceRecord(Title title, boolean suppressDiscovery, RequestContext requestContext) {
     logger.debug("InventoryInstanceManager.createInstanceRecord title.id={}", title.getId());
     JsonObject lookupObj = new JsonObject();
     Future<Void> instanceTypeFuture = InventoryUtils.getEntryId(configurationEntriesCache, inventoryCache, INSTANCE_TYPES, MISSING_INSTANCE_TYPE, requestContext)
@@ -138,7 +139,7 @@ public class InventoryInstanceManager {
     Future<Void> contributorNameTypeIdFuture = verifyContributorNameTypesExist(title.getContributors(), requestContext);
 
     return GenericCompositeFuture.join(List.of(instanceTypeFuture, statusFuture, contributorNameTypeIdFuture))
-      .map(cf -> buildInstanceRecordJsonObject(title, lookupObj))
+      .map(cf -> buildInstanceRecordJsonObject(title, suppressDiscovery, lookupObj))
       .compose(instanceJson -> createInstance(instanceJson, requestContext));
   }
 
@@ -152,13 +153,13 @@ public class InventoryInstanceManager {
     return restClient.getAsJsonObject(requestEntry, requestContext);
   }
 
-  JsonObject buildInstanceRecordJsonObject(Title title, JsonObject lookupObj) {
+  JsonObject buildInstanceRecordJsonObject(Title title, boolean suppressDiscovery, JsonObject lookupObj) {
     JsonObject instance = new JsonObject();
 
     // MODORDERS-145 The Source and source code are required by schema
     instance.put(INSTANCE_SOURCE, SOURCE_FOLIO);
     instance.put(INSTANCE_TITLE, title.getTitle());
-    instance.put(INSTANCE_DISCOVERY_SUPPRESS, false);
+    instance.put(INSTANCE_DISCOVERY_SUPPRESS, suppressDiscovery);
 
     if (title.getEdition() != null) {
       instance.put(INSTANCE_EDITIONS, new JsonArray(singletonList(title.getEdition())));
@@ -180,7 +181,7 @@ public class InventoryInstanceManager {
         invContributor.put(CONTRIBUTOR_NAME_TYPE_ID, polContributor.getContributorNameTypeId());
         invContributor.put(CONTRIBUTOR_NAME, polContributor.getContributor());
         return invContributor;
-      }).collect(toList());
+      }).toList();
       instance.put(INSTANCE_CONTRIBUTORS, contributors);
     }
 
@@ -194,7 +195,7 @@ public class InventoryInstanceManager {
             identifier.put(INSTANCE_IDENTIFIER_TYPE_VALUE, pId.getProductId());
             return identifier;
           })
-          .collect(toList());
+          .toList();
       instance.put(INSTANCE_IDENTIFIERS, new JsonArray(identifiers));
     }
     return instance;
@@ -326,7 +327,7 @@ public class InventoryInstanceManager {
         invContributor.put(CONTRIBUTOR_NAME_TYPE_ID, polContributor.getContributorNameTypeId());
         invContributor.put(CONTRIBUTOR_NAME, polContributor.getContributor());
         return invContributor;
-      }).collect(toList());
+      }).toList();
       instance.put(INSTANCE_CONTRIBUTORS, contributors);
     }
 
@@ -341,7 +342,7 @@ public class InventoryInstanceManager {
             identifier.put(INSTANCE_IDENTIFIER_TYPE_VALUE, pId.getProductId());
             return identifier;
           })
-          .collect(toList());
+          .toList();
       instance.put(INSTANCE_IDENTIFIERS, new JsonArray(identifiers));
     }
     return instance;
@@ -386,7 +387,7 @@ public class InventoryInstanceManager {
     return restClient.getAsJsonObject(requestEntry, requestContext)
       .map(entries -> entries.getJsonArray(CONTRIBUTOR_NAME_TYPES).stream()
         .map(JsonObject::mapFrom)
-        .collect(Collectors.toList())
+        .toList()
       )
       .recover(e -> {
         logger.error("The issue happened getting contributor name types", e);
@@ -446,7 +447,7 @@ public class InventoryInstanceManager {
     }
     var targetTenant = TenantTool.tenantId(requestContext.getHeaders());
     logger.info("createShadowInstanceIfNeeded:: Getting instance: {} from tenant: {}", instanceId, targetTenant);
-    return getInstanceById(instanceId, true, requestContext)
+    return getInstanceById(instanceId, requestContext)
       .compose(instance -> {
         if (Objects.nonNull(instance) && !instance.isEmpty()) {
           logger.info("createShadowInstanceIfNeeded:: Shadow instance {} already exists in tenant: {}, skipping...", instanceId, targetTenant);
@@ -457,9 +458,8 @@ public class InventoryInstanceManager {
       });
   }
 
-  private Future<JsonObject> getInstanceById(String instanceId, boolean skipNotFoundException, RequestContext requestContext) {
+  private Future<JsonObject> getInstanceById(String instanceId, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCE_RECORDS_BY_ID_ENDPOINT)).withId(instanceId);
-    return restClient.getAsJsonObject(requestEntry, skipNotFoundException, requestContext);
+    return restClient.getAsJsonObject(requestEntry, true, requestContext);
   }
-
 }

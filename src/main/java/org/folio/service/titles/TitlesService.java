@@ -57,6 +57,7 @@ import org.folio.service.pieces.PieceStorageService;
 
 @Log4j2
 public class TitlesService {
+
   private static final String ENDPOINT = resourcesPath(TITLES);
   private static final String BY_ID_ENDPOINT = ENDPOINT + "/{id}";
 
@@ -159,18 +160,18 @@ public class TitlesService {
   }
 
   private List<String> getNonPackageLineIds(List<PoLine> poLines) {
-    return poLines.stream().filter(line -> !line.getIsPackage()).map(PoLine::getId).collect(toList());
+    return poLines.stream().filter(line -> !line.getIsPackage()).map(PoLine::getId).toList();
   }
 
   public Future<String> updateTitleWithInstance(String titleId, RequestContext locationContext,
                                                 RequestContext requestContext) {
     return getTitleById(titleId, requestContext)
-      .compose(title -> updateTitleWithInstance(title, false, locationContext, requestContext));
+      .compose(title -> updateTitleWithInstance(title, false, false, locationContext, requestContext));
   }
 
-  public Future<String> updateTitleWithInstance(Title title, boolean isInstanceMatchingDisabled,
+  public Future<String> updateTitleWithInstance(Title title, boolean isInstanceMatchingDisabled, boolean suppressDiscovery,
                                                 RequestContext locationContext, RequestContext requestContext) {
-    return titleInstanceService.getOrCreateInstance(title, isInstanceMatchingDisabled, locationContext)
+    return titleInstanceService.getOrCreateInstance(title, isInstanceMatchingDisabled, suppressDiscovery, locationContext)
       .map(title::withInstanceId)
       .compose(entity -> saveTitle(entity, requestContext)
         .map(v -> entity.getInstanceId()));

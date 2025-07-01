@@ -27,6 +27,7 @@ import org.folio.spring.SpringContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 
 public class TitlesApi extends BaseApi implements OrdersTitles {
+
   @Autowired
   private TitlesService titlesService;
   @Autowired

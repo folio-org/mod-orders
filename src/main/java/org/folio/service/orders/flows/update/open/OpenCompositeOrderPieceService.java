@@ -36,6 +36,7 @@ import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.titles.TitlesService;
 
 public class OpenCompositeOrderPieceService {
+
   private static final Logger logger = LogManager.getLogger(OpenCompositeOrderPieceService.class);
 
   private final InventoryItemManager inventoryItemManager;
@@ -134,7 +135,7 @@ public class OpenCompositeOrderPieceService {
         protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
       )
       .compose(v ->
-        openOrderUpdateInventory(order, order.getPoLines().get(0), piece, isInstanceMatchingDisabled, requestContext)
+        openOrderUpdateInventory(order, order.getPoLines().getFirst(), piece, isInstanceMatchingDisabled, requestContext)
       )
       .map(v -> piece);
   }
@@ -174,8 +175,9 @@ public class OpenCompositeOrderPieceService {
       return inventoryItemManager.updateItemWithPieceFields(piece, requestContext);
     }
     var locationContext = createContextWithNewTenantId(requestContext, piece.getReceivingTenantId());
+    var suppressDiscovery = Optional.ofNullable(poLine.getSuppressInstanceFromDiscovery()).orElse(false);
     return titlesService.getTitleById(piece.getTitleId(), requestContext)
-      .compose(title -> titlesService.updateTitleWithInstance(title, isInstanceMatchingDisabled, locationContext, requestContext).map(title::withInstanceId))
+      .compose(title -> titlesService.updateTitleWithInstance(title, isInstanceMatchingDisabled, suppressDiscovery, locationContext, requestContext).map(title::withInstanceId))
       .compose(title -> getOrCreateHolding(poLine, piece, title, locationContext))
       .compose(holdingId -> updateItemsIfNeeded(compPO, poLine, holdingId, locationContext))
       .map(itemId -> Optional.ofNullable(itemId).map(piece::withItemId))
