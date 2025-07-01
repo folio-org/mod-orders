@@ -2234,14 +2234,14 @@ public class PurchaseOrdersApiTest {
   void testUpdateOrderWithLineConditionalProtectedFieldsChanging() {
     logger.info("=== testUpdateOrderWithLineConditionalProtectedFieldsChanging ===");
 
-    CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_STATUS).mapTo(CompositePurchaseOrder.class);
-    reqData.getPoLines().getFirst().setCheckinItems(true);
+    JsonObject reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_STATUS_CONDITIONAL_PROTECTED_FIELDS);
+    assertThat(reqData.getString("workflowStatus"), is(CompositePurchaseOrder.WorkflowStatus.OPEN.value()));
 
     Map<String, Object> allProtectedFieldsModification = new HashMap<>();
 
     allProtectedFieldsModification.put(COMPOSITE_PO_LINES_PREFIX.concat(POLineFieldNames.CHECKIN_ITEMS.getFieldName()), false);
 
-    checkPreventProtectedFieldsModificationRule(COMPOSITE_ORDERS_BY_ID_PATH, JsonObject.mapFrom(reqData), allProtectedFieldsModification);
+    checkPreventProtectedFieldsModificationRule(COMPOSITE_ORDERS_BY_ID_PATH, reqData, allProtectedFieldsModification);
   }
 
   @Test
