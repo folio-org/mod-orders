@@ -27,12 +27,10 @@ import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.P_E_MIX;
 
 import java.util.Collections;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiPredicate;
-import java.util.stream.Collectors;
 
 import lombok.experimental.UtilityClass;
 import org.apache.commons.collections4.ListUtils;
