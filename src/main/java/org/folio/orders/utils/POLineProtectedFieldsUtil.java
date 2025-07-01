@@ -35,7 +35,7 @@ import java.util.stream.Stream;
 import org.apache.commons.collections4.ListUtils;
 
 public class POLineProtectedFieldsUtil {
-  private static final List<String> commonProtectedFieldNames = Stream.of(ACQUISITION_METHOD, CHECKIN_ITEMS,
+  private static final List<String> commonProtectedFieldNames = Stream.of(ACQUISITION_METHOD,
       COLLECTION, CONTRIBUTORS, DONOR, DETAILS_PRODUCT_IDS, DETAILS_SUBSCRIPTION_INTERVAL,
       ORDER_FORMAT, RUSH, SELECTOR, VENDORDETAIL_INSTRUCTION_TO_VENDOR)
     .map(POLineFieldNames::getFieldName).collect(Collectors.toList());
