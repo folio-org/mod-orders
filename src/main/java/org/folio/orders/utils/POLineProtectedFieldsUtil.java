@@ -26,6 +26,7 @@ import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.PHYSICAL_RESOURCE;
 import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.P_E_MIX;
 
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,14 +55,14 @@ public class POLineProtectedFieldsUtil {
 
   private static final List<POLineFieldNames> PHYS_VS_ELEC_PROTECTED_FIELDS = ListUtils.union(ELEC_PROTECTED_FIELDS, PHYS_PROTECTED_FIELDS);
 
-  private static final Map<PoLine.OrderFormat, List<POLineFieldNames>> PROTECTED_FIELDS_MAP = new HashMap<>(Map.of(
+  private static final EnumMap<PoLine.OrderFormat, List<POLineFieldNames>> PROTECTED_FIELDS_MAP = new EnumMap<>(Map.of(
     P_E_MIX, ListUtils.union(COMMON_PROTECTED_FIELDS, PHYS_VS_ELEC_PROTECTED_FIELDS),
     ELECTRONIC_RESOURCE, ListUtils.union(COMMON_PROTECTED_FIELDS, ELEC_PROTECTED_FIELDS),
     PHYSICAL_RESOURCE, ListUtils.union(COMMON_PROTECTED_FIELDS, PHYS_PROTECTED_FIELDS),
     OTHER, ListUtils.union(COMMON_PROTECTED_FIELDS, PHYS_PROTECTED_FIELDS)
   ));
 
-  private static final Map<POLineFieldNames, BiPredicate<CompositePurchaseOrder, PoLine>> CONDITIONAL_PROTECTED_FIELDS = new HashMap<>(Map.of(
+  private static final EnumMap<POLineFieldNames, BiPredicate<CompositePurchaseOrder, PoLine>> CONDITIONAL_PROTECTED_FIELDS = new EnumMap<>(Map.of(
     // Restrict check-in items only for open POs with check-in items enabled
     CHECKIN_ITEMS, (po, pol) -> po.getWorkflowStatus() == OPEN && BooleanUtils.isNotTrue(pol.getCheckinItems())
   ));
@@ -71,7 +72,7 @@ public class POLineProtectedFieldsUtil {
       .filter(entry -> entry.getValue().test(po, pol))
       .map(Map.Entry::getKey)
       .map(POLineFieldNames::getFieldName)
-      .collect(Collectors.toList());
+      .toList();
   }
 
   public static List<String> getFieldNames(CompositePurchaseOrder purchaseOrder, PoLine poLine) {
