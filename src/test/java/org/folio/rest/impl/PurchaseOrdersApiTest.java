@@ -2231,6 +2231,20 @@ public class PurchaseOrdersApiTest {
   }
 
   @Test
+  void testUpdateOrderWithLineConditionalProtectedFieldsChanging() {
+    logger.info("=== testUpdateOrderWithLineConditionalProtectedFieldsChanging ===");
+
+    CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_STATUS).mapTo(CompositePurchaseOrder.class);
+    reqData.getPoLines().getFirst().setCheckinItems(true);
+
+    Map<String, Object> allProtectedFieldsModification = new HashMap<>();
+
+    allProtectedFieldsModification.put(COMPOSITE_PO_LINES_PREFIX.concat(POLineFieldNames.CHECKIN_ITEMS.getFieldName()), false);
+
+    checkPreventProtectedFieldsModificationRule(COMPOSITE_ORDERS_BY_ID_PATH, JsonObject.mapFrom(reqData), allProtectedFieldsModification);
+  }
+
+  @Test
   void testUpdateOrderWithProtectedFieldsChangingForClosedOrder() {
     logger.info("=== testUpdateOrderWithProtectedFieldsChangingForClosedOrder ===");
 
