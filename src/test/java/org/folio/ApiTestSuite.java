@@ -572,7 +572,6 @@ public class ApiTestSuite {
   class TitlesServiceTestNested extends TitlesServiceTest {
   }
 
-
   @Nested
   class CacheableExchangeRateServiceTestNested extends CacheableExchangeRateServiceTest {
   }

@@ -76,9 +76,9 @@ import org.mockito.stubbing.Answer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
-
 @ExtendWith(VertxExtension.class)
 public class OpenCompositeOrderPieceServiceTest {
+
   public static final String LINE_ID = "c0d08448-347b-418a-8c2f-5fb50248d67e";
   private static final String COMPOSITE_LINES_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
 
@@ -107,16 +107,17 @@ public class OpenCompositeOrderPieceServiceTest {
 
   private RequestContext requestContext;
   private static boolean runningOnOwn;
+  private AutoCloseable openMocks;
 
   @BeforeEach
   void initMocks(){
-    MockitoAnnotations.openMocks(this);
+    openMocks = MockitoAnnotations.openMocks(this);
     autowireDependencies(this);
     requestContext = new RequestContext(ctx, okapiHeadersMock);
   }
 
   @BeforeAll
-  public static void before() throws InterruptedException, ExecutionException, TimeoutException {
+  static void before() throws InterruptedException, ExecutionException, TimeoutException {
     if (isVerticleNotDeployed()) {
       ApiTestSuite.before();
       runningOnOwn = true;
@@ -125,7 +126,7 @@ public class OpenCompositeOrderPieceServiceTest {
   }
 
   @AfterAll
-  public static void after() {
+  static void after() {
     clearVertxContext();
     if (runningOnOwn) {
       ApiTestSuite.after();
@@ -133,7 +134,10 @@ public class OpenCompositeOrderPieceServiceTest {
   }
 
   @AfterEach
-  void resetMocks() {
+  void resetMocks() throws Exception {
+    if (openMocks != null) {
+      openMocks.close();
+    }
     clearServiceInteractions();
   }
 
@@ -194,7 +198,6 @@ public class OpenCompositeOrderPieceServiceTest {
     assertEquals(title.getId(), piece.getTitleId());
   }
 
-
   @Test
   void testUpdateInventoryPositiveCaseIfPOLIsPackage() {
     //given
@@ -210,7 +213,7 @@ public class OpenCompositeOrderPieceServiceTest {
     SharingInstance sharingInstance = new SharingInstance(UUID.randomUUID(), UUID.randomUUID().toString(), UUID.randomUUID().toString());
 
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
-    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title), anyBoolean(), eq(requestContext), eq(requestContext));
+    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title), anyBoolean(), anyBoolean(), eq(requestContext), eq(requestContext));
 
     doReturn(succeededFuture(sharingInstance))
       .when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(instanceId), eq(requestContext));
@@ -218,7 +221,7 @@ public class OpenCompositeOrderPieceServiceTest {
       .when(inventoryHoldingManager).createHoldingAndReturnId(eq(title.getInstanceId()), eq(piece.getLocationId()), eq(requestContext));
     doReturn(succeededFuture(itemId)).when(inventoryItemManager).openOrderCreateItemRecord(any(CompositePurchaseOrder.class),
       any(PoLine.class), eq(holdingId), eq(requestContext));
-    doReturn(succeededFuture(itemId)).when(inventoryInstanceManager).createInstanceRecord(eq(title), eq(requestContext));
+    doReturn(succeededFuture(itemId)).when(inventoryInstanceManager).createInstanceRecord(eq(title), anyBoolean(), eq(requestContext));
 
     //When
     openCompositeOrderPieceService.openOrderUpdateInventory(order, line, piece, false, requestContext).result();
@@ -238,14 +241,14 @@ public class OpenCompositeOrderPieceServiceTest {
 
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     PoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(PoLine.class);
-    line.getLocations().get(0).withLocationId(null).withHoldingId(holdingId);
+    line.getLocations().getFirst().withLocationId(null).withHoldingId(holdingId);
     line.setIsPackage(true);
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class).withInstanceId(instanceId);
     Piece piece = createPieceWithHoldingId(line, title);
 
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
     doReturn(succeededFuture(itemId)).when(inventoryItemManager).openOrderCreateItemRecord(order, line, holdingId, requestContext);
-    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title), anyBoolean(), eq(requestContext), eq(requestContext));
+    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title), anyBoolean(), anyBoolean(), eq(requestContext), eq(requestContext));
 
     //When
     openCompositeOrderPieceService.openOrderUpdateInventory(order, line, piece, false, requestContext).result();
@@ -256,6 +259,7 @@ public class OpenCompositeOrderPieceServiceTest {
   }
 
   @ParameterizedTest
+  @SuppressWarnings("unchecked")
   @CsvSource(value = {"Physical Resource:Instance:2:3:Physical", "Physical Resource:None:2:3:Physical",
                       "Other:Instance:2:3:Other", "Other:None:2:3:Other"}, delimiter = ':')
   void shouldCreatePieceWithLocationReferenceIfLineContainsLocationAndInventoryIsInstanceOrNoneAndNoCreatedPieces(
@@ -318,6 +322,7 @@ public class OpenCompositeOrderPieceServiceTest {
   }
 
   @ParameterizedTest
+  @SuppressWarnings("unchecked")
   @CsvSource(value = {"Electronic Resource:Instance:2:3:Electronic",
                       "Electronic Resource:None:2:3:Electronic"}, delimiter = ':')
   void shouldCreatePieceWithLocationReferenceIfElectronicLineContainsLocationAndInventoryIsInstanceOrNoneAndNoCreatedPieces(
@@ -381,6 +386,7 @@ public class OpenCompositeOrderPieceServiceTest {
   }
 
   @ParameterizedTest
+  @SuppressWarnings("unchecked")
   @CsvSource(value = {"P/E Mix:Instance:None:2:3", "P/E Mix:None:Instance:2:3",
                       "P/E Mix:None:None:2:3", "P/E Mix:Instance:Instance:2:3"}, delimiter = ':')
   void shouldCreatePieceWithLocationReferenceIfMixedLineContainsLocationAndInventoryIsInstanceOrNoneAndNoCreatedPieces(
@@ -445,6 +451,7 @@ public class OpenCompositeOrderPieceServiceTest {
   }
 
   @ParameterizedTest
+  @SuppressWarnings("unchecked")
   @CsvSource(value = {"P/E Mix:Instance:Instance, Holding:2:3", "P/E Mix:None:Instance, Holding:2:3"}, delimiter = ':')
   void shouldCreatePieceWithLocationAndHoldingReferenceIfMixedLineContainsLocationAndInventoryIsInstanceOrNoneAndNoCreatedPieces(
     String lineType, String elecCreateInventory, String physCreateInventory, int elecQty1, int physQty2) {
@@ -508,6 +515,7 @@ public class OpenCompositeOrderPieceServiceTest {
   }
 
   @ParameterizedTest
+  @SuppressWarnings("unchecked")
   @CsvSource(value = {"P/E Mix:Instance:Instance, Holding, Item:2:3", "P/E Mix:None:Instance, Holding, Item:2:3"}, delimiter = ':')
   void shouldCreatePieceWithLocationAndHoldingReferenceIfMixedLineContainsLocationAndInventoryIsInstanceOrNoneAndExistPiecesWithItems(
                   String lineType, String elecCreateInventory, String physCreateInventory, int elecQty1, int physQty2) {
@@ -522,14 +530,14 @@ public class OpenCompositeOrderPieceServiceTest {
 
     if (Eresource.CreateInventory.INSTANCE_HOLDING_ITEM == Eresource.CreateInventory.fromValue(elecCreateInventory)) {
       elecLocation.withHoldingId(holdingId);
-      expectedPiecesWithItem.addAll(createElecPiecesWithHoldingId(lineId, titleId, true, elecLocation));
+      expectedPiecesWithItem.addAll(createElecPiecesWithHoldingId(lineId, titleId, elecLocation));
     } else {
       elecLocation.withLocationId(locationId);
     }
      Location physLocation = new Location().withQuantityPhysical(physQty2).withQuantity(physQty2);
     if (Physical.CreateInventory.INSTANCE_HOLDING_ITEM == Physical.CreateInventory.fromValue(physCreateInventory)) {
       physLocation.withHoldingId(holdingId);
-      expectedPiecesWithItem.addAll(createPhysPiecesWithHoldingId(lineId, titleId, true, physLocation));
+      expectedPiecesWithItem.addAll(createPhysPiecesWithHoldingId(lineId, titleId, physLocation));
     } else {
       physLocation.withLocationId(locationId);
     }
@@ -637,7 +645,7 @@ public class OpenCompositeOrderPieceServiceTest {
     });
   }
 
-  private List<Piece> createPhysPiecesWithHoldingId(String lineId, String titleId, boolean withItem, Location location) {
+  private List<Piece> createPhysPiecesWithHoldingId(String lineId, String titleId, Location location) {
     List<Piece> pieces = new ArrayList<>();
     for (int i = 0; i < location.getQuantityPhysical(); i++) {
       Piece piece = new Piece().withId(UUID.randomUUID().toString())
@@ -645,15 +653,13 @@ public class OpenCompositeOrderPieceServiceTest {
         .withPoLineId(lineId)
         .withHoldingId(location.getHoldingId())
         .withFormat(Piece.Format.PHYSICAL);
-      if (withItem) {
-        piece.withItemId(UUID.randomUUID().toString());
-      }
+      piece.withItemId(UUID.randomUUID().toString());
       pieces.add(piece);
     }
     return pieces;
   }
 
-  private List<Piece> createElecPiecesWithHoldingId(String lineId, String titleId, boolean withItem, Location location) {
+  private List<Piece> createElecPiecesWithHoldingId(String lineId, String titleId, Location location) {
     List<Piece> pieces = new ArrayList<>();
     for (int i = 0; i < location.getQuantityPhysical(); i++) {
       Piece piece = new Piece().withId(UUID.randomUUID().toString())
@@ -661,9 +667,7 @@ public class OpenCompositeOrderPieceServiceTest {
         .withPoLineId(lineId)
         .withHoldingId(location.getHoldingId())
         .withFormat(Piece.Format.ELECTRONIC);
-      if (withItem) {
-        piece.withItemId(UUID.randomUUID().toString());
-      }
+      piece.withItemId(UUID.randomUUID().toString());
       pieces.add(piece);
     }
     return pieces;
@@ -673,7 +677,7 @@ public class OpenCompositeOrderPieceServiceTest {
     return new Piece().withId(UUID.randomUUID().toString())
       .withTitleId(title.getId())
       .withPoLineId(line.getId())
-      .withLocationId(line.getLocations().get(0).getLocationId())
+      .withLocationId(line.getLocations().getFirst().getLocationId())
       .withFormat(Piece.Format.PHYSICAL);
   }
 
@@ -681,7 +685,7 @@ public class OpenCompositeOrderPieceServiceTest {
     return new Piece().withId(UUID.randomUUID().toString())
       .withTitleId(title.getId())
       .withPoLineId(line.getId())
-      .withHoldingId(line.getLocations().get(0).getHoldingId())
+      .withHoldingId(line.getLocations().getFirst().getHoldingId())
       .withFormat(Piece.Format.PHYSICAL);
   }
 
@@ -742,6 +746,5 @@ public class OpenCompositeOrderPieceServiceTest {
       return spy(new OpenCompositeOrderPieceService(purchaseOrderStorageService, pieceStorageService, protectionService,
         receiptStatusPublisher, inventoryItemManager, inventoryHoldingManager, titlesService, openCompositeOrderHolderBuilder));
     }
-
   }
 }
