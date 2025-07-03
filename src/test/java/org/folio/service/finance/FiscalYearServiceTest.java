@@ -28,7 +28,7 @@ import org.folio.rest.acq.model.finance.FiscalYear;
 
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.service.caches.ConfigurationEntriesCache;
+import org.folio.service.caches.CommonSettingsCache;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -51,7 +51,7 @@ public class FiscalYearServiceTest {
   @Mock
   private RequestContext requestContextMock;
   @Mock
-  private ConfigurationEntriesCache configurationEntriesCacheMock;
+  private CommonSettingsCache commonSettingsCacheMock;
 
   private AutoCloseable openMocks;
 
@@ -59,7 +59,7 @@ public class FiscalYearServiceTest {
   public void initMocks() {
     openMocks = MockitoAnnotations.openMocks(this);
     doReturn(Future.succeededFuture("UTC"))
-      .when(configurationEntriesCacheMock).getSystemTimeZone(any(RequestContext.class));
+      .when(commonSettingsCacheMock).getSystemTimeZone(any(RequestContext.class));
     fiscalYearService.init();
   }
 

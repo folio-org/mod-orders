@@ -46,7 +46,7 @@ import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.RolloverStatus;
-import org.folio.service.caches.ConfigurationEntriesCache;
+import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.exchange.CacheableExchangeRateService;
 import org.folio.service.finance.FundService;
 import org.folio.service.finance.rollover.LedgerRolloverErrorService;
@@ -87,7 +87,7 @@ public class OrderRolloverServiceTest {
   @Mock
   private PurchaseOrderLineService purchaseOrderLineService;
   @Mock
-  private ConfigurationEntriesCache configurationEntriesCache;
+  private CommonSettingsCache commonSettingsCache;
   @Mock
   private LedgerRolloverProgressService ledgerRolloverProgressService;
   @Mock
@@ -112,7 +112,7 @@ public class OrderRolloverServiceTest {
     okapiHeadersMock.put(X_OKAPI_TENANT.getName(), X_OKAPI_TENANT.getValue());
     okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
     requestContext = new RequestContext(Vertx.vertx().getOrCreateContext(), okapiHeadersMock);
-    conversionHelper = new CurrencyConversionMockHelper(configurationEntriesCache, cacheableExchangeRateService,
+    conversionHelper = new CurrencyConversionMockHelper(commonSettingsCache, cacheableExchangeRateService,
       systemCurrency, requestContext);
   }
 
@@ -583,7 +583,7 @@ public class OrderRolloverServiceTest {
 
     doReturn(succeededFuture()).when(purchaseOrderLineService).saveOrderLinesWithoutSearchLocationsUpdate(anyList(), any());
 
-    doReturn(succeededFuture(systemCurrency)).when(configurationEntriesCache).getSystemCurrency(requestContext);
+    doReturn(succeededFuture(systemCurrency)).when(commonSettingsCache).getSystemCurrency(requestContext);
 
     Encumbrance encumbrance = new Encumbrance()
       .withSourcePurchaseOrderId(orderId)
@@ -655,7 +655,7 @@ public class OrderRolloverServiceTest {
     doReturn(succeededFuture()).when(ledgerRolloverProgressService).updateRolloverProgress(progress.withOrdersRolloverStatus(RolloverStatus.SUCCESS), requestContext);
     doReturn(succeededFuture(new LedgerFiscalYearRolloverError())).when(ledgerRolloverErrorService)
       .saveRolloverError(anyString(), any(Throwable.class), any(LedgerFiscalYearRolloverError.ErrorType.class), anyString(), eq(requestContext));
-    doReturn(failedFuture("Error loading system currency from cache")).when(configurationEntriesCache).getSystemCurrency(requestContext);
+    doReturn(failedFuture("Error loading system currency from cache")).when(commonSettingsCache).getSystemCurrency(requestContext);
 
     Future<Void> future = orderRolloverService.startRollover(ledgerFiscalYearRollover, progress, requestContext);
     vertxTestContext.assertFailure(future)

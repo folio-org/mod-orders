@@ -49,7 +49,7 @@ import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
 import org.folio.service.ProtectionService;
-import org.folio.service.configuration.ConfigurationEntriesService;
+import org.folio.service.settings.CommonSettingsRetriever;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemManager;
@@ -321,8 +321,9 @@ public class CheckinHelperTest {
       return mock(PieceUpdateFlowPoLineService.class);
     }
 
-    @Bean ConfigurationEntriesService configurationEntriesService() {
-      return mock(ConfigurationEntriesService.class);
+    @Bean
+    CommonSettingsRetriever configurationEntriesService() {
+      return mock(CommonSettingsRetriever.class);
     }
 
     @Bean

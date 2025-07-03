@@ -7,17 +7,17 @@ import static org.mockito.Mockito.when;
 
 import org.folio.rest.acq.model.finance.ExchangeRate;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.service.caches.ConfigurationEntriesCache;
+import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.exchange.CacheableExchangeRateService;
 
 public class CurrencyConversionMockHelper {
 
   private final CacheableExchangeRateService cacheableExchangeRateService;
 
-  public CurrencyConversionMockHelper(ConfigurationEntriesCache configurationEntriesCache,
-      CacheableExchangeRateService cacheableExchangeRateService, String systemCurrency, RequestContext requestContext) {
+  public CurrencyConversionMockHelper(CommonSettingsCache commonSettingsCache,
+                                      CacheableExchangeRateService cacheableExchangeRateService, String systemCurrency, RequestContext requestContext) {
     this.cacheableExchangeRateService = cacheableExchangeRateService;
-    when(configurationEntriesCache.getSystemCurrency(requestContext))
+    when(commonSettingsCache.getSystemCurrency(requestContext))
       .thenReturn(succeededFuture(systemCurrency));
   }
 
