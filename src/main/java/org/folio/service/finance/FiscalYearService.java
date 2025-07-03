@@ -29,7 +29,7 @@ import org.folio.rest.jaxrs.model.Parameter;
 
 import io.vertx.core.Future;
 import org.folio.rest.tools.utils.TenantTool;
-import org.folio.service.caches.ConfigurationEntriesCache;
+import org.folio.service.caches.CommonSettingsCache;
 import org.springframework.beans.factory.annotation.Value;
 
 @Log4j2
@@ -43,17 +43,17 @@ public class FiscalYearService {
 
   private final RestClient restClient;
   private final FundService fundService;
-  private final ConfigurationEntriesCache configurationEntriesCache;
+  private final CommonSettingsCache commonSettingsCache;
   private AsyncCache<String, String> currentFiscalYearCacheBySeries;
   private AsyncCache<String, String> seriesCacheByFiscalYearId;
 
   @Value("${orders.cache.fiscal-years.expiration.time.seconds:300}")
   private long cacheExpirationTime;
 
-  public FiscalYearService(RestClient restClient, FundService fundService, ConfigurationEntriesCache configurationEntriesCache) {
+  public FiscalYearService(RestClient restClient, FundService fundService, CommonSettingsCache commonSettingsCache) {
     this.restClient = restClient;
     this.fundService = fundService;
-    this.configurationEntriesCache = configurationEntriesCache;
+    this.commonSettingsCache = commonSettingsCache;
   }
 
   @PostConstruct
@@ -112,7 +112,7 @@ public class FiscalYearService {
   private Future<String> getCurrentFiscalYearForSeries(String series, RequestContext requestContext) {
     var cacheKey = CACHE_KEY_TEMPLATE.formatted(series, TenantTool.tenantId(requestContext.getHeaders()));
     return Future.fromCompletionStage(currentFiscalYearCacheBySeries.get(cacheKey, (key, executor) ->
-      configurationEntriesCache.getSystemTimeZone(requestContext)
+      commonSettingsCache.getSystemTimeZone(requestContext)
         .map(timezone -> Instant.now().atZone(ZoneId.of(timezone)).toLocalDate())
         .map(now -> FISCAL_YEAR_BY_SERIES_QUERY.formatted(series, now))
         .map(query -> new RequestEntry(FISCAL_YEARS_ENDPOINT).withQuery(query).withLimit(3).withOffset(0))

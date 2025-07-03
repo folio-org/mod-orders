@@ -19,7 +19,7 @@ import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Piece;
-import org.folio.service.caches.ConfigurationEntriesCache;
+import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.organization.OrganizationService;
@@ -66,7 +66,7 @@ public class PiecesClaimingService {
   private static final String VENDOR_CODE_PARAMETER = "vendorCode";
   private static final String PIECE_ID_PARAMETER = "pieceId";
 
-  private final ConfigurationEntriesCache configurationEntriesCache;
+  private final CommonSettingsCache commonSettingsCache;
   private final PieceStorageService pieceStorageService;
   private final PurchaseOrderLineService purchaseOrderLineService;
   private final PurchaseOrderStorageService purchaseOrderStorageService;
@@ -87,7 +87,7 @@ public class PiecesClaimingService {
       log.info("sendClaims:: Cannot send claims piece ids are empty - No claims are sent");
       throwHttpException(CANNOT_SEND_CLAIMS_PIECE_IDS_ARE_EMPTY, claimingCollection, HttpStatus.HTTP_BAD_REQUEST);
     }
-    return configurationEntriesCache.loadConfiguration(DATA_EXPORT_SPRING_CONFIG_MODULE_NAME, requestContext)
+    return commonSettingsCache.loadConfiguration(DATA_EXPORT_SPRING_CONFIG_MODULE_NAME, requestContext)
       .compose(config -> {
         if (CollectionUtils.isEmpty(config.getMap())) {
           log.info("sendClaims:: Cannot retrieve config entries - No claims are sent");

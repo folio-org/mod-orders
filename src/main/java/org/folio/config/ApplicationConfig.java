@@ -27,9 +27,9 @@ import org.folio.service.ReasonForClosureService;
 import org.folio.service.SuffixService;
 import org.folio.service.TagService;
 import org.folio.service.UserService;
-import org.folio.service.caches.ConfigurationEntriesCache;
+import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.caches.InventoryCache;
-import org.folio.service.configuration.ConfigurationEntriesService;
+import org.folio.service.settings.CommonSettingsRetriever;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
 import org.folio.service.consortium.SharingInstanceService;
@@ -193,16 +193,16 @@ public class ApplicationConfig {
   }
 
   @Bean
-  ConfigurationEntriesCache configurationEntriesCache (ConfigurationEntriesService configurationEntriesService) {
-    return new ConfigurationEntriesCache(configurationEntriesService);
+  CommonSettingsCache configurationEntriesCache (CommonSettingsRetriever commonSettingsRetriever) {
+    return new CommonSettingsCache(commonSettingsRetriever);
   }
 
   @Bean
   OrderRolloverService rolloverOrderService(FundService fundService, PurchaseOrderLineService purchaseOrderLineService, TransactionService transactionService,
-                                            ConfigurationEntriesCache configurationEntriesCache, LedgerRolloverProgressService ledgerRolloverProgressService,
+                                            CommonSettingsCache commonSettingsCache, LedgerRolloverProgressService ledgerRolloverProgressService,
                                             LedgerRolloverErrorService ledgerRolloverErrorService, FailedLedgerRolloverPoLineDao failedLedgerRolloverPoLineDao,
                                             CacheableExchangeRateService cacheableExchangeRateService) {
-    return new OrderRolloverService(fundService, purchaseOrderLineService, transactionService, configurationEntriesCache,
+    return new OrderRolloverService(fundService, purchaseOrderLineService, transactionService, commonSettingsCache,
       ledgerRolloverProgressService, ledgerRolloverErrorService, failedLedgerRolloverPoLineDao, cacheableExchangeRateService);
   }
 
@@ -222,8 +222,8 @@ public class ApplicationConfig {
   }
 
   @Bean
-  ConfigurationEntriesService configurationEntriesService(RestClient restClient) {
-    return new ConfigurationEntriesService(restClient);
+  CommonSettingsRetriever configurationEntriesService(RestClient restClient) {
+    return new CommonSettingsRetriever(restClient);
   }
 
   @Bean
@@ -259,8 +259,8 @@ public class ApplicationConfig {
   }
 
   @Bean
-  FiscalYearService fiscalYearService(RestClient restClient, FundService fundService, ConfigurationEntriesCache configurationEntriesCache) {
-    return new FiscalYearService(restClient, fundService, configurationEntriesCache);
+  FiscalYearService fiscalYearService(RestClient restClient, FundService fundService, CommonSettingsCache commonSettingsCache) {
+    return new FiscalYearService(restClient, fundService, commonSettingsCache);
   }
 
   @Bean
@@ -408,16 +408,16 @@ public class ApplicationConfig {
   @Bean
   CompositeOrderDynamicDataPopulateService totalExpendedPopulateService(TransactionService transactionService, InvoiceService invoiceService,
                                                                         InvoiceLineService invoiceLineService, FiscalYearService fiscalYearService,
-                                                                        ConfigurationEntriesCache configurationEntriesCache,
+                                                                        CommonSettingsCache commonSettingsCache,
                                                                         CacheableExchangeRateService cacheableExchangeRateService) {
     return new CompositeOrderTotalFieldsPopulateService(transactionService, invoiceService, invoiceLineService,
-      fiscalYearService, configurationEntriesCache, cacheableExchangeRateService);
+      fiscalYearService, commonSettingsCache, cacheableExchangeRateService);
   }
 
   @Bean("orderLinesSummaryPopulateService")
-  CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService(ConfigurationEntriesCache configurationEntriesCache,
+  CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService(CommonSettingsCache commonSettingsCache,
                                                                             CacheableExchangeRateService cacheableExchangeRateService) {
-    return new OrderLinesSummaryPopulateService(configurationEntriesCache, cacheableExchangeRateService);
+    return new OrderLinesSummaryPopulateService(commonSettingsCache, cacheableExchangeRateService);
   }
 
   @Bean
@@ -472,26 +472,26 @@ public class ApplicationConfig {
 
   @Bean
   InventoryItemManager inventoryItemManager(RestClient restClient,
-                                            ConfigurationEntriesCache configurationEntriesCache,
+                                            CommonSettingsCache commonSettingsCache,
                                             InventoryCache inventoryCache,
                                             ConsortiumConfigurationService consortiumConfigurationService) {
-    return new InventoryItemManager(restClient, configurationEntriesCache, inventoryCache, consortiumConfigurationService);
+    return new InventoryItemManager(restClient, commonSettingsCache, inventoryCache, consortiumConfigurationService);
   }
 
   @Bean
   InventoryHoldingManager inventoryHoldingManager(RestClient restClient,
-                                                  ConfigurationEntriesCache configurationEntriesCache,
+                                                  CommonSettingsCache commonSettingsCache,
                                                   InventoryCache inventoryCache) {
-    return new InventoryHoldingManager(restClient, configurationEntriesCache, inventoryCache);
+    return new InventoryHoldingManager(restClient, commonSettingsCache, inventoryCache);
   }
 
   @Bean
   InventoryInstanceManager inventoryInstanceManager(RestClient restClient,
-                                                    ConfigurationEntriesCache configurationEntriesCache,
+                                                    CommonSettingsCache commonSettingsCache,
                                                     InventoryCache inventoryCache,
                                                     ConsortiumConfigurationService consortiumConfigurationService,
                                                     SharingInstanceService sharingInstanceService) {
-    return new InventoryInstanceManager(restClient, configurationEntriesCache,
+    return new InventoryInstanceManager(restClient, commonSettingsCache,
       inventoryCache, sharingInstanceService, consortiumConfigurationService);
   }
 
@@ -702,19 +702,19 @@ public class ApplicationConfig {
 
   @Bean
   PurchaseOrderHelper purchaseOrderHelper(PurchaseOrderLineHelper purchaseOrderLineHelper,
-    @Qualifier("orderLinesSummaryPopulateService") CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService, EncumbranceService encumbranceService,
-    @Qualifier("combinedPopulateService") CompositeOrderDynamicDataPopulateService combinedPopulateService,
-    EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
-    TagService tagService, PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService,
-    ProtectionService protectionService, InventoryItemStatusSyncService itemStatusSyncService,
-    OpenCompositeOrderManager openCompositeOrderManager, PurchaseOrderStorageService purchaseOrderStorageService,
-    ConfigurationEntriesCache configurationEntriesCache, PoNumberHelper poNumberHelper,
-    OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator, ReOpenCompositeOrderManager reOpenCompositeOrderManager,
-    OrderValidationService orderValidationService, PoLineValidationService poLineValidationService) {
+                                          @Qualifier("orderLinesSummaryPopulateService") CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService, EncumbranceService encumbranceService,
+                                          @Qualifier("combinedPopulateService") CompositeOrderDynamicDataPopulateService combinedPopulateService,
+                                          EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
+                                          TagService tagService, PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService,
+                                          ProtectionService protectionService, InventoryItemStatusSyncService itemStatusSyncService,
+                                          OpenCompositeOrderManager openCompositeOrderManager, PurchaseOrderStorageService purchaseOrderStorageService,
+                                          CommonSettingsCache commonSettingsCache, PoNumberHelper poNumberHelper,
+                                          OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator, ReOpenCompositeOrderManager reOpenCompositeOrderManager,
+                                          OrderValidationService orderValidationService, PoLineValidationService poLineValidationService) {
     return new PurchaseOrderHelper(purchaseOrderLineHelper, orderLinesSummaryPopulateService, encumbranceService,
       combinedPopulateService, encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, tagService,
       purchaseOrderLineService, titlesService, protectionService, itemStatusSyncService,
-      openCompositeOrderManager, purchaseOrderStorageService, configurationEntriesCache,
+      openCompositeOrderManager, purchaseOrderStorageService, commonSettingsCache,
       poNumberHelper, openCompositeOrderFlowValidator, reOpenCompositeOrderManager,
       orderValidationService, poLineValidationService);
   }
@@ -722,11 +722,11 @@ public class ApplicationConfig {
   @Bean
   public OrderValidationService orderValidationService(
     PoLineValidationService poLineValidationService,
-    ConfigurationEntriesCache configurationEntriesCache, OrganizationService organizationService,
+    CommonSettingsCache commonSettingsCache, OrganizationService organizationService,
     ProtectionService protectionService, PrefixService prefixService, PurchaseOrderLineHelper purchaseOrderLineHelper,
     PurchaseOrderLineService purchaseOrderLineService, SuffixService suffixService, PoNumberHelper poNumberHelper,
     UnOpenCompositeOrderManager unOpenCompositeOrderManager) {
-    return new OrderValidationService(poLineValidationService, configurationEntriesCache, organizationService,
+    return new OrderValidationService(poLineValidationService, commonSettingsCache, organizationService,
       protectionService, prefixService, purchaseOrderLineHelper, purchaseOrderLineService, suffixService, poNumberHelper,
       unOpenCompositeOrderManager);
   }
