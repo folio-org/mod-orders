@@ -202,58 +202,26 @@ public class InventoryUtils {
   }
 
   public static void updateItemWithPieceFields(JsonObject item, Piece piece) {
-    if (StringUtils.isNotEmpty(piece.getDisplaySummary())) {
-      item.put(ITEM_DISPLAY_SUMMARY, piece.getDisplaySummary());
-    }
-    if (StringUtils.isNotEmpty(piece.getEnumeration())) {
-      item.put(ITEM_ENUMERATION, piece.getEnumeration());
-    }
-    if (StringUtils.isNotEmpty(piece.getCopyNumber())) {
-      item.put(COPY_NUMBER, piece.getCopyNumber());
-    }
-    if (StringUtils.isNotEmpty(piece.getChronology())) {
-      item.put(ITEM_CHRONOLOGY, piece.getChronology());
-    }
-    if (StringUtils.isNotEmpty(piece.getBarcode())) {
-      item.put(ITEM_BARCODE, piece.getBarcode());
-    }
-    if (StringUtils.isNotEmpty(piece.getAccessionNumber())) {
-      item.put(ITEM_ACCESSION_NUMBER, piece.getAccessionNumber());
-    }
-    if (StringUtils.isNotEmpty(piece.getCallNumber())) {
-      item.put(ITEM_LEVEL_CALL_NUMBER, piece.getCallNumber());
-    }
-    if (piece.getDiscoverySuppress() != null) {
-      item.put(ITEM_DISCOVERY_SUPPRESS, piece.getDiscoverySuppress());
-    }
+    updateCommonItemFields(item,
+      piece.getDisplaySummary(),
+      piece.getEnumeration(),
+      piece.getCopyNumber(),
+      piece.getChronology(),
+      piece.getBarcode(),
+      piece.getAccessionNumber(),
+      piece.getCallNumber());
   }
 
   public static void updateItemWithCheckinPieceFields(JsonObject item, CheckInPiece checkinPiece) {
     item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, checkinPiece.getItemStatus().value()));
-    if (StringUtils.isNotEmpty(checkinPiece.getDisplaySummary())) {
-      item.put(ITEM_DISPLAY_SUMMARY, checkinPiece.getDisplaySummary());
-    }
-    if (StringUtils.isNotEmpty(checkinPiece.getEnumeration())) {
-      item.put(ITEM_ENUMERATION, checkinPiece.getEnumeration());
-    }
-    if (StringUtils.isNotEmpty(checkinPiece.getCopyNumber())) {
-      item.put(COPY_NUMBER, checkinPiece.getCopyNumber());
-    }
-    if (StringUtils.isNotEmpty(checkinPiece.getChronology())) {
-      item.put(ITEM_CHRONOLOGY, checkinPiece.getChronology());
-    }
-    if (StringUtils.isNotEmpty(checkinPiece.getBarcode())) {
-      item.put(ITEM_BARCODE, checkinPiece.getBarcode());
-    }
-    if (StringUtils.isNotEmpty(checkinPiece.getAccessionNumber())) {
-      item.put(ITEM_ACCESSION_NUMBER, checkinPiece.getAccessionNumber());
-    }
-    if (StringUtils.isNotEmpty(checkinPiece.getCallNumber())) {
-      item.put(ITEM_LEVEL_CALL_NUMBER, checkinPiece.getCallNumber());
-    }
-    if (checkinPiece.getDiscoverySuppress() != null) {
-      item.put(ITEM_DISCOVERY_SUPPRESS, checkinPiece.getDiscoverySuppress());
-    }
+    updateCommonItemFields(item,
+      checkinPiece.getDisplaySummary(),
+      checkinPiece.getEnumeration(),
+      checkinPiece.getCopyNumber(),
+      checkinPiece.getChronology(),
+      checkinPiece.getBarcode(),
+      checkinPiece.getAccessionNumber(),
+      checkinPiece.getCallNumber());
   }
 
   public static void updateItemWithReceivedItemFields(PiecesHolder holder, JsonObject item, ReceivedItem receivedItem) {
@@ -261,23 +229,44 @@ public class InventoryUtils {
       receivedItem.withItemStatus(ReceivedItem.ItemStatus.ORDER_CLOSED);
     }
     item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, receivedItem.getItemStatus().value()));
-    if (StringUtils.isNotEmpty(receivedItem.getDisplaySummary())) {
-      item.put(ITEM_DISPLAY_SUMMARY, receivedItem.getDisplaySummary());
+    updateCommonItemFields(item,
+      receivedItem.getDisplaySummary(),
+      receivedItem.getEnumeration(),
+      receivedItem.getCopyNumber(),
+      receivedItem.getChronology(),
+      receivedItem.getBarcode(),
+      null, // ReceivedItem has no getAccessionNumber method
+      receivedItem.getCallNumber());
+  }
+
+  private static void updateCommonItemFields(JsonObject item,
+                                             String displaySummary,
+                                             String enumeration,
+                                             String copyNumber,
+                                             String chronology,
+                                             String barcode,
+                                             String accessionNumber,
+                                             String callNumber) {
+    if (StringUtils.isNotEmpty(displaySummary)) {
+      item.put(ITEM_DISPLAY_SUMMARY, displaySummary);
     }
-    if (StringUtils.isNotEmpty(receivedItem.getEnumeration())) {
-      item.put(ITEM_ENUMERATION, receivedItem.getEnumeration());
+    if (StringUtils.isNotEmpty(enumeration)) {
+      item.put(ITEM_ENUMERATION, enumeration);
     }
-    if (StringUtils.isNotEmpty(receivedItem.getCopyNumber())) {
-      item.put(COPY_NUMBER, receivedItem.getCopyNumber());
+    if (StringUtils.isNotEmpty(copyNumber)) {
+      item.put(COPY_NUMBER, copyNumber);
     }
-    if (StringUtils.isNotEmpty(receivedItem.getChronology())) {
-      item.put(ITEM_CHRONOLOGY, receivedItem.getChronology());
+    if (StringUtils.isNotEmpty(chronology)) {
+      item.put(ITEM_CHRONOLOGY, chronology);
     }
-    if (StringUtils.isNotEmpty(receivedItem.getBarcode())) {
-      item.put(ITEM_BARCODE, receivedItem.getBarcode());
+    if (StringUtils.isNotEmpty(barcode)) {
+      item.put(ITEM_BARCODE, barcode);
     }
-    if (StringUtils.isNotEmpty(receivedItem.getCallNumber())) {
-      item.put(ITEM_LEVEL_CALL_NUMBER, receivedItem.getCallNumber());
+    if (StringUtils.isNotEmpty(accessionNumber)) {
+      item.put(ITEM_ACCESSION_NUMBER, accessionNumber);
+    }
+    if (StringUtils.isNotEmpty(callNumber)) {
+      item.put(ITEM_LEVEL_CALL_NUMBER, callNumber);
     }
   }
 
