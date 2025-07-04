@@ -46,7 +46,6 @@ import static org.folio.service.inventory.InventoryItemManager.COPY_NUMBER;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_ACCESSION_NUMBER;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_BARCODE;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_CHRONOLOGY;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_DISCOVERY_SUPPRESS;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_DISPLAY_SUMMARY;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_ENUMERATION;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_LEVEL_CALL_NUMBER;
