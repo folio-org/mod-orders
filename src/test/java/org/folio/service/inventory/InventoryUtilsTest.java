@@ -5,6 +5,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import java.io.IOException;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.tools.utils.TenantTool;
 import org.junit.jupiter.api.Assertions;
@@ -24,16 +25,10 @@ import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.impl.MockServer.CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL;
 import static org.folio.rest.impl.MockServer.ECS_CONSORTIUM_PIECES_JSON;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
-import static org.folio.service.inventory.InventoryItemManager.COPY_NUMBER;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_ACCESSION_NUMBER;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_BARCODE;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_CHRONOLOGY;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_DISCOVERY_SUPPRESS;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_DISPLAY_SUMMARY;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_ENUMERATION;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_LEVEL_CALL_NUMBER;
+import static org.folio.service.inventory.InventoryItemManager.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 @ExtendWith(VertxExtension.class)
 public class InventoryUtilsTest {
@@ -85,7 +80,35 @@ public class InventoryUtilsTest {
     assertEquals(piece.getBarcode(), item.getString(ITEM_BARCODE));
     assertEquals(piece.getAccessionNumber(), item.getString(ITEM_ACCESSION_NUMBER));
     assertEquals(piece.getCallNumber(), item.getString(ITEM_LEVEL_CALL_NUMBER));
-    assertEquals(piece.getDiscoverySuppress(), item.getBoolean(ITEM_DISCOVERY_SUPPRESS));
+    assertNotEquals(piece.getDiscoverySuppress(), item.getBoolean(ITEM_DISCOVERY_SUPPRESS));
+  }
+
+  @Test
+  void updatesItemWithAllCheckinPieceFields() {
+    CheckInPiece checkinPiece = new CheckInPiece()
+      .withItemStatus(CheckInPiece.ItemStatus.IN_PROCESS)
+      .withDisplaySummary("Display Summary")
+      .withEnumeration("Enumeration")
+      .withCopyNumber("Copy Number")
+      .withChronology("Chronology")
+      .withBarcode("Barcode")
+      .withAccessionNumber("Accession Number")
+      .withCallNumber("Call Number")
+      .withDiscoverySuppress(true);
+
+    JsonObject item = new JsonObject();
+
+    InventoryUtils.updateItemWithCheckinPieceFields(item, checkinPiece);
+
+    assertEquals(checkinPiece.getItemStatus().value(), item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME));
+    assertEquals(checkinPiece.getDisplaySummary(), item.getString(ITEM_DISPLAY_SUMMARY));
+    assertEquals(checkinPiece.getEnumeration(), item.getString(ITEM_ENUMERATION));
+    assertEquals(checkinPiece.getCopyNumber(), item.getString(COPY_NUMBER));
+    assertEquals(checkinPiece.getChronology(), item.getString(ITEM_CHRONOLOGY));
+    assertEquals(checkinPiece.getBarcode(), item.getString(ITEM_BARCODE));
+    assertEquals(checkinPiece.getAccessionNumber(), item.getString(ITEM_ACCESSION_NUMBER));
+    assertEquals(checkinPiece.getCallNumber(), item.getString(ITEM_LEVEL_CALL_NUMBER));
+    assertNotEquals(checkinPiece.getDiscoverySuppress(), item.getBoolean(ITEM_DISCOVERY_SUPPRESS));
   }
 
   @Test
