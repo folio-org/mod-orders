@@ -13,7 +13,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.tools.utils.TenantTool;
-import org.folio.service.caches.ConfigurationEntriesCache;
+import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.caches.InventoryCache;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.consortium.SharingInstanceService;
@@ -55,7 +55,7 @@ public class InventoryInstanceManagerTest {
   @Mock
   private RestClient restClient;
   @Mock
-  private ConfigurationEntriesCache configurationEntriesCache;
+  private CommonSettingsCache commonSettingsCache;
   @Mock
   private InventoryCache inventoryCache;
   @Mock
@@ -67,7 +67,7 @@ public class InventoryInstanceManagerTest {
   @BeforeEach
   void beforeEach() {
     mockitoMocks = MockitoAnnotations.openMocks(this);
-    inventoryInstanceManager = new InventoryInstanceManager(restClient, configurationEntriesCache, inventoryCache, sharingInstanceService, consortiumConfigurationService);
+    inventoryInstanceManager = new InventoryInstanceManager(restClient, commonSettingsCache, inventoryCache, sharingInstanceService, consortiumConfigurationService);
   }
 
   @AfterEach

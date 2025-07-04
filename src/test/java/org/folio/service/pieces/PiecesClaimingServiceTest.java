@@ -13,7 +13,7 @@ import org.folio.rest.jaxrs.model.ClaimingPieceResult;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.folio.service.caches.ConfigurationEntriesCache;
+import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.organization.OrganizationService;
@@ -51,7 +51,7 @@ import static org.mockito.Mockito.*;
 @CopilotGenerated(partiallyGenerated = true)
 public class PiecesClaimingServiceTest {
 
-  @Mock private ConfigurationEntriesCache configurationEntriesCache;
+  @Mock private CommonSettingsCache commonSettingsCache;
   @Mock private PieceStorageService pieceStorageService;
   @Mock private PurchaseOrderLineService purchaseOrderLineService;
   @Mock private PurchaseOrderStorageService purchaseOrderStorageService;
@@ -92,7 +92,7 @@ public class PiecesClaimingServiceTest {
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of(pieceId1)).withClaimingInterval(1);
     var requestContext = mock(RequestContext.class);
 
-    when(configurationEntriesCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject()));
+    when(commonSettingsCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject()));
 
     piecesClaimingService.sendClaims(claimingCollection, requestContext)
       .onComplete(testContext.failing(throwable -> testContext.verify(() -> {
@@ -115,7 +115,7 @@ public class PiecesClaimingServiceTest {
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of(pieceId1)).withClaimingInterval(1);
     var requestContext = mock(RequestContext.class);
 
-    when(configurationEntriesCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("key", "value")));
+    when(commonSettingsCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("key", "value")));
     when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of()));
 
     piecesClaimingService.sendClaims(claimingCollection, requestContext)
@@ -138,7 +138,7 @@ public class PiecesClaimingServiceTest {
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1")).withClaimingInterval(1);
     var requestContext = mock(RequestContext.class);
 
-    when(configurationEntriesCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("CLAIMS_vendorId", createIntegrationDetail())));
+    when(commonSettingsCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("CLAIMS_vendorId", createIntegrationDetail())));
     when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of(new Piece().withId("pieceId1").withPoLineId("poLineId1").withReceivingStatus(Piece.ReceivingStatus.RECEIVED))));
     when(purchaseOrderLineService.getOrderLineById(any(), any())).thenReturn(Future.succeededFuture(new PoLine().withPurchaseOrderId("orderId1")));
     when(purchaseOrderStorageService.getPurchaseOrderById(any(), any())).thenReturn(Future.succeededFuture(new PurchaseOrder().withVendor("vendorId")));
@@ -169,7 +169,7 @@ public class PiecesClaimingServiceTest {
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of(pieceId));
     var requestContext = mock(RequestContext.class);
 
-    when(configurationEntriesCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject()
+    when(commonSettingsCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject()
       .put("CLAIMS_vendorId1", createIntegrationDetail())));
     when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of(piece)));
     when(purchaseOrderLineService.getOrderLineById(any(), any())).thenReturn(Future.succeededFuture(new PoLine().withPurchaseOrderId("orderId")));
@@ -205,7 +205,7 @@ public class PiecesClaimingServiceTest {
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of(pieceId1, pieceId2, pieceId3));
     var requestContext = mock(RequestContext.class);
 
-    when(configurationEntriesCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject()
+    when(commonSettingsCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject()
       .put("CLAIMS_vendorId1", createIntegrationDetail())));
     when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of(piece1, piece2, piece3)));
     when(purchaseOrderLineService.getOrderLineById(any(), any())).thenAnswer(invocation -> {
@@ -250,7 +250,7 @@ public class PiecesClaimingServiceTest {
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1")).withClaimingInterval(1);
     var requestContext = mock(RequestContext.class);
 
-    when(configurationEntriesCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("CLAIMS_vendorId", createIntegrationDetail())));
+    when(commonSettingsCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("CLAIMS_vendorId", createIntegrationDetail())));
     when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of(new Piece().withId("pieceId1").withPoLineId("poLineId1").withReceivingStatus(Piece.ReceivingStatus.LATE))));
     when(purchaseOrderLineService.getOrderLineById(any(), any())).thenReturn(Future.succeededFuture(new PoLine().withPurchaseOrderId("orderId1")));
     when(purchaseOrderStorageService.getPurchaseOrderById(any(), any())).thenReturn(Future.succeededFuture(new PurchaseOrder().withVendor("vendorId")));
@@ -273,7 +273,7 @@ public class PiecesClaimingServiceTest {
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1", "pieceId2")).withClaimingInterval(1);
     var requestContext = mock(RequestContext.class);
 
-    when(configurationEntriesCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("CLAIMS_vendorId", createIntegrationDetail())));
+    when(commonSettingsCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("CLAIMS_vendorId", createIntegrationDetail())));
     when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of(
       new Piece().withId("pieceId1").withPoLineId("poLineId1").withReceivingStatus(Piece.ReceivingStatus.LATE),
       new Piece().withId("pieceId2").withPoLineId("poLineId2").withReceivingStatus(Piece.ReceivingStatus.LATE)
@@ -301,7 +301,7 @@ public class PiecesClaimingServiceTest {
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1", "pieceId2", "pieceId3", "pieceId4", "pieceId5")).withClaimingInterval(1);
     var requestContext = mock(RequestContext.class);
 
-    when(configurationEntriesCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject()
+    when(commonSettingsCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject()
       .put("CLAIMS_vendorId1", createIntegrationDetail())
       .put("CLAIMS_vendorId2", createIntegrationDetail())));
 
@@ -356,7 +356,7 @@ public class PiecesClaimingServiceTest {
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1", "pieceId2", "pieceId3", "pieceId4", "pieceId5")).withClaimingInterval(1);
     var requestContext = mock(RequestContext.class);
 
-    when(configurationEntriesCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject()
+    when(commonSettingsCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject()
       .put("CLAIMS_vendorId1", createIntegrationDetail())
       .put("CLAIMS_vendorId2", createIntegrationDetail())
     ));

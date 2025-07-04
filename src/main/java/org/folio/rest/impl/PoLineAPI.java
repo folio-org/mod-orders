@@ -29,7 +29,7 @@ import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.ValidateFundDistributionsRequest;
 import org.folio.rest.jaxrs.resource.OrdersOrderLines;
-import org.folio.service.caches.ConfigurationEntriesCache;
+import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.orders.PoLineValidationService;
 import org.folio.service.orders.lines.update.OrderLinePatchOperationService;
 import org.folio.spring.SpringContextUtil;
@@ -46,7 +46,7 @@ public class PoLineAPI extends BaseApi implements OrdersOrderLines {
   @Autowired
   private PurchaseOrderLineHelper helper;
   @Autowired
-  private ConfigurationEntriesCache configurationEntriesCache;
+  private CommonSettingsCache commonSettingsCache;
   @Autowired
   private PoLineValidationService poLineValidationService;
   @Autowired
@@ -70,7 +70,7 @@ public class PoLineAPI extends BaseApi implements OrdersOrderLines {
   public void postOrdersOrderLines(PoLine poLine, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
-    configurationEntriesCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
+    commonSettingsCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
       .compose(tenantConfig -> helper.createPoLine(poLine, tenantConfig, requestContext))
       .onSuccess(pol -> {
         String okapiUrl = okapiHeaders.get(OKAPI_URL);
@@ -116,7 +116,7 @@ public class PoLineAPI extends BaseApi implements OrdersOrderLines {
     if (!lineId.equals(poLine.getId())) {
       errors.add(ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.toError());
     }
-    configurationEntriesCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
+    commonSettingsCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
       .compose(tenantConfig -> helper.setTenantDefaultCreateInventoryValues(poLine, tenantConfig))
       .compose(v -> poLineValidationService.validatePoLine(poLine, requestContext))
       .map(errors::addAll)

@@ -46,7 +46,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.service.TagService;
-import org.folio.service.caches.ConfigurationEntriesCache;
+import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.inventory.InventoryItemStatusSyncService;
 import org.folio.service.invoice.InvoiceLineService;
@@ -103,7 +103,7 @@ public class PurchaseOrderHelperTest {
   @Mock
   PurchaseOrderStorageService purchaseOrderStorageService;
   @Mock
-  ConfigurationEntriesCache configurationEntriesCache;
+  CommonSettingsCache commonSettingsCache;
   @Mock
   OrderValidationService orderValidationService;
   @Mock
@@ -131,7 +131,7 @@ public class PurchaseOrderHelperTest {
 
     JsonObject tenantConfig = new JsonObject();
     doReturn(succeededFuture(tenantConfig))
-      .when(configurationEntriesCache).loadConfiguration(eq(ORDER_CONFIG_MODULE_NAME), eq(requestContext));
+      .when(commonSettingsCache).loadConfiguration(eq(ORDER_CONFIG_MODULE_NAME), eq(requestContext));
     doReturn(succeededFuture(List.of()))
       .when(orderValidationService).validateOrderForPost(any(CompositePurchaseOrder.class), eq(tenantConfig), eq(requestContext));
     doReturn(succeededFuture(null))

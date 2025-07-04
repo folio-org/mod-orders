@@ -56,6 +56,7 @@
             "orders-storage.titles.collection.get",
             "orders-storage.order-invoice-relationships.collection.get",
             "configuration.entries.collection.get",
+            "mod-settings.global.read.stripes-core.prefs.manage",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
             "invoice.invoices.collection.get",
@@ -172,6 +173,7 @@
             "orders-storage.po-lines.collection.get",
             "orders-storage.po-lines.item.post",
             "configuration.entries.collection.get",
+            "mod-settings.global.read.stripes-core.prefs.manage",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
             "inventory.instances.item.get",
@@ -198,6 +200,7 @@
             "orders-storage.purchase-orders.item.get",
             "orders-storage.titles.collection.get",
             "configuration.entries.collection.get",
+            "mod-settings.global.read.stripes-core.prefs.manage",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get"
           ]
@@ -242,6 +245,7 @@
             "orders-storage.purchase-orders.item.put",
             "orders-storage.titles.collection.get",
             "configuration.entries.collection.get",
+            "mod-settings.global.read.stripes-core.prefs.manage",
             "inventory-storage.identifier-types.collection.get",
             "inventory.items.item.put",
             "inventory.items.collection.get",
@@ -305,7 +309,8 @@
             "orders-storage.pieces.collection.get",
             "user-tenants.collection.get",
             "consortia.sharing-instances.item.post",
-            "configuration.entries.collection.get"
+            "configuration.entries.collection.get",
+            "mod-settings.global.read.stripes-core.prefs.manage"
           ]
         },
         {
@@ -394,6 +399,7 @@
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
             "configuration.entries.collection.get",
+            "mod-settings.global.read.stripes-core.prefs.manage",
             "inventory.instances.item.get",
             "inventory.instances.item.post",
             "inventory.instances.collection.get",
@@ -488,6 +494,7 @@
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
             "configuration.entries.collection.get",
+            "mod-settings.global.read.stripes-core.prefs.manage",
             "inventory.items.item.put",
             "inventory.items.collection.get",
             "inventory-storage.holdings-sources.collection.get",
@@ -534,6 +541,7 @@
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
             "configuration.entries.collection.get",
+            "mod-settings.global.read.stripes-core.prefs.manage",
             "inventory.instances.collection.get",
             "inventory.instances.item.get",
             "inventory.instances.item.post",
@@ -608,6 +616,7 @@
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
             "configuration.entries.collection.get",
+            "mod-settings.global.read.stripes-core.prefs.manage",
             "inventory.items.item.put",
             "inventory.items.collection.get",
             "inventory-storage.holdings-sources.collection.get",
@@ -888,7 +897,8 @@
             "consortia.sharing-instances.item.post",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
-            "configuration.entries.collection.get"
+            "configuration.entries.collection.get",
+            "mod-settings.global.read.stripes-core.prefs.manage"
           ]
         },
         {
@@ -913,6 +923,7 @@
             "inventory-storage.contributor-name-types.collection.get",
             "user-tenants.collection.get",
             "configuration.entries.collection.get",
+            "mod-settings.global.read.stripes-core.prefs.manage",
             "consortia.sharing-instances.item.post",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get"
@@ -933,6 +944,7 @@
             "inventory-storage.items.collection.get",
             "inventory-storage.items.collection.delete",
             "configuration.entries.collection.get",
+            "mod-settings.global.read.stripes-core.prefs.manage",
             "orders-storage.settings.collection.get",
             "user-tenants.collection.get",
             "acquisitions-units-storage.units.collection.get",
@@ -1071,6 +1083,7 @@
           ],
           "modulePermissions": [
             "configuration.entries.collection.get",
+            "mod-settings.global.read.stripes-core.prefs.manage",
             "finance-storage.funds.collection.get",
             "finance.exchange-rate.item.get",
             "finance.transactions.batch.execute",
@@ -1238,6 +1251,7 @@
           ],
           "modulePermissions": [
             "configuration.entries.collection.get",
+            "mod-settings.global.read.stripes-core.prefs.manage",
             "orders-storage.pieces.collection.get",
             "orders-storage.pieces.item.put",
             "orders-storage.po-lines.item.get",
@@ -1291,6 +1305,10 @@
     {
       "id": "orders-storage.acquisition-methods",
       "version": "1.0"
+    },
+    {
+      "id": "settings",
+      "version": "1.2"
     },
     {
       "id": "configuration",
@@ -2183,6 +2201,7 @@
         "orders-storage.titles.item.get",
         "orders-storage.order-invoice-relationships.collection.get",
         "configuration.entries.collection.get",
+        "mod-settings.global.read.stripes-core.prefs.manage",
         "finance.funds.budget.item.get",
         "finance.funds.collection.get",
         "finance.funds.item.get",
@@ -2251,6 +2270,7 @@
         "orders-storage.po-lines.item.get",
         "orders-storage.purchase-orders.item.get",
         "configuration.entries.collection.get",
+        "mod-settings.global.read.stripes-core.prefs.manage",
         "finance.funds.budget.item.get",
         "finance.funds.collection.get",
         "finance.budgets.collection.get",
@@ -2314,6 +2334,7 @@
       "permissions": [
         "converter-storage.jobprofilesnapshots.get",
         "configuration.entries.collection.get",
+        "mod-settings.global.read.stripes-core.prefs.manage",
         "finance-storage.fiscal-years.item.get",
         "acquisitions-units.memberships.collection.get",
         "acquisitions-units.units.collection.get",
@@ -2324,7 +2345,6 @@
         "orders.po-lines.item.get",
         "organizations.organizations.collection.get",
         "change-manager.jobExecutions.item.get"
-
       ]
     }
   },

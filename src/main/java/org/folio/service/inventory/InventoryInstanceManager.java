@@ -23,7 +23,7 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.utils.TenantTool;
-import org.folio.service.caches.ConfigurationEntriesCache;
+import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.caches.InventoryCache;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.consortium.SharingInstanceService;
@@ -78,18 +78,18 @@ public class InventoryInstanceManager {
   public static final String INSTANCE_DISCOVERY_SUPPRESS = "discoverySuppress";
 
   private final RestClient restClient;
-  private final ConfigurationEntriesCache configurationEntriesCache;
+  private final CommonSettingsCache commonSettingsCache;
   private final InventoryCache inventoryCache;
   private final SharingInstanceService sharingInstanceService;
   private final ConsortiumConfigurationService consortiumConfigurationService;
 
   public InventoryInstanceManager(RestClient restClient,
-                                  ConfigurationEntriesCache configurationEntriesCache,
+                                  CommonSettingsCache commonSettingsCache,
                                   InventoryCache inventoryCache,
                                   SharingInstanceService sharingInstanceService,
                                   ConsortiumConfigurationService consortiumConfigurationService) {
     this.restClient = restClient;
-    this.configurationEntriesCache = configurationEntriesCache;
+    this.commonSettingsCache = commonSettingsCache;
     this.inventoryCache = inventoryCache;
     this.sharingInstanceService = sharingInstanceService;
     this.consortiumConfigurationService = consortiumConfigurationService;
@@ -128,11 +128,11 @@ public class InventoryInstanceManager {
   public Future<String> createInstanceRecord(Title title, boolean suppressDiscovery, RequestContext requestContext) {
     logger.debug("InventoryInstanceManager.createInstanceRecord title.id={}", title.getId());
     JsonObject lookupObj = new JsonObject();
-    Future<Void> instanceTypeFuture = InventoryUtils.getEntryId(configurationEntriesCache, inventoryCache, INSTANCE_TYPES, MISSING_INSTANCE_TYPE, requestContext)
+    Future<Void> instanceTypeFuture = InventoryUtils.getEntryId(commonSettingsCache, inventoryCache, INSTANCE_TYPES, MISSING_INSTANCE_TYPE, requestContext)
       .onSuccess(lookupObj::mergeIn)
       .mapEmpty();
 
-    Future<Void> statusFuture = InventoryUtils.getEntryId(configurationEntriesCache, inventoryCache, INSTANCE_STATUSES, MISSING_INSTANCE_STATUS, requestContext)
+    Future<Void> statusFuture = InventoryUtils.getEntryId(commonSettingsCache, inventoryCache, INSTANCE_STATUSES, MISSING_INSTANCE_STATUS, requestContext)
       .onSuccess(lookupObj::mergeIn)
       .mapEmpty();
 
@@ -280,11 +280,11 @@ public class InventoryInstanceManager {
   private Future<String> createInstanceRecord(PoLine poLine, RequestContext requestContext) {
     logger.debug("InventoryInstanceManager.createInstanceRecord poLine.id={}", poLine.getId());
     JsonObject lookupObj = new JsonObject();
-    Future<Void> instanceTypeFuture = InventoryUtils.getEntryId(configurationEntriesCache, inventoryCache, INSTANCE_TYPES, MISSING_INSTANCE_TYPE, requestContext)
+    Future<Void> instanceTypeFuture = InventoryUtils.getEntryId(commonSettingsCache, inventoryCache, INSTANCE_TYPES, MISSING_INSTANCE_TYPE, requestContext)
       .onSuccess(lookupObj::mergeIn)
       .mapEmpty();
 
-    Future<Void> statusFuture = InventoryUtils.getEntryId(configurationEntriesCache, inventoryCache, INSTANCE_STATUSES, MISSING_INSTANCE_STATUS, requestContext)
+    Future<Void> statusFuture = InventoryUtils.getEntryId(commonSettingsCache, inventoryCache, INSTANCE_STATUSES, MISSING_INSTANCE_STATUS, requestContext)
       .onSuccess(lookupObj::mergeIn)
       .mapEmpty();
 

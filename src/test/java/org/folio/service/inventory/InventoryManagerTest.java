@@ -82,9 +82,9 @@ import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Title;
-import org.folio.service.caches.ConfigurationEntriesCache;
+import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.caches.InventoryCache;
-import org.folio.service.configuration.ConfigurationEntriesService;
+import org.folio.service.settings.CommonSettingsRetriever;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.consortium.SharingInstanceService;
 import org.folio.utils.RequestContextMatcher;
@@ -134,7 +134,7 @@ public class InventoryManagerTest {
   @Autowired
   private RestClient restClient;
   @Autowired
-  private ConfigurationEntriesCache configurationEntriesCache;
+  private CommonSettingsCache commonSettingsCache;
   @Autowired
   private InventoryCache inventoryCache;
   @Autowired
@@ -559,7 +559,7 @@ public class InventoryManagerTest {
 
     doReturn(Future.failedFuture(new HttpException(500, "Something went wrong!")))
       .when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), any(JsonObject.class), any(RequestContext.class));
-    doReturn(Future.succeededFuture(new JsonObject())).when(configurationEntriesCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
+    doReturn(Future.succeededFuture(new JsonObject())).when(commonSettingsCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
     doReturn(Future.succeededFuture(new JsonObject())).when(inventoryCache).getEntryId(LOAN_TYPES, DEFAULT_LOAN_TYPE_NAME, requestContext);
 
     Future<List<String>> result = inventoryItemManager.createMissingPhysicalItems(order, line, piece, 1, requestContext);
@@ -579,7 +579,7 @@ public class InventoryManagerTest {
 
     doReturn(Future.failedFuture(new HttpException(500, InventoryItemManager.BARCODE_ALREADY_EXIST_ERROR)))
       .when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), any(JsonObject.class), any(RequestContext.class));
-    doReturn(Future.succeededFuture(new JsonObject())).when(configurationEntriesCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
+    doReturn(Future.succeededFuture(new JsonObject())).when(commonSettingsCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
     doReturn(Future.succeededFuture(new JsonObject())).when(inventoryCache).getEntryId(LOAN_TYPES, DEFAULT_LOAN_TYPE_NAME, requestContext);
 
     //When
@@ -602,7 +602,7 @@ public class InventoryManagerTest {
 
     doReturn(Future.succeededFuture(expItemId))
       .when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), eq(itemRecord), any(RequestContext.class));
-    doReturn(Future.succeededFuture(new JsonObject())).when(configurationEntriesCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
+    doReturn(Future.succeededFuture(new JsonObject())).when(commonSettingsCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
     doReturn(Future.succeededFuture(new JsonObject())).when(inventoryCache).getEntryId(LOAN_TYPES, DEFAULT_LOAN_TYPE_NAME, requestContext);
 
     Future<List<String>> result = inventoryItemManager.createMissingPhysicalItems(order, line, piece, 1, requestContext);
@@ -621,7 +621,7 @@ public class InventoryManagerTest {
 
     doReturn(Future.succeededFuture(expItemId))
       .when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), eq(itemRecord), any(RequestContext.class));
-    doReturn(Future.succeededFuture(new JsonObject())).when(configurationEntriesCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
+    doReturn(Future.succeededFuture(new JsonObject())).when(commonSettingsCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
     doReturn(Future.succeededFuture(new JsonObject())).when(inventoryCache).getEntryId(LOAN_TYPES, DEFAULT_LOAN_TYPE_NAME, requestContext);
 
     Future<List<String>> result = inventoryItemManager.createMissingPhysicalItems(order, line, piece, 1, requestContext);
@@ -882,12 +882,12 @@ public class InventoryManagerTest {
    */
   static class ContextConfiguration {
     @Bean
-    public ConfigurationEntriesService configurationEntriesService() {
-      return mock(ConfigurationEntriesService.class);
+    public CommonSettingsRetriever configurationEntriesService() {
+      return mock(CommonSettingsRetriever.class);
     }
     @Bean
-    public ConfigurationEntriesCache configurationEntriesCache() {
-      return mock(ConfigurationEntriesCache.class);
+    public CommonSettingsCache configurationEntriesCache() {
+      return mock(CommonSettingsCache.class);
     }
 
     @Bean
@@ -917,26 +917,26 @@ public class InventoryManagerTest {
 
     @Bean
     public InventoryItemManager inventoryItemManager(RestClient restClient,
-                                                     ConfigurationEntriesCache configurationEntriesCache,
+                                                     CommonSettingsCache commonSettingsCache,
                                                      InventoryCache inventoryCache,
                                                      ConsortiumConfigurationService consortiumConfigurationService) {
-      return spy(new InventoryItemManager(restClient, configurationEntriesCache, inventoryCache, consortiumConfigurationService));
+      return spy(new InventoryItemManager(restClient, commonSettingsCache, inventoryCache, consortiumConfigurationService));
     }
 
     @Bean
     public InventoryHoldingManager inventoryHoldingManager(RestClient restClient,
-                                                           ConfigurationEntriesCache configurationEntriesCache,
+                                                           CommonSettingsCache commonSettingsCache,
                                                            InventoryCache inventoryCache) {
-      return spy(new InventoryHoldingManager(restClient, configurationEntriesCache, inventoryCache));
+      return spy(new InventoryHoldingManager(restClient, commonSettingsCache, inventoryCache));
     }
 
     @Bean
     public InventoryInstanceManager inventoryInstanceManager(RestClient restClient,
-                                                             ConfigurationEntriesCache configurationEntriesCache,
+                                                             CommonSettingsCache commonSettingsCache,
                                                              InventoryCache inventoryCache,
                                                              ConsortiumConfigurationService consortiumConfigurationService,
                                                              SharingInstanceService sharingInstanceService) {
-      return spy(new InventoryInstanceManager(restClient, configurationEntriesCache, inventoryCache, sharingInstanceService, consortiumConfigurationService));
+      return spy(new InventoryInstanceManager(restClient, commonSettingsCache, inventoryCache, sharingInstanceService, consortiumConfigurationService));
     }
   }
 

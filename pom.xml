@@ -532,6 +532,16 @@
               <targetPackage>org.folio.rest.acq.model.tag</targetPackage>
             </configuration>
           </execution>
+          <execution>
+            <id>mod-settings</id>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <configuration>
+              <sourceDirectory>${basedir}/ramls/acq-models/mod-settings/schemas</sourceDirectory>
+              <targetPackage>org.folio.rest.acq.model.settings</targetPackage>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
 

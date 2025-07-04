@@ -20,7 +20,7 @@ import org.folio.rest.acq.model.invoice.Invoice;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.service.caches.ConfigurationEntriesCache;
+import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.exchange.CacheableExchangeRateService;
 import org.folio.service.exchange.CustomExchangeRateProvider;
 import org.folio.service.finance.FiscalYearService;
@@ -47,17 +47,17 @@ public class CompositeOrderTotalFieldsPopulateService implements CompositeOrderD
   private final InvoiceService invoiceService;
   private final InvoiceLineService invoiceLineService;
   private final FiscalYearService fiscalYearService;
-  private final ConfigurationEntriesCache configurationEntriesCache;
+  private final CommonSettingsCache commonSettingsCache;
   private final CacheableExchangeRateService cacheableExchangeRateService;
 
   public CompositeOrderTotalFieldsPopulateService(TransactionService transactionService, InvoiceService invoiceService,
-      InvoiceLineService invoiceLineService, FiscalYearService fiscalYearService,
-      ConfigurationEntriesCache configurationEntriesCache, CacheableExchangeRateService cacheableExchangeRateService) {
+                                                  InvoiceLineService invoiceLineService, FiscalYearService fiscalYearService,
+                                                  CommonSettingsCache commonSettingsCache, CacheableExchangeRateService cacheableExchangeRateService) {
     this.transactionService = transactionService;
     this.invoiceService = invoiceService;
     this.invoiceLineService = invoiceLineService;
     this.fiscalYearService = fiscalYearService;
-    this.configurationEntriesCache = configurationEntriesCache;
+    this.commonSettingsCache = commonSettingsCache;
     this.cacheableExchangeRateService = cacheableExchangeRateService;
   }
 
@@ -119,7 +119,7 @@ public class CompositeOrderTotalFieldsPopulateService implements CompositeOrderD
 
   private Future<ExchangeRateMaps> getExchangeRates(List<Invoice> invoices, List<Transaction> transactions,
       RequestContext requestContext) {
-    return configurationEntriesCache.getSystemCurrency(requestContext)
+    return commonSettingsCache.getSystemCurrency(requestContext)
       .compose(systemCurrency -> getInvoiceExchangeRates(invoices, systemCurrency, requestContext)
         .compose(invoiceRates -> getEncumbranceExchangeRates(transactions, systemCurrency,
             requestContext)

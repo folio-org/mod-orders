@@ -22,7 +22,7 @@ import org.folio.rest.acq.model.invoice.InvoiceLine;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.service.caches.ConfigurationEntriesCache;
+import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.exchange.CacheableExchangeRateService;
 import org.folio.service.finance.FiscalYearService;
 import org.folio.service.finance.transaction.TransactionService;
@@ -53,7 +53,7 @@ public class CompositeOrderTotalFieldsPopulateServiceTest {
   @Mock
   private FiscalYearService fiscalYearService;
   @Mock
-  private ConfigurationEntriesCache configurationEntriesCache;
+  private CommonSettingsCache commonSettingsCache;
   @Mock
   private CacheableExchangeRateService cacheableExchangeRateService;
   @Mock
@@ -67,7 +67,7 @@ public class CompositeOrderTotalFieldsPopulateServiceTest {
   @BeforeEach
   public void initMocks() {
     mockitoMocks = MockitoAnnotations.openMocks(this);
-    conversionHelper = new CurrencyConversionMockHelper(configurationEntriesCache, cacheableExchangeRateService,
+    conversionHelper = new CurrencyConversionMockHelper(commonSettingsCache, cacheableExchangeRateService,
       systemCurrency, requestContext);
   }
 

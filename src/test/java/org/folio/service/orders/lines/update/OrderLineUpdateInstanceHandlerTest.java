@@ -33,9 +33,9 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
 import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.ProtectionService;
-import org.folio.service.caches.ConfigurationEntriesCache;
+import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.caches.InventoryCache;
-import org.folio.service.configuration.ConfigurationEntriesService;
+import org.folio.service.settings.CommonSettingsRetriever;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
 import org.folio.service.consortium.SharingInstanceService;
@@ -259,32 +259,32 @@ public class OrderLineUpdateInstanceHandlerTest {
     }
 
     @Bean
-    ConfigurationEntriesService configurationEntriesService(RestClient restClient) {
-      return new ConfigurationEntriesService(restClient);
+    CommonSettingsRetriever configurationEntriesService(RestClient restClient) {
+      return new CommonSettingsRetriever(restClient);
     }
 
     @Bean
     public InventoryItemManager inventoryItemManager(RestClient restClient,
-                                                     ConfigurationEntriesCache configurationEntriesCache,
+                                                     CommonSettingsCache commonSettingsCache,
                                                      InventoryCache inventoryCache,
                                                      ConsortiumConfigurationService consortiumConfigurationService) {
-      return new InventoryItemManager(restClient, configurationEntriesCache, inventoryCache, consortiumConfigurationService);
+      return new InventoryItemManager(restClient, commonSettingsCache, inventoryCache, consortiumConfigurationService);
     }
 
     @Bean
     public InventoryHoldingManager inventoryHoldingManager(RestClient restClient,
-                                                           ConfigurationEntriesCache configurationEntriesCache,
+                                                           CommonSettingsCache commonSettingsCache,
                                                            InventoryCache inventoryCache) {
-      return new InventoryHoldingManager(restClient, configurationEntriesCache, inventoryCache);
+      return new InventoryHoldingManager(restClient, commonSettingsCache, inventoryCache);
     }
 
     @Bean
     public InventoryInstanceManager inventoryInstanceManager(RestClient restClient,
-                                                             ConfigurationEntriesCache configurationEntriesCache,
+                                                             CommonSettingsCache commonSettingsCache,
                                                              InventoryCache inventoryCache,
                                                              ConsortiumConfigurationService consortiumConfigurationService,
                                                              SharingInstanceService sharingInstanceService) {
-      return new InventoryInstanceManager(restClient, configurationEntriesCache, inventoryCache, sharingInstanceService, consortiumConfigurationService);
+      return new InventoryInstanceManager(restClient, commonSettingsCache, inventoryCache, sharingInstanceService, consortiumConfigurationService);
     }
 
     @Bean
@@ -298,8 +298,8 @@ public class OrderLineUpdateInstanceHandlerTest {
     }
 
     @Bean
-    ConfigurationEntriesCache configurationEntriesCache(ConfigurationEntriesService configurationEntriesService) {
-      return new ConfigurationEntriesCache(configurationEntriesService);
+    CommonSettingsCache configurationEntriesCache(CommonSettingsRetriever commonSettingsRetriever) {
+      return new CommonSettingsCache(commonSettingsRetriever);
     }
 
     @Bean OrderLinePatchOperationService orderLinePatchOperationService(

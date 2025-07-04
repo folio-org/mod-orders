@@ -21,7 +21,7 @@ import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.jaxrs.model.ReceivedItem;
-import org.folio.service.caches.ConfigurationEntriesCache;
+import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.caches.InventoryCache;
 
 import java.util.ArrayList;
@@ -101,30 +101,30 @@ public class InventoryUtils {
 
   private static final List<String> ITEM_STATUSES_FOR_TITLE_DELETE = List.of(ItemStatus.ON_ORDER.value(), ItemStatus.ORDER_CLOSED.value());
 
-  public static Future<String> getLoanTypeId(ConfigurationEntriesCache configurationEntriesCache,
+  public static Future<String> getLoanTypeId(CommonSettingsCache commonSettingsCache,
                                              InventoryCache inventoryCache,
                                              RequestContext requestContext) {
-    return getEntryId(configurationEntriesCache, inventoryCache, LOAN_TYPES, MISSING_LOAN_TYPE, requestContext)
+    return getEntryId(commonSettingsCache, inventoryCache, LOAN_TYPES, MISSING_LOAN_TYPE, requestContext)
       .map(jsonObject -> jsonObject.getString(LOAN_TYPES));
   }
 
-  public static Future<String> getSourceId(ConfigurationEntriesCache configurationEntriesCache,
+  public static Future<String> getSourceId(CommonSettingsCache commonSettingsCache,
                                            InventoryCache inventoryCache,
                                            RequestContext requestContext) {
-    return getEntryId(configurationEntriesCache, inventoryCache, HOLDINGS_SOURCES, MISSING_HOLDINGS_SOURCE_ID, requestContext)
+    return getEntryId(commonSettingsCache, inventoryCache, HOLDINGS_SOURCES, MISSING_HOLDINGS_SOURCE_ID, requestContext)
       .map(jsonObject -> jsonObject.getString(HOLDINGS_SOURCES));
   }
 
-  public static Future<JsonObject> getEntryId(ConfigurationEntriesCache configurationEntriesCache,
+  public static Future<JsonObject> getEntryId(CommonSettingsCache commonSettingsCache,
                                               InventoryCache inventoryCache,
                                               String entryType,
                                               ErrorCodes errorCode,
                                               RequestContext requestContext) {
     Promise<JsonObject> promise = Promise.promise();
-    getEntryTypeValue(configurationEntriesCache, entryType, requestContext)
+    getEntryTypeValue(commonSettingsCache, entryType, requestContext)
       .compose(entryTypeValue -> inventoryCache.getEntryId(entryType, entryTypeValue, requestContext))
       .onSuccess(promise::complete)
-      .onFailure(t -> getEntryTypeValue(configurationEntriesCache, entryType, requestContext)
+      .onFailure(t -> getEntryTypeValue(commonSettingsCache, entryType, requestContext)
         .onComplete(result -> {
           if (result.succeeded()) {
             promise.fail(new HttpException(500, buildErrorWithParameter(result.result(), errorCode)));
@@ -137,10 +137,10 @@ public class InventoryUtils {
     return promise.future();
   }
 
-  private static Future<String> getEntryTypeValue(ConfigurationEntriesCache configurationEntriesCache,
+  private static Future<String> getEntryTypeValue(CommonSettingsCache commonSettingsCache,
                                                   String entryType,
                                                   RequestContext requestContext) {
-    return configurationEntriesCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
+    return commonSettingsCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
       .map(configs -> switch (entryType) {
         case HOLDINGS_SOURCES -> configs.getString(CONFIG_NAME_HOLDINGS_SOURCE_NAME, DEFAULT_HOLDINGS_SOURCE_NAME);
         case INSTANCE_TYPES -> configs.getString(CONFIG_NAME_INSTANCE_TYPE_CODE, DEFAULT_INSTANCE_TYPE_CODE);

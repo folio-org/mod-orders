@@ -38,7 +38,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.ProtectionService;
-import org.folio.service.configuration.ConfigurationEntriesService;
+import org.folio.service.settings.CommonSettingsRetriever;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
@@ -178,8 +178,8 @@ public class OpenCompositeOrderManagerTest {
   private static class ContextConfiguration {
 
     @Bean
-    public ConfigurationEntriesService configurationEntriesService() {
-      return mock(ConfigurationEntriesService.class);
+    public CommonSettingsRetriever configurationEntriesService() {
+      return mock(CommonSettingsRetriever.class);
     }
 
     @Bean TitlesService titlesService() {

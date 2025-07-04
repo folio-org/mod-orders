@@ -1,0 +1,156 @@
+package org.folio.service.settings;
+
+import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
+import org.folio.CopilotGenerated;
+import org.folio.orders.utils.ResourcePathResolver;
+import org.folio.rest.acq.model.settings.CommonSetting;
+import org.folio.rest.acq.model.settings.CommonSettingsCollection;
+import org.folio.rest.acq.model.settings.Value;
+import org.folio.rest.core.RestClient;
+import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
+import org.folio.rest.jaxrs.model.Config;
+import org.folio.rest.jaxrs.model.Configs;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.List;
+
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.when;
+
+@CopilotGenerated
+@ExtendWith(MockitoExtension.class)
+public class CommonSettingsRetrieverTest {
+
+  @Mock
+  private RequestContext requestContextMock;
+  @Mock
+  private RestClient restClientMock;
+  @InjectMocks
+  private CommonSettingsRetriever commonSettingsRetriever;
+
+  @Test
+  void shouldLoadConfigurationSuccessfully() {
+    RequestEntry requestEntry = new RequestEntry(resourcesPath(ResourcePathResolver.CONFIGURATION_ENTRIES));
+    JsonObject expectedConfig = new JsonObject().put("key", "value");
+    Configs configs = new Configs().withConfigs(List.of(new Config().withConfigName("key").withValue("value")));
+
+    doReturn(Future.succeededFuture(configs))
+      .when(restClientMock).get(eq(requestEntry), eq(Configs.class), any(RequestContext.class));
+
+    Future<JsonObject> result = commonSettingsRetriever.loadConfiguration(requestEntry, requestContextMock);
+
+    assertEquals(expectedConfig, result.result());
+  }
+
+  @Test
+  void shouldReturnDefaultCurrencyWhenLocaleSettingsNotPresent() {
+    RequestEntry requestEntry = new RequestEntry(resourcesPath(ResourcePathResolver.SETTINGS_ENTRIES));
+    CommonSettingsCollection settingsCollection = getLocaleSettings();
+
+    when(restClientMock.get(eq(requestEntry), eq(CommonSettingsCollection.class), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(settingsCollection));
+
+    Future<String> result = commonSettingsRetriever.getSystemCurrency(requestEntry, requestContextMock);
+
+    assertEquals("USD", result.result());
+  }
+
+  @Test
+  void shouldReturnConfiguredCurrency() {
+    RequestEntry requestEntry = new RequestEntry(resourcesPath(ResourcePathResolver.SETTINGS_ENTRIES));
+    CommonSettingsCollection settingsCollection = getLocaleSettings();
+    settingsCollection.getItems().getFirst().getValue().withAdditionalProperty("currency", "EUR");
+
+    when(restClientMock.get(eq(requestEntry), eq(CommonSettingsCollection.class), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(settingsCollection));
+
+    Future<String> result = commonSettingsRetriever.getSystemCurrency(requestEntry, requestContextMock);
+
+    assertEquals("EUR", result.result());
+  }
+
+  @Test
+  void shouldReturnDefaultTimeZoneWhenLocaleSettingsNotPresent() {
+    RequestEntry requestEntry = new RequestEntry(resourcesPath(ResourcePathResolver.SETTINGS_ENTRIES));
+    CommonSettingsCollection settingsCollection = new CommonSettingsCollection();
+
+    when(restClientMock.get(eq(requestEntry), eq(CommonSettingsCollection.class), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(settingsCollection));
+
+    Future<String> result = commonSettingsRetriever.getSystemTimeZone(requestEntry, requestContextMock);
+
+    assertEquals("UTC", result.result());
+  }
+
+  @Test
+  void shouldReturnConfiguredTimeZone() {
+    RequestEntry requestEntry = new RequestEntry(resourcesPath(ResourcePathResolver.SETTINGS_ENTRIES));
+    CommonSettingsCollection settingsCollection = getLocaleSettings();
+    settingsCollection.getItems().getFirst().getValue().withAdditionalProperty("timezone", "PST");
+
+    when(restClientMock.get(eq(requestEntry), eq(CommonSettingsCollection.class), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(settingsCollection));
+
+    Future<String> result = commonSettingsRetriever.getSystemTimeZone(requestEntry, requestContextMock);
+
+    assertEquals("PST", result.result());
+  }
+
+  @Test
+  void shouldFailToLoadConfigurationWhenRestClientFails() {
+    RequestEntry requestEntry = new RequestEntry(resourcesPath(ResourcePathResolver.CONFIGURATION_ENTRIES));
+
+    when(restClientMock.get(eq(requestEntry), eq(Configs.class), any(RequestContext.class)))
+      .thenReturn(Future.failedFuture(new RuntimeException("Service failure")));
+
+    Future<JsonObject> result = commonSettingsRetriever.loadConfiguration(requestEntry, requestContextMock);
+
+    assertTrue(result.failed());
+    assertEquals(RuntimeException.class, result.cause().getClass());
+  }
+
+  @Test
+  void shouldFailToReturnSystemCurrencyWhenRestClientFails() {
+    RequestEntry requestEntry = new RequestEntry(resourcesPath(ResourcePathResolver.SETTINGS_ENTRIES));
+
+    when(restClientMock.get(eq(requestEntry), eq(CommonSettingsCollection.class), any(RequestContext.class)))
+      .thenReturn(Future.failedFuture(new RuntimeException("Service failure")));
+
+    Future<String> result = commonSettingsRetriever.getSystemCurrency(requestEntry, requestContextMock);
+
+    assertTrue(result.failed());
+    assertEquals(RuntimeException.class, result.cause().getClass());
+  }
+
+  @Test
+  void shouldFailToReturnSystemTimeZoneWhenRestClientFails() {
+    RequestEntry requestEntry = new RequestEntry(resourcesPath(ResourcePathResolver.SETTINGS_ENTRIES));
+
+    when(restClientMock.get(eq(requestEntry), eq(CommonSettingsCollection.class), any(RequestContext.class)))
+      .thenReturn(Future.failedFuture(new RuntimeException("Service failure")));
+
+    Future<String> result = commonSettingsRetriever.getSystemTimeZone(requestEntry, requestContextMock);
+
+    assertTrue(result.failed());
+    assertEquals(RuntimeException.class, result.cause().getClass());
+  }
+
+  private static CommonSettingsCollection getLocaleSettings() {
+    return new CommonSettingsCollection().withItems(List.of(new CommonSetting()
+      .withKey(CommonSettingsRetriever.TENANT_LOCALE_SETTINGS).withValue(new Value()
+        .withAdditionalProperty(CommonSettingsRetriever.CURRENCY_KEY, "USD")
+        .withAdditionalProperty(CommonSettingsRetriever.TZ_KEY, "UTC"))));
+  }
+
+}

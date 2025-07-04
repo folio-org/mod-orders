@@ -73,7 +73,7 @@ import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.util.OkapiConnectionParams;
-import org.folio.service.caches.ConfigurationEntriesCache;
+import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.caches.JobExecutionTotalRecordsCache;
 import org.folio.service.caches.JobProfileSnapshotCache;
 import org.folio.service.caches.MappingParametersCache;
@@ -131,7 +131,7 @@ public class CreateOrderEventHandler implements EventHandler {
 
   private final PurchaseOrderHelper purchaseOrderHelper;
   private final PurchaseOrderLineHelper poLineHelper;
-  private final ConfigurationEntriesCache configurationEntriesCache;
+  private final CommonSettingsCache commonSettingsCache;
   private final IdStorageService idStorageService;
   private final JobProfileSnapshotCache jobProfileSnapshotCache;
   private final SequentialOrderIdService sequentialOrderIdService;
@@ -145,7 +145,7 @@ public class CreateOrderEventHandler implements EventHandler {
 
   @Autowired
   public CreateOrderEventHandler(PurchaseOrderHelper purchaseOrderHelper, PurchaseOrderLineHelper poLineHelper,
-                                 ConfigurationEntriesCache configurationEntriesCache, IdStorageService idStorageService,
+                                 CommonSettingsCache commonSettingsCache, IdStorageService idStorageService,
                                  JobProfileSnapshotCache jobProfileSnapshotCache,
                                  SequentialOrderIdService sequentialOrderIdService,
                                  PoLineImportProgressService poLineImportProgressService,
@@ -155,7 +155,7 @@ public class CreateOrderEventHandler implements EventHandler {
                                  OrderValidationService orderValidationService) {
     this.purchaseOrderHelper = purchaseOrderHelper;
     this.poLineHelper = poLineHelper;
-    this.configurationEntriesCache = configurationEntriesCache;
+    this.commonSettingsCache = commonSettingsCache;
     this.idStorageService = idStorageService;
     this.jobProfileSnapshotCache = jobProfileSnapshotCache;
     this.sequentialOrderIdService = sequentialOrderIdService;
@@ -195,7 +195,7 @@ public class CreateOrderEventHandler implements EventHandler {
           Optional<Integer> poLinesLimitOptional = extractPoLinesLimit(dataImportEventPayload);
 
           RequestContext requestContext = new RequestContext(Vertx.currentContext(), okapiHeaders);
-          Future<JsonObject> tenantConfigFuture = configurationEntriesCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
+          Future<JsonObject> tenantConfigFuture = commonSettingsCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
           String temporaryOrderIdForANewOrder = UUID.randomUUID().toString();
 
           tenantConfigFuture

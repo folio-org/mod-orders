@@ -19,7 +19,7 @@ import org.folio.ApiTestSuite;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.service.ProtectionService;
-import org.folio.service.configuration.ConfigurationEntriesService;
+import org.folio.service.settings.CommonSettingsRetriever;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.PurchaseOrderLineService;
@@ -98,8 +98,8 @@ public class PieceServiceTest {
   private static class ContextConfiguration {
 
     @Bean
-    public ConfigurationEntriesService configurationEntriesService() {
-      return mock(ConfigurationEntriesService.class);
+    public CommonSettingsRetriever configurationEntriesService() {
+      return mock(CommonSettingsRetriever.class);
     }
 
     @Bean
