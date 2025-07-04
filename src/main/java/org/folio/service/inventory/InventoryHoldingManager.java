@@ -21,7 +21,7 @@ import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.tools.utils.TenantTool;
-import org.folio.service.caches.ConfigurationEntriesCache;
+import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.caches.InventoryCache;
 
 import java.util.ArrayList;
@@ -59,18 +59,19 @@ public class InventoryHoldingManager {
   public static final String HOLDINGS_LOOKUP_QUERY = "instanceId==%s and permanentLocationId==%s";
 
   private final RestClient restClient;
-  private final ConfigurationEntriesCache configurationEntriesCache;
+  private final CommonSettingsCache commonSettingsCache;
   private final InventoryCache inventoryCache;
 
   public InventoryHoldingManager(RestClient restClient,
-                                 ConfigurationEntriesCache configurationEntriesCache,
+                                 CommonSettingsCache commonSettingsCache,
                                  InventoryCache inventoryCache) {
     this.restClient = restClient;
-    this.configurationEntriesCache = configurationEntriesCache;
+    this.commonSettingsCache = commonSettingsCache;
     this.inventoryCache = inventoryCache;
   }
 
   public Future<String> getOrCreateHoldingsRecord(String instanceId, Location location, RequestContext requestContext) {
+    logger.debug("InventoryHoldingManager.getOrCreateHoldingsRecord instanceId={}", instanceId);
     if (Objects.nonNull(location.getHoldingId())) {
       return getFromCacheOrCreateHolding(location.getHoldingId(), requestContext);
     } else {
@@ -79,6 +80,7 @@ public class InventoryHoldingManager {
   }
 
   public Future<String> getFromCacheOrCreateHolding(String holdingId, RequestContext requestContext) {
+    logger.debug("InventoryHoldingManager.getFromCacheOrCreateHolding holdingId={}", holdingId);
     Context ctx = requestContext.getContext();
     String tenantId = TenantTool.tenantId(requestContext.getHeaders());
 
@@ -107,6 +109,7 @@ public class InventoryHoldingManager {
   }
 
   public Future<JsonObject> getOrCreateHoldingsJsonRecord(Eresource eresource, String instanceId, Location location, RequestContext requestContext) {
+    logger.debug("InventoryHoldingManager.getOrCreateHoldingsJsonRecord instanceId={}", instanceId);
     if (StringUtils.isNotEmpty(location.getHoldingId())) {
       String holdingId = location.getHoldingId();
       RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT))
@@ -208,7 +211,8 @@ public class InventoryHoldingManager {
   }
 
   private Future<JsonObject> createHolding(String instanceId, String locationId, RequestContext requestContext) {
-    return InventoryUtils.getSourceId(configurationEntriesCache, inventoryCache, requestContext)
+    logger.debug("InventoryHoldingManager.createHolding instanceId={}", instanceId);
+    return InventoryUtils.getSourceId(commonSettingsCache, inventoryCache, requestContext)
       .map(sourceId -> {
         JsonObject holdingsRecJson = new JsonObject();
         holdingsRecJson.put(HOLDING_INSTANCE_ID, instanceId);
@@ -220,10 +224,13 @@ public class InventoryHoldingManager {
       .compose(holdingsRecJson -> {
         RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS));
         return restClient.postJsonObject(requestEntry, holdingsRecJson, requestContext);
-      });
+      })
+      .onSuccess(holding -> logger.info("createHolding:: Created holding with id {}", holding.getString(ID)))
+      .onFailure(t -> logger.error("createHolding:: Failed to create holding", t));
   }
 
   public Future<String> createHoldingAndReturnId(String instanceId, String locationId, RequestContext requestContext) {
+    logger.debug("InventoryHoldingManager.createHoldingAndReturnId instanceId={}", instanceId);
     return createHolding(instanceId, locationId, requestContext)
       .map(holding -> holding.getString(ID));
   }

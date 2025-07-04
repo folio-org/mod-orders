@@ -38,6 +38,7 @@ public final class TestConstants {
   public static final String PO_ID_PENDING_STATUS_WITH_PO_LINES = "e5ae4afd-3fa9-494e-a972-f541df9b877e";
   public static final String PO_ID_PENDING_STATUS_WITHOUT_PO_LINES = "50fb922c-3fa9-494e-a972-f2801f1b9fd1";
   public static final String PO_ID_OPEN_STATUS = "c1465131-ed35-4308-872c-d7cdf0afc5f7";
+  public static final String PO_ID_OPEN_STATUS_CONDITIONAL_PROTECTED_FIELDS = "c1465131-ed35-4308-872c-d7cdf0afc5f8";
   public static final String PO_WFD_ID_OPEN_STATUS = "a1465131-ed35-4308-872c-d7cdf0afc5f7";
   public static final String PO_ID_CLOSED_STATUS = "07f65192-44a4-483d-97aa-b137bbd96390";
   public static final String PO_CLOSED_STATUS_WITH_ONGOING = "07f65192-44a4-483d-97aa-b137bbd96392";

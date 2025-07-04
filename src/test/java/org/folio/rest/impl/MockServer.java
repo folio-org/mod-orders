@@ -59,6 +59,7 @@ import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHI
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITION_METHODS;
 import static org.folio.orders.utils.ResourcePathResolver.BUDGETS;
+import static org.folio.orders.utils.ResourcePathResolver.CONFIGURATION_ENTRIES;
 import static org.folio.orders.utils.ResourcePathResolver.CURRENT_BUDGET;
 import static org.folio.orders.utils.ResourcePathResolver.DATA_EXPORT_SPRING_CREATE_JOB;
 import static org.folio.orders.utils.ResourcePathResolver.DATA_EXPORT_SPRING_EXECUTE_JOB;
@@ -84,6 +85,7 @@ import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE
 import static org.folio.orders.utils.ResourcePathResolver.REASONS_FOR_CLOSURE;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
 import static org.folio.orders.utils.ResourcePathResolver.ROUTING_LISTS;
+import static org.folio.orders.utils.ResourcePathResolver.SETTINGS_ENTRIES;
 import static org.folio.orders.utils.ResourcePathResolver.SUFFIXES;
 import static org.folio.orders.utils.ResourcePathResolver.TAGS;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
@@ -145,6 +147,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -239,6 +242,7 @@ public class MockServer {
   public static final String BASE_MOCK_DATA_PATH = "mockdata/";
   private static final String CONTRIBUTOR_NAME_TYPES_PATH = BASE_MOCK_DATA_PATH + "contributorNameTypes/contributorPersonalNameType.json";
   public static final String CONFIG_MOCK_PATH = BASE_MOCK_DATA_PATH + "configurations.entries/%s.json";
+  public static final String SETTINGS_MOCK_PATH = BASE_MOCK_DATA_PATH + "settings.entries/%s.json";
   public static final String LOAN_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "loanTypes/";
   public static final String LEDGER_FY_ROLLOVERS_PATH = BASE_MOCK_DATA_PATH + "ledgerFyRollovers/";
   public static final String LEDGER_FY_ROLLOVERS_ERRORS_PATH = BASE_MOCK_DATA_PATH + "ledgerFyRolloverErrors/";
@@ -680,6 +684,8 @@ public class MockServer {
     router.get("/material-types").handler(ctx -> handleGetJsonResource(ctx, MOCK_DATA_MATERIAL_TYPES_JSON));
     router.get(resourcesPath(WRAPPER_PIECES_STORAGE)).handler(ctx -> handleGetJsonResource(ctx, MOCK_DATA_WRAPPER_PIECES_JSON));
     router.get(resourcesPath(WRAPPER_PIECES_STORAGE) + "/:id").handler(ctx -> handleGetJsonResource(ctx, MOCK_DATA_WRAPPER_PIECES_BY_ID_JSON));
+    router.get(resourcesPath(CONFIGURATION_ENTRIES)).handler(this::handleConfigurationModuleResponse);
+    router.get(resourcesPath(SETTINGS_ENTRIES)).handler(this::handleSettingsModuleResponse);
     // PUT
     router.put(resourcePath(PURCHASE_ORDER_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER_STORAGE));
     router.put(resourcePath(PO_LINES_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES_STORAGE));
@@ -711,7 +717,7 @@ public class MockServer {
     router.delete(resourcePath(PREFIXES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PREFIXES));
     router.delete(resourcePath(SUFFIXES)).handler(ctx -> handleDeleteGenericSubObj(ctx, SUFFIXES));
     router.delete("/inventory/items/:id").handler(ctx -> handleDeleteGenericSubObj(ctx, ITEM_RECORDS));
-    router.get("/configurations/entries").handler(this::handleConfigurationModuleResponse);
+    // PATCH
     router.patch(resourcePath(PO_LINES_STORAGE)).handler(this::handlePatchOrderLines);
     return router;
   }
@@ -1634,6 +1640,14 @@ public class MockServer {
     }
   }
 
+  private void handleSettingsModuleResponse(RoutingContext ctx) {
+    try {
+      serverResponse(ctx, 200, APPLICATION_JSON, getMockData(SETTINGS_MOCK_PATH.formatted(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10.getValue())));
+    } catch (IOException e) {
+      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
+    }
+  }
+
   private void handleDeleteGenericSubObj(RoutingContext ctx, String subObj) {
     String id = ctx.request().getParam(ID);
     String tenant = ctx.request().getHeader(OKAPI_HEADER_TENANT);
@@ -1929,7 +1943,9 @@ public class MockServer {
         try {
           List<Piece> piecesList = getMockEntries(PIECES_STORAGE, Piece.class).get();
           if (!isClaimingTenant) {
-            pieces = new PieceCollection().withPieces(piecesList);
+            pieces = requestQuery != null && requestQuery.contains("poLineId") && requestQuery.contains("receivingStatus")
+              ? getPiecesByPolAndStatus(requestQuery, polId -> piecesList.stream().filter(piece -> piece.getPoLineId().equals(polId)).collect(Collectors.toList()))
+              : new PieceCollection().withPieces(piecesList);
           } else {
             pieces = new PieceCollection().withPieces(piecesList.stream().filter(piece -> piece.getReceivingStatus() == LATE).toList());
           }
@@ -1940,31 +1956,14 @@ public class MockServer {
       } else {
         try {
           if (requestQuery.contains("poLineId==")) {
-            logger.info("handleGetPieces (by poLineId)");
-            List<String> conditions = StreamEx
-              .split(requestQuery, " or ")
-              .flatMap(s -> StreamEx.split(s, " and "))
-              .toList();
-
-            String polId = EMPTY;
-            String status = EMPTY;
-            for (String condition : conditions) {
-              if (condition.startsWith("poLineId")) {
-                polId = condition.split("poLineId==")[1];
-              } else if (condition.startsWith("receivingStatus")) {
-                status = condition.split("receivingStatus==")[1];
+            pieces = getPiecesByPolAndStatus(requestQuery, polId -> {
+              try {
+                String path = PIECE_RECORDS_MOCK_DATA_PATH + String.format("pieceRecords-%s.json", polId);
+                return new JsonObject(getMockData(path)).mapTo(PieceCollection.class).getPieces();
+              } catch (IOException e) {
+                throw new RuntimeException(e);
               }
-            }
-            logger.info("poLineId: {}", polId);
-            logger.info("receivingStatus: {}", status);
-
-            String path = PIECE_RECORDS_MOCK_DATA_PATH + String.format("pieceRecords-%s.json", polId);
-            pieces = new JsonObject(getMockData(path)).mapTo(PieceCollection.class);
-            // Filter piece records by receiving status
-            if (StringUtils.isNotEmpty(status)) {
-              Piece.ReceivingStatus receivingStatus = Piece.ReceivingStatus.fromValue(status);
-              pieces.getPieces().removeIf(piece -> receivingStatus != piece.getReceivingStatus());
-            }
+            });
           } else if (requestQuery.contains("id==")) {
             logger.info("handleGetPieces (by id)");
             pieces = new JsonObject(getMockData(PIECES_COLLECTION)).mapTo(PieceCollection.class);
@@ -1986,7 +1985,7 @@ public class MockServer {
 
           pieces.setTotalRecords(pieces.getPieces().size());
         } catch (Exception e) {
-          logger.info("handleGetPieces (with empty piece collection on exception)");
+          logger.info("handleGetPieces (with empty piece collection on exception)", e);
           pieces = new PieceCollection();
           pieces.setTotalRecords(0);
         }
@@ -2001,6 +2000,43 @@ public class MockServer {
         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
         .end(data.encodePrettily());
     }
+  }
+
+  private PieceCollection getPiecesByPolAndStatus(String requestQuery, Function<String, List<Piece>> piecesGetter) {
+    logger.info("handleGetPieces (by poLineId)");
+
+    var pieces = new PieceCollection();
+    List<String> conditions = StreamEx
+      .split(requestQuery, " or ")
+      .flatMap(s -> StreamEx.split(s, " and "))
+      .toList();
+
+    String polId = EMPTY;
+    String status = EMPTY;
+    String statusNot = EMPTY;
+    for (String condition : conditions) {
+      if (condition.startsWith("poLineId")) {
+        polId = condition.split("poLineId==")[1];
+      } else if (condition.startsWith("receivingStatus==")) {
+        status = condition.split("receivingStatus==")[1];
+      } else if (condition.startsWith("receivingStatus<>")) {
+        statusNot = condition.split("receivingStatus<>")[1];
+      }
+    }
+    logger.info("poLineId: {}", polId);
+    logger.info("receivingStatus: {}", status);
+
+    pieces.setPieces(piecesGetter.apply(polId));
+    // Filter piece records by receiving status
+    if (StringUtils.isNotEmpty(status)) {
+      Piece.ReceivingStatus receivingStatus = Piece.ReceivingStatus.fromValue(status);
+      pieces.getPieces().removeIf(piece -> receivingStatus != piece.getReceivingStatus());
+    } else if (statusNot.equals(Piece.ReceivingStatus.RECEIVED.value())) {
+      Piece.ReceivingStatus receivingStatus = Piece.ReceivingStatus.RECEIVED;
+      pieces.getPieces().removeIf(piece -> receivingStatus == piece.getReceivingStatus());
+    }
+
+    return pieces.withTotalRecords(pieces.getPieces().size());
   }
 
   private void handleGetTitles(RoutingContext ctx) {

@@ -8,7 +8,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Ongoing;
-import org.folio.service.caches.ConfigurationEntriesCache;
+import org.folio.service.caches.CommonSettingsCache;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -44,7 +44,7 @@ public class OrderValidationServiceTest {
   @Mock
   private PurchaseOrderLineService purchaseOrderLineService;
   @Mock
-  private ConfigurationEntriesCache configurationEntriesCache;
+  private CommonSettingsCache commonSettingsCache;
   @Mock
   private RequestContext requestContext;
   private AutoCloseable mockitoMocks;
@@ -115,7 +115,7 @@ public class OrderValidationServiceTest {
     compPO.setOngoing(new Ongoing());
 
     doReturn(succeededFuture(tenantConfig))
-      .when(configurationEntriesCache).loadConfiguration(eq(ORDER_CONFIG_MODULE_NAME), eq(requestContext));
+      .when(commonSettingsCache).loadConfiguration(eq(ORDER_CONFIG_MODULE_NAME), eq(requestContext));
 
     // When
     Future<List<Error>> future = orderValidationService.validateOrderForPut(compPO.getId(), compPO, requestContext);
@@ -138,7 +138,7 @@ public class OrderValidationServiceTest {
     compPO.setOrderType(ONGOING);
 
     doReturn(succeededFuture(tenantConfig))
-      .when(configurationEntriesCache).loadConfiguration(eq(ORDER_CONFIG_MODULE_NAME), eq(requestContext));
+      .when(commonSettingsCache).loadConfiguration(eq(ORDER_CONFIG_MODULE_NAME), eq(requestContext));
 
     // When
     Future<List<Error>> future = orderValidationService.validateOrderForPut(compPO.getId(), compPO, requestContext);

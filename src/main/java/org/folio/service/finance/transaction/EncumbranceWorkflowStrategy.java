@@ -15,7 +15,9 @@ public interface EncumbranceWorkflowStrategy {
       CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage, RequestContext requestContext) {
     return Future.succeededFuture();
   }
+
   Future<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
     RequestContext requestContext);
+
   OrderWorkflowType getStrategyName();
 }

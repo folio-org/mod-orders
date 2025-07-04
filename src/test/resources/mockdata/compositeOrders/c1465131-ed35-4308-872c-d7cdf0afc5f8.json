@@ -1,0 +1,48 @@
+{
+  "id": "c1465131-ed35-4308-872c-d7cdf0afc5f8",
+  "approved": false,
+  "notes": [],
+  "manualPo": false,
+  "poNumber": "268s870",
+  "orderType": "One-Time",
+  "reEncumber": false,
+  "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
+  "workflowStatus": "Open",
+  "poLines": [
+    {
+      "id": "ed97366a-7f11-4bdc-bc2d-cedc496e2a6f",
+      "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
+      "checkinItems": true,
+      "collection" : false,
+      "description": "ABCDEFGH",
+      "details": {
+        "productIds": [
+          {
+            "productId": "9781118416068",
+            "productIdType": "8261054f-be78-422d-bd51-4ed9f33c3422"
+          }
+        ]
+      },
+      "eresource":{
+        "createInventory": "None"
+      },
+      "poLineDescription": "PO Line description",
+      "poLineNumber": "268s870-1",
+      "orderFormat": "Electronic Resource",
+      "cost":{
+        "listUnitPriceElectronic": 0,
+        "currency" : "USD",
+        "quantityElectronic":1
+      },
+      "purchaseOrderId": "c1465131-ed35-4308-872c-d7cdf0afc5f8",
+      "rush" : false,
+      "source": "User",
+      "titleOrPackage": "Kayak Fishing in the Northern Gulf Coast",
+      "isPackage": false
+    }
+  ],
+  "metadata": {
+    "createdDate": "2014-07-06T00:00:00.000",
+    "createdByUserId": "28d10cfc-d137-11e8-a8d5-f2801f1b9fd1"
+  }
+}

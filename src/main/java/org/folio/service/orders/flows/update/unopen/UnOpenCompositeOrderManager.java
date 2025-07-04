@@ -149,7 +149,7 @@ public class UnOpenCompositeOrderManager {
    * deleteHoldings == true && workflow independent => delete holdings
    * deleteHoldings == false && workflow independent => do nothing
    *
-   * @param poLine        the purchase order
+   * @param poLine         the purchase order
    * @param deleteHoldings delete holdings flag
    * @param requestContext the request context
    * @return future with void
@@ -169,17 +169,24 @@ public class UnOpenCompositeOrderManager {
     }
     if (PoLineCommonUtil.isItemsUpdateRequired(poLine)) {
       if (poLine.getCheckinItems()) { // independent workflow
-        return (deleteHoldings) ? processInventoryOnlyWithHolding(poLine, requestContext) : Future.succeededFuture();
+        return (deleteHoldings)
+          ? processInventoryOnlyWithHolding(poLine, requestContext)
+          : Future.succeededFuture();
       } else { // synchronized workflow
-        return (deleteHoldings) ? processInventoryHoldingWithItems(poLine, requestContext) : processInventoryOnlyWithItems(poLine, requestContext);
+        return (deleteHoldings)
+          ? processInventoryHoldingWithItems(poLine, requestContext)
+          : processInventoryOnlyWithItems(poLine, requestContext);
       }
     }
     if (PoLineCommonUtil.isHoldingsUpdateRequired(poLine)) {
       if (poLine.getCheckinItems()) { // independent workflow
-        return (deleteHoldings) ? processInventoryOnlyWithHolding(poLine, requestContext) : Future.succeededFuture();
+        return (deleteHoldings)
+          ? processInventoryOnlyWithHolding(poLine, requestContext)
+          : Future.succeededFuture();
       } else { // synchronized workflow
-        return (deleteHoldings) ? processInventoryOnlyWithHolding(poLine, requestContext) :
-          deleteExpectedPieces(poLine, requestContext).mapEmpty();
+        return (deleteHoldings)
+          ? processInventoryOnlyWithHolding(poLine, requestContext)
+          : deleteExpectedPieces(poLine, requestContext).mapEmpty();
       }
     }
 

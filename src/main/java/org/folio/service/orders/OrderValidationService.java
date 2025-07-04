@@ -23,7 +23,7 @@ import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.service.PrefixService;
 import org.folio.service.ProtectionService;
 import org.folio.service.SuffixService;
-import org.folio.service.caches.ConfigurationEntriesCache;
+import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.orders.flows.update.unopen.UnOpenCompositeOrderManager;
 import org.folio.service.organization.OrganizationService;
 
@@ -62,7 +62,7 @@ public class OrderValidationService {
   private static final Logger logger = LogManager.getLogger();
 
   private final PoLineValidationService poLineValidationService;
-  private final ConfigurationEntriesCache configurationEntriesCache;
+  private final CommonSettingsCache commonSettingsCache;
   private final OrganizationService organizationService;
   private final PoNumberHelper poNumberHelper;
   private final PrefixService prefixService;
@@ -73,13 +73,13 @@ public class OrderValidationService {
   private final UnOpenCompositeOrderManager unOpenCompositeOrderManager;
 
   public OrderValidationService(
-      PoLineValidationService poLineValidationService,
-      ConfigurationEntriesCache configurationEntriesCache, OrganizationService organizationService,
-      ProtectionService protectionService, PrefixService prefixService, PurchaseOrderLineHelper purchaseOrderLineHelper,
-      PurchaseOrderLineService purchaseOrderLineService, SuffixService suffixService, PoNumberHelper poNumberHelper,
-      UnOpenCompositeOrderManager unOpenCompositeOrderManager) {
+    PoLineValidationService poLineValidationService,
+    CommonSettingsCache commonSettingsCache, OrganizationService organizationService,
+    ProtectionService protectionService, PrefixService prefixService, PurchaseOrderLineHelper purchaseOrderLineHelper,
+    PurchaseOrderLineService purchaseOrderLineService, SuffixService suffixService, PoNumberHelper poNumberHelper,
+    UnOpenCompositeOrderManager unOpenCompositeOrderManager) {
     this.poLineValidationService = poLineValidationService;
-    this.configurationEntriesCache = configurationEntriesCache;
+    this.commonSettingsCache = commonSettingsCache;
     this.organizationService = organizationService;
     this.poNumberHelper = poNumberHelper;
     this.prefixService = prefixService;
@@ -171,7 +171,7 @@ public class OrderValidationService {
       });
     }
 
-    return configurationEntriesCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
+    return commonSettingsCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
       .compose(tenantConfig -> validateOrderForPost(compPO, tenantConfig, requestContext))
       .map(errors -> {
         resultErrors.addAll(errors);
@@ -222,7 +222,7 @@ public class OrderValidationService {
    * @param compPO composite purchase order
    */
   public Future<Void> checkOrderApprovalRequired(CompositePurchaseOrder compPO, RequestContext requestContext) {
-    return configurationEntriesCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
+    return commonSettingsCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
       .map(tenantConfig -> {
         boolean isApprovalRequired = isApprovalRequiredConfiguration(tenantConfig);
         if (isApprovalRequired && !compPO.getApproved().equals(Boolean.TRUE)) {
@@ -248,7 +248,7 @@ public class OrderValidationService {
    * @param compPO composite purchase order for checking permissions
    */
   private Future<Void> checkOrderApprovalPermissions(CompositePurchaseOrder compPO, RequestContext requestContext) {
-    return configurationEntriesCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
+    return commonSettingsCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
       .map(tenantConfig -> {
         boolean isApprovalRequired = isApprovalRequiredConfiguration(tenantConfig);
         if (isApprovalRequired && compPO.getApproved()

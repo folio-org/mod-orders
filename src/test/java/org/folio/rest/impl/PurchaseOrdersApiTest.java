@@ -76,6 +76,7 @@ import static org.folio.rest.impl.MockServer.getInstancesSearches;
 import static org.folio.rest.impl.MockServer.getItemUpdates;
 import static org.folio.rest.impl.MockServer.getItemsSearches;
 import static org.folio.rest.impl.MockServer.getLoanTypesSearches;
+import static org.folio.rest.impl.MockServer.getPieceDeletions;
 import static org.folio.rest.impl.MockServer.getPieceSearches;
 import static org.folio.rest.impl.MockServer.getPurchaseOrderUpdates;
 import static org.folio.rest.impl.MockServer.getQueryParams;
@@ -115,7 +116,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
+import io.vertx.core.Vertx;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -152,6 +155,7 @@ import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Physical.CreateInventory;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLine.OrderFormat;
 import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
@@ -179,7 +183,6 @@ import io.restassured.http.Headers;
 import io.restassured.response.Response;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -223,6 +226,7 @@ public class PurchaseOrdersApiTest {
   // API paths
   public static final String COMPOSITE_ORDERS_PATH = "/orders/composite-orders";
   private static final String COMPOSITE_ORDERS_BY_ID_PATH = COMPOSITE_ORDERS_PATH + "/%s";
+  private static final String PIECES_PATH = "/orders/pieces";
 
   static final String LISTED_PRINT_MONOGRAPH_PATH = "po_listed_print_monograph.json";
   static final String LISTED_PRINT_SERIAL_RECEIPT_NOT_REQUIRED_PATH = "po_listed_print_serial_with_receipt_payment_not_required.json";
@@ -284,6 +288,7 @@ public class PurchaseOrdersApiTest {
     okapiHeaders.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
     requestContext = new RequestContext(context, okapiHeaders);
   }
+
   @BeforeAll
   static void before() throws InterruptedException, ExecutionException, TimeoutException {
     if (isVerticleNotDeployed()) {
@@ -2217,11 +2222,24 @@ public class PurchaseOrdersApiTest {
 
     Map<String, Object> allProtectedFieldsModification = new HashMap<>();
 
-    allProtectedFieldsModification.put(COMPOSITE_PO_LINES_PREFIX.concat(POLineFieldNames.CHECKIN_ITEMS.getFieldName()), true);
     allProtectedFieldsModification.put(COMPOSITE_PO_LINES_PREFIX.concat(POLineFieldNames.ACQUISITION_METHOD.getFieldName()),
       TestUtils.DEPOSITORY_METHOD);
     allProtectedFieldsModification.put(COMPOSITE_PO_LINES_PREFIX.concat(POLineFieldNames.ERESOURCE_USER_LIMIT.getFieldName()),
       "100");
+
+    checkPreventProtectedFieldsModificationRule(COMPOSITE_ORDERS_BY_ID_PATH, reqData, allProtectedFieldsModification);
+  }
+
+  @Test
+  void testUpdateOrderWithLineConditionalProtectedFieldsChanging() {
+    logger.info("=== testUpdateOrderWithLineConditionalProtectedFieldsChanging ===");
+
+    JsonObject reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_STATUS_CONDITIONAL_PROTECTED_FIELDS);
+    assertThat(reqData.getString("workflowStatus"), is(CompositePurchaseOrder.WorkflowStatus.OPEN.value()));
+
+    Map<String, Object> allProtectedFieldsModification = new HashMap<>();
+
+    allProtectedFieldsModification.put(COMPOSITE_PO_LINES_PREFIX.concat(POLineFieldNames.CHECKIN_ITEMS.getFieldName()), false);
 
     checkPreventProtectedFieldsModificationRule(COMPOSITE_ORDERS_BY_ID_PATH, reqData, allProtectedFieldsModification);
   }
@@ -2688,6 +2706,7 @@ public class PurchaseOrdersApiTest {
     // Set CreateInventory value to create inventory instances and holdings
     reqData.getPoLines().get(0).getEresource().setCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
     reqData.getPoLines().get(0).setReceiptStatus(ReceiptStatus.RECEIPT_NOT_REQUIRED);
+    reqData.getPoLines().get(0).setCheckinItems(true);
 
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
@@ -2733,6 +2752,7 @@ public class PurchaseOrdersApiTest {
     reqData.getPoLines().get(0).getPhysical().setCreateInventory(Physical.CreateInventory.NONE);
     reqData.getPoLines().get(0).getEresource().setCreateInventory(Eresource.CreateInventory.NONE);
     reqData.getPoLines().get(0).setReceiptStatus(ReceiptStatus.RECEIPT_NOT_REQUIRED);
+    reqData.getPoLines().get(0).setCheckinItems(true);
 
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
@@ -2991,6 +3011,35 @@ public class PurchaseOrdersApiTest {
     });
   }
 
+  @Test
+  void testOpenAndUnopenSynchronizedOrderDeletesNonReceivedPieces() throws Exception {
+    logger.info("=== testOpenAndUnopenSynchronizedOrderDeletedNonReceivedPieces ===");
+    var order = new JsonObject(getMockData(MINIMAL_ORDER_PATH)).mapTo(CompositePurchaseOrder.class)
+      .withId(UUID.randomUUID().toString())
+      .withWorkflowStatus(WorkflowStatus.OPEN);
+    var pol = order.getPoLines().getFirst()
+      .withId(UUID.randomUUID().toString());
+
+    // Create order
+    addMockEntry(PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(order));
+    addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(pol));
+    preparePiecesForCompositePo(order);
+    assertThat(getPiecesByLineId(pol.getId()), hasSize(2));
+
+    // Add received piece
+    addMockEntry(PIECES_STORAGE, new Piece().withId(UUID.randomUUID().toString()).withPoLineId(pol.getId())
+      .withLocationId(pol.getLocations().getFirst().getLocationId()).withFormat(OTHER)
+      .withReceivingStatus(Piece.ReceivingStatus.RECEIVED).withTitleId(SAMPLE_TITLE_ID));
+    assertThat(getPiecesByLineId(pol.getId()), hasSize(3));
+
+    // Unopen order
+    order.setWorkflowStatus(WorkflowStatus.PENDING);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, order.getId()), JsonObject.mapFrom(order).toString(),
+      prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT, X_OKAPI_USER_ID, UNOPEN_PERMISSIONS_HEADER),"", 204);
+
+    assertThat(getPieceDeletions(), hasSize(2));
+  }
+
   private CompositePurchaseOrder prepareCompositeOrderOpenRequest(CompositePurchaseOrder po) {
     CompositePurchaseOrder compositeOrderPutRequest = new CompositePurchaseOrder();
     compositeOrderPutRequest.setId(ORDER_WITHOUT_MATERIAL_TYPES_ID);
@@ -3021,11 +3070,19 @@ public class PurchaseOrdersApiTest {
 
     return order;
   }
+
   private static JsonObject getMockOrderWithStatusPaymentNotRequired() throws Exception {
     JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_RECEIPT_NOT_REQUIRED_PATH));
     order.put("workflowStatus", "Pending");
 
     return order;
+  }
+
+  private static List<Piece> getPiecesByLineId(String poLineId) {
+    var pieces = verifySuccessGet(PIECES_PATH, PieceCollection.class);
+    return pieces.getPieces().stream()
+      .filter(piece -> poLineId.equals(piece.getPoLineId()))
+      .collect(Collectors.toList());
   }
 
   private void preparePiecesForCompositePo(CompositePurchaseOrder reqData) {
@@ -3035,7 +3092,8 @@ public class PurchaseOrdersApiTest {
           .withTitle(poLine.getTitleOrPackage()).withPoLineId(poLine.getId());
         addMockEntry(TITLES, JsonObject.mapFrom(title));
         addMockEntry(PIECES_STORAGE,
-          new Piece().withPoLineId(poLine.getId())
+          new Piece().withId(UUID.randomUUID().toString())
+            .withPoLineId(poLine.getId())
             .withLocationId(location.getLocationId()).withFormat(OTHER)
             .withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
             .withTitleId(title.getId()));

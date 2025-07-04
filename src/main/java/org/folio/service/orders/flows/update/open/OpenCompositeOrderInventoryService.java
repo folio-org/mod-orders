@@ -50,6 +50,7 @@ public class OpenCompositeOrderInventoryService {
 
   public Future<Void> processInventory(Map<String, List<Title>> lineIdsTitles, CompositePurchaseOrder compPO,
       boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+    logger.debug("OpenCompositeOrderInventoryService.processInventory compPO.id={}", compPO.getId());
     Semaphore semaphore = new Semaphore(SEMAPHORE_MAX_ACTIVE_THREADS, requestContext.getContext().owner());
     if (CollectionUtils.isEmpty(compPO.getPoLines())) {
       return Future.succeededFuture();

@@ -24,7 +24,7 @@ import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.ReceivedItem;
 import org.folio.rest.tools.utils.TenantTool;
-import org.folio.service.caches.ConfigurationEntriesCache;
+import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.caches.InventoryCache;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 
@@ -73,16 +73,16 @@ public class InventoryItemManager {
   private static final String BUILDING_PIECE_MESSAGE = "Building {} {} piece(s) for PO Line with id={}";
 
   private final RestClient restClient;
-  private final ConfigurationEntriesCache configurationEntriesCache;
+  private final CommonSettingsCache commonSettingsCache;
   private final InventoryCache inventoryCache;
   private final ConsortiumConfigurationService consortiumConfigurationService;
 
   public InventoryItemManager(RestClient restClient,
-                              ConfigurationEntriesCache configurationEntriesCache,
+                              CommonSettingsCache commonSettingsCache,
                               InventoryCache inventoryCache,
                               ConsortiumConfigurationService consortiumConfigurationService) {
     this.restClient = restClient;
-    this.configurationEntriesCache = configurationEntriesCache;
+    this.commonSettingsCache = commonSettingsCache;
     this.inventoryCache = inventoryCache;
     this.consortiumConfigurationService = consortiumConfigurationService;
   }
@@ -399,7 +399,7 @@ public class InventoryItemManager {
     } else {
       itemStatus = ReceivedItem.ItemStatus.ON_ORDER.value();
     }
-    return InventoryUtils.getLoanTypeId(configurationEntriesCache, inventoryCache, requestContext)
+    return InventoryUtils.getLoanTypeId(commonSettingsCache, inventoryCache, requestContext)
       .map(loanTypeId -> {
         JsonObject itemRecord = new JsonObject();
         itemRecord.put(ITEM_HOLDINGS_RECORD_ID, holdingId);

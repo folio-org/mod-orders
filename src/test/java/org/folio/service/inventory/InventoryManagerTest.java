@@ -82,9 +82,9 @@ import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Title;
-import org.folio.service.caches.ConfigurationEntriesCache;
+import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.caches.InventoryCache;
-import org.folio.service.configuration.ConfigurationEntriesService;
+import org.folio.service.settings.CommonSettingsRetriever;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.consortium.SharingInstanceService;
 import org.folio.utils.RequestContextMatcher;
@@ -134,7 +134,7 @@ public class InventoryManagerTest {
   @Autowired
   private RestClient restClient;
   @Autowired
-  private ConfigurationEntriesCache configurationEntriesCache;
+  private CommonSettingsCache commonSettingsCache;
   @Autowired
   private InventoryCache inventoryCache;
   @Autowired
@@ -142,15 +142,12 @@ public class InventoryManagerTest {
   @Autowired
   private ConsortiumConfigurationService consortiumConfigurationService;
 
-
-  private Map<String, String> okapiHeadersMock;
-  private Context ctxMock;
   private RequestContext requestContext;
   private static boolean runningOnOwn;
-  private AutoCloseable mockitoClosable;
+  private AutoCloseable openMocks;
 
   @BeforeAll
-  public static void before() throws InterruptedException, ExecutionException, TimeoutException {
+  static void before() throws InterruptedException, ExecutionException, TimeoutException {
     if (isVerticleNotDeployed()) {
       ApiTestSuite.before();
       runningOnOwn = true;
@@ -159,7 +156,7 @@ public class InventoryManagerTest {
   }
 
   @AfterAll
-  public static void after() {
+  static void after() {
     clearVertxContext();
     if (runningOnOwn) {
       ApiTestSuite.after();
@@ -168,10 +165,10 @@ public class InventoryManagerTest {
 
   @BeforeEach
   void beforeEach() {
-    mockitoClosable = MockitoAnnotations.openMocks(this);
+    openMocks = MockitoAnnotations.openMocks(this);
     autowireDependencies(this);
-    ctxMock = getFirstContextFromVertx(getVertx());
-    okapiHeadersMock = new HashMap<>();
+    Context ctxMock = getFirstContextFromVertx(getVertx());
+    Map<String, String> okapiHeadersMock = new HashMap<>();
     okapiHeadersMock.put(OKAPI_URL, "http://localhost:" + mockPort);
     okapiHeadersMock.put(X_OKAPI_TOKEN.getName(), X_OKAPI_TOKEN.getValue());
     okapiHeadersMock.put(X_OKAPI_TENANT.getName(), X_OKAPI_TENANT.getValue());
@@ -182,7 +179,9 @@ public class InventoryManagerTest {
 
   @AfterEach
   void resetMocks() throws Exception {
-    mockitoClosable.close();
+    if (openMocks != null) {
+      openMocks.close();
+    }
     Mockito.reset(restClient, sharingInstanceService);
     clearServiceInteractions();
   }
@@ -194,7 +193,7 @@ public class InventoryManagerTest {
        .map(o -> ((JsonObject) o))
        .toList();
 
-    List<String> holdingIds = holdings.stream().map(holding ->  holding.getString(ID)).collect(toList());
+    List<String> holdingIds = holdings.stream().map(holding ->  holding.getString(ID)).toList();
 
     doReturn(succeededFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
     var future = inventoryHoldingManager.getHoldingsByIds(holdingIds, requestContext);
@@ -239,7 +238,7 @@ public class InventoryManagerTest {
       .map(o -> ((JsonObject) o))
       .toList();
 
-    List<String> locationIds = holdings.stream().map(holding ->  holding.getString(HOLDING_PERMANENT_LOCATION_ID)).collect(toList());
+    List<String> locationIds = holdings.stream().map(holding ->  holding.getString(HOLDING_PERMANENT_LOCATION_ID)).toList();
 
     doReturn(succeededFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
     List<JsonObject> actHoldings = inventoryHoldingManager.getHoldingRecords(instanceId, locationIds, requestContext).result();
@@ -258,7 +257,7 @@ public class InventoryManagerTest {
     List<String> locationIds = holdings.stream().map(holding ->  holding.getString(HOLDING_PERMANENT_LOCATION_ID)).toList();
 
     doReturn(succeededFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
-    inventoryHoldingManager.getFirstHoldingRecord(instanceId, locationIds.get(0), requestContext).result();
+    inventoryHoldingManager.getFirstHoldingRecord(instanceId, locationIds.getFirst(), requestContext).result();
     verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
   }
 
@@ -320,7 +319,7 @@ public class InventoryManagerTest {
     reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
     reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
     reqData.getEresource().setCreateInventory(INSTANCE_HOLDING);
-    reqData.getLocations().get(0).setLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
+    reqData.getLocations().getFirst().setLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
     reqData.setCheckinItems(true);
 
     //When
@@ -341,7 +340,7 @@ public class InventoryManagerTest {
     JsonObject statuseJSON = new JsonObject("{\"instanceTypes\":\"30fffe0e-e985-4144-b2e2-1e8179bdb41f\"" +
       ",\"instanceStatuses\":\"daf2681c-25af-4202-a3fa-e58fdf806183\"}");
     //When
-    inventoryInstanceManager.buildInstanceRecordJsonObject(title, statuseJSON);
+    inventoryInstanceManager.buildInstanceRecordJsonObject(title, false, statuseJSON);
     //Then
     verify(title).getContributors();
     verify(title, times(1)).getPublishedDate();
@@ -362,7 +361,7 @@ public class InventoryManagerTest {
     JsonObject statuseJSON = new JsonObject("{\"instanceTypes\":\"30fffe0e-e985-4144-b2e2-1e8179bdb41f\"" +
       ",\"instanceStatuses\":\"daf2681c-25af-4202-a3fa-e58fdf806183\"}");
     //When
-    inventoryInstanceManager.buildInstanceRecordJsonObject(title, statuseJSON);
+    inventoryInstanceManager.buildInstanceRecordJsonObject(title, false, statuseJSON);
     //Then
     verify(title).getContributors();
     verify(title, times(2)).getPublishedDate();
@@ -383,7 +382,7 @@ public class InventoryManagerTest {
     JsonObject statuseJSON = new JsonObject("{\"instanceTypes\":\"30fffe0e-e985-4144-b2e2-1e8179bdb41f\"" +
       ",\"instanceStatuses\":\"daf2681c-25af-4202-a3fa-e58fdf806183\"}");
     //When
-    inventoryInstanceManager.buildInstanceRecordJsonObject(title, statuseJSON);
+    inventoryInstanceManager.buildInstanceRecordJsonObject(title, false, statuseJSON);
     //Then
     verify(title).getContributors();
     verify(title, times(1)).getPublishedDate();
@@ -404,7 +403,7 @@ public class InventoryManagerTest {
     JsonObject statuseJSON = new JsonObject("{\"instanceTypes\":\"30fffe0e-e985-4144-b2e2-1e8179bdb41f\"" +
       ",\"instanceStatuses\":\"daf2681c-25af-4202-a3fa-e58fdf806183\"}");
     //When
-    inventoryInstanceManager.buildInstanceRecordJsonObject(title, statuseJSON);
+    inventoryInstanceManager.buildInstanceRecordJsonObject(title, false, statuseJSON);
     //Then
     verify(title).getContributors();
     verify(title, times(1)).getPublishedDate();
@@ -506,11 +505,11 @@ public class InventoryManagerTest {
   void testShouldCreateInstanceRecordIfInstanceMatchingIsDisabled()  {
     //given
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
-    doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryInstanceManager).createInstanceRecord(any(Title.class), eq(requestContext));
+    doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryInstanceManager).createInstanceRecord(any(Title.class), anyBoolean(), eq(requestContext));
     //When
-    inventoryInstanceManager.getOrCreateInstanceRecord(title, true, requestContext).result();
+    inventoryInstanceManager.getOrCreateInstanceRecord(title, true, false, requestContext).result();
     //Then
-    verify(inventoryInstanceManager, times(1)).createInstanceRecord(any(Title.class), eq(requestContext));
+    verify(inventoryInstanceManager, times(1)).createInstanceRecord(any(Title.class), anyBoolean(), eq(requestContext));
   }
 
   @Test
@@ -519,11 +518,11 @@ public class InventoryManagerTest {
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
     JsonObject instances = new JsonObject(getMockData(INSTANCE_RECORDS_MOCK_DATA_PATH));
     doReturn(succeededFuture(instances)).when(inventoryInstanceManager).searchInstancesByProducts(any(), eq(requestContext));
-    doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryInstanceManager).createInstanceRecord(any(Title.class), eq(requestContext));
+    doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryInstanceManager).createInstanceRecord(any(Title.class), anyBoolean(), eq(requestContext));
     //When
-    inventoryInstanceManager.getOrCreateInstanceRecord(title, false, requestContext).result();
+    inventoryInstanceManager.getOrCreateInstanceRecord(title, false, false, requestContext).result();
     //Then
-    verify(inventoryInstanceManager, times(0)).createInstanceRecord(any(Title.class), eq(requestContext));
+    verify(inventoryInstanceManager, times(0)).createInstanceRecord(any(Title.class), anyBoolean(), eq(requestContext));
     verify(inventoryInstanceManager, times(1)).searchInstancesByProducts(any(), eq(requestContext));
   }
 
@@ -560,14 +559,14 @@ public class InventoryManagerTest {
 
     doReturn(Future.failedFuture(new HttpException(500, "Something went wrong!")))
       .when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), any(JsonObject.class), any(RequestContext.class));
-    doReturn(Future.succeededFuture(new JsonObject())).when(configurationEntriesCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
+    doReturn(Future.succeededFuture(new JsonObject())).when(commonSettingsCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
     doReturn(Future.succeededFuture(new JsonObject())).when(inventoryCache).getEntryId(LOAN_TYPES, DEFAULT_LOAN_TYPE_NAME, requestContext);
 
     Future<List<String>> result = inventoryItemManager.createMissingPhysicalItems(order, line, piece, 1, requestContext);
     HttpException cause = (HttpException) result.cause();
 
     assertEquals(ITEM_CREATION_FAILED.getCode(), cause.getError().getCode());
-    assertEquals("Something went wrong!", cause.getError().getParameters().get(0).getValue());
+    assertEquals("Something went wrong!", cause.getError().getParameters().getFirst().getValue());
   }
 
   @Test
@@ -580,7 +579,7 @@ public class InventoryManagerTest {
 
     doReturn(Future.failedFuture(new HttpException(500, InventoryItemManager.BARCODE_ALREADY_EXIST_ERROR)))
       .when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), any(JsonObject.class), any(RequestContext.class));
-    doReturn(Future.succeededFuture(new JsonObject())).when(configurationEntriesCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
+    doReturn(Future.succeededFuture(new JsonObject())).when(commonSettingsCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
     doReturn(Future.succeededFuture(new JsonObject())).when(inventoryCache).getEntryId(LOAN_TYPES, DEFAULT_LOAN_TYPE_NAME, requestContext);
 
     //When
@@ -603,11 +602,11 @@ public class InventoryManagerTest {
 
     doReturn(Future.succeededFuture(expItemId))
       .when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), eq(itemRecord), any(RequestContext.class));
-    doReturn(Future.succeededFuture(new JsonObject())).when(configurationEntriesCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
+    doReturn(Future.succeededFuture(new JsonObject())).when(commonSettingsCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
     doReturn(Future.succeededFuture(new JsonObject())).when(inventoryCache).getEntryId(LOAN_TYPES, DEFAULT_LOAN_TYPE_NAME, requestContext);
 
     Future<List<String>> result = inventoryItemManager.createMissingPhysicalItems(order, line, piece, 1, requestContext);
-    assertEquals(expItemId, result.result().get(0));
+    assertEquals(expItemId, result.result().getFirst());
   }
 
   @Test
@@ -622,11 +621,11 @@ public class InventoryManagerTest {
 
     doReturn(Future.succeededFuture(expItemId))
       .when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), eq(itemRecord), any(RequestContext.class));
-    doReturn(Future.succeededFuture(new JsonObject())).when(configurationEntriesCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
+    doReturn(Future.succeededFuture(new JsonObject())).when(commonSettingsCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
     doReturn(Future.succeededFuture(new JsonObject())).when(inventoryCache).getEntryId(LOAN_TYPES, DEFAULT_LOAN_TYPE_NAME, requestContext);
 
     Future<List<String>> result = inventoryItemManager.createMissingPhysicalItems(order, line, piece, 1, requestContext);
-    assertEquals(expItemId, result.result().get(0));
+    assertEquals(expItemId, result.result().getFirst());
   }
 
   @Test
@@ -668,7 +667,7 @@ public class InventoryManagerTest {
 
     JsonObject holdingsRecJson = new JsonObject();
     holdingsRecJson.put(HOLDING_INSTANCE_ID, oldInstanceId);
-    holdingsRecJson.put(HOLDING_PERMANENT_LOCATION_ID, locationIds.get(0));
+    holdingsRecJson.put(HOLDING_PERMANENT_LOCATION_ID, locationIds.getFirst());
 
     doReturn(succeededFuture(holdingIdExp)).when(restClient).put(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
 
@@ -692,7 +691,7 @@ public class InventoryManagerTest {
 
     JsonObject holdingsRecJson = new JsonObject();
     holdingsRecJson.put(HOLDING_INSTANCE_ID, instanceId);
-    holdingsRecJson.put(HOLDING_PERMANENT_LOCATION_ID, locationIds.get(0));
+    holdingsRecJson.put(HOLDING_PERMANENT_LOCATION_ID, locationIds.getFirst());
 
     doReturn(succeededFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
 
@@ -755,7 +754,7 @@ public class InventoryManagerTest {
 
     JsonObject holdingsRecJson = new JsonObject();
     holdingsRecJson.put(HOLDING_INSTANCE_ID, instanceId);
-    holdingsRecJson.put(HOLDING_PERMANENT_LOCATION_ID, locationIds.get(0));
+    holdingsRecJson.put(HOLDING_PERMANENT_LOCATION_ID, locationIds.getFirst());
 
     doReturn(Future.failedFuture(new HttpException(NOT_FOUND, "Not_Found")))
       .when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
@@ -787,7 +786,7 @@ public class InventoryManagerTest {
     JsonObject holdingsRecJson = new JsonObject();
     holdingsRecJson.put(ID, holdingIdExp);
     holdingsRecJson.put(HOLDING_INSTANCE_ID, instanceId);
-    holdingsRecJson.put(HOLDING_PERMANENT_LOCATION_ID, locationIds.get(0));
+    holdingsRecJson.put(HOLDING_PERMANENT_LOCATION_ID, locationIds.getFirst());
 
     JsonObject holdingsRecJsonColl = new JsonObject();
     holdingsRecJsonColl.put(HOLDINGS_RECORDS, new JsonArray().add(holdingsRecJson));
@@ -813,12 +812,12 @@ public class InventoryManagerTest {
       .toList();
 
     List<String> locationIds = holdings.stream().map(holding -> holding.getString(HOLDING_PERMANENT_LOCATION_ID)).toList();
-    Location location = new Location().withLocationId(locationIds.get(0)).withQuantity(1).withQuantityPhysical(1);
+    Location location = new Location().withLocationId(locationIds.getFirst()).withQuantity(1).withQuantityPhysical(1);
 
     JsonObject holdingsRecJson = new JsonObject();
     holdingsRecJson.put(ID, firstHoldingIdExp);
     holdingsRecJson.put(HOLDING_INSTANCE_ID, instanceId);
-    holdingsRecJson.put(HOLDING_PERMANENT_LOCATION_ID, locationIds.get(0));
+    holdingsRecJson.put(HOLDING_PERMANENT_LOCATION_ID, locationIds.getFirst());
 
     JsonObject holdingsRecJsonColl = new JsonObject();
     holdingsRecJsonColl.put(HOLDINGS_RECORDS, new JsonArray().add(holdingsRecJson));
@@ -883,12 +882,12 @@ public class InventoryManagerTest {
    */
   static class ContextConfiguration {
     @Bean
-    public ConfigurationEntriesService configurationEntriesService() {
-      return mock(ConfigurationEntriesService.class);
+    public CommonSettingsRetriever configurationEntriesService() {
+      return mock(CommonSettingsRetriever.class);
     }
     @Bean
-    public ConfigurationEntriesCache configurationEntriesCache() {
-      return mock(ConfigurationEntriesCache.class);
+    public CommonSettingsCache configurationEntriesCache() {
+      return mock(CommonSettingsCache.class);
     }
 
     @Bean
@@ -918,26 +917,26 @@ public class InventoryManagerTest {
 
     @Bean
     public InventoryItemManager inventoryItemManager(RestClient restClient,
-                                                     ConfigurationEntriesCache configurationEntriesCache,
+                                                     CommonSettingsCache commonSettingsCache,
                                                      InventoryCache inventoryCache,
                                                      ConsortiumConfigurationService consortiumConfigurationService) {
-      return spy(new InventoryItemManager(restClient, configurationEntriesCache, inventoryCache, consortiumConfigurationService));
+      return spy(new InventoryItemManager(restClient, commonSettingsCache, inventoryCache, consortiumConfigurationService));
     }
 
     @Bean
     public InventoryHoldingManager inventoryHoldingManager(RestClient restClient,
-                                                           ConfigurationEntriesCache configurationEntriesCache,
+                                                           CommonSettingsCache commonSettingsCache,
                                                            InventoryCache inventoryCache) {
-      return spy(new InventoryHoldingManager(restClient, configurationEntriesCache, inventoryCache));
+      return spy(new InventoryHoldingManager(restClient, commonSettingsCache, inventoryCache));
     }
 
     @Bean
     public InventoryInstanceManager inventoryInstanceManager(RestClient restClient,
-                                                             ConfigurationEntriesCache configurationEntriesCache,
+                                                             CommonSettingsCache commonSettingsCache,
                                                              InventoryCache inventoryCache,
                                                              ConsortiumConfigurationService consortiumConfigurationService,
                                                              SharingInstanceService sharingInstanceService) {
-      return spy(new InventoryInstanceManager(restClient, configurationEntriesCache, inventoryCache, sharingInstanceService, consortiumConfigurationService));
+      return spy(new InventoryInstanceManager(restClient, commonSettingsCache, inventoryCache, sharingInstanceService, consortiumConfigurationService));
     }
   }
 

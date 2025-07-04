@@ -380,7 +380,7 @@ public class PurchaseOrderLineHelper {
       return;
     }
     compPO.getPoLines().forEach(poLine -> {
-      var fields = POLineProtectedFieldsUtil.getFieldNames(poLine.getOrderFormat().value());
+      var fields = POLineProtectedFieldsUtil.getFieldNames(compPO, poLine);
       var correspondingLine = findCorrespondingCompositePoLine(poLine, existingPoLines);
       verifyProtectedFieldsChanged(fields, correspondingLine, JsonObject.mapFrom(poLine));
     });
@@ -670,7 +670,7 @@ public class PurchaseOrderLineHelper {
 
   private void validatePOLineProtectedFieldsChanged(PoLine compOrderLine, PoLine poLineFromStorage, CompositePurchaseOrder purchaseOrder) {
     if (purchaseOrder.getWorkflowStatus() != PENDING) {
-      verifyProtectedFieldsChanged(POLineProtectedFieldsUtil.getFieldNames(compOrderLine.getOrderFormat().value()), JsonObject.mapFrom(poLineFromStorage), JsonObject.mapFrom(compOrderLine));
+      verifyProtectedFieldsChanged(POLineProtectedFieldsUtil.getFieldNames(purchaseOrder, compOrderLine), JsonObject.mapFrom(poLineFromStorage), JsonObject.mapFrom(compOrderLine));
     }
   }
 

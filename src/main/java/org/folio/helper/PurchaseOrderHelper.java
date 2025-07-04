@@ -56,7 +56,7 @@ import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.ProtectionService;
 import org.folio.service.TagService;
-import org.folio.service.caches.ConfigurationEntriesCache;
+import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
@@ -95,24 +95,24 @@ public class PurchaseOrderHelper {
   private final OpenCompositeOrderManager openCompositeOrderManager;
   private final OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator;
   private final PurchaseOrderStorageService purchaseOrderStorageService;
-  private final ConfigurationEntriesCache configurationEntriesCache;
+  private final CommonSettingsCache commonSettingsCache;
   private final PoNumberHelper poNumberHelper;
   private final ReOpenCompositeOrderManager reOpenCompositeOrderManager;
   private final OrderValidationService orderValidationService;
   private final PoLineValidationService poLineValidationService;
 
   public PurchaseOrderHelper(PurchaseOrderLineHelper purchaseOrderLineHelper,
-      CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService, EncumbranceService encumbranceService,
-      CompositeOrderDynamicDataPopulateService combinedPopulateService,
-      EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
-      OrderInvoiceRelationService orderInvoiceRelationService, TagService tagService,
-      PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService,
-      ProtectionService protectionService, InventoryItemStatusSyncService itemStatusSyncService,
-      OpenCompositeOrderManager openCompositeOrderManager, PurchaseOrderStorageService purchaseOrderStorageService,
-      ConfigurationEntriesCache configurationEntriesCache, PoNumberHelper poNumberHelper,
-      OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
-      ReOpenCompositeOrderManager reOpenCompositeOrderManager, OrderValidationService orderValidationService,
-      PoLineValidationService poLineValidationService) {
+                             CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService, EncumbranceService encumbranceService,
+                             CompositeOrderDynamicDataPopulateService combinedPopulateService,
+                             EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
+                             OrderInvoiceRelationService orderInvoiceRelationService, TagService tagService,
+                             PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService,
+                             ProtectionService protectionService, InventoryItemStatusSyncService itemStatusSyncService,
+                             OpenCompositeOrderManager openCompositeOrderManager, PurchaseOrderStorageService purchaseOrderStorageService,
+                             CommonSettingsCache commonSettingsCache, PoNumberHelper poNumberHelper,
+                             OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
+                             ReOpenCompositeOrderManager reOpenCompositeOrderManager, OrderValidationService orderValidationService,
+                             PoLineValidationService poLineValidationService) {
     this.purchaseOrderLineHelper = purchaseOrderLineHelper;
     this.orderLinesSummaryPopulateService = orderLinesSummaryPopulateService;
     this.encumbranceService = encumbranceService;
@@ -126,7 +126,7 @@ public class PurchaseOrderHelper {
     this.itemStatusSyncService = itemStatusSyncService;
     this.openCompositeOrderManager = openCompositeOrderManager;
     this.purchaseOrderStorageService = purchaseOrderStorageService;
-    this.configurationEntriesCache = configurationEntriesCache;
+    this.commonSettingsCache = commonSettingsCache;
     this.poNumberHelper = poNumberHelper;
     this.openCompositeOrderFlowValidator = openCompositeOrderFlowValidator;
     this.reOpenCompositeOrderManager = reOpenCompositeOrderManager;
@@ -161,7 +161,7 @@ public class PurchaseOrderHelper {
 
   public Future<CompositePurchaseOrder> postCompositeOrder(CompositePurchaseOrder compPO, RequestContext requestContext) {
     // First validate content of the PO and proceed only if all is okay
-    return configurationEntriesCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
+    return commonSettingsCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
       .compose(tenantConfig -> orderValidationService.validateOrderForPost(compPO, tenantConfig, requestContext)
         .compose(errors -> {
           if (CollectionUtils.isEmpty(errors)) {
@@ -269,7 +269,7 @@ public class PurchaseOrderHelper {
           .compose(v -> {
             if (isTransitionToOpen) {
               return orderValidationService.checkOrderApprovalRequired(compPO, requestContext)
-                .compose(ok -> configurationEntriesCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext))
+                .compose(ok -> commonSettingsCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext))
                 .compose(tenantConfiguration -> openCompositeOrderManager.process(compPO, poFromStorage, tenantConfiguration, requestContext));
             } else {
               return Future.succeededFuture();

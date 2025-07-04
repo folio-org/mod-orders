@@ -22,6 +22,9 @@ import static org.folio.orders.utils.CacheUtils.buildAsyncCache;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_SETTINGS;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
+/**
+ * This service class is used to fetch settings from <code>mod-orders-storage</code>, unlike {@link CommonSettingsRetriever}
+ */
 @Log4j2
 public class SettingsRetriever {
 

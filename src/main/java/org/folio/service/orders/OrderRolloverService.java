@@ -57,7 +57,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.RolloverStatus;
-import org.folio.service.caches.ConfigurationEntriesCache;
+import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.exchange.CacheableExchangeRateService;
 import org.folio.service.exchange.CustomExchangeRateProvider;
 import org.folio.service.finance.FundService;
@@ -90,20 +90,20 @@ public class OrderRolloverService {
   private final FundService fundService;
   private final PurchaseOrderLineService purchaseOrderLineService;
   private final TransactionService transactionService;
-  private final ConfigurationEntriesCache configurationEntriesCache;
+  private final CommonSettingsCache commonSettingsCache;
   private final LedgerRolloverProgressService ledgerRolloverProgressService;
   private final LedgerRolloverErrorService ledgerRolloverErrorService;
   private final FailedLedgerRolloverPoLineDao failedLedgerRolloverPoLineDao;
   private final CacheableExchangeRateService cacheableExchangeRateService;
 
   public OrderRolloverService(FundService fundService, PurchaseOrderLineService purchaseOrderLineService, TransactionService transactionService,
-                              ConfigurationEntriesCache configurationEntriesCache, LedgerRolloverProgressService ledgerRolloverProgressService,
+                              CommonSettingsCache commonSettingsCache, LedgerRolloverProgressService ledgerRolloverProgressService,
                               LedgerRolloverErrorService ledgerRolloverErrorService, FailedLedgerRolloverPoLineDao failedLedgerRolloverPoLineDao,
                               CacheableExchangeRateService cacheableExchangeRateService) {
     this.fundService = fundService;
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.transactionService = transactionService;
-    this.configurationEntriesCache = configurationEntriesCache;
+    this.commonSettingsCache = commonSettingsCache;
     this.ledgerRolloverProgressService = ledgerRolloverProgressService;
     this.ledgerRolloverErrorService = ledgerRolloverErrorService;
     this.failedLedgerRolloverPoLineDao = failedLedgerRolloverPoLineDao;
@@ -127,7 +127,7 @@ public class OrderRolloverService {
     var fundIdsFuture = fundService.getFundsByLedgerId(ledgerFYRollover.getLedgerId(), requestContext)
       .map(ledgerFunds -> ledgerFunds.stream().map(Fund::getId).toList());
     return fundIdsFuture
-      .compose(ledgerFundIds -> configurationEntriesCache.getSystemCurrency(requestContext)
+      .compose(ledgerFundIds -> commonSettingsCache.getSystemCurrency(requestContext)
         .compose(systemCurrency -> rolloverOrdersByFundIds(ledgerFundIds, ledgerFYRollover, systemCurrency, requestContext)))
       .recover(t -> handleOrderRolloverError(t, ledgerFYRollover, progress, requestContext))
       .compose(v -> calculateAndUpdateOverallProgressStatus(progress.withOrdersRolloverStatus(SUCCESS), requestContext))

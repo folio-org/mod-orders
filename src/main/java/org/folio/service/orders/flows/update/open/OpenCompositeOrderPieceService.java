@@ -36,6 +36,7 @@ import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.titles.TitlesService;
 
 public class OpenCompositeOrderPieceService {
+
   private static final Logger logger = LogManager.getLogger(OpenCompositeOrderPieceService.class);
 
   private final InventoryItemManager inventoryItemManager;
@@ -74,7 +75,7 @@ public class OpenCompositeOrderPieceService {
    */
   public Future<List<Piece>> handlePieces(PoLine poLine, String titleId, List<Piece> expectedPiecesWithItem,
                                           boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    logger.debug("handlePieces:: Get pieces by poLine ID - {}", poLine.getId());
+    logger.debug("OpenCompositeOrderPieceService.handlePieces:: Get pieces by poLine ID - {}", poLine.getId());
     return openCompositeOrderHolderBuilder.buildHolder(poLine, titleId, expectedPiecesWithItem, requestContext)
       .compose(holder -> {
         var piecesWithChangedLocation = holder.getPiecesWithChangedLocation();
@@ -134,7 +135,7 @@ public class OpenCompositeOrderPieceService {
         protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
       )
       .compose(v ->
-        openOrderUpdateInventory(order, order.getPoLines().get(0), piece, isInstanceMatchingDisabled, requestContext)
+        openOrderUpdateInventory(order, order.getPoLines().getFirst(), piece, isInstanceMatchingDisabled, requestContext)
       )
       .map(v -> piece);
   }
@@ -169,12 +170,14 @@ public class OpenCompositeOrderPieceService {
    */
   public Future<Void> openOrderUpdateInventory(CompositePurchaseOrder compPO, PoLine poLine,
                                                Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+    logger.debug("OpenCompositeOrderPieceService.openOrderUpdateInventory poLine.id={}", poLine.getId());
     if (!Boolean.TRUE.equals(poLine.getIsPackage())) {
       return inventoryItemManager.updateItemWithPieceFields(piece, requestContext);
     }
     var locationContext = createContextWithNewTenantId(requestContext, piece.getReceivingTenantId());
+    var suppressDiscovery = Optional.ofNullable(poLine.getSuppressInstanceFromDiscovery()).orElse(false);
     return titlesService.getTitleById(piece.getTitleId(), requestContext)
-      .compose(title -> titlesService.updateTitleWithInstance(title, isInstanceMatchingDisabled, locationContext, requestContext).map(title::withInstanceId))
+      .compose(title -> titlesService.updateTitleWithInstance(title, isInstanceMatchingDisabled, suppressDiscovery, locationContext, requestContext).map(title::withInstanceId))
       .compose(title -> getOrCreateHolding(poLine, piece, title, locationContext))
       .compose(holdingId -> updateItemsIfNeeded(compPO, poLine, holdingId, locationContext))
       .map(itemId -> Optional.ofNullable(itemId).map(piece::withItemId))
@@ -182,6 +185,7 @@ public class OpenCompositeOrderPieceService {
   }
 
   private Future<String> getOrCreateHolding(PoLine poLine, Piece piece, Title title, RequestContext locationContext) {
+    logger.debug("OpenCompositeOrderPieceService.getOrCreateHolding poLine.id={}", poLine.getId());
     if (piece.getHoldingId() != null || !PoLineCommonUtil.isHoldingsUpdateRequired(poLine)) {
       return Future.succeededFuture(piece.getHoldingId());
     }

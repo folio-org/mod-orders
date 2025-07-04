@@ -15,12 +15,13 @@ public class TitleInstanceService {
   }
 
   public Future<String> getOrCreateInstance(Title title, RequestContext requestContext) {
-    return getOrCreateInstance(title, false, requestContext);
+    return getOrCreateInstance(title, false, false, requestContext);
   }
 
-  public Future<String> getOrCreateInstance(Title title, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+  public Future<String> getOrCreateInstance(Title title, boolean isInstanceMatchingDisabled,
+                                            boolean suppressDiscovery, RequestContext requestContext) {
     return createShadowInstance(title.getInstanceId(), requestContext)
-      .compose(shadowInstId -> createInventoryInstance(shadowInstId, title, isInstanceMatchingDisabled, requestContext));
+      .compose(shadowInstId -> createInventoryInstance(shadowInstId, title, isInstanceMatchingDisabled, suppressDiscovery, requestContext));
   }
 
   private Future<String> createShadowInstance(String instanceId, RequestContext requestContext) {
@@ -28,14 +29,14 @@ public class TitleInstanceService {
       .map(sharingInstance -> sharingInstance != null ? instanceId : null);
   }
 
-  private Future<String> createInventoryInstance(String shadowInstId, Title title, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+  private Future<String> createInventoryInstance(String shadowInstId, Title title, boolean isInstanceMatchingDisabled,
+                                                 boolean suppressDiscovery, RequestContext requestContext) {
     if (shadowInstId != null) {
       return Future.succeededFuture(shadowInstId);
     }
     if (title.getInstanceId() != null) {
       return Future.succeededFuture(title.getInstanceId());
     }
-    return inventoryInstanceManager.getOrCreateInstanceRecord(title, isInstanceMatchingDisabled, requestContext);
+    return inventoryInstanceManager.getOrCreateInstanceRecord(title, isInstanceMatchingDisabled, suppressDiscovery, requestContext);
   }
-
 }

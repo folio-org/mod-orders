@@ -1,6 +1,7 @@
 package org.folio.service.orders.flows.update.open;
 
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
+import static org.folio.service.UserService.getCurrentUserId;
 
 import java.util.Date;
 import java.util.List;
@@ -59,19 +60,20 @@ public class OpenCompositeOrderManager {
    * @return CompletableFuture that indicates when transition is completed
    */
   public Future<Void> process(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, JsonObject config, RequestContext requestContext) {
-      updateIncomingOrder(compPO, poFromStorage);
-      return openCompositeOrderFlowValidator.validate(compPO, poFromStorage, requestContext)
-        .compose(aCompPO -> titlesService.fetchNonPackageTitles(compPO, requestContext))
-        .compose(linesIdTitles -> {
-          populateInstanceId(linesIdTitles, compPO.getPoLines());
-          return openCompositeOrderInventoryService.processInventory(linesIdTitles, compPO, isInstanceMatchingDisabled(config), requestContext);
-        })
-        .compose(v -> finishProcessingEncumbrancesForOpenOrder(compPO, poFromStorage, requestContext))
-        .map(ok -> {
-          changePoLineStatuses(compPO);
-          return null;
-        })
-        .compose(ok -> openOrderUpdatePoLinesSummary(compPO.getPoLines(), requestContext));
+    logger.debug("OpenCompositeOrderManager.process compPO.id={}", compPO.getId());
+    updateIncomingOrder(compPO, poFromStorage, requestContext);
+    return openCompositeOrderFlowValidator.validate(compPO, poFromStorage, requestContext)
+      .compose(aCompPO -> titlesService.fetchNonPackageTitles(compPO, requestContext))
+      .compose(linesIdTitles -> {
+        populateInstanceId(linesIdTitles, compPO.getPoLines());
+        return openCompositeOrderInventoryService.processInventory(linesIdTitles, compPO, isInstanceMatchingDisabled(config), requestContext);
+      })
+      .compose(v -> finishProcessingEncumbrancesForOpenOrder(compPO, poFromStorage, requestContext))
+      .map(ok -> {
+        changePoLineStatuses(compPO);
+        return null;
+      })
+      .compose(ok -> openOrderUpdatePoLinesSummary(compPO.getPoLines(), requestContext));
   }
 
   private boolean isInstanceMatchingDisabled(JsonObject config) {
@@ -81,6 +83,7 @@ public class OpenCompositeOrderManager {
   }
 
   public Future<Void> openOrderUpdatePoLinesSummary(List<PoLine> poLines, RequestContext requestContext) {
+    logger.debug("OpenCompositeOrderManager.openOrderUpdatePoLinesSummary");
     return GenericCompositeFuture.join(poLines.stream()
       .map(this::removeLocationId)
       .map(line -> purchaseOrderLineService.saveOrderLine(line, requestContext))
@@ -102,7 +105,7 @@ public class OpenCompositeOrderManager {
   private void populateInstanceId(Map<String, List<Title>> lineIdsTitles, List<PoLine> lines) {
     getNonPackageLines(lines).forEach(line -> {
       if (lineIdsTitles.containsKey(line.getId())) {
-        line.setInstanceId(lineIdsTitles.get(line.getId()).get(0).getInstanceId());
+        line.setInstanceId(lineIdsTitles.get(line.getId()).getFirst().getInstanceId());
       }
     });
   }
@@ -143,6 +146,7 @@ public class OpenCompositeOrderManager {
 
   private Future<Void> finishProcessingEncumbrancesForOpenOrder(CompositePurchaseOrder compPO,
       CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
+    logger.debug("OpenCompositeOrderManager.finishProcessingEncumbrancesForOpenOrder compPO.id={}", compPO.getId());
     EncumbranceWorkflowStrategy strategy = encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.PENDING_TO_OPEN);
     return strategy.processEncumbrances(compPO, poFromStorage, requestContext)
       .onSuccess(v -> logger.info("Finished processing encumbrances to open the order, order id={}", compPO.getId()))
@@ -157,8 +161,9 @@ public class OpenCompositeOrderManager {
       });
   }
 
-  private void updateIncomingOrder(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage) {
+  private void updateIncomingOrder(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
     compPO.setWorkflowStatus(OPEN);
+    compPO.setOpenedById(getCurrentUserId(requestContext.getHeaders()));
     compPO.setDateOrdered(new Date());
     if (CollectionUtils.isEmpty(compPO.getPoLines())) {
       CompositePurchaseOrder clonedPoFromStorage = JsonObject.mapFrom(poFromStorage).mapTo(CompositePurchaseOrder.class);

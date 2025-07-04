@@ -16,7 +16,7 @@ import org.folio.rest.acq.model.finance.ExchangeRate;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.service.caches.ConfigurationEntriesCache;
+import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.exchange.CacheableExchangeRateService;
 import org.folio.service.exchange.CustomExchangeRateProvider;
 import org.javamoney.moneta.Money;
@@ -30,12 +30,12 @@ public class OrderLinesSummaryPopulateService implements CompositeOrderDynamicDa
 
   protected final Logger logger = LogManager.getLogger(OrderLinesSummaryPopulateService.class);
 
-  private final ConfigurationEntriesCache configurationEntriesCache;
+  private final CommonSettingsCache commonSettingsCache;
   private final CacheableExchangeRateService cacheableExchangeRateService;
 
-  public OrderLinesSummaryPopulateService(ConfigurationEntriesCache configurationEntriesCache,
+  public OrderLinesSummaryPopulateService(CommonSettingsCache commonSettingsCache,
                                           CacheableExchangeRateService cacheableExchangeRateService) {
-    this.configurationEntriesCache = configurationEntriesCache;
+    this.commonSettingsCache = commonSettingsCache;
     this.cacheableExchangeRateService = cacheableExchangeRateService;
   }
 
@@ -60,7 +60,7 @@ public class OrderLinesSummaryPopulateService implements CompositeOrderDynamicDa
    */
   public Future<Double> calculateTotalEstimatedPrice(List<PoLine> poLines,
       RequestContext requestContext) {
-    return configurationEntriesCache.getSystemCurrency(requestContext)
+    return commonSettingsCache.getSystemCurrency(requestContext)
       .compose(toCurrency -> getExchangeRatesPerPoLine(poLines, toCurrency, requestContext)
       .map(poLineExchangeRate -> Pair.of(toCurrency, poLineExchangeRate))
       .map(toCurrencyPolExcRates -> convertEstimatedPrice(poLines, toCurrencyPolExcRates)));
