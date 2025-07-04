@@ -59,6 +59,7 @@ import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHI
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITION_METHODS;
 import static org.folio.orders.utils.ResourcePathResolver.BUDGETS;
+import static org.folio.orders.utils.ResourcePathResolver.CONFIGURATION_ENTRIES;
 import static org.folio.orders.utils.ResourcePathResolver.CURRENT_BUDGET;
 import static org.folio.orders.utils.ResourcePathResolver.DATA_EXPORT_SPRING_CREATE_JOB;
 import static org.folio.orders.utils.ResourcePathResolver.DATA_EXPORT_SPRING_EXECUTE_JOB;
@@ -84,6 +85,7 @@ import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE
 import static org.folio.orders.utils.ResourcePathResolver.REASONS_FOR_CLOSURE;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
 import static org.folio.orders.utils.ResourcePathResolver.ROUTING_LISTS;
+import static org.folio.orders.utils.ResourcePathResolver.SETTINGS_ENTRIES;
 import static org.folio.orders.utils.ResourcePathResolver.SUFFIXES;
 import static org.folio.orders.utils.ResourcePathResolver.TAGS;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
@@ -240,6 +242,7 @@ public class MockServer {
   public static final String BASE_MOCK_DATA_PATH = "mockdata/";
   private static final String CONTRIBUTOR_NAME_TYPES_PATH = BASE_MOCK_DATA_PATH + "contributorNameTypes/contributorPersonalNameType.json";
   public static final String CONFIG_MOCK_PATH = BASE_MOCK_DATA_PATH + "configurations.entries/%s.json";
+  public static final String SETTINGS_MOCK_PATH = BASE_MOCK_DATA_PATH + "settings.entries/%s.json";
   public static final String LOAN_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "loanTypes/";
   public static final String LEDGER_FY_ROLLOVERS_PATH = BASE_MOCK_DATA_PATH + "ledgerFyRollovers/";
   public static final String LEDGER_FY_ROLLOVERS_ERRORS_PATH = BASE_MOCK_DATA_PATH + "ledgerFyRolloverErrors/";
@@ -681,6 +684,8 @@ public class MockServer {
     router.get("/material-types").handler(ctx -> handleGetJsonResource(ctx, MOCK_DATA_MATERIAL_TYPES_JSON));
     router.get(resourcesPath(WRAPPER_PIECES_STORAGE)).handler(ctx -> handleGetJsonResource(ctx, MOCK_DATA_WRAPPER_PIECES_JSON));
     router.get(resourcesPath(WRAPPER_PIECES_STORAGE) + "/:id").handler(ctx -> handleGetJsonResource(ctx, MOCK_DATA_WRAPPER_PIECES_BY_ID_JSON));
+    router.get(resourcesPath(CONFIGURATION_ENTRIES)).handler(this::handleConfigurationModuleResponse);
+    router.get(resourcesPath(SETTINGS_ENTRIES)).handler(this::handleSettingsModuleResponse);
     // PUT
     router.put(resourcePath(PURCHASE_ORDER_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER_STORAGE));
     router.put(resourcePath(PO_LINES_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES_STORAGE));
@@ -712,7 +717,7 @@ public class MockServer {
     router.delete(resourcePath(PREFIXES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PREFIXES));
     router.delete(resourcePath(SUFFIXES)).handler(ctx -> handleDeleteGenericSubObj(ctx, SUFFIXES));
     router.delete("/inventory/items/:id").handler(ctx -> handleDeleteGenericSubObj(ctx, ITEM_RECORDS));
-    router.get("/configurations/entries").handler(this::handleConfigurationModuleResponse);
+    // PATCH
     router.patch(resourcePath(PO_LINES_STORAGE)).handler(this::handlePatchOrderLines);
     return router;
   }
@@ -1630,6 +1635,14 @@ public class MockServer {
       } catch (Exception exc) {
         serverResponse(ctx, 200, APPLICATION_JSON, getMockData(String.format(CONFIG_MOCK_PATH, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10.getValue())));
       }
+    } catch (IOException e) {
+      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
+    }
+  }
+
+  private void handleSettingsModuleResponse(RoutingContext ctx) {
+    try {
+      serverResponse(ctx, 200, APPLICATION_JSON, getMockData(SETTINGS_MOCK_PATH.formatted(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10.getValue())));
     } catch (IOException e) {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     }

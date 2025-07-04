@@ -2345,7 +2345,6 @@
         "orders.po-lines.item.get",
         "organizations.organizations.collection.get",
         "change-manager.jobExecutions.item.get"
-
       ]
     }
   },
