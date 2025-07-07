@@ -117,7 +117,9 @@ public class PiecesAPI extends BaseApi implements OrdersPieces, OrdersPiecesRequ
     var pieceIds = pieceBatchStatusCollection.getPieceIds();
     var receivingStatus = pieceBatchStatusCollection.getReceivingStatus();
     var claimingInterval = pieceBatchStatusCollection.getClaimingInterval();
-    pieceUpdateFlowManager.updatePiecesStatuses(pieceIds, receivingStatus, claimingInterval, null, null, new RequestContext(vertxContext, okapiHeaders))
+    var internalNote = pieceBatchStatusCollection.getInternalNote();
+    var externalNote = pieceBatchStatusCollection.getExternalNote();
+    pieceUpdateFlowManager.updatePiecesStatuses(pieceIds, receivingStatus, claimingInterval, internalNote, externalNote, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
