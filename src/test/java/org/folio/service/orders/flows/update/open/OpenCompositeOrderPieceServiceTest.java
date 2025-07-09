@@ -275,11 +275,12 @@ public class OpenCompositeOrderPieceServiceTest {
     Location location1 = new Location().withLocationId(locationId1).withQuantityPhysical(qty1).withQuantity(qty1).withTenantId("tenant1");
     Location location2 = new Location().withLocationId(locationId2).withQuantityPhysical(qty2).withQuantity(qty2).withTenantId("tenant2");
     Cost cost = new Cost().withQuantityPhysical(qty1 + qty2).withQuantityElectronic(null);
-    Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.fromValue(createInventory));
+    Physical physical = new Physical()
+      .withCreateInventory(Physical.CreateInventory.fromValue(createInventory))
+      .withExpectedReceiptDate(expectedReceiptDate);
     PoLine line = new PoLine().withId(lineId).withPurchaseOrderId(orderId).withCost(cost)
       .withLocations(List.of(location1, location2)).withIsPackage(false)
-      .withPhysical(physical).withOrderFormat(PoLine.OrderFormat.fromValue(lineType))
-      .withReceiptDate(expectedReceiptDate);
+      .withPhysical(physical).withOrderFormat(PoLine.OrderFormat.fromValue(lineType));
     CompositePurchaseOrder compOrder = new CompositePurchaseOrder().withId(orderId).withPoLines(List.of(line));
     Title title = new Title().withId(titleId).withTitle("test title");
 
@@ -338,7 +339,6 @@ public class OpenCompositeOrderPieceServiceTest {
     String locationId1 = UUID.randomUUID().toString();
     String locationId2 = UUID.randomUUID().toString();
     String titleId = UUID.randomUUID().toString();
-    Date expectedReceiptDate = new Date();
     Location location1 = new Location().withLocationId(locationId1).withQuantityElectronic(qty1).withQuantity(qty1);
     Location location2 = new Location().withLocationId(locationId2).withQuantityElectronic(qty2).withQuantity(qty2);
     Cost cost = new Cost().withQuantityElectronic(qty1 + qty2);
@@ -346,8 +346,7 @@ public class OpenCompositeOrderPieceServiceTest {
     PoLine line = new PoLine().withId(lineId).withPurchaseOrderId(orderId)
       .withCost(cost).withLocations(List.of(location1, location2))
       .withIsPackage(false).withEresource(eresource)
-      .withOrderFormat(PoLine.OrderFormat.fromValue(lineType))
-      .withReceiptDate(expectedReceiptDate);
+      .withOrderFormat(PoLine.OrderFormat.fromValue(lineType));
     CompositePurchaseOrder compOrder = new CompositePurchaseOrder().withId(orderId).withPoLines(List.of(line));
     Title title = new Title().withId(titleId).withTitle("test title");
 
@@ -379,7 +378,7 @@ public class OpenCompositeOrderPieceServiceTest {
       assertEquals(lineId, piece.getPoLineId());
       assertEquals(titleId, piece.getTitleId());
       assertEquals(Piece.Format.fromValue(pieceFormat), piece.getFormat());
-      assertEquals(expectedReceiptDate, piece.getReceiptDate());
+      assertNull(piece.getReceiptDate());
     });
     List<Piece> piecesLoc2 =  createdPieces.stream().filter(piece -> piece.getLocationId().equals(locationId2))
       .toList();
@@ -390,7 +389,7 @@ public class OpenCompositeOrderPieceServiceTest {
       assertEquals(lineId, piece.getPoLineId());
       assertEquals(titleId, piece.getTitleId());
       assertEquals(Piece.Format.fromValue(pieceFormat), piece.getFormat());
-      assertEquals(expectedReceiptDate, piece.getReceiptDate());
+      assertNull(piece.getReceiptDate());
     });
   }
 
@@ -411,13 +410,14 @@ public class OpenCompositeOrderPieceServiceTest {
     Location location2 = new Location().withLocationId(locationId2).withQuantityPhysical(physQty2).withQuantity(physQty2);
     Cost cost = new Cost().withQuantityElectronic(elecQty1 + physQty2);
     Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.fromValue(elecCreateInventory));
-    Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.fromValue(physCreateInventory));
+    Physical physical = new Physical()
+      .withCreateInventory(Physical.CreateInventory.fromValue(physCreateInventory))
+      .withExpectedReceiptDate(expectedReceiptDate);
 
     PoLine line = new PoLine().withId(lineId).withPurchaseOrderId(orderId)
       .withCost(cost).withLocations(List.of(location1, location2))
       .withIsPackage(false).withEresource(eresource).withPhysical(physical)
-      .withOrderFormat(PoLine.OrderFormat.fromValue(lineType))
-      .withReceiptDate(expectedReceiptDate);
+      .withOrderFormat(PoLine.OrderFormat.fromValue(lineType));
     CompositePurchaseOrder compOrder = new CompositePurchaseOrder().withId(orderId).withPoLines(List.of(line));
     Title title = new Title().withId(titleId).withTitle("test title");
 
@@ -448,7 +448,7 @@ public class OpenCompositeOrderPieceServiceTest {
       assertEquals(lineId, piece.getPoLineId());
       assertEquals(titleId, piece.getTitleId());
       assertEquals(Piece.Format.ELECTRONIC, piece.getFormat());
-      assertEquals(expectedReceiptDate, piece.getReceiptDate());
+      assertNull(piece.getReceiptDate());
     });
     List<Piece> piecesLoc2 =  createdPieces.stream().filter(piece -> piece.getLocationId().equals(locationId2))
       .toList();
@@ -479,13 +479,14 @@ public class OpenCompositeOrderPieceServiceTest {
     Location location2 = new Location().withHoldingId(holdingId).withQuantityPhysical(physQty2).withQuantity(physQty2);
     Cost cost = new Cost().withQuantityElectronic(elecQty1 + physQty2);
     Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.fromValue(elecCreateInventory));
-    Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.fromValue(physCreateInventory));
+    Physical physical = new Physical()
+      .withCreateInventory(Physical.CreateInventory.fromValue(physCreateInventory))
+      .withExpectedReceiptDate(expectedReceiptDate);
 
     PoLine line = new PoLine().withId(lineId).withPurchaseOrderId(orderId)
       .withCost(cost).withLocations(List.of(location1, location2))
       .withIsPackage(false).withEresource(eresource).withPhysical(physical)
-      .withOrderFormat(PoLine.OrderFormat.fromValue(lineType))
-      .withReceiptDate(expectedReceiptDate);
+      .withOrderFormat(PoLine.OrderFormat.fromValue(lineType));
     CompositePurchaseOrder compOrder = new CompositePurchaseOrder().withId(orderId).withPoLines(List.of(line));
     Title title = new Title().withId(titleId).withTitle("test title");
 
@@ -516,7 +517,7 @@ public class OpenCompositeOrderPieceServiceTest {
       assertEquals(lineId, piece.getPoLineId());
       assertEquals(titleId, piece.getTitleId());
       assertEquals(Piece.Format.ELECTRONIC, piece.getFormat());
-      assertEquals(expectedReceiptDate, piece.getReceiptDate());
+      assertNull(piece.getReceiptDate());
     });
     List<Piece> piecesLoc2 =  createdPieces.stream().filter(piece -> holdingId.equals(piece.getHoldingId()))
       .toList();
@@ -563,13 +564,14 @@ public class OpenCompositeOrderPieceServiceTest {
     Cost cost = new Cost().withQuantityElectronic(elecQty1 + physQty2);
 
     Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.fromValue(elecCreateInventory));
-    Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.fromValue(physCreateInventory));
+    Physical physical = new Physical()
+      .withCreateInventory(Physical.CreateInventory.fromValue(physCreateInventory))
+      .withExpectedReceiptDate(expectedReceiptDate);
 
     PoLine line = new PoLine().withId(lineId).withPurchaseOrderId(orderId)
       .withCost(cost).withLocations(List.of(elecLocation, physLocation))
       .withIsPackage(false).withEresource(eresource).withPhysical(physical)
-      .withOrderFormat(PoLine.OrderFormat.fromValue(lineType))
-      .withReceiptDate(expectedReceiptDate);
+      .withOrderFormat(PoLine.OrderFormat.fromValue(lineType));
     CompositePurchaseOrder compOrder = new CompositePurchaseOrder().withId(orderId).withPoLines(List.of(line));
     Title title = new Title().withId(titleId).withTitle("test title");
 
@@ -597,7 +599,7 @@ public class OpenCompositeOrderPieceServiceTest {
     piecesLocElec.forEach(piece -> {
       assertEquals(lineId, piece.getPoLineId());
       assertEquals(titleId, piece.getTitleId());
-      assertEquals(expectedReceiptDate, piece.getReceiptDate());
+      assertNull(piece.getReceiptDate());
       if (Eresource.CreateInventory.INSTANCE_HOLDING_ITEM == Eresource.CreateInventory.fromValue(elecCreateInventory)) {
         assertEquals(holdingId, piece.getHoldingId());
         assertNotNull(piece.getItemId());
@@ -634,10 +636,11 @@ public class OpenCompositeOrderPieceServiceTest {
     var location1 = new Location().withLocationId(UUID.randomUUID().toString()).withTenantId(tenantId1).withQuantityPhysical(1).withQuantity(1);
     var location2 = new Location().withLocationId(UUID.randomUUID().toString()).withTenantId(tenantId2).withQuantityPhysical(1).withQuantity(1);
     var cost = new Cost().withQuantityPhysical(1).withQuantityElectronic(null);
-    var physical = new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE);
+    var physical = new Physical()
+      .withCreateInventory(Physical.CreateInventory.INSTANCE)
+      .withExpectedReceiptDate(expectedReceiptDate);
     var line = new PoLine().withId(lineId).withCost(cost).withLocations(List.of(location2))
-      .withIsPackage(false).withPhysical(physical).withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
-      .withReceiptDate(expectedReceiptDate);
+      .withIsPackage(false).withPhysical(physical).withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE);
     var title = new Title().withId(titleId);
     var pieceId = UUID.randomUUID().toString();
     var pieceBefore = new Piece().withId(pieceId).withLocationId(location1.getLocationId()).withReceivingTenantId(tenantId1)
@@ -692,8 +695,7 @@ public class OpenCompositeOrderPieceServiceTest {
         .withTitleId(titleId)
         .withPoLineId(lineId)
         .withHoldingId(location.getHoldingId())
-        .withFormat(Piece.Format.ELECTRONIC)
-        .withReceiptDate(expectedReceiptDate);
+        .withFormat(Piece.Format.ELECTRONIC);
       piece.withItemId(UUID.randomUUID().toString());
       pieces.add(piece);
     }

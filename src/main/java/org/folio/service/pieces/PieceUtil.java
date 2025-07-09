@@ -111,4 +111,9 @@ public class PieceUtil {
       && !piece.getReceivingStatus().equals(Piece.ReceivingStatus.RECEIVED);
   }
 
+  public static Date getExpectedReceiptDate(Piece.Format pieceFormat, PoLine poLine) {
+    return (pieceFormat != Piece.Format.ELECTRONIC && poLine.getPhysical() != null)
+      ? poLine.getPhysical().getExpectedReceiptDate()
+      : null;
+  }
 }

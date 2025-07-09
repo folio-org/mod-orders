@@ -111,7 +111,7 @@ public class OpenCompositeOrderHolderBuilder {
         piecesToCreate.add(new Piece()
           .withFormat(format)
           .withPoLineId(poLine.getId())
-          .withReceiptDate(poLine.getReceiptDate()));
+          .withReceiptDate(PieceUtil.getExpectedReceiptDate(format, poLine)));
       }
     });
     return piecesToCreate;
@@ -191,7 +191,7 @@ public class OpenCompositeOrderHolderBuilder {
         piecesToCreate.add(pieceSupplier.get()
           .withFormat(format)
           .withPoLineId(poLine.getId())
-          .withReceiptDate(poLine.getReceiptDate())
+          .withReceiptDate(PieceUtil.getExpectedReceiptDate(format, poLine))
           .withReceivingTenantId(receivingTenantId));
       }
     });

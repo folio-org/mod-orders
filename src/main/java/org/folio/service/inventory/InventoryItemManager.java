@@ -27,6 +27,7 @@ import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.caches.InventoryCache;
 import org.folio.service.consortium.ConsortiumConfigurationService;
+import org.folio.service.pieces.PieceUtil;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -272,21 +273,19 @@ public class InventoryItemManager {
   }
 
   private Piece openOrderBuildPiece(PoLine poLine, String itemId, Piece.Format pieceFormat, Location location) {
+    Piece piece = new Piece()
+      .withFormat(pieceFormat)
+      .withItemId(itemId)
+      .withPoLineId(poLine.getId())
+      .withReceiptDate(PieceUtil.getExpectedReceiptDate(pieceFormat, poLine))
+      .withReceivingTenantId(location.getTenantId());
+
     if (location.getHoldingId() != null) {
-      return new Piece().withFormat(pieceFormat)
-        .withItemId(itemId)
-        .withPoLineId(poLine.getId())
-        .withReceiptDate(poLine.getReceiptDate())
-        .withHoldingId(location.getHoldingId())
-        .withReceivingTenantId(location.getTenantId());
+      piece.withHoldingId(location.getHoldingId());
     } else {
-      return new Piece().withFormat(pieceFormat)
-        .withItemId(itemId)
-        .withPoLineId(poLine.getId())
-        .withReceiptDate(poLine.getReceiptDate())
-        .withLocationId(location.getLocationId())
-        .withReceivingTenantId(location.getTenantId());
+      piece.withLocationId(location.getLocationId());
     }
+    return piece;
   }
 
   private void validateItemsCreation(String poLineId, int expectedItemsQuantity, int itemsSize) {
