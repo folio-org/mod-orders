@@ -2,6 +2,8 @@ package org.folio.service.inventory;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import lombok.extern.log4j.Log4j2;
+import org.folio.CopilotGenerated;
 import org.folio.models.consortium.ConsortiumConfiguration;
 import org.folio.models.consortium.SharingInstance;
 import org.folio.models.consortium.SharingInstanceCollection;
@@ -20,8 +22,12 @@ import org.folio.service.consortium.SharingInstanceService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.platform.commons.util.StringUtils;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import java.util.List;
@@ -30,7 +36,11 @@ import java.util.UUID;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestUtils.getMockAsJson;
+import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_INSTANCE_STATUS;
+import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_INSTANCE_TYPE;
 import static org.folio.rest.impl.PurchaseOrderLinesApiTest.COMP_PO_LINES_MOCK_DATA_PATH;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_STATUSES;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_TYPES;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -40,8 +50,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
+@Log4j2
 public class InventoryInstanceManagerTest {
+
   private static final String PO_LINE_MIN_CONTENT_PATH = COMP_PO_LINES_MOCK_DATA_PATH + "minimalContent.json";
   private static final String MEMBER_TENANT_1 = "tenant1";
   private static final String MEMBER_TENANT_2 = "tenant2";
@@ -63,7 +76,6 @@ public class InventoryInstanceManagerTest {
   @Mock
   private ConsortiumConfigurationService consortiumConfigurationService;
 
-
   @BeforeEach
   void beforeEach() {
     mockitoMocks = MockitoAnnotations.openMocks(this);
@@ -71,7 +83,7 @@ public class InventoryInstanceManagerTest {
   }
 
   @AfterEach
-  public void afterEach() throws Exception {
+  void afterEach() throws Exception {
     mockitoMocks.close();
   }
 
@@ -106,6 +118,57 @@ public class InventoryInstanceManagerTest {
     verifyNoInteractions(sharingInstanceService);
   }
 
+  @ParameterizedTest
+  @CsvSource({"true,true", "false,false", "false,"})
+  @CopilotGenerated(partiallyGenerated = true, model = "Claude Sonnet 3.7")
+  void shouldCreateInstanceRecordWithSuppressDiscoveryWhenPoLineSuppressInstanceFromDiscoveryIsTrue(String expected, String input) {
+    var poLine = getPoLine(null, List.of(
+      new Location().withTenantId(MEMBER_TENANT_1),
+      new Location().withTenantId(CENTRAL_TENANT)));
+    when(consortiumConfigurationService.getConsortiumConfiguration(requestContext))
+      .thenReturn(succeededFuture(Optional.empty()));
+    if (StringUtils.isNotBlank(input)) {
+      poLine.setSuppressInstanceFromDiscovery(Boolean.valueOf(input));
+    }
+
+    // Mock the InventoryUtils.getEntryId static method calls
+    try (var mockedUtils = Mockito.mockStatic(InventoryUtils.class)) {
+      // Mock for instance types
+      var instanceTypeJson = new JsonObject().put(INSTANCE_TYPES, "fake-instance-type-id");
+      mockedUtils.when(() -> InventoryUtils.getEntryId(eq(commonSettingsCache), eq(inventoryCache),
+          eq(INSTANCE_TYPES), eq(MISSING_INSTANCE_TYPE), eq(requestContext)))
+        .thenReturn(succeededFuture(instanceTypeJson));
+
+      // Mock for instance statuses
+      var statusJson = new JsonObject().put(INSTANCE_STATUSES, "fake-status-id");
+      mockedUtils.when(() -> InventoryUtils.getEntryId(eq(commonSettingsCache), eq(inventoryCache),
+          eq(INSTANCE_STATUSES), eq(MISSING_INSTANCE_STATUS), eq(requestContext)))
+        .thenReturn(succeededFuture(statusJson));
+
+      var emptyInstanceCollection = new JsonObject();
+      emptyInstanceCollection.put("instances", new JsonArray());
+      when(restClient.getAsJsonObject(any(RequestEntry.class), any(RequestContext.class)))
+        .thenReturn(succeededFuture(emptyInstanceCollection));
+
+      // Mock for postJsonObjectAndGetId
+      when(restClient.postJsonObjectAndGetId(any(RequestEntry.class), any(JsonObject.class), any(RequestContext.class)))
+        .thenReturn(succeededFuture("mock-instance-id"));
+
+      inventoryInstanceManager.openOrderHandleInstance(poLine, false, requestContext).result();
+
+      // Verify instance was created with suppressDiscovery=true
+      var instanceCaptor = ArgumentCaptor.forClass(JsonObject.class);
+      verify(restClient).postJsonObjectAndGetId(any(RequestEntry.class), instanceCaptor.capture(), any(RequestContext.class));
+      var createdInstance = instanceCaptor.getValue();
+      var actual = createdInstance.getBoolean(InventoryInstanceManager.INSTANCE_DISCOVERY_SUPPRESS);
+
+      log.info("Created instance with suppressDiscovery: {}", actual);
+      assertEquals(Boolean.valueOf(expected), actual);
+
+      verifyNoInteractions(sharingInstanceService);
+    }
+  }
+
   @Test
   void shouldNotShareInstanceAmongTenantsWhenInstancesAlreadyShared() {
     String instanceId = UUID.randomUUID().toString();
@@ -125,8 +188,7 @@ public class InventoryInstanceManagerTest {
       .doReturn(succeededFuture(instanceCollection))
       .when(restClient).getAsJsonObject(any(RequestEntry.class), any(RequestContext.class));
 
-
-    SharingInstanceCollection collection = getSharingInstanceCollection(instanceId, MEMBER_TENANT_1, CENTRAL_TENANT);
+    SharingInstanceCollection collection = getSharingInstanceCollection(instanceId);
     doReturn(succeededFuture(collection)).when(sharingInstanceService).getSharingInstances(instanceId, configuration.get(), requestContext);
 
     inventoryInstanceManager.openOrderHandleInstance(poLine, false, requestContext).result();
@@ -179,16 +241,14 @@ public class InventoryInstanceManagerTest {
     PoLine result = getMockAsJson(PO_LINE_MIN_CONTENT_PATH).mapTo(PoLine.class);
     result.setInstanceId(instanceId);
     result.setLocations(locations);
-    result.setDetails(
-      new Details().withProductIds(
-        List.of(
-          new ProductId().withProductId("10407849").withProductIdType("913300b2-03ed-469a-8179-c1092c991227"))));
+    List<ProductId> productIds = List.of(new ProductId().withProductId("10407849").withProductIdType("913300b2-03ed-469a-8179-c1092c991227"));
+    result.setDetails(new Details().withProductIds(productIds));
     return result;
   }
 
-  private SharingInstanceCollection getSharingInstanceCollection(String instanceId, String sourceTenant, String targetTenant) {
+  private SharingInstanceCollection getSharingInstanceCollection(String instanceId) {
     SharingInstanceCollection result = new SharingInstanceCollection();
-    SharingInstance sharingInstance = new SharingInstance(UUID.fromString(instanceId), sourceTenant, targetTenant);
+    SharingInstance sharingInstance = new SharingInstance(UUID.fromString(instanceId), MEMBER_TENANT_1, CENTRAL_TENANT);
     result.setSharingInstances(List.of(sharingInstance));
     return result;
   }

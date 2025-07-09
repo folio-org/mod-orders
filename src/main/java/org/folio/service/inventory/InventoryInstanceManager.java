@@ -31,6 +31,7 @@ import org.folio.service.consortium.SharingInstanceService;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Stream;
 
@@ -213,7 +214,7 @@ public class InventoryInstanceManager {
    * @return Future with instance id
    */
   private Future<String> getOrCreateInstanceRecordForPoLine(PoLine poLine, boolean isInstanceMatchingDisabled,
-      ConsortiumConfiguration configuration, RequestContext requestContext) {
+                                                            ConsortiumConfiguration configuration, RequestContext requestContext) {
     logger.debug("getOrCreateInstanceRecordForPoLine:: poLine.id={}", poLine.getId());
     if (poLine.getInstanceId() != null) {
       return Future.succeededFuture(poLine.getInstanceId());
@@ -306,7 +307,9 @@ public class InventoryInstanceManager {
     // MODORDERS-145 The Source and source code are required by schema
     instance.put(INSTANCE_SOURCE, SOURCE_FOLIO);
     instance.put(INSTANCE_TITLE, poLine.getTitleOrPackage());
-    instance.put(INSTANCE_DISCOVERY_SUPPRESS, false);
+
+    var suppressDiscovery = Optional.ofNullable(poLine.getSuppressInstanceFromDiscovery()).orElse(false);
+    instance.put(INSTANCE_DISCOVERY_SUPPRESS, suppressDiscovery);
 
     if (poLine.getEdition() != null) {
       instance.put(INSTANCE_EDITIONS, new JsonArray(singletonList(poLine.getEdition())));
