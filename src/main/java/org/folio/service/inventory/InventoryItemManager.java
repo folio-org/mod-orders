@@ -27,6 +27,7 @@ import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.caches.InventoryCache;
 import org.folio.service.consortium.ConsortiumConfigurationService;
+import org.folio.service.pieces.PieceUtil;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -206,12 +207,12 @@ public class InventoryItemManager {
                   existingItemIds = getElectronicItemIds(poLine, existingItems);
                   return createMissingElectronicItems(comPO, poLine, pieceWithHoldingId,
                     expectedQuantity - existingItemIds.size(), updatedRequestContext)
-                    .map(createdItemIds -> buildPieces(location, polId, pieceFormat, createdItemIds, existingItemIds));
+                    .map(createdItemIds -> buildPieces(location, poLine, pieceFormat, createdItemIds, existingItemIds));
                 } else {
                   existingItemIds = getPhysicalItemIds(poLine, existingItems);
                   return createMissingPhysicalItems(comPO, poLine, pieceWithHoldingId,
                     expectedQuantity - existingItemIds.size(), updatedRequestContext)
-                    .map(createdItemIds -> buildPieces(location, polId, pieceFormat, createdItemIds, existingItemIds));
+                    .map(createdItemIds -> buildPieces(location, poLine, pieceFormat, createdItemIds, existingItemIds));
                 }
               });
             // Build piece records once new existingItemIds are created
@@ -264,27 +265,27 @@ public class InventoryItemManager {
       .collect(toList());
   }
 
-  private List<Piece> buildPieces(Location location, String polId, Piece.Format pieceFormat, List<String> createdItemIds,
+  private List<Piece> buildPieces(Location location, PoLine poLine, Piece.Format pieceFormat, List<String> createdItemIds,
                                   List<String> existingItemIds) {
     List<String> itemIds = ListUtils.union(createdItemIds, existingItemIds);
-    logger.info(BUILDING_PIECE_MESSAGE, itemIds.size(), pieceFormat, polId);
-    return StreamEx.of(itemIds).map(itemId -> openOrderBuildPiece(polId, itemId, pieceFormat, location)).toList();
+    logger.info(BUILDING_PIECE_MESSAGE, itemIds.size(), pieceFormat, poLine);
+    return StreamEx.of(itemIds).map(itemId -> openOrderBuildPiece(poLine, itemId, pieceFormat, location)).toList();
   }
 
-  private Piece openOrderBuildPiece(String polId, String itemId, Piece.Format pieceFormat, Location location) {
+  private Piece openOrderBuildPiece(PoLine poLine, String itemId, Piece.Format pieceFormat, Location location) {
+    Piece piece = new Piece()
+      .withFormat(pieceFormat)
+      .withItemId(itemId)
+      .withPoLineId(poLine.getId())
+      .withReceiptDate(PieceUtil.getExpectedReceiptDate(pieceFormat, poLine))
+      .withReceivingTenantId(location.getTenantId());
+
     if (location.getHoldingId() != null) {
-      return new Piece().withFormat(pieceFormat)
-        .withItemId(itemId)
-        .withPoLineId(polId)
-        .withHoldingId(location.getHoldingId())
-        .withReceivingTenantId(location.getTenantId());
+      piece.withHoldingId(location.getHoldingId());
     } else {
-      return new Piece().withFormat(pieceFormat)
-        .withItemId(itemId)
-        .withPoLineId(polId)
-        .withLocationId(location.getLocationId())
-        .withReceivingTenantId(location.getTenantId());
+      piece.withLocationId(location.getLocationId());
     }
+    return piece;
   }
 
   private void validateItemsCreation(String poLineId, int expectedItemsQuantity, int itemsSize) {

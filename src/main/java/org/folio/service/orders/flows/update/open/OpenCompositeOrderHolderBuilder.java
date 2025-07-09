@@ -108,7 +108,10 @@ public class OpenCompositeOrderHolderBuilder {
     expectedQuantitiesWithoutLocation.forEach((format, expectedQty) -> {
       int remainingPiecesQuantity = expectedQty - existingPiecesQuantities.getOrDefault(format, 0);
       for (int i = 0; i < remainingPiecesQuantity; i++) {
-        piecesToCreate.add(new Piece().withFormat(format).withPoLineId(poLine.getId()));
+        piecesToCreate.add(new Piece()
+          .withFormat(format)
+          .withPoLineId(poLine.getId())
+          .withReceiptDate(PieceUtil.getExpectedReceiptDate(format, poLine)));
       }
     });
     return piecesToCreate;
@@ -185,7 +188,11 @@ public class OpenCompositeOrderHolderBuilder {
     expectedQuantitiesWithoutItem.forEach((format, expectedQty) -> {
       int remainingPiecesQuantity = expectedQty - existedQuantityWithoutItem.getOrDefault(format, 0);
       for (int i = 0; i < remainingPiecesQuantity; i++) {
-        piecesToCreate.add(pieceSupplier.get().withFormat(format).withPoLineId(poLine.getId()).withReceivingTenantId(receivingTenantId));
+        piecesToCreate.add(pieceSupplier.get()
+          .withFormat(format)
+          .withPoLineId(poLine.getId())
+          .withReceiptDate(PieceUtil.getExpectedReceiptDate(format, poLine))
+          .withReceivingTenantId(receivingTenantId));
       }
     });
     return piecesToCreate;
