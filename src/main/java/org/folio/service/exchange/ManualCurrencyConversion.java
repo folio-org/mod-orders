@@ -12,6 +12,7 @@ import javax.money.convert.ExchangeRateProvider;
 
 import org.javamoney.moneta.function.MonetaryOperators;
 import org.javamoney.moneta.spi.AbstractCurrencyConversion;
+import org.folio.rest.acq.model.finance.ExchangeRate.OperationMode;
 
 public class ManualCurrencyConversion extends AbstractCurrencyConversion {
 
@@ -19,18 +20,18 @@ public class ManualCurrencyConversion extends AbstractCurrencyConversion {
 
   private final ExchangeRateProvider rateProvider;
   private final ConversionQuery conversionQuery;
-  private final org.folio.rest.acq.model.finance.ExchangeRate.OperationMode operationMode;
+  private final OperationMode operationMode;
 
   public ManualCurrencyConversion(ConversionQuery conversionQuery, ExchangeRateProvider rateProvider,
                                   ConversionContext conversionContext) {
     super(conversionQuery.getCurrency(), conversionContext);
     this.conversionQuery = conversionQuery;
     this.rateProvider = rateProvider;
-    this.operationMode = org.folio.rest.acq.model.finance.ExchangeRate.OperationMode.MULTIPLY;
+    this.operationMode = OperationMode.MULTIPLY;
   }
 
   public ManualCurrencyConversion(ConversionQuery conversionQuery, ExchangeRateProvider rateProvider,
-                                  ConversionContext conversionContext, org.folio.rest.acq.model.finance.ExchangeRate.OperationMode operationMode) {
+                                  ConversionContext conversionContext, OperationMode operationMode) {
     super(conversionQuery.getCurrency(), conversionContext);
     this.conversionQuery = conversionQuery;
     this.rateProvider = rateProvider;
@@ -65,7 +66,7 @@ public class ManualCurrencyConversion extends AbstractCurrencyConversion {
    */
   @Override
   public MonetaryAmount apply(MonetaryAmount amount) {
-    if (this.operationMode == org.folio.rest.acq.model.finance.ExchangeRate.OperationMode.MULTIPLY) {
+    if (this.operationMode == OperationMode.MULTIPLY) {
       return super.apply(amount);
     }
     if (super.getCurrency().equals(Objects.requireNonNull(amount).getCurrency())) {
