@@ -376,7 +376,9 @@ public class OrderRolloverService {
 
   protected CurrencyConversion retrieveCurrencyConversion(ExchangeRate exchangeRate, boolean isCustomExchangeRate) {
     var query = buildConversionQuery(exchangeRate.getFrom(), exchangeRate.getTo(), exchangeRate.getExchangeRate());
-    var provider = new CustomExchangeRateProvider(isCustomExchangeRate || exchangeRate.getOperationMode() == DIVIDE ? DIVIDE : MULTIPLY);
+    var operationMode = isCustomExchangeRate || exchangeRate.getOperationMode() == DIVIDE ? DIVIDE : MULTIPLY;
+    logger.info("retrieveCurrencyConversion:: Using operationMode: {}", operationMode);
+    var provider = new CustomExchangeRateProvider(operationMode);
     return provider.getCurrencyConversion(query);
   }
 

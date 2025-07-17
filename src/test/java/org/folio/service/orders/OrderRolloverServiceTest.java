@@ -724,8 +724,7 @@ public class OrderRolloverServiceTest {
     var exchangeRate = new ExchangeRate()
       .withFrom(fromCurrency)
       .withTo(toCurrency)
-      .withExchangeRate(exchangeRateAmount)
-      .withOperationMode(ExchangeRate.OperationMode.MULTIPLY);
+      .withExchangeRate(exchangeRateAmount);
     var currencyConversion = orderRolloverService.retrieveCurrencyConversion(exchangeRate, customExchangeRate);
 
     var holder = new PoLineEncumbrancesHolder(poLine)
