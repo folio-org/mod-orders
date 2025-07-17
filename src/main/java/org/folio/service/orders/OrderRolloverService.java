@@ -8,11 +8,10 @@ import static org.folio.orders.utils.HelperUtils.calculateCostUnitsTotal;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
+import static org.folio.rest.acq.model.finance.ExchangeRate.OperationMode.DIVIDE;
 import static org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverError.ErrorType.ORDER_ROLLOVER;
 import static org.folio.rest.jaxrs.model.RolloverStatus.ERROR;
 import static org.folio.rest.jaxrs.model.RolloverStatus.SUCCESS;
-import static org.folio.service.exchange.ManualCurrencyConversion.OperationMode.DIVIDE;
-import static org.folio.service.exchange.ManualCurrencyConversion.OperationMode.MULTIPLY;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -42,6 +41,7 @@ import org.folio.models.PoLineEncumbrancesHolder;
 import org.folio.models.RolloverConversionHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.acq.model.finance.Encumbrance;
+import org.folio.rest.acq.model.finance.ExchangeRate;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverProgress;
 import org.folio.rest.acq.model.finance.Transaction;
@@ -373,9 +373,11 @@ public class OrderRolloverService {
     return BigDecimal.valueOf(totalAmountAfterConversion.doubleValue());
   }
 
-  protected CurrencyConversion retrieveCurrencyConversion(String fromCurrency, String toCurrency, Number exchangeRate, boolean isCustomExchangeRate) {
-    var query = buildConversionQuery(fromCurrency, toCurrency, exchangeRate);
-    var provider = new CustomExchangeRateProvider(Boolean.TRUE.equals(isCustomExchangeRate) ? DIVIDE : MULTIPLY);
+  protected CurrencyConversion retrieveCurrencyConversion(ExchangeRate exchangeRate, boolean isCustomExchangeRate) {
+    var query = buildConversionQuery(exchangeRate.getFrom(), exchangeRate.getTo(), exchangeRate.getExchangeRate());
+    var operationMode = isCustomExchangeRate ? DIVIDE : exchangeRate.getOperationMode();
+    logger.info("retrieveCurrencyConversion:: Using operationMode: {}", operationMode);
+    var provider = new CustomExchangeRateProvider(operationMode);
     return provider.getCurrencyConversion(query);
   }
 
@@ -393,7 +395,7 @@ public class OrderRolloverService {
     poLines.forEach(poLine -> {
       var rolloverConversion = getRolloverConversionByPoLineId(poLine, poLineExchangeRates);
       var exchangeRate = rolloverConversion.getExchangeRate();
-      var conversion = retrieveCurrencyConversion(exchangeRate.getFrom(), exchangeRate.getTo(), exchangeRate.getExchangeRate(), rolloverConversion.isCustomExchangeRate());
+      var conversion = retrieveCurrencyConversion(exchangeRate, rolloverConversion.isCustomExchangeRate());
       var holder = new PoLineEncumbrancesHolder(poLine)
         .withCurrencyConversion(conversion)
         .withSystemCurrency(exchangeRate.getFrom());

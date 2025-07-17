@@ -12,6 +12,7 @@ import javax.money.convert.ExchangeRateProvider;
 
 import org.javamoney.moneta.function.MonetaryOperators;
 import org.javamoney.moneta.spi.AbstractCurrencyConversion;
+import org.folio.rest.acq.model.finance.ExchangeRate.OperationMode;
 
 public class ManualCurrencyConversion extends AbstractCurrencyConversion {
 
@@ -23,10 +24,7 @@ public class ManualCurrencyConversion extends AbstractCurrencyConversion {
 
   public ManualCurrencyConversion(ConversionQuery conversionQuery, ExchangeRateProvider rateProvider,
                                   ConversionContext conversionContext) {
-    super(conversionQuery.getCurrency(), conversionContext);
-    this.conversionQuery = conversionQuery;
-    this.rateProvider = rateProvider;
-    this.operationMode = OperationMode.MULTIPLY;
+    this(conversionQuery, rateProvider, conversionContext, OperationMode.MULTIPLY);
   }
 
   public ManualCurrencyConversion(ConversionQuery conversionQuery, ExchangeRateProvider rateProvider,
@@ -35,11 +33,6 @@ public class ManualCurrencyConversion extends AbstractCurrencyConversion {
     this.conversionQuery = conversionQuery;
     this.rateProvider = rateProvider;
     this.operationMode = operationMode;
-  }
-
-  public enum OperationMode {
-    MULTIPLY,
-    DIVIDE
   }
 
   @Override

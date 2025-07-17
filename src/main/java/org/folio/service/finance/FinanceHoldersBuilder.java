@@ -118,7 +118,7 @@ public class FinanceHoldersBuilder {
         poLineCurrency, fyCurrency.get(), fixedExchangeRate);
       encumbranceConversionHolderFutures.add(cacheableExchangeRateService.getExchangeRate(poLineCurrency, fyCurrency.get(), fixedExchangeRate, requestContext)
         .compose(exchangeRate -> {
-          var provider = new CustomExchangeRateProvider();
+          var provider = new CustomExchangeRateProvider(exchangeRate.getOperationMode());
           var query = buildConversionQuery(poLineCurrency, fyCurrency.get(), exchangeRate.getExchangeRate());
           var conversion = provider.getCurrencyConversion(query);
           return Future.succeededFuture(new EncumbranceConversionHolder().withHolders(holders).withConversion(conversion));
