@@ -20,13 +20,13 @@ public class CustomExchangeRateProvider implements ExchangeRateProvider {
     .build();
   public static final String RATE_KEY = "factor";
 
-  private final ManualCurrencyConversion.OperationMode operationMode;
+  private final org.folio.rest.acq.model.finance.ExchangeRate.OperationMode operationMode;
 
   public CustomExchangeRateProvider() {
-    this.operationMode = ManualCurrencyConversion.OperationMode.MULTIPLY;
+    this.operationMode = org.folio.rest.acq.model.finance.ExchangeRate.OperationMode.MULTIPLY;
   }
 
-  public CustomExchangeRateProvider(ManualCurrencyConversion.OperationMode operationMode) {
+  public CustomExchangeRateProvider(org.folio.rest.acq.model.finance.ExchangeRate.OperationMode operationMode) {
     this.operationMode = operationMode;
   }
 

@@ -55,7 +55,8 @@ public class CacheableExchangeRateService {
       var cacheKey = String.format("%s-%s", from, to);
       return Future.fromCompletionStage(asyncCache.get(cacheKey, (key, executor) -> getExchangeRateFromRemote(from, to, requestContext)))
         .compose(exchangeRateOptional -> exchangeRateOptional.map(exchangeRate -> {
-          log.info("getExchangeRate:: Retrieving an exchange rate, {} -> {}, exchangeRate: {}", from, to, exchangeRate.getExchangeRate());
+          log.info("getExchangeRate:: Retrieving an exchange rate, {} -> {}, exchangeRate: {}, operationMode: {}",
+            from, to, exchangeRate.getExchangeRate(), exchangeRate.getOperationMode());
           return Future.succeededFuture(exchangeRate);
         })
         .orElseGet(() -> Future.failedFuture("Cannot retrieve exchange rate from API")));

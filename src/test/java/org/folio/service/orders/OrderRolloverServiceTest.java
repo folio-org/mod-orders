@@ -32,6 +32,7 @@ import java.util.stream.Stream;
 
 import org.folio.models.PoLineEncumbrancesHolder;
 import org.folio.rest.acq.model.finance.Encumbrance;
+import org.folio.rest.acq.model.finance.ExchangeRate;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverError;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverErrorCollection;
@@ -720,7 +721,12 @@ public class OrderRolloverServiceTest {
 
     conversionHelper.mockExchangeRateProviderResolver(fromCurrency, toCurrency, exchangeRateAmount);
 
-    var currencyConversion = orderRolloverService.retrieveCurrencyConversion(fromCurrency, poLine.getCost().getCurrency(), exchangeRateAmount, customExchangeRate);
+    var exchangeRate = new ExchangeRate()
+      .withFrom(fromCurrency)
+      .withTo(toCurrency)
+      .withExchangeRate(exchangeRateAmount)
+      .withOperationMode(ExchangeRate.OperationMode.MULTIPLY);
+    var currencyConversion = orderRolloverService.retrieveCurrencyConversion(exchangeRate, customExchangeRate);
 
     var holder = new PoLineEncumbrancesHolder(poLine)
       .withEncumbrances(singletonList(transaction))

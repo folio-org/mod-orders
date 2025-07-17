@@ -19,27 +19,22 @@ public class ManualCurrencyConversion extends AbstractCurrencyConversion {
 
   private final ExchangeRateProvider rateProvider;
   private final ConversionQuery conversionQuery;
-  private final OperationMode operationMode;
+  private final org.folio.rest.acq.model.finance.ExchangeRate.OperationMode operationMode;
 
   public ManualCurrencyConversion(ConversionQuery conversionQuery, ExchangeRateProvider rateProvider,
                                   ConversionContext conversionContext) {
     super(conversionQuery.getCurrency(), conversionContext);
     this.conversionQuery = conversionQuery;
     this.rateProvider = rateProvider;
-    this.operationMode = OperationMode.MULTIPLY;
+    this.operationMode = org.folio.rest.acq.model.finance.ExchangeRate.OperationMode.MULTIPLY;
   }
 
   public ManualCurrencyConversion(ConversionQuery conversionQuery, ExchangeRateProvider rateProvider,
-                                  ConversionContext conversionContext, OperationMode operationMode) {
+                                  ConversionContext conversionContext, org.folio.rest.acq.model.finance.ExchangeRate.OperationMode operationMode) {
     super(conversionQuery.getCurrency(), conversionContext);
     this.conversionQuery = conversionQuery;
     this.rateProvider = rateProvider;
     this.operationMode = operationMode;
-  }
-
-  public enum OperationMode {
-    MULTIPLY,
-    DIVIDE
   }
 
   @Override
@@ -70,7 +65,7 @@ public class ManualCurrencyConversion extends AbstractCurrencyConversion {
    */
   @Override
   public MonetaryAmount apply(MonetaryAmount amount) {
-    if (this.operationMode == OperationMode.MULTIPLY) {
+    if (this.operationMode == org.folio.rest.acq.model.finance.ExchangeRate.OperationMode.MULTIPLY) {
       return super.apply(amount);
     }
     if (super.getCurrency().equals(Objects.requireNonNull(amount).getCurrency())) {

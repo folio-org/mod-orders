@@ -44,7 +44,6 @@ public final class TestConfig {
   private TestConfig() {}
 
   public static void deployVerticle() throws InterruptedException, ExecutionException, TimeoutException {
-
     int okapiPort = NetworkUtils.nextFreePort();
     RestAssured.baseURI = "http://localhost:" + okapiPort;
     RestAssured.port = okapiPort;

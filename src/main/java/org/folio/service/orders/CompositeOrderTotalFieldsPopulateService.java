@@ -191,7 +191,6 @@ public class CompositeOrderTotalFieldsPopulateService implements CompositeOrderD
 
   private <T> double getTotalAmount(List<T> entities, Function<T, String> currencyExtractor,
       Function<T, Double> amountExtractor, Function<T, ExchangeRate> exchangeRateExtractor) {
-    var provider = new CustomExchangeRateProvider();
     return StreamEx.of(entities)
       .map(entity -> {
         String currency = currencyExtractor.apply(entity);
@@ -200,6 +199,7 @@ public class CompositeOrderTotalFieldsPopulateService implements CompositeOrderD
         if (currency.equals(exchangeRate.getTo())) {
           return amount;
         } else {
+          var provider = new CustomExchangeRateProvider(exchangeRate.getOperationMode());
           ConversionQuery query = buildConversionQuery(currency, exchangeRate.getTo(), exchangeRate.getExchangeRate());
           CurrencyConversion conversion = provider.getCurrencyConversion(query);
           return amount.with(conversion);

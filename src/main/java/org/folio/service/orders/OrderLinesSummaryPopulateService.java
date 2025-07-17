@@ -94,7 +94,7 @@ public class OrderLinesSummaryPopulateService implements CompositeOrderDynamicDa
         if (StringUtils.equals(exchangeRate.getFrom(), exchangeRate.getTo())) {
           return amount;
         } else {
-          var provider = new CustomExchangeRateProvider();
+          var provider = new CustomExchangeRateProvider(exchangeRate.getOperationMode());
           var query = buildConversionQuery(poLine.getCost().getCurrency(), toCurrency, exchangeRate.getExchangeRate());
           var conversion = provider.getCurrencyConversion(query);
           return amount.with(conversion);

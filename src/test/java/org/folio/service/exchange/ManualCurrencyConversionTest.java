@@ -1,13 +1,14 @@
 package org.folio.service.exchange;
 
+import static org.folio.rest.acq.model.finance.ExchangeRate.OperationMode.DIVIDE;
+import static org.folio.rest.acq.model.finance.ExchangeRate.OperationMode.MULTIPLY;
 import static org.folio.service.exchange.CustomExchangeRateProvider.RATE_KEY;
-import static org.folio.service.exchange.ManualCurrencyConversion.OperationMode.DIVIDE;
-import static org.folio.service.exchange.ManualCurrencyConversion.OperationMode.MULTIPLY;
 
 import javax.money.Monetary;
 import javax.money.convert.ConversionContext;
 import javax.money.convert.ConversionQueryBuilder;
 
+import org.folio.rest.acq.model.finance.ExchangeRate;
 import org.javamoney.moneta.Money;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -17,8 +18,8 @@ import org.junit.jupiter.params.provider.EnumSource;
 public class ManualCurrencyConversionTest {
 
   @ParameterizedTest
-  @EnumSource(ManualCurrencyConversion.OperationMode.class)
-  void testApplyWithOperationModes(ManualCurrencyConversion.OperationMode operationMode) {
+  @EnumSource(ExchangeRate.OperationMode.class)
+  void testApplyWithOperationModes(ExchangeRate.OperationMode operationMode) {
     var totalAmount = 10;
     var fromCurrency = "USD";
     var toCurrency = "AUD";
