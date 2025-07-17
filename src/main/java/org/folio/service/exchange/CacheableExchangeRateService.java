@@ -59,7 +59,7 @@ public class CacheableExchangeRateService {
             from, to, exchangeRate.getExchangeRate(), exchangeRate.getOperationMode());
           return Future.succeededFuture(exchangeRate);
         })
-        .orElseGet(() -> Future.failedFuture("Cannot retrieve exchange rate from API")));
+        .orElseThrow(() -> new IllegalStateException("Cannot retrieve exchange rate from API using from=%s, and to=%s currencies".formatted(from, to))));
     } catch (Exception e) {
       log.error("Error when retrieving cacheable exchange rate", e);
       return Future.failedFuture(e);

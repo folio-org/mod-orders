@@ -24,10 +24,7 @@ public class ManualCurrencyConversion extends AbstractCurrencyConversion {
 
   public ManualCurrencyConversion(ConversionQuery conversionQuery, ExchangeRateProvider rateProvider,
                                   ConversionContext conversionContext) {
-    super(conversionQuery.getCurrency(), conversionContext);
-    this.conversionQuery = conversionQuery;
-    this.rateProvider = rateProvider;
-    this.operationMode = OperationMode.MULTIPLY;
+    this(conversionQuery, rateProvider, conversionContext, OperationMode.MULTIPLY);
   }
 
   public ManualCurrencyConversion(ConversionQuery conversionQuery, ExchangeRateProvider rateProvider,

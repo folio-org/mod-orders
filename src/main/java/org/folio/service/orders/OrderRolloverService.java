@@ -9,7 +9,6 @@ import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.acq.model.finance.ExchangeRate.OperationMode.DIVIDE;
-import static org.folio.rest.acq.model.finance.ExchangeRate.OperationMode.MULTIPLY;
 import static org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverError.ErrorType.ORDER_ROLLOVER;
 import static org.folio.rest.jaxrs.model.RolloverStatus.ERROR;
 import static org.folio.rest.jaxrs.model.RolloverStatus.SUCCESS;
@@ -376,7 +375,7 @@ public class OrderRolloverService {
 
   protected CurrencyConversion retrieveCurrencyConversion(ExchangeRate exchangeRate, boolean isCustomExchangeRate) {
     var query = buildConversionQuery(exchangeRate.getFrom(), exchangeRate.getTo(), exchangeRate.getExchangeRate());
-    var operationMode = isCustomExchangeRate || exchangeRate.getOperationMode() == DIVIDE ? DIVIDE : MULTIPLY;
+    var operationMode = isCustomExchangeRate ? DIVIDE : exchangeRate.getOperationMode();
     logger.info("retrieveCurrencyConversion:: Using operationMode: {}", operationMode);
     var provider = new CustomExchangeRateProvider(operationMode);
     return provider.getCurrencyConversion(query);
