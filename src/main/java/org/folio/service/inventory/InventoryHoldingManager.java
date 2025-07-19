@@ -32,7 +32,6 @@ import java.util.Objects;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 
-import static java.util.stream.Collectors.toList;
 import static one.util.streamex.StreamEx.ofSubLists;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
@@ -193,7 +192,7 @@ public class InventoryHoldingManager {
         String deletedIds = holdings.stream().map(holding -> holding.getString(ID)).collect(Collectors.joining(","));
         logger.debug("Holding ids: {}", deletedIds);
       }
-      return holdings.stream().filter(Objects::nonNull).collect(toList());
+      return holdings.stream().filter(Objects::nonNull).toList();
     });
   }
 
@@ -247,7 +246,7 @@ public class InventoryHoldingManager {
   private Future<Void> updateHoldingRecords(List<JsonObject> holdingRecords, RequestContext requestContext) {
     return GenericCompositeFuture.join(holdingRecords.stream()
         .map(holdingRecord -> updateHolding(holdingRecord, requestContext))
-        .collect(toList()))
+        .toList())
       .mapEmpty();
   }
 
@@ -260,6 +259,9 @@ public class InventoryHoldingManager {
     if (Objects.isNull(location.getLocationId())) {
       return getHoldingById(location.getHoldingId(), true, requestContext)
         .compose(holding -> {
+          if (Objects.isNull(holding)) {
+            return Future.succeededFuture();
+          }
           String locationId = holding.getString(HOLDING_PERMANENT_LOCATION_ID);
           return getFirstHoldingRecord(instanceId, locationId, requestContext)
             .compose(jsonHolding -> {

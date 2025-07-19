@@ -41,13 +41,16 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -877,6 +880,152 @@ public class InventoryManagerTest {
     verify(sharingInstanceService).createShadowInstance(instanceId, configuration.get(), requestContext);
   }
 
+  @Test
+  void shouldCreateNewHoldingWhenLocationIdProvidedButNoMatchingHoldingExists(VertxTestContext vertxTestContext) {
+    // Given
+    var instanceId = UUID.randomUUID().toString();
+    var locationId = UUID.randomUUID().toString();
+    var newHoldingId = UUID.randomUUID().toString();
+    var location = new Location().withLocationId(locationId).withQuantity(1).withQuantityPhysical(1);
+
+    var emptyHoldingsCollection = new JsonObject().put(HOLDINGS_RECORDS, new JsonArray());
+
+    doReturn(succeededFuture(emptyHoldingsCollection))
+      .when(restClient)
+      .getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+
+    doReturn(succeededFuture(newHoldingId))
+      .when(inventoryHoldingManager)
+      .createHoldingAndReturnId(instanceId, locationId, requestContext);
+
+    // When
+    var future = inventoryHoldingManager.getOrCreateHoldingRecordByInstanceAndLocation(instanceId, location, requestContext);
+
+    // Then
+    vertxTestContext.assertComplete(future)
+      .onComplete(ar -> {
+        vertxTestContext.verify(() -> {
+          assertEquals(newHoldingId, ar.result());
+          verify(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+          verify(inventoryHoldingManager).createHoldingAndReturnId(instanceId, locationId, requestContext);
+        });
+        vertxTestContext.completeNow();
+      });
+  }
+
+  @Test
+  void shouldReturnNullWhenHoldingIdProvidedButHoldingNotFound(VertxTestContext vertxTestContext) {
+    // Given
+    var instanceId = UUID.randomUUID().toString();
+    var holdingId = UUID.randomUUID().toString();
+    var location = new Location().withHoldingId(holdingId).withQuantity(1).withQuantityPhysical(1);
+
+    // Mock the REST client response for getHoldingById
+    doReturn(succeededFuture(null))
+      .when(restClient)
+      .getAsJsonObject(any(RequestEntry.class), eq(true), eq(requestContext));
+
+    // When
+    var future = inventoryHoldingManager.getOrCreateHoldingRecordByInstanceAndLocation(instanceId, location, requestContext);
+
+    // Then
+    vertxTestContext.assertComplete(future)
+      .onComplete(ar -> {
+        vertxTestContext.verify(() -> {
+          assertNull(ar.result());
+          verify(restClient).getAsJsonObject(any(RequestEntry.class), eq(true), eq(requestContext));
+          verify(inventoryHoldingManager, never()).createHoldingAndReturnId(eq(instanceId), anyString(), any(RequestContext.class));
+        });
+        vertxTestContext.completeNow();
+      });
+  }
+
+  @Test
+  void shouldCreateNewHoldingWhenHoldingIdProvidedButNoMatchingHoldingExists(VertxTestContext vertxTestContext) {
+    // Given
+    var instanceId = UUID.randomUUID().toString();
+    var holdingId = UUID.randomUUID().toString();
+    var locationId = UUID.randomUUID().toString();
+    var newHoldingId = UUID.randomUUID().toString();
+    var location = new Location().withHoldingId(holdingId).withQuantity(1).withQuantityPhysical(1);
+
+    var existingHolding = new JsonObject()
+      .put(ID, holdingId)
+      .put(HOLDING_PERMANENT_LOCATION_ID, locationId);
+
+    var emptyHoldingsCollection = new JsonObject().put(HOLDINGS_RECORDS, new JsonArray());
+
+    doReturn(succeededFuture(existingHolding))
+      .when(restClient)
+      .getAsJsonObject(any(RequestEntry.class), eq(true), eq(requestContext));
+
+    doReturn(succeededFuture(emptyHoldingsCollection))
+      .when(restClient)
+      .getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+
+    doReturn(succeededFuture(newHoldingId))
+      .when(inventoryHoldingManager)
+      .createHoldingAndReturnId(instanceId, locationId, requestContext);
+
+    // When
+    var future = inventoryHoldingManager.getOrCreateHoldingRecordByInstanceAndLocation(instanceId, location, requestContext);
+
+    // Then
+    vertxTestContext.assertComplete(future)
+      .onComplete(ar -> {
+        vertxTestContext.verify(() -> {
+          assertEquals(newHoldingId, ar.result());
+          verify(restClient).getAsJsonObject(any(RequestEntry.class), eq(true), eq(requestContext));
+          verify(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+          verify(inventoryHoldingManager).createHoldingAndReturnId(instanceId, locationId, requestContext);
+        });
+        vertxTestContext.completeNow();
+      });
+  }
+
+  @Test
+  void shouldReuseExistingHoldingWhenHoldingIdProvidedAndMatchingHoldingExists(VertxTestContext vertxTestContext) {
+    // Given
+    var instanceId = UUID.randomUUID().toString();
+    var holdingId = UUID.randomUUID().toString();
+    var matchingHoldingId = UUID.randomUUID().toString();
+    var locationId = UUID.randomUUID().toString();
+    var location = new Location().withHoldingId(holdingId).withQuantity(1).withQuantityPhysical(1);
+
+    var existingHolding = new JsonObject()
+      .put(ID, holdingId)
+      .put(HOLDING_PERMANENT_LOCATION_ID, locationId);
+
+    var matchingHolding = new JsonObject().put(ID, matchingHoldingId);
+
+    var holdingsCollection = new JsonObject()
+      .put(HOLDINGS_RECORDS, new JsonArray().add(matchingHolding));
+
+    // Mock the REST client responses
+    doReturn(succeededFuture(existingHolding))
+      .when(restClient)
+      .getAsJsonObject(any(RequestEntry.class), eq(true), eq(requestContext));
+
+    doReturn(succeededFuture(holdingsCollection))
+      .when(restClient)
+      .getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+
+    // When
+    var future = inventoryHoldingManager.getOrCreateHoldingRecordByInstanceAndLocation(instanceId, location, requestContext);
+
+    // Then
+    vertxTestContext.assertComplete(future)
+      .onComplete(ar -> {
+        vertxTestContext.verify(() -> {
+          assertEquals(matchingHoldingId, ar.result());
+          verify(restClient).getAsJsonObject(any(RequestEntry.class), eq(true), eq(requestContext));
+          verify(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+          verify(inventoryHoldingManager, never()).createHoldingAndReturnId(eq(instanceId), anyString(), any(RequestContext.class));
+        });
+        vertxTestContext.completeNow();
+      });
+  }
+
   /**
    * Define unit test specific beans to override actual ones
    */
@@ -939,5 +1088,4 @@ public class InventoryManagerTest {
       return spy(new InventoryInstanceManager(restClient, commonSettingsCache, inventoryCache, sharingInstanceService, consortiumConfigurationService));
     }
   }
-
 }
