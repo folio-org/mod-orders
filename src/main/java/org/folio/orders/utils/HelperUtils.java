@@ -47,7 +47,6 @@ import java.util.function.Function;
 import static io.vertx.core.Future.succeededFuture;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.folio.rest.RestConstants.EN;
-import static org.folio.rest.RestConstants.SEMAPHORE_MAX_ACTIVE_THREADS;
 import static org.folio.rest.core.exceptions.ErrorCodes.MULTIPLE_NONPACKAGE_TITLES;
 import static org.folio.rest.core.exceptions.ErrorCodes.TITLE_NOT_FOUND;
 import static org.folio.service.exchange.CustomExchangeRateProvider.RATE_KEY;

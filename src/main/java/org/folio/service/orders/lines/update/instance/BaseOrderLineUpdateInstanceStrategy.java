@@ -1,9 +1,9 @@
 package org.folio.service.orders.lines.update.instance;
 
 import io.vertx.core.Future;
+import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
 import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.models.RequestContext;
@@ -18,9 +18,8 @@ import java.util.List;
 
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccessNonNull;
 
+@Log4j2
 public abstract class BaseOrderLineUpdateInstanceStrategy implements OrderLineUpdateInstanceStrategy {
-
-  private static final Logger logger = LogManager.getLogger(BaseOrderLineUpdateInstanceStrategy.class);
 
   InventoryInstanceManager inventoryInstanceManager;
   InventoryItemManager inventoryItemManager;
@@ -51,9 +50,9 @@ public abstract class BaseOrderLineUpdateInstanceStrategy implements OrderLineUp
       .map(location -> {
         var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());
         return deleteHoldingWithoutItems(location.getHoldingId(), locationContext)
-          .onSuccess(v -> logger.info("deleteAbandonedHoldings:: operation succeeded for holdingId: {}", location.getHoldingId()))
-          .onFailure(e -> logger.error("Failed to delete abandoned holdings for holdingId: {}", location.getHoldingId(), e))
-          .map(deleted -> deleted ? location.getHoldingId() : null);
+          .onSuccess(v -> log.info("deleteAbandonedHoldings:: operation succeeded for holdingId: {}", location.getHoldingId()))
+          .onFailure(e -> log.error("Failed to delete abandoned holdings for holdingId: {}", location.getHoldingId(), e))
+          .map(deleted -> BooleanUtils.isTrue(deleted) ? location.getHoldingId() : null);
       }).toList();
     return collectResultsOnSuccessNonNull(deleteHoldingFutures);
   }
