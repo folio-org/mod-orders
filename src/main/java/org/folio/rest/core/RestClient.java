@@ -145,7 +145,7 @@ public class RestClient {
       .expect(SUCCESS_RESPONSE_PREDICATE)
       .send()
       .onSuccess(f -> promise.complete())
-      .onFailure(t -> handleErrorResponse(promise, t, skipError404));
+      .onFailure(t -> handleErrorResponse(promise, t, skipError404, endpointById));
 
       return promise.future();
   }
@@ -159,9 +159,9 @@ public class RestClient {
       promise.fail(t);
     }
   }
-  private void handleErrorResponse(Promise<Void> promise, Throwable t, boolean skipError404) {
+  private void handleErrorResponse(Promise<Void> promise, Throwable t, boolean skipError404, String path) {
     if (skipError404 && t instanceof HttpException httpException && httpException.getCode() == 404){
-      log.warn(t);
+      log.warn("handleErrorResponse: Resource not found: '{}', reason: {}", path, t.getMessage());
       promise.complete();
     } else {
       log.error(t);

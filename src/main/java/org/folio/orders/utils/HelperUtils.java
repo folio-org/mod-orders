@@ -4,12 +4,11 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
-import io.vertxconcurrent.Semaphore;
 import one.util.streamex.IntStreamEx;
+import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.map.CaseInsensitiveMap;
 import org.apache.commons.lang3.ObjectUtils;
@@ -281,6 +280,18 @@ public class HelperUtils {
   }
 
   /**
+   * Same as {@link #collectResultsOnSuccess(Collection)} but filters out null results.
+   *
+   * @param futures list of futures and each produces resulting object on completion
+   * @param <T>     resulting type
+   * @return resulting objects that are not null
+   */
+  public static <T> Future<List<T>> collectResultsOnSuccessNonNull(Collection<Future<T>> futures) {
+    return collectResultsOnSuccess(futures)
+      .map(results -> StreamEx.of(results).nonNull().toList());
+  }
+
+  /**
    * Executes a collection of futures and fails if any of them fail.
    * Returns a Void future that completes when all futures complete successfully.
    *
@@ -423,31 +434,4 @@ public class HelperUtils {
     return JsonObject.mapFrom(object).mapTo(clazz);
   }
 
-  public static <I, O> Future<List<O>> executeWithSemaphores(Collection<I> collection,
-                                                             FunctionReturningFuture<I, O> f, RequestContext requestContext) {
-    if (collection.isEmpty())
-      return Future.succeededFuture(List.of());
-    return requestContext.getContext().<List<Future<O>>>executeBlocking(promise -> {
-      Semaphore semaphore = new Semaphore(SEMAPHORE_MAX_ACTIVE_THREADS, Vertx.currentContext().owner());
-      List<Future<O>> futures = new ArrayList<>();
-      for (I item : collection) {
-        semaphore.acquire(() -> {
-          Future<O> future = f.apply(item)
-            .onComplete(asyncResult -> semaphore.release());
-          futures.add(future);
-          if (futures.size() == collection.size()) {
-            promise.complete(futures);
-          }
-        });
-      }
-    }).compose(HelperUtils::collectResultsOnSuccess);
-  }
-
-  public interface FunctionReturningFuture<I, O> {
-    Future<O> apply(I item);
-  }
-
-  public interface BiFunctionReturningFuture<I1, I2, O> {
-    Future<O> apply(I1 item1, I2 item2);
-  }
 }
