@@ -13,6 +13,7 @@ import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.lines.update.OrderLineUpdateInstanceStrategy;
 
+import java.util.Collections;
 import java.util.List;
 
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccessNonNull;
@@ -43,7 +44,7 @@ public abstract class BaseOrderLineUpdateInstanceStrategy implements OrderLineUp
 
   Future<List<String>> deleteAbandonedHoldings(boolean isDeleteAbandonedHoldings, PoLine poLine, RequestContext requestContext) {
     if (!isDeleteAbandonedHoldings) {
-      return Future.succeededFuture();
+      return Future.succeededFuture(Collections.emptyList());
     }
     var deleteHoldingFutures = poLine.getLocations().stream()
       .filter(location -> StringUtils.isNotEmpty(location.getHoldingId()))
