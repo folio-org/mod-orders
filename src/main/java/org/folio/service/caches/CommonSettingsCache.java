@@ -11,7 +11,6 @@ import io.vertx.core.Vertx;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.folio.orders.utils.HelperUtils.BiFunctionReturningFuture;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.tools.utils.TenantTool;
@@ -24,6 +23,8 @@ import com.github.benmanes.caffeine.cache.AsyncCache;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
+
+import java.util.function.BiFunction;
 
 @Log4j2
 @Component
@@ -71,7 +72,7 @@ public class CommonSettingsCache {
   private <T> Future<T> loadSettingsData(RequestContext requestContext,
                                          String entriesUrl, String query,
                                          AsyncCache<String, T> cache,
-                                         BiFunctionReturningFuture<RequestEntry, RequestContext, T> configExtractor) {
+                                         BiFunction<RequestEntry, RequestContext, Future<T>> configExtractor) {
     var requestEntry = new RequestEntry(entriesUrl).withQuery(query).withOffset(0).withLimit(Integer.MAX_VALUE);
     var cacheKey = buildUniqueKey(requestEntry, requestContext);
     return Future.fromCompletionStage(cache.get(cacheKey, (key, executor) ->

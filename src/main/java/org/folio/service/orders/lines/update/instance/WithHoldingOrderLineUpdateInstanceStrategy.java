@@ -3,11 +3,10 @@ package org.folio.service.orders.lines.update.instance;
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import lombok.extern.log4j.Log4j2;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.RequestContextUtil;
@@ -36,15 +35,14 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
+import static org.folio.orders.utils.FutureUtils.asFuture;
 import static org.folio.orders.utils.HelperUtils.chainCall;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.service.inventory.InventoryItemManager.ID;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_HOLDINGS_RECORD_ID;
 
-
+@Log4j2
 public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpdateInstanceStrategy {
-
-  private static final Logger logger = LogManager.getLogger(WithHoldingOrderLineUpdateInstanceStrategy.class);
 
   private static final String HOLDINGS_ITEMS = "holdingsItems";
   private static final String BARE_HOLDINGS_ITEMS = "bareHoldingsItems";
@@ -58,22 +56,21 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
     this.pieceStorageService = pieceStorageService;
   }
 
-  protected Future<Void> processHoldings(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
+  Future<Void> processHoldings(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
+    log.info("processHoldings:: Processing holdings with operation: {} for poLineId: {}", holder.getPatchOrderLineRequest().getOperation(), holder.getStoragePoLine().getId());
     ReplaceInstanceRef replaceInstanceRef = holder.getPatchOrderLineRequest().getReplaceInstanceRef();
     if (replaceInstanceRef == null) {
       return Future.succeededFuture();
     }
     String newInstanceId = replaceInstanceRef.getNewInstanceId();
-
     holder.createStoragePatchOrderLineRequest(StoragePatchOrderLineRequest.PatchOrderLineOperationType.REPLACE_INSTANCE_REF, newInstanceId);
-    PoLine poLine = holder.getStoragePoLine();
 
     return switch (replaceInstanceRef.getHoldingsOperation()) {
       case MOVE -> moveHoldings(holder, newInstanceId, requestContext);
       case FIND_OR_CREATE -> findOrCreateHoldingsAndUpdateItems(holder, newInstanceId, requestContext)
-        .compose(v -> deleteAbandonedHoldings(replaceInstanceRef.getDeleteAbandonedHoldings(), poLine, requestContext));
+        .compose(v -> deleteAbandonedHoldingsAndUpdateHolder(holder, requestContext));
       case CREATE -> createHoldingsAndUpdateItems(holder, newInstanceId, requestContext)
-        .compose(v -> deleteAbandonedHoldings(replaceInstanceRef.getDeleteAbandonedHoldings(), poLine, requestContext));
+        .compose(v -> deleteAbandonedHoldingsAndUpdateHolder(holder, requestContext));
       default -> Future.succeededFuture();
     };
   }
@@ -81,7 +78,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
 
   private Future<Void> moveHoldings(OrderLineUpdateInstanceHolder holder, String newInstanceId, RequestContext requestContext) {
     PoLine poLine = holder.getStoragePoLine();
-    logger.info("moveHoldings:: start processing for poLineId: {} and new instanceId: {}", poLine.getId(), newInstanceId);
+    log.info("moveHoldings:: start processing for poLineId: {} and new instanceId: {}", poLine.getId(), newInstanceId);
     return pieceStorageService.getPiecesByPoLineId(poLine, requestContext)
       .map(pieces -> getHoldingsByTenants(holder, pieces, requestContext))
       .compose(holdingsByTenant -> {
@@ -92,9 +89,9 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
               var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, entry.getKey());
               return inventoryInstanceManager.createShadowInstanceIfNeeded(newInstanceId, locationContext)
                 .compose(instance -> inventoryHoldingManager.updateInstanceForHoldingRecords(holdings, newInstanceId, locationContext))
-                .onSuccess(v -> logger.info("moveHoldings:: {} holdings for tenantId: {} have been updated with new instanceId: {}",
+                .onSuccess(v -> log.info("moveHoldings:: {} holdings for tenantId: {} have been updated with new instanceId: {}",
                   holdings.size(), entry.getKey(), newInstanceId))
-                .onFailure(e -> logger.error("Failed to update holdings for tenantId: {} with new instanceId: {}",
+                .onFailure(e -> log.error("Failed to update holdings for tenantId: {} with new instanceId: {}",
                   entry.getKey(), newInstanceId, e));
             }))
             .toList();
@@ -157,7 +154,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
     PoLine poLine = holder.getStoragePoLine();
     String holdingId = location.getHoldingId();
     var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());
-    logger.info("findOrCreateHoldingsAndUpdateItems:: start processing for new instanceId: {}, holdingId: {}, tenantId(for ECS): {}",
+    log.info("findOrCreateHoldingsAndUpdateItems:: start processing for new instanceId: {}, holdingId: {}, tenantId(for ECS): {}",
       newInstanceId, holdingId, location.getTenantId());
     return inventoryInstanceManager.createShadowInstanceIfNeeded(newInstanceId, locationContext)
       .compose(instance -> inventoryHoldingManager.getOrCreateHoldingRecordByInstanceAndLocation(newInstanceId, location, locationContext))
@@ -183,7 +180,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
     PoLine poLine = holder.getStoragePoLine();
     String holdingId = location.getHoldingId();
     var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());
-    logger.info("createHoldingsAndUpdateItems:: start processing for new instanceId: {}, holdingId: {}, tenantId(for ECS): {}",
+    log.info("createHoldingsAndUpdateItems:: start processing for new instanceId: {}, holdingId: {}, tenantId(for ECS): {}",
       newInstanceId, holdingId, location.getTenantId());
     return inventoryInstanceManager.createShadowInstanceIfNeeded(newInstanceId, locationContext)
       .compose(instance -> inventoryHoldingManager.createHolding(newInstanceId, location, locationContext))
@@ -196,7 +193,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
   private Future<Void> processLocations(OrderLineUpdateInstanceHolder holder,
                                         RequestContext requestContext,
                                         Function<Location, Future<Void>> processFunction) {
-    return retrieveUniqueLocations(holder.getStoragePoLine(), requestContext)
+    return retrieveUniqueLocations(holder, requestContext)
       .compose(tenantIdToLocationsMap ->
         collectResultsOnSuccess(tenantIdToLocationsMap.values().stream()
           .map(locations -> chainCall(locations, processFunction))
@@ -205,23 +202,23 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
       .mapEmpty();
   }
 
-  private Future<Map<String, List<Location>>> retrieveUniqueLocations(PoLine poLine, RequestContext requestContext) {
-    return pieceStorageService.getPiecesByPoLineId(poLine, requestContext)
+  private Future<Map<String, List<Location>>> retrieveUniqueLocations(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
+    return pieceStorageService.getPiecesByPoLineId(holder.getStoragePoLine(), requestContext)
       .map(pieces -> {
-        List<Location> pieceHoldingIds = pieces
-          .stream()
+        List<Location> pieceHoldingIds = pieces.stream()
           .map(piece -> new Location()
             .withHoldingId(piece.getHoldingId())
             .withLocationId(piece.getLocationId())
             .withTenantId(piece.getReceivingTenantId()))
           .collect(toList());
-        List<Location> storageHoldingIds = poLine.getLocations();
+        List<Location> storageHoldingIds = holder.getStoragePoLine().getLocations();
 
         List<Location> uniqueLocations = StreamEx.of(ListUtils.union(pieceHoldingIds, storageHoldingIds))
           .distinct(location -> String.format("%s %s", location.getLocationId(), location.getHoldingId()))
           .filter(location -> Objects.nonNull(location.getHoldingId()))
+          .filter(location -> !holder.getDeletedHoldingIds().contains(location.getHoldingId()))
           .toList();
-        logger.info("retrieveUniqueLocations:: list of result locations: {}", Json.encodePrettily(uniqueLocations));
+        log.info("retrieveUniqueLocations:: list of result locations: {}", Json.encodePrettily(uniqueLocations));
         return uniqueLocations.stream()
           .collect(Collectors.groupingBy(location -> Objects.requireNonNullElse(location.getTenantId(), TenantTool.tenantId(requestContext.getHeaders()))));
       });
@@ -230,9 +227,8 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
   private Future<Void> updateItemsHolding(String holdingId, String newHoldingId, String poLineId, RequestContext requestContext) {
     return inventoryItemManager.getItemsByHoldingIdAndOrderLineId(holdingId, poLineId, requestContext)
       .compose(items -> updateItemsInInventory(items, newHoldingId, requestContext))
-      .onSuccess(v -> logger.info("updateItemsHolding:: existing items for holdingId: {} have been updated with new holdingId: {}",
-        holdingId, newHoldingId))
-      .onFailure(e -> logger.error("Failed to update items for holdingId: {} with new holdingId: {}", holdingId, newHoldingId, e));
+      .onSuccess(v -> log.info("updateItemsHolding:: existing items for holdingId: {} have been updated with new holdingId: {}", holdingId, newHoldingId))
+      .onFailure(e -> log.error("Failed to update items for holdingId: {} with new holdingId: {}", holdingId, newHoldingId, e));
   }
 
   private Future<Void> updateItemsInInventory(List<JsonObject> items, String newHoldingId, RequestContext requestContext) {
@@ -262,6 +258,12 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
         }
         return null;
       });
+  }
+
+  private Future<Void> deleteAbandonedHoldingsAndUpdateHolder(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
+    return deleteAbandonedHoldings(holder.getPatchOrderLineRequest().getReplaceInstanceRef().getDeleteAbandonedHoldings(), holder.getStoragePoLine(), requestContext)
+      .compose(deletedHoldings -> asFuture(() -> holder.getDeletedHoldingIds().addAll(deletedHoldings)))
+      .mapEmpty();
   }
 
 }
