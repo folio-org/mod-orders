@@ -216,7 +216,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
         List<Location> uniqueLocations = StreamEx.of(ListUtils.union(pieceHoldingIds, storageHoldingIds))
           .distinct(location -> String.format("%s %s", location.getLocationId(), location.getHoldingId()))
           .filter(location -> Objects.nonNull(location.getHoldingId()))
-          .filter(location -> !holder.getDeletedHoldings().contains(location.getHoldingId()))
+          .filter(location -> !holder.getDeletedHoldingIds().contains(location.getHoldingId()))
           .toList();
         log.info("retrieveUniqueLocations:: list of result locations: {}", Json.encodePrettily(uniqueLocations));
         return uniqueLocations.stream()
@@ -262,7 +262,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
 
   private Future<Void> deleteAbandonedHoldingsAndUpdateHolder(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
     return deleteAbandonedHoldings(holder.getPatchOrderLineRequest().getReplaceInstanceRef().getDeleteAbandonedHoldings(), holder.getStoragePoLine(), requestContext)
-      .compose(deletedHoldings -> asFuture(() -> holder.getDeletedHoldings().addAll(deletedHoldings)))
+      .compose(deletedHoldings -> asFuture(() -> holder.getDeletedHoldingIds().addAll(deletedHoldings)))
       .mapEmpty();
   }
 

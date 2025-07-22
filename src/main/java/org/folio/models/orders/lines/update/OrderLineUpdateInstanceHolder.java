@@ -19,7 +19,7 @@ public class OrderLineUpdateInstanceHolder {
   private PoLine storagePoLine;
   private PatchOrderLineRequest patchOrderLineRequest;
   private StoragePatchOrderLineRequest storagePatchOrderLineRequest;
-  private final Set<String> deletedHoldings = new HashSet<>();
+  private final Set<String> deletedHoldingIds = new HashSet<>();
 
   public OrderLineUpdateInstanceHolder withStoragePoLine(PoLine storagePoLine) {
     this.storagePoLine = storagePoLine;
