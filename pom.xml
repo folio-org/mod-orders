@@ -66,7 +66,7 @@
     <testcontainers-bom.version>1.20.5</testcontainers-bom.version>
 
     <!--Dependency Properties-->
-    <spring.version>6.2.3</spring.version>
+    <spring.version>6.2.7</spring.version>
     <aspectj.version>1.9.22.1</aspectj.version>
     <rest-assured.version>5.5.1</rest-assured.version>
     <streamex.version>0.8.3</streamex.version>
