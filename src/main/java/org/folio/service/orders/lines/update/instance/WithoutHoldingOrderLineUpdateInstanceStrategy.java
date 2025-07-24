@@ -26,7 +26,8 @@ public class WithoutHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLine
 
     holder.createStoragePatchOrderLineRequest(StoragePatchOrderLineRequest.PatchOrderLineOperationType.REPLACE_INSTANCE_REF, newInstanceId);
 
-    return deleteAbandonedHoldings(replaceInstanceRef.getDeleteAbandonedHoldings(), holder.getStoragePoLine(), requestContext);
+    return deleteAbandonedHoldings(replaceInstanceRef.getDeleteAbandonedHoldings(), holder.getStoragePoLine(), requestContext)
+      .mapEmpty();
   }
 
 }

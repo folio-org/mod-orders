@@ -12,6 +12,7 @@ import javax.money.convert.ExchangeRateProvider;
 import javax.money.convert.ProviderContext;
 import javax.money.convert.ProviderContextBuilder;
 import javax.money.convert.RateType;
+import org.folio.rest.acq.model.finance.ExchangeRate.OperationMode;
 
 public class CustomExchangeRateProvider implements ExchangeRateProvider {
 
@@ -20,13 +21,13 @@ public class CustomExchangeRateProvider implements ExchangeRateProvider {
     .build();
   public static final String RATE_KEY = "factor";
 
-  private final ManualCurrencyConversion.OperationMode operationMode;
+  private final OperationMode operationMode;
 
   public CustomExchangeRateProvider() {
-    this.operationMode = ManualCurrencyConversion.OperationMode.MULTIPLY;
+    this.operationMode = OperationMode.MULTIPLY;
   }
 
-  public CustomExchangeRateProvider(ManualCurrencyConversion.OperationMode operationMode) {
+  public CustomExchangeRateProvider(OperationMode operationMode) {
     this.operationMode = operationMode;
   }
 

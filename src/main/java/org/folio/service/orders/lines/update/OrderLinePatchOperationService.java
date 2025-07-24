@@ -6,8 +6,7 @@ import static org.folio.service.inventory.InventoryUtils.INVENTORY_LOOKUP_ENDPOI
 
 import java.util.Objects;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import lombok.extern.log4j.Log4j2;
 import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.acq.model.StoragePatchOrderLineRequest;
@@ -25,8 +24,8 @@ import org.folio.service.orders.PurchaseOrderLineService;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
+@Log4j2
 public class OrderLinePatchOperationService {
-  private static final Logger logger = LogManager.getLogger(OrderLinePatchOperationService.class);
 
   private static final String ENDPOINT = "/orders-storage/po-lines";
   private static final String BY_ID_ENDPOINT = ENDPOINT + "/{id}";
@@ -50,13 +49,13 @@ public class OrderLinePatchOperationService {
   }
 
   public Future<Void> patch(String lineId, PatchOrderLineRequest request, RequestContext requestContext) {
-    logger.info("patch:: start patching operation: {} for poLineId: {}", request.getOperation(), lineId);
+    log.info("patch:: start patching operation: {} for poLineId: {}", request.getOperation(), lineId);
     String newInstanceId = request.getReplaceInstanceRef().getNewInstanceId();
     return inventoryInstanceManager.createShadowInstanceIfNeeded(newInstanceId, requestContext)
       .compose(v -> purchaseOrderLineService.getOrderLineById(lineId, requestContext))
       .compose(poLine -> patchOrderLineAndInstanceInfo(request, poLine, requestContext))
-      .onSuccess(v -> logger.info("patch:: successfully patched operation: {} for poLineId: {}", request.getOperation(), lineId))
-      .onFailure(e -> logger.error("Failed to patch operation: {} for poLineId: {}", request.getOperation(), lineId, e));
+      .onSuccess(v -> log.info("patch:: successfully patched operation: {} for poLineId: {}", request.getOperation(), lineId))
+      .onFailure(e -> log.error("Failed to patch operation: {} for poLineId: {}", request.getOperation(), lineId, e));
   }
 
   private Future<Void> patchOrderLineAndInstanceInfo(PatchOrderLineRequest request, PoLine poLine, RequestContext requestContext) {
@@ -80,26 +79,28 @@ public class OrderLinePatchOperationService {
   }
 
   private Future<Void> updateInstanceForPhysical(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
+    log.info("updateInstanceForPhysical:: Updating instance for physical type with poLineId: '{}'", holder.getStoragePoLine().getId());
     var physical = PoLineCommonUtil.getPhysical(holder.getStoragePoLine());
     if (physical == null) {
       return Future.succeededFuture();
     }
-    return orderLineUpdateInstanceStrategyResolver.resolve(
-      CreateInventoryType.fromValue(physical.getCreateInventory().value())).updateInstance(holder, requestContext);
+    return orderLineUpdateInstanceStrategyResolver.resolve(CreateInventoryType.fromValue(physical.getCreateInventory().value()))
+      .updateInstance(holder, requestContext);
   }
 
   private Future<Void> updateInstanceForEresource(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
+    log.info("updateInstanceForEresource:: Updating instance for eresource type with poLineId: '{}'", holder.getStoragePoLine().getId());
     var eresource = PoLineCommonUtil.getEresource(holder.getStoragePoLine());
     if (eresource == null) {
       return Future.succeededFuture();
     }
-    return orderLineUpdateInstanceStrategyResolver.resolve(
-      CreateInventoryType.fromValue(eresource.getCreateInventory().value())).updateInstance(holder, requestContext);
+    return orderLineUpdateInstanceStrategyResolver.resolve(CreateInventoryType.fromValue(eresource.getCreateInventory().value()))
+      .updateInstance(holder, requestContext);
   }
 
   private Future<Void> sendPatchOrderLineRequest(OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder, String lineId,
                                                  RequestContext requestContext) {
-    logger.debug("sendPatchOrderLineRequest:: sending patch request for poLineId: {}", lineId);
+    log.debug("sendPatchOrderLineRequest:: sending patch request for poLineId: {}", lineId);
     StoragePatchOrderLineRequest storagePatchOrderLineRequest = orderLineUpdateInstanceHolder.getStoragePatchOrderLineRequest();
     if (Objects.nonNull(storagePatchOrderLineRequest)) {
       RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(lineId);
@@ -115,8 +116,8 @@ public class OrderLinePatchOperationService {
     return restClient.getAsJsonObject(requestEntry, requestContext)
       .map(instanceRecord -> updatePoLineWithInstanceRecordInfo(instanceRecord, poLine))
       .compose(updatePoLine -> purchaseOrderLineService.saveOrderLine(updatePoLine, requestContext))
-      .onSuccess(v -> logger.info("updateInventoryInstanceInformation:: updated instance info for poLineId: {}", poLine.getId()))
-      .onFailure(v -> logger.error("Error when updating retrieving instance record from inventory-storage request to by instanceId {}, poLineId {}", newInstanceId, poLine.getId()));
+      .onSuccess(v -> log.info("updateInventoryInstanceInformation:: updated instance info for poLineId: {}", poLine.getId()))
+      .onFailure(v -> log.error("Error when updating retrieving instance record from inventory-storage request to by instanceId {}, poLineId {}", newInstanceId, poLine.getId()));
   }
 
   private PoLine updatePoLineWithInstanceRecordInfo(JsonObject lookupObj, PoLine poLine) {

@@ -268,7 +268,7 @@ public class InventoryItemManager {
   private List<Piece> buildPieces(Location location, PoLine poLine, Piece.Format pieceFormat, List<String> createdItemIds,
                                   List<String> existingItemIds) {
     List<String> itemIds = ListUtils.union(createdItemIds, existingItemIds);
-    logger.info(BUILDING_PIECE_MESSAGE, itemIds.size(), pieceFormat, poLine);
+    logger.info(BUILDING_PIECE_MESSAGE, itemIds.size(), pieceFormat, poLine.getId());
     return StreamEx.of(itemIds).map(itemId -> openOrderBuildPiece(poLine, itemId, pieceFormat, location)).toList();
   }
 

@@ -103,7 +103,7 @@ public class ReEncumbranceHoldersBuilder extends FinanceHoldersBuilder {
         poLineCurrency, fyCurrency.get(), fixedExchangeRate);
       encumbranceConversionHolderFutures.add(cacheableExchangeRateService.getExchangeRate(poLineCurrency, fyCurrency.get(), fixedExchangeRate, requestContext)
         .compose(exchangeRate -> {
-          var provider = new CustomExchangeRateProvider();
+          var provider = new CustomExchangeRateProvider(exchangeRate.getOperationMode());
           var poLineToFYQuery = buildConversionQuery(poLineCurrency, fyCurrency.get(), exchangeRate.getExchangeRate());
           var poLineToFYConversion = provider.getCurrencyConversion(poLineToFYQuery);
           var fixedExchangeRateConverted = poLineToFYConversion.getExchangeRate(Money.of(0d, poLineCurrency)).getFactor().doubleValue();
