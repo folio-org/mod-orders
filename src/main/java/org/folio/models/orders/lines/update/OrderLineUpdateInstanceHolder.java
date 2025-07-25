@@ -1,8 +1,6 @@
 package org.folio.models.orders.lines.update;
 
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Optional;
 import java.util.Set;
 
 import lombok.Getter;
@@ -32,16 +30,16 @@ public class OrderLineUpdateInstanceHolder {
   }
 
   public void createStoragePatchOrderLineRequest(PatchOrderLineOperationType patchOrderLineOperationType, String newInstanceId) {
+    if (storagePatchOrderLineRequest != null) {
+      return;
+    }
     this.storagePatchOrderLineRequest = new StoragePatchOrderLineRequest()
       .withOperation(patchOrderLineOperationType)
-      .withReplaceInstanceRef(new StorageReplaceOrderLineInstanceRef()
-        .withNewInstanceId(newInstanceId));
+      .withReplaceInstanceRef(new StorageReplaceOrderLineInstanceRef().withNewInstanceId(newInstanceId));
   }
 
   public void addHoldingRefsToStoragePatchOrderLineRequest(String holdingId, String newHoldingId) {
-    var instanceRef = this.storagePatchOrderLineRequest.getReplaceInstanceRef();
-    var holdings = Optional.ofNullable(instanceRef.getHoldings())
-      .orElseGet(() -> instanceRef.withHoldings(new ArrayList<>()).getHoldings());
-    holdings.add(new StorageReplaceOrderLineHoldingRefs().withFromHoldingId(holdingId).withToHoldingId(newHoldingId));
+    this.storagePatchOrderLineRequest.getReplaceInstanceRef().getHoldings()
+      .add(new StorageReplaceOrderLineHoldingRefs().withFromHoldingId(holdingId).withToHoldingId(newHoldingId));
   }
 }
