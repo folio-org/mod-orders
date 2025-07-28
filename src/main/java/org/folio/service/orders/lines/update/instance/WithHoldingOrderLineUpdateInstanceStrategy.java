@@ -193,7 +193,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
   private Future<Void> processLocations(OrderLineUpdateInstanceHolder holder,
                                         RequestContext requestContext,
                                         Function<Location, Future<Void>> processFunction) {
-    return retrieveUniqueLocations(holder, requestContext)
+    return retrieveProcessableLocations(holder, requestContext)
       .compose(tenantIdToLocationsMap ->
         collectResultsOnSuccess(tenantIdToLocationsMap.values().stream()
           .map(locations -> chainCall(locations, processFunction))
@@ -202,7 +202,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
       .mapEmpty();
   }
 
-  private Future<Map<String, List<Location>>> retrieveUniqueLocations(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
+  private Future<Map<String, List<Location>>> retrieveProcessableLocations(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
     return pieceStorageService.getPiecesByPoLineId(holder.getStoragePoLine(), requestContext)
       .map(pieces -> {
         List<Location> pieceHoldingIds = pieces.stream()
@@ -216,9 +216,9 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
         List<Location> uniqueLocations = StreamEx.of(ListUtils.union(pieceHoldingIds, storageHoldingIds))
           .distinct(location -> String.format("%s %s", location.getLocationId(), location.getHoldingId()))
           .filter(location -> Objects.nonNull(location.getHoldingId()))
-          .filter(location -> !holder.getDeletedHoldingIds().contains(location.getHoldingId()))
+          .filter(location -> holder.shouldProcessHolding(location.getHoldingId()))
           .toList();
-        log.info("retrieveUniqueLocations:: list of result locations: {}", Json.encodePrettily(uniqueLocations));
+        log.info("retrieveProcessableLocations:: Locations to process: {}", Json.encodePrettily(uniqueLocations));
         return uniqueLocations.stream()
           .collect(Collectors.groupingBy(location -> Objects.requireNonNullElse(location.getTenantId(), TenantTool.tenantId(requestContext.getHeaders()))));
       });
