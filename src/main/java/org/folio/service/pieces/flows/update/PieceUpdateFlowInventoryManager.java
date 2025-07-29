@@ -52,7 +52,7 @@ public class PieceUpdateFlowInventoryManager {
   public Future<Void> processInventory(PieceUpdateHolder holder, RequestContext requestContext) {
     final var locationContext = createContextWithNewTenantId(requestContext, holder.getPieceToUpdate().getReceivingTenantId());
     Piece pieceToUpdate = holder.getPieceToUpdate();
-    return inventoryItemManager.updateItemWithPieceFields(pieceToUpdate, locationContext)
+    return inventoryItemManager.updateItemWithPieceFields(holder.getPieceFromStorage(), pieceToUpdate, locationContext)
       .compose(v -> updateInventoryForPoLine(holder, locationContext, requestContext)
           .map(holder::withInstanceId)
           .compose(aHolder -> handleHolding(holder, locationContext))

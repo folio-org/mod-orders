@@ -188,7 +188,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   protected Future<Boolean> receiveInventoryItemAndUpdatePiece(PiecesHolder holder, JsonObject item, Piece piece, RequestContext locationContext) {
     Promise<Boolean> promise = Promise.promise();
     CheckInPiece checkinPiece = getByPiece(piece);
-    InventoryUtils.updateItemWithCheckinPieceFields(item, checkinPiece);
+    InventoryUtils.updateItemWithCheckinPieceFields(item, piece, checkinPiece);
     inventoryItemManager.updateItem(item, locationContext)
       // Update Piece record object with check-in details if item updated
       // successfully

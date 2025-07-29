@@ -183,7 +183,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   @Override
   protected Future<Boolean> receiveInventoryItemAndUpdatePiece(PiecesHolder holder, JsonObject item, Piece piece, RequestContext locationContext) {
     ReceivedItem receivedItem = getByPiece(piece);
-    InventoryUtils.updateItemWithReceivedItemFields(holder, item, receivedItem);
+    InventoryUtils.updateItemWithReceivedItemFields(holder, item, piece, receivedItem);
     return inventoryItemManager.updateItem(item, locationContext)
       // Update Piece record object with receiving details if item updated
       // successfully
