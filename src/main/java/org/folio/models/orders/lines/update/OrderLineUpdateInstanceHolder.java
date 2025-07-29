@@ -1,6 +1,7 @@
 package org.folio.models.orders.lines.update;
 
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 import lombok.Getter;
@@ -46,10 +47,8 @@ public class OrderLineUpdateInstanceHolder {
 
   public boolean shouldProcessHolding(String holdingId) {
     // Check if the holding is deleted or found/created that results into storing the holding ref (toHoldingId)
-    return !deletedHoldingIds.contains(holdingId) &&
-      StreamEx.of(storagePatchOrderLineRequest.getReplaceInstanceRef().getHoldings())
-        .map(StorageReplaceOrderLineHoldingRefs::getToHoldingId)
-        .noneMatch(holdingId::equals);
+    return !deletedHoldingIds.contains(holdingId) && StreamEx.of(storagePatchOrderLineRequest.getReplaceInstanceRef().getHoldings())
+      .noneMatch(ref -> Objects.equals(holdingId, ref.getFromHoldingId()) || Objects.equals(holdingId, ref.getToHoldingId()));
   }
 
 }
