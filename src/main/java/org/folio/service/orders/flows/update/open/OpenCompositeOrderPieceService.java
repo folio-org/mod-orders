@@ -143,21 +143,21 @@ public class OpenCompositeOrderPieceService {
     logger.debug("updatePiece:: Updating piece - {}", piece.getId());
     return titlesService.getTitleById(piece.getTitleId(), requestContext)
       .compose(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext))
-      .compose(v -> inventoryItemManager.updateItemWithPieceFields(piece, requestContext))
       .compose(vVoid -> pieceStorageService.getPieceById(piece.getId(), requestContext))
-      .compose(pieceStorage -> {
-        var isReceivingStatusChanged = updatePieceStatus(piece, pieceStorage.getReceivingStatus(), piece.getReceivingStatus());
-        return pieceStorageService.updatePiece(piece, requestContext)
-          .compose(v -> {
-            logger.debug("updatePiece:: Status updated from: {} to {}", pieceStorage.getReceivingStatus(), piece.getReceivingStatus());
-            if (isReceivingStatusChanged) {
-              receiptStatusPublisher.sendEvent(MessageAddress.RECEIPT_STATUS, createPoLineUpdateEvent(piece.getPoLineId()), requestContext);
-            }
-            return Future.succeededFuture();
-          })
-          .onFailure(e -> logger.error("Error updating piece by id to storage {}", piece.getId(), e));
-      })
-      .onFailure(e -> logger.error("Error getting piece by id from storage {}", piece.getId(), e))
+      .compose(pieceStorage -> inventoryItemManager.updateItemWithPieceFields(pieceStorage, piece, requestContext)
+        .compose(aVoid -> {
+          var isReceivingStatusChanged = updatePieceStatus(piece, pieceStorage.getReceivingStatus(), piece.getReceivingStatus());
+          return pieceStorageService.updatePiece(piece, requestContext)
+            .compose(v -> {
+              logger.debug("updatePiece:: Status updated from: {} to {}", pieceStorage.getReceivingStatus(), piece.getReceivingStatus());
+              if (isReceivingStatusChanged) {
+                receiptStatusPublisher.sendEvent(MessageAddress.RECEIPT_STATUS, createPoLineUpdateEvent(piece.getPoLineId()), requestContext);
+              }
+              return Future.succeededFuture();
+            })
+            .onFailure(e -> logger.error("Error updating piece by id to storage {}", piece.getId(), e));
+        })
+      ).onFailure(e -> logger.error("Error getting piece by id from storage {}", piece.getId(), e))
       .map(v -> piece);
   }
 
@@ -170,7 +170,7 @@ public class OpenCompositeOrderPieceService {
   public Future<Void> openOrderUpdateInventory(CompositePurchaseOrder compPO, CompositePoLine compPOL,
                                                Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     if (!Boolean.TRUE.equals(compPOL.getIsPackage())) {
-      return inventoryItemManager.updateItemWithPieceFields(piece, requestContext);
+      return inventoryItemManager.updateItemWithPieceFields(null, piece, requestContext);
     }
     var locationContext = createContextWithNewTenantId(requestContext, piece.getReceivingTenantId());
     return titlesService.getTitleById(piece.getTitleId(), requestContext)

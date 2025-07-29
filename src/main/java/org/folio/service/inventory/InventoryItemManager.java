@@ -138,7 +138,7 @@ public class InventoryItemManager {
     return collectResultsOnSuccess(futures);
   }
 
-  public Future<Void> updateItemWithPieceFields(Piece piece, RequestContext requestContext) {
+  public Future<Void> updateItemWithPieceFields(Piece pieceFromStorage, Piece piece, RequestContext requestContext) {
     if (piece.getItemId() == null || piece.getPoLineId() == null || piece.getIsBound()) {
       return Future.succeededFuture();
     }
@@ -147,7 +147,7 @@ public class InventoryItemManager {
         if (item == null || item.isEmpty()) {
           return Future.succeededFuture();
         }
-        InventoryUtils.updateItemWithPieceFields(item, piece);
+        InventoryUtils.updateItemWithPieceFields(item, pieceFromStorage, piece);
         return updateItem(item, requestContext);
       });
   }
@@ -346,7 +346,7 @@ public class InventoryItemManager {
     String holdingId = piece.getHoldingId();
     return buildElectronicItemRecordJsonObject(compPO, compPOL, holdingId, requestContext)
       .compose(item -> {
-        InventoryUtils.updateItemWithPieceFields(item, piece);
+        InventoryUtils.updateItemWithPieceFields(item, null, piece);
         item.put(ID, piece.getItemId());
         logger.info("Posting {} electronic item(s) for PO Line with '{}' id", quantity, compPOL.getId());
         return createItemRecords(item, quantity, requestContext);
@@ -377,7 +377,7 @@ public class InventoryItemManager {
     String holdingId = piece.getHoldingId();
     return buildPhysicalItemRecordJsonObject(compPO, compPOL, holdingId, requestContext)
       .compose(item -> {
-        InventoryUtils.updateItemWithPieceFields(item, piece);
+        InventoryUtils.updateItemWithPieceFields(item, null, piece);
         item.put(ID, piece.getItemId());
         logger.info("Posting {} physical item(s) for PO Line with '{}' id, receivingTenantId: {}",
           quantity, compPOL.getId(), piece.getReceivingTenantId());
