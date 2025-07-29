@@ -29,6 +29,7 @@ import static org.folio.service.inventory.InventoryItemManager.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ExtendWith(VertxExtension.class)
 public class InventoryUtilsTest {
@@ -49,6 +50,10 @@ public class InventoryUtilsTest {
   @Test
   void testUpdateItemWithPieceFields() {
     // given
+    Piece pieceFromStorage = new Piece();
+    pieceFromStorage.setEnumeration("enumeration");
+    pieceFromStorage.setCopyNumber("copy number");
+
     Piece piece = new Piece();
     piece.setEnumeration("enumeration");
     piece.setCopyNumber("copy number");
@@ -70,12 +75,12 @@ public class InventoryUtilsTest {
     )));
 
     // when
-    InventoryUtils.updateItemWithPieceFields(item, piece);
+    InventoryUtils.updateItemWithPieceFields(item, pieceFromStorage, piece);
 
     // then
     assertEquals(piece.getDisplaySummary(), item.getString(ITEM_DISPLAY_SUMMARY));
-    assertEquals(piece.getEnumeration(), item.getString(ITEM_ENUMERATION));
-    assertEquals(piece.getCopyNumber(), item.getString(COPY_NUMBER));
+    assertEquals(oldValue, item.getString(ITEM_ENUMERATION));
+    assertEquals(oldValue, item.getString(COPY_NUMBER));
     assertEquals(piece.getChronology(), item.getString(ITEM_CHRONOLOGY));
     assertEquals(piece.getBarcode(), item.getString(ITEM_BARCODE));
     assertEquals(piece.getAccessionNumber(), item.getString(ITEM_ACCESSION_NUMBER));
@@ -96,12 +101,15 @@ public class InventoryUtilsTest {
       .withCallNumber("Call Number")
       .withDiscoverySuppress(true);
 
+    Piece pieceFromStorage = new Piece();
+    pieceFromStorage.setDisplaySummary("Display Summary");
     JsonObject item = new JsonObject();
+    item.put(ITEM_DISPLAY_SUMMARY, "oldValue");
 
-    InventoryUtils.updateItemWithCheckinPieceFields(item, checkinPiece);
+    InventoryUtils.updateItemWithCheckinPieceFields(item, pieceFromStorage, checkinPiece);
 
     assertEquals(checkinPiece.getItemStatus().value(), item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME));
-    assertEquals(checkinPiece.getDisplaySummary(), item.getString(ITEM_DISPLAY_SUMMARY));
+    assertEquals("oldValue", item.getString(ITEM_DISPLAY_SUMMARY));
     assertEquals(checkinPiece.getEnumeration(), item.getString(ITEM_ENUMERATION));
     assertEquals(checkinPiece.getCopyNumber(), item.getString(COPY_NUMBER));
     assertEquals(checkinPiece.getChronology(), item.getString(ITEM_CHRONOLOGY));
@@ -114,6 +122,8 @@ public class InventoryUtilsTest {
   @Test
   void testUpdateItemWithPieceFields_notOverwrite() {
     // given
+    Piece pieceFromStorage = new Piece();
+
     Piece piece = new Piece();
 
     String oldValue = "old value";
@@ -128,7 +138,7 @@ public class InventoryUtilsTest {
     )));
 
     // when
-    InventoryUtils.updateItemWithPieceFields(item, piece);
+    InventoryUtils.updateItemWithPieceFields(item, pieceFromStorage, piece);
 
     // then
     assertEquals(oldValue, item.getString(ITEM_ENUMERATION));
@@ -140,6 +150,97 @@ public class InventoryUtilsTest {
     assertFalse(item.getBoolean(ITEM_DISCOVERY_SUPPRESS));
   }
 
+  @Test
+  void updatesAllItemFieldsWhenPieceFromStorageIsNull() {
+    JsonObject item = new JsonObject();
+
+    String displaySummary = "New Display";
+    String enumeration = "New Enum";
+    String copyNumber = "New Copy";
+    String chronology = "New Chrono";
+    String barcode = "New Barcode";
+    String accessionNumber = "New Accession";
+    String callNumber = "New Call";
+
+    InventoryUtils.updateCommonItemFields(item, null,
+      displaySummary, enumeration, copyNumber, chronology,
+      barcode, accessionNumber, callNumber);
+
+    assertEquals(displaySummary, item.getString(ITEM_DISPLAY_SUMMARY));
+    assertEquals(enumeration, item.getString(ITEM_ENUMERATION));
+    assertEquals(copyNumber, item.getString(COPY_NUMBER));
+    assertEquals(chronology, item.getString(ITEM_CHRONOLOGY));
+    assertEquals(barcode, item.getString(ITEM_BARCODE));
+    assertEquals(accessionNumber, item.getString(ITEM_ACCESSION_NUMBER));
+    assertEquals(callNumber, item.getString(ITEM_LEVEL_CALL_NUMBER));
+  }
+
+  @Test
+  void doesNotUpdateItemFieldsWhenValuesAreEmpty() {
+    JsonObject item = new JsonObject();
+    Piece pieceFromStorage = new Piece()
+      .withDisplaySummary("Old Display")
+      .withEnumeration("Old Enum")
+      .withCopyNumber("Old Copy")
+      .withChronology("Old Chrono")
+      .withBarcode("Old Barcode")
+      .withAccessionNumber("Old Accession")
+      .withCallNumber("Old Call");
+
+    InventoryUtils.updateCommonItemFields(item, pieceFromStorage,
+      "", null, "", "", "", "", "");
+
+    assertTrue(item.isEmpty());
+  }
+
+  @Test
+  void doesNotUpdateItemFieldsWhenValuesAreUnchanged() {
+    JsonObject item = new JsonObject();
+    String existingValue = "Existing Value";
+    Piece pieceFromStorage = new Piece()
+      .withDisplaySummary(existingValue)
+      .withEnumeration(existingValue)
+      .withCopyNumber(existingValue)
+      .withChronology(existingValue)
+      .withBarcode(existingValue)
+      .withAccessionNumber(existingValue)
+      .withCallNumber(existingValue);
+
+    InventoryUtils.updateCommonItemFields(item, pieceFromStorage,
+      existingValue, existingValue, existingValue, existingValue,
+      existingValue, existingValue, existingValue);
+
+    assertTrue(item.isEmpty());
+  }
+
+  @Test
+  void updatesOnlyChangedItemFields() {
+    JsonObject item = new JsonObject();
+    Piece pieceFromStorage = new Piece()
+      .withDisplaySummary("Old Display")
+      .withEnumeration("Old Enum")
+      .withCopyNumber("Old Copy")
+      .withChronology("Old Chrono")
+      .withBarcode("Old Barcode")
+      .withAccessionNumber("Old Accession")
+      .withCallNumber("Old Call");
+
+    String newBarcode = "New Barcode";
+    String newCallNumber = "New Call";
+
+    InventoryUtils.updateCommonItemFields(item, pieceFromStorage,
+      pieceFromStorage.getDisplaySummary(),
+      pieceFromStorage.getEnumeration(),
+      pieceFromStorage.getCopyNumber(),
+      pieceFromStorage.getChronology(),
+      newBarcode,
+      pieceFromStorage.getAccessionNumber(),
+      newCallNumber);
+
+    assertEquals(2, item.size());
+    assertEquals(newBarcode, item.getString(ITEM_BARCODE));
+    assertEquals(newCallNumber, item.getString(ITEM_LEVEL_CALL_NUMBER));
+  }
 
   @Test
   void testConstructItemRecreateConfigSrcWithReceivingTenantId() throws IOException {
