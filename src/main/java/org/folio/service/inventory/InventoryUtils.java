@@ -200,35 +200,34 @@ public class InventoryUtils {
       .toList();
   }
 
-  public static void updateItemWithPieceFields(JsonObject item, Piece piece) {
-    updateCommonItemFields(item,
+  public static void updateItemWithPieceFields(JsonObject item, Piece pieceFromStorage, Piece piece) {
+    updateCommonItemFields(item, pieceFromStorage,
       piece.getDisplaySummary(),
       piece.getEnumeration(),
       piece.getCopyNumber(),
       piece.getChronology(),
       piece.getBarcode(),
-      piece.getAccessionNumber(),
-      piece.getCallNumber());
+      piece.getAccessionNumber(), piece.getCallNumber());
   }
 
-  public static void updateItemWithCheckinPieceFields(JsonObject item, CheckInPiece checkinPiece) {
+  public static void updateItemWithCheckinPieceFields(JsonObject item, Piece pieceFromStorage, CheckInPiece checkinPiece) {
     item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, checkinPiece.getItemStatus().value()));
-    updateCommonItemFields(item,
+    updateCommonItemFields(item, pieceFromStorage,
       checkinPiece.getDisplaySummary(),
       checkinPiece.getEnumeration(),
       checkinPiece.getCopyNumber(),
       checkinPiece.getChronology(),
       checkinPiece.getBarcode(),
-      checkinPiece.getAccessionNumber(),
-      checkinPiece.getCallNumber());
+      checkinPiece.getAccessionNumber(), checkinPiece.getCallNumber());
   }
 
-  public static void updateItemWithReceivedItemFields(PiecesHolder holder, JsonObject item, ReceivedItem receivedItem) {
+  public static void updateItemWithReceivedItemFields(PiecesHolder holder, JsonObject item,
+                                                      Piece pieceFromStorage, ReceivedItem receivedItem) {
     if (isOrderClosedOrPoLineCancelled(holder)) {
       receivedItem.withItemStatus(ReceivedItem.ItemStatus.ORDER_CLOSED);
     }
     item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, receivedItem.getItemStatus().value()));
-    updateCommonItemFields(item,
+    updateCommonItemFields(item, pieceFromStorage,
       receivedItem.getDisplaySummary(),
       receivedItem.getEnumeration(),
       receivedItem.getCopyNumber(),
@@ -238,35 +237,32 @@ public class InventoryUtils {
       receivedItem.getCallNumber());
   }
 
-  private static void updateCommonItemFields(JsonObject item,
-                                             String displaySummary,
-                                             String enumeration,
-                                             String copyNumber,
-                                             String chronology,
-                                             String barcode,
-                                             String accessionNumber,
-                                             String callNumber) {
-    if (StringUtils.isNotEmpty(displaySummary)) {
-      item.put(ITEM_DISPLAY_SUMMARY, displaySummary);
+  static void updateCommonItemFields(JsonObject item,
+                                     Piece pieceFromStorage,
+                                     String displaySummary,
+                                     String enumeration,
+                                     String copyNumber,
+                                     String chronology,
+                                     String barcode,
+                                     String accessionNumber,
+                                     String callNumber) {
+    updateItemField(item, ITEM_DISPLAY_SUMMARY, pieceFromStorage != null ? pieceFromStorage.getDisplaySummary() : null, displaySummary);
+    updateItemField(item, ITEM_ENUMERATION, pieceFromStorage != null ? pieceFromStorage.getEnumeration() : null, enumeration);
+    updateItemField(item, COPY_NUMBER, pieceFromStorage != null ? pieceFromStorage.getCopyNumber() : null, copyNumber);
+    updateItemField(item, ITEM_CHRONOLOGY,  pieceFromStorage != null ? pieceFromStorage.getChronology() : null, chronology);
+    updateItemField(item, ITEM_BARCODE,  pieceFromStorage != null ? pieceFromStorage.getBarcode() : null, barcode);
+    updateItemField(item, ITEM_ACCESSION_NUMBER,  pieceFromStorage != null ? pieceFromStorage.getAccessionNumber() : null, accessionNumber);
+    updateItemField(item, ITEM_LEVEL_CALL_NUMBER,  pieceFromStorage != null ? pieceFromStorage.getCallNumber() : null, callNumber);
+  }
+
+  private void updateItemField(JsonObject item, String itemFieldName, String existingValue, String valueToUpdate) {
+    if (StringUtils.isEmpty(valueToUpdate)) {
+      return;
     }
-    if (StringUtils.isNotEmpty(enumeration)) {
-      item.put(ITEM_ENUMERATION, enumeration);
+    if (StringUtils.equals(existingValue, valueToUpdate)) {
+      return;
     }
-    if (StringUtils.isNotEmpty(copyNumber)) {
-      item.put(COPY_NUMBER, copyNumber);
-    }
-    if (StringUtils.isNotEmpty(chronology)) {
-      item.put(ITEM_CHRONOLOGY, chronology);
-    }
-    if (StringUtils.isNotEmpty(barcode)) {
-      item.put(ITEM_BARCODE, barcode);
-    }
-    if (StringUtils.isNotEmpty(accessionNumber)) {
-      item.put(ITEM_ACCESSION_NUMBER, accessionNumber);
-    }
-    if (StringUtils.isNotEmpty(callNumber)) {
-      item.put(ITEM_LEVEL_CALL_NUMBER, callNumber);
-    }
+    item.put(itemFieldName, valueToUpdate);
   }
 
   private static boolean isOrderClosedOrPoLineCancelled(PiecesHolder holder) {

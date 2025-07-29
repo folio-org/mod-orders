@@ -151,7 +151,7 @@ public class OpenCompositeOrderPieceServiceTest {
     Title title = new Title().withId(piece.getTitleId()).withTitle("test title");
 
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), eq(ProtectedOperationType.UPDATE), eq(requestContext));
-    doReturn(succeededFuture(null)).when(inventoryItemManager).updateItemWithPieceFields(eq(piece), eq(requestContext));
+    doReturn(succeededFuture(null)).when(inventoryItemManager).updateItemWithPieceFields(eq(pieceFromStorage), eq(piece), eq(requestContext));
     doReturn(succeededFuture(order)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(piece.getPoLineId()), eq(requestContext));
     doReturn(succeededFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(eq(piece.getId()), eq(requestContext));
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(eq(title.getId()), eq(requestContext));
@@ -173,7 +173,7 @@ public class OpenCompositeOrderPieceServiceTest {
     Title title = new Title().withId(titleId).withTitle("test title");
 
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), eq(ProtectedOperationType.UPDATE), eq(requestContext));
-    doReturn(succeededFuture(null)).when(inventoryItemManager).updateItemWithPieceFields(eq(piece), eq(requestContext));
+    doReturn(succeededFuture(null)).when(inventoryItemManager).updateItemWithPieceFields(eq(pieceFromStorage), eq(piece), eq(requestContext));
     doReturn(succeededFuture(order)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(piece.getPoLineId()), eq(requestContext));
     doReturn(succeededFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(eq(piece.getId()), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceStorageService).updatePiece(eq(piece), eq(requestContext));
@@ -192,7 +192,7 @@ public class OpenCompositeOrderPieceServiceTest {
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
     Piece piece = createPieceWithLocationId(line, title);
 
-    doReturn(succeededFuture(null)).when(inventoryItemManager).updateItemWithPieceFields(piece, requestContext);
+    doReturn(succeededFuture(null)).when(inventoryItemManager).updateItemWithPieceFields(null, piece, requestContext);
 
     openCompositeOrderPieceService.openOrderUpdateInventory(order, line, piece, false, requestContext).result();
 
@@ -650,7 +650,7 @@ public class OpenCompositeOrderPieceServiceTest {
     doReturn(succeededFuture(null)).when(openCompositeOrderPieceService).openOrderUpdateInventory(any(CompositePurchaseOrder.class),
       any(PoLine.class), any(Piece.class), any(Boolean.class), eq(requestContext));
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
-    doReturn(succeededFuture(null)).when(inventoryItemManager).updateItemWithPieceFields(any(Piece.class), eq(requestContext));
+    doReturn(succeededFuture(null)).when(inventoryItemManager).updateItemWithPieceFields(eq(pieceBefore), any(Piece.class), eq(requestContext));
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(titleId, requestContext);
     doReturn(succeededFuture(List.of(pieceBefore))).when(pieceStorageService).getPiecesByPoLineId(line, requestContext);
     doReturn(succeededFuture(pieceBefore)).when(pieceStorageService).getPieceById(eq(pieceId), eq(requestContext));
