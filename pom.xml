@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.folio</groupId>
   <artifactId>mod-orders</artifactId>
-  <version>13.0.6-SNAPSHOT</version>
+  <version>13.0.6</version>
 
   <name>Orders Business Logic</name>
   <description>Business logic to manage orders in FOLIO</description>
@@ -18,7 +18,7 @@
     <url>https://github.com/folio-org/mod-orders.git</url>
     <connection>scm:git:git://github.com/folio-org/mod-orders.git</connection>
     <developerConnection>scm:git:git@github.com:folio-org/mod-orders.git</developerConnection>
-    <tag>v13.0.0</tag>
+    <tag>v13.0.6</tag>
   </scm>
 
   <issueManagement>
