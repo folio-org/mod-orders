@@ -1,5 +1,14 @@
 ## 13.1.0 - Unreleased
 
+## 13.0.6 - Released (Sunflower R1 2025 Bug Fix)
+The primary focus of this release was to resolve issue with updating receiving piece overwriting data in related item record.
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v13.0.5...v13.0.6)
+
+### Bug Fixes
+* [MODORDERS-1331](https://issues.folio.org/browse/MODORDERS-1331) - Updating receiving piece overwrites data in related item record (Sunflower)
+
+
 ## 13.0.5 - Released (Sunflower R1 2025 Bug Fix)
 The primary focus of this release was to fix issue with instance matching in ECS envs and remove ISBN validation/normalization.
 
