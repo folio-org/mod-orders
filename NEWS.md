@@ -1,5 +1,13 @@
 ## 13.0.0 - Unreleased
 
+## 12.9.13 - Released (Ramsons R2 2024)
+The primary focus of this release was to resolve issue with updating receiving piece overwriting data in related item record.
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.9.12...v12.9.13)
+
+### Bug Fixes
+* [MODORDERS-1330](https://issues.folio.org/browse/MODORDERS-1330) - Updating receiving piece overwrites data in related item record (Ramsons)
+
+
 ## 12.9.12 - Released (Ramsons R2 2024)
 The primary focus of this release was to remove ISBN validation/normalization logic
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.9.11...v12.9.12)
