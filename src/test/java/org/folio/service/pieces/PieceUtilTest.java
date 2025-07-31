@@ -5,6 +5,7 @@ import org.folio.models.pieces.PieceBatchStatusUpdateHolder;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.Location;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -15,7 +16,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@CopilotGenerated(partiallyGenerated = true)
+@CopilotGenerated(model = "Claude Sonnet 4", partiallyGenerated = true)
 public class PieceUtilTest {
 
   @Test
@@ -99,4 +100,36 @@ public class PieceUtilTest {
 
     assertNull(result);
   }
+
+  @Test
+  void testGetPiecesLocationsWithEmptyList() {
+    List<Piece> pieces = List.of();
+
+    List<Location> result = PieceUtil.getPiecesLocations(pieces);
+
+    assertTrue(result.isEmpty());
+  }
+
+  @Test
+  void testGetPiecesLocationsWithNonEmptyList() {
+    String holdingId = UUID.randomUUID().toString();
+    String locationId = UUID.randomUUID().toString();
+    String tenantId = "test-tenant";
+
+    Piece piece = new Piece()
+      .withHoldingId(holdingId)
+      .withLocationId(locationId)
+      .withReceivingTenantId(tenantId);
+
+    List<Piece> pieces = List.of(piece);
+
+    List<Location> result = PieceUtil.getPiecesLocations(pieces);
+
+    assertEquals(1, result.size());
+    Location location = result.getFirst();
+    assertEquals(holdingId, location.getHoldingId());
+    assertEquals(locationId, location.getLocationId());
+    assertEquals(tenantId, location.getTenantId());
+  }
+
 }
