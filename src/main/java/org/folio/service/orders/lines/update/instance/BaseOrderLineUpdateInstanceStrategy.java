@@ -7,7 +7,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
 import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.Location;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemManager;
@@ -41,11 +41,11 @@ public abstract class BaseOrderLineUpdateInstanceStrategy implements OrderLineUp
     return processHoldings(holder, requestContext);
   }
 
-  Future<List<String>> deleteAbandonedHoldings(boolean isDeleteAbandonedHoldings, PoLine poLine, RequestContext requestContext) {
+  Future<List<String>> deleteAbandonedHoldings(boolean isDeleteAbandonedHoldings, List<Location> locations, RequestContext requestContext) {
     if (!isDeleteAbandonedHoldings) {
       return Future.succeededFuture(Collections.emptyList());
     }
-    var deleteHoldingFutures = poLine.getLocations().stream()
+    var deleteHoldingFutures = locations.stream()
       .filter(location -> StringUtils.isNotEmpty(location.getHoldingId()))
       .map(location -> {
         var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());

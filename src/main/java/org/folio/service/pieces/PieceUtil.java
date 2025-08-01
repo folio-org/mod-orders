@@ -116,4 +116,14 @@ public class PieceUtil {
       ? poLine.getPhysical().getExpectedReceiptDate()
       : null;
   }
+
+  public static List<Location> getPiecesLocations(List<Piece> pieces) {
+    return pieces.stream()
+      .map(piece -> new Location()
+        .withHoldingId(piece.getHoldingId())
+        .withLocationId(piece.getLocationId())
+        .withTenantId(piece.getReceivingTenantId()))
+      .toList();
+  }
+
 }

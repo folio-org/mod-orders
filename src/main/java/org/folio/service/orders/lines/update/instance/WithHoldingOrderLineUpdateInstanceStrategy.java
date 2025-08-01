@@ -6,7 +6,7 @@ import io.vertx.core.json.JsonObject;
 import lombok.extern.log4j.Log4j2;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.collections4.ListUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.RequestContextUtil;
@@ -40,6 +40,7 @@ import static org.folio.orders.utils.HelperUtils.chainCall;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.service.inventory.InventoryItemManager.ID;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_HOLDINGS_RECORD_ID;
+import static org.folio.service.pieces.PieceUtil.getPiecesLocations;
 
 @Log4j2
 public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpdateInstanceStrategy {
@@ -205,19 +206,14 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
   private Future<Map<String, List<Location>>> retrieveProcessableLocations(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
     return pieceStorageService.getPiecesByPoLineId(holder.getStoragePoLine(), requestContext)
       .map(pieces -> {
-        List<Location> pieceHoldingIds = pieces.stream()
-          .map(piece -> new Location()
-            .withHoldingId(piece.getHoldingId())
-            .withLocationId(piece.getLocationId())
-            .withTenantId(piece.getReceivingTenantId()))
-          .collect(toList());
-        List<Location> storageHoldingIds = holder.getStoragePoLine().getLocations();
-
-        List<Location> uniqueLocations = StreamEx.of(ListUtils.union(pieceHoldingIds, storageHoldingIds))
-          .distinct(location -> String.format("%s %s", location.getLocationId(), location.getHoldingId()))
+        List<Location> uniqueLocations = StreamEx.of(getPiecesLocations(pieces))
+          .append(holder.getStoragePoLine().getLocations())
+          .distinct(location -> Pair.of(location.getLocationId(), location.getHoldingId()))
           .filter(location -> Objects.nonNull(location.getHoldingId()))
           .filter(location -> holder.shouldProcessHolding(location.getHoldingId()))
           .toList();
+
+        holder.getProcessedLocations().addAll(uniqueLocations);
         log.info("retrieveProcessableLocations:: Locations to process: {}", Json.encodePrettily(uniqueLocations));
         return uniqueLocations.stream()
           .collect(Collectors.groupingBy(location -> Objects.requireNonNullElse(location.getTenantId(), TenantTool.tenantId(requestContext.getHeaders()))));
@@ -261,7 +257,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
   }
 
   private Future<Void> deleteAbandonedHoldingsAndUpdateHolder(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
-    return deleteAbandonedHoldings(holder.getPatchOrderLineRequest().getReplaceInstanceRef().getDeleteAbandonedHoldings(), holder.getStoragePoLine(), requestContext)
+    return deleteAbandonedHoldings(holder.getPatchOrderLineRequest().getReplaceInstanceRef().getDeleteAbandonedHoldings(), holder.getProcessedLocations(), requestContext)
       .compose(deletedHoldings -> asFuture(() -> holder.getDeletedHoldingIds().addAll(deletedHoldings)))
       .mapEmpty();
   }

@@ -1,6 +1,8 @@
 package org.folio.models.orders.lines.update;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
@@ -10,6 +12,7 @@ import org.folio.rest.acq.model.StoragePatchOrderLineRequest;
 import org.folio.rest.acq.model.StoragePatchOrderLineRequest.PatchOrderLineOperationType;
 import org.folio.rest.acq.model.StorageReplaceOrderLineHoldingRefs;
 import org.folio.rest.acq.model.StorageReplaceOrderLineInstanceRef;
+import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.PoLine;
 
@@ -19,6 +22,7 @@ public class OrderLineUpdateInstanceHolder {
   private PoLine storagePoLine;
   private PatchOrderLineRequest patchOrderLineRequest;
   private StoragePatchOrderLineRequest storagePatchOrderLineRequest;
+  private final List<Location> processedLocations = new ArrayList<>();
   private final Set<String> deletedHoldingIds = new HashSet<>();
 
   public OrderLineUpdateInstanceHolder withStoragePoLine(PoLine storagePoLine) {
