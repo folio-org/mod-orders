@@ -45,24 +45,6 @@ public class FundService {
                 .collect(Collectors.toList()));
   }
 
-  public Future<List<Fund>> getFunds(Collection<String> fundIds, RequestContext requestContext) {
-    return collectResultsOnSuccess(
-        ofSubLists(new ArrayList<>(fundIds), MAX_IDS_FOR_GET_RQ_15).map(ids -> getFundsByIds(ids, requestContext))
-          .toList()).map(
-              lists -> lists.stream()
-                .flatMap(Collection::stream)
-                .collect(Collectors.toList()));
-  }
-
-  private Future<List<Fund>> getFundsByIds(Collection<String> ids, RequestContext requestContext) {
-    String query = convertIdsToCqlQuery(ids);
-    RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query)
-      .withLimit(MAX_IDS_FOR_GET_RQ_15)
-      .withOffset(0);
-    return restClient.get(requestEntry, FundCollection.class, requestContext)
-      .map(FundCollection::getFunds);
-  }
-
   public Future<Fund> retrieveFundById(String fundId, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(fundId);
     return restClient.get(requestEntry, CompositeFund.class, requestContext)

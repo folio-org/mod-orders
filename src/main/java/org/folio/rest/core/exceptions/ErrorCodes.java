@@ -122,6 +122,7 @@ public enum ErrorCodes {
   PO_LINE_HAS_RELATED_APPROVED_INVOICE_ERROR("poLineHasRelatedApprovedInvoice", "A related invoice has the APPROVED status, invoice line ids: %s"),
   INSTANCE_INVALID_PRODUCT_ID_ERROR("instanceInvalidProductIdError", "Instance connection could not be changed, the chosen instance contains an invalid Product ID."),
   FUND_LOCATION_RESTRICTION_VIOLATION("fundLocationRestrictionViolation", "One of the locations is restricted to be used by all funds."),
+  FUND_CODE_MISMATCH("fundCodeMismatch", "Fund code mismatch. The fund code in the fund distribution must match the fund code in the fund."),
   ENCUMBRANCES_FOR_RE_ENCUMBER_NOT_FOUND("encumbrancesForReEncumberNotFound", "The encumbrances were correctly created during the rollover or have already been updated."),
   CLAIMING_CONFIG_INVALID("claimingConfigInvalid", "Claiming interval should be set and greater than 0 if claiming is active"),
   TEMPLATE_NAME_ALREADY_EXISTS("templateNameNotUnique", "Template name already exists"),

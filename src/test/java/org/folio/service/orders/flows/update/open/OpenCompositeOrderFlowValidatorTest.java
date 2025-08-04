@@ -2,6 +2,7 @@ package org.folio.service.orders.flows.update.open;
 
 import static org.folio.rest.core.exceptions.ErrorCodes.FUND_LOCATION_RESTRICTION_VIOLATION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
@@ -13,6 +14,7 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.folio.CopilotGenerated;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
@@ -59,14 +61,14 @@ public class OpenCompositeOrderFlowValidatorTest {
         fundIds.stream().map(id -> new FundDistribution().withFundId(id)).toList()
       );
 
-    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+    when(fundService.getAllFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocations(createLocations("L1"))
       ))
     );
 
     // when
-    Future<Void> future = openCompositeOrderFlowValidator.checkFundLocationRestrictions(List.of(poLine), requestContext);
+    Future<Void> future = openCompositeOrderFlowValidator.validateFundsAndPopulateCodes(List.of(poLine), requestContext);
 
     // then
     vertxTestContext.assertComplete(future)
@@ -90,14 +92,14 @@ public class OpenCompositeOrderFlowValidatorTest {
       .withLocations(
         locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
       );
-    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+    when(fundService.getAllFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L1"))
       ))
     );
 
     // when
-    Future<Void> future = openCompositeOrderFlowValidator.checkFundLocationRestrictions(List.of(poLine), requestContext);
+    Future<Void> future = openCompositeOrderFlowValidator.validateFundsAndPopulateCodes(List.of(poLine), requestContext);
 
     // then
     vertxTestContext.assertComplete(future)
@@ -121,14 +123,14 @@ public class OpenCompositeOrderFlowValidatorTest {
       .withLocations(
         locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
       );
-    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+    when(fundService.getAllFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L1"))
       ))
     );
 
     // when
-    Future<Void> future = openCompositeOrderFlowValidator.checkFundLocationRestrictions(List.of(poLine), requestContext);
+    Future<Void> future = openCompositeOrderFlowValidator.validateFundsAndPopulateCodes(List.of(poLine), requestContext);
 
     // then
     vertxTestContext.assertFailure(future)
@@ -160,7 +162,7 @@ public class OpenCompositeOrderFlowValidatorTest {
       .withLocations(
         locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
       );
-    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+    when(fundService.getAllFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocations(createLocations("L1")),
         new Fund().withId("F2").withCode("FC").withRestrictByLocations(false).withLocations(createLocations("L1"))
@@ -168,7 +170,7 @@ public class OpenCompositeOrderFlowValidatorTest {
     );
 
     // when
-    Future<Void> future = openCompositeOrderFlowValidator.checkFundLocationRestrictions(List.of(poLine), requestContext);
+    Future<Void> future = openCompositeOrderFlowValidator.validateFundsAndPopulateCodes(List.of(poLine), requestContext);
 
     // then
     vertxTestContext.assertComplete(future)
@@ -192,7 +194,7 @@ public class OpenCompositeOrderFlowValidatorTest {
       .withLocations(
         locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
       );
-    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+    when(fundService.getAllFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocations(createLocations("L2")),
         new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L1"))
@@ -200,7 +202,7 @@ public class OpenCompositeOrderFlowValidatorTest {
     );
 
     // when
-    Future<Void> future = openCompositeOrderFlowValidator.checkFundLocationRestrictions(List.of(poLine), requestContext);
+    Future<Void> future = openCompositeOrderFlowValidator.validateFundsAndPopulateCodes(List.of(poLine), requestContext);
 
     // then
     vertxTestContext.assertComplete(future)
@@ -224,7 +226,7 @@ public class OpenCompositeOrderFlowValidatorTest {
       .withLocations(
         locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
       );
-    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+    when(fundService.getAllFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocations(createLocations("L2")),
         new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L1"))
@@ -232,7 +234,7 @@ public class OpenCompositeOrderFlowValidatorTest {
     );
 
     // when
-    Future<Void> future = openCompositeOrderFlowValidator.checkFundLocationRestrictions(List.of(poLine), requestContext);
+    Future<Void> future = openCompositeOrderFlowValidator.validateFundsAndPopulateCodes(List.of(poLine), requestContext);
 
     // then
     vertxTestContext.assertFailure(future)
@@ -264,7 +266,7 @@ public class OpenCompositeOrderFlowValidatorTest {
       .withLocations(
         locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
       );
-    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+    when(fundService.getAllFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L1")),
         new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L2"))
@@ -272,7 +274,7 @@ public class OpenCompositeOrderFlowValidatorTest {
     );
 
     // when
-    Future<Void> future = openCompositeOrderFlowValidator.checkFundLocationRestrictions(List.of(poLine), requestContext);
+    Future<Void> future = openCompositeOrderFlowValidator.validateFundsAndPopulateCodes(List.of(poLine), requestContext);
 
     // then
     vertxTestContext.assertFailure(future)
@@ -304,7 +306,7 @@ public class OpenCompositeOrderFlowValidatorTest {
       .withLocations(
         locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
       );
-    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+    when(fundService.getAllFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L1")),
         new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L2"))
@@ -312,7 +314,7 @@ public class OpenCompositeOrderFlowValidatorTest {
     );
 
     // when
-    Future<Void> future = openCompositeOrderFlowValidator.checkFundLocationRestrictions(List.of(poLine), requestContext);
+    Future<Void> future = openCompositeOrderFlowValidator.validateFundsAndPopulateCodes(List.of(poLine), requestContext);
 
     // then
     vertxTestContext.assertFailure(future)
@@ -344,7 +346,7 @@ public class OpenCompositeOrderFlowValidatorTest {
       .withLocations(
         locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
       );
-    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+    when(fundService.getAllFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L1", "L3")),
         new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L2"))
@@ -352,7 +354,7 @@ public class OpenCompositeOrderFlowValidatorTest {
     );
 
     // when
-    Future<Void> future = openCompositeOrderFlowValidator.checkFundLocationRestrictions(List.of(poLine), requestContext);
+    Future<Void> future = openCompositeOrderFlowValidator.validateFundsAndPopulateCodes(List.of(poLine), requestContext);
 
     // then
     vertxTestContext.assertFailure(future)
@@ -384,7 +386,7 @@ public class OpenCompositeOrderFlowValidatorTest {
       .withLocations(
         locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
       );
-    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+    when(fundService.getAllFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L1")),
         new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L2"))
@@ -392,7 +394,7 @@ public class OpenCompositeOrderFlowValidatorTest {
     );
 
     // when
-    Future<Void> future = openCompositeOrderFlowValidator.checkFundLocationRestrictions(List.of(poLine), requestContext);
+    Future<Void> future = openCompositeOrderFlowValidator.validateFundsAndPopulateCodes(List.of(poLine), requestContext);
 
     // then
     vertxTestContext.assertComplete(future)
@@ -416,7 +418,7 @@ public class OpenCompositeOrderFlowValidatorTest {
       .withLocations(
         locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
       );
-    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+    when(fundService.getAllFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocations(List.of()),
         new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L2"))
@@ -424,7 +426,7 @@ public class OpenCompositeOrderFlowValidatorTest {
     );
 
     // when
-    Future<Void> future = openCompositeOrderFlowValidator.checkFundLocationRestrictions(List.of(poLine), requestContext);
+    Future<Void> future = openCompositeOrderFlowValidator.validateFundsAndPopulateCodes(List.of(poLine), requestContext);
 
     // then
     vertxTestContext.assertComplete(future)
@@ -448,7 +450,7 @@ public class OpenCompositeOrderFlowValidatorTest {
       .withLocations(
         locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
       );
-    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+    when(fundService.getAllFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocations(List.of()),
         new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L2"))
@@ -456,7 +458,7 @@ public class OpenCompositeOrderFlowValidatorTest {
     );
 
     // when
-    Future<Void> future = openCompositeOrderFlowValidator.checkFundLocationRestrictions(List.of(poLine), requestContext);
+    Future<Void> future = openCompositeOrderFlowValidator.validateFundsAndPopulateCodes(List.of(poLine), requestContext);
 
     // then
     vertxTestContext.assertFailure(future)
@@ -488,7 +490,7 @@ public class OpenCompositeOrderFlowValidatorTest {
       .withLocations(
         locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
       );
-    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+    when(fundService.getAllFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L1", "L3")),
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L2"))
@@ -496,7 +498,7 @@ public class OpenCompositeOrderFlowValidatorTest {
     );
 
     // when
-    Future<Void> future = openCompositeOrderFlowValidator.checkFundLocationRestrictions(List.of(poLine), requestContext);
+    Future<Void> future = openCompositeOrderFlowValidator.validateFundsAndPopulateCodes(List.of(poLine), requestContext);
 
     // then
     vertxTestContext.assertComplete(future)
@@ -520,14 +522,14 @@ public class OpenCompositeOrderFlowValidatorTest {
       .withLocations(
         locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
       );
-    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+    when(fundService.getAllFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L1", "L3"))
       ))
     );
 
     // when
-    Future<Void> future = openCompositeOrderFlowValidator.checkFundLocationRestrictions(List.of(poLine), requestContext);
+    Future<Void> future = openCompositeOrderFlowValidator.validateFundsAndPopulateCodes(List.of(poLine), requestContext);
 
     // then
     vertxTestContext.assertComplete(future)
@@ -557,7 +559,7 @@ public class OpenCompositeOrderFlowValidatorTest {
         )
       );
 
-    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+    when(fundService.getAllFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L2")),
         new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L1"))
@@ -568,7 +570,7 @@ public class OpenCompositeOrderFlowValidatorTest {
     );
 
     // when
-    Future<Void> future = openCompositeOrderFlowValidator.checkFundLocationRestrictions(List.of(poLine), requestContext);
+    Future<Void> future = openCompositeOrderFlowValidator.validateFundsAndPopulateCodes(List.of(poLine), requestContext);
 
     // then
     vertxTestContext.assertComplete(future)
@@ -597,7 +599,7 @@ public class OpenCompositeOrderFlowValidatorTest {
         )
       );
 
-    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+    when(fundService.getAllFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L2")),
         new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L1"))
@@ -608,7 +610,7 @@ public class OpenCompositeOrderFlowValidatorTest {
     );
 
     // when
-    Future<Void> future = openCompositeOrderFlowValidator.checkFundLocationRestrictions(List.of(poLine), requestContext);
+    Future<Void> future = openCompositeOrderFlowValidator.validateFundsAndPopulateCodes(List.of(poLine), requestContext);
 
     // then
     vertxTestContext.assertFailure(future)
@@ -616,6 +618,184 @@ public class OpenCompositeOrderFlowValidatorTest {
         assertTrue(result.failed());
         HttpException exception = (HttpException) result.cause();
         assertEquals(404, exception.getCode());
+        vertxTestContext.completeNow();
+      });
+  }
+
+  @Test
+  @CopilotGenerated(model = "Claude Sonnet 4")
+  public void testPopulateMissingFundCodes_ShouldPopulateMissingCodes(VertxTestContext vertxTestContext) {
+    // given
+    String fundId1 = "fund-id-1";
+    String fundId2 = "fund-id-2";
+    String fundCode1 = "FUND-CODE-1";
+    String fundCode2 = "FUND-CODE-2";
+
+    List<FundDistribution> fundDistributions = List.of(
+      new FundDistribution().withFundId(fundId1), // Missing code
+      new FundDistribution().withFundId(fundId2).withCode(fundCode2) // Already has correct code
+    );
+
+    PoLine poLine = new PoLine()
+      .withId("test-po-line-id")
+      .withPoLineNumber("test-po-line-number")
+      .withFundDistribution(fundDistributions)
+      .withLocations(List.of(new Location().withLocationId("L1")));
+
+    List<Fund> funds = List.of(
+      new Fund().withId(fundId1).withCode(fundCode1).withRestrictByLocations(false),
+      new Fund().withId(fundId2).withCode(fundCode2).withRestrictByLocations(false)
+    );
+
+    when(fundService.getAllFunds(List.of(fundId1, fundId2), requestContext))
+      .thenReturn(Future.succeededFuture(funds));
+
+    // when
+    Future<Void> future = openCompositeOrderFlowValidator.validateFundsAndPopulateCodes(List.of(poLine), requestContext);
+
+    // then
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        // Verify that missing fund code was populated
+        assertEquals(fundCode1, poLine.getFundDistribution().get(0).getCode());
+        // Verify that existing correct fund code was preserved
+        assertEquals(fundCode2, poLine.getFundDistribution().get(1).getCode());
+        vertxTestContext.completeNow();
+      });
+  }
+
+  @Test
+  @CopilotGenerated(model = "Claude Sonnet 4")
+  public void testPopulateMissingFundCodes_ShouldNotPopulateWhenFundNotFound(VertxTestContext vertxTestContext) {
+    // given
+    String fundId1 = "fund-id-1";
+    String fundId2 = "fund-id-2";
+    String fundCode1 = "FUND-CODE-1";
+
+    List<FundDistribution> fundDistributions = List.of(
+      new FundDistribution().withFundId(fundId1), // Missing code
+      new FundDistribution().withFundId(fundId2)  // Missing code, fund not found
+    );
+
+    PoLine poLine = new PoLine()
+      .withId("test-po-line-id")
+      .withPoLineNumber("test-po-line-number")
+      .withFundDistribution(fundDistributions)
+      .withLocations(List.of(new Location().withLocationId("L1")));
+
+    // Only fund1 is returned, fund2 is missing
+    List<Fund> funds = List.of(
+      new Fund().withId(fundId1).withCode(fundCode1).withRestrictByLocations(false)
+    );
+
+    when(fundService.getAllFunds(List.of(fundId1, fundId2), requestContext))
+      .thenReturn(Future.succeededFuture(funds));
+
+    // when
+    Future<Void> future = openCompositeOrderFlowValidator.validateFundsAndPopulateCodes(List.of(poLine), requestContext);
+
+    // then
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        // Verify that found fund code was populated
+        assertEquals(fundCode1, poLine.getFundDistribution().get(0).getCode());
+        // Verify that missing fund code remains null
+        assertNull(poLine.getFundDistribution().get(1).getCode());
+        vertxTestContext.completeNow();
+      });
+  }
+
+  @Test
+  @CopilotGenerated(model = "Claude Sonnet 4")
+  public void testPopulateMissingFundCodes_ShouldNotPopulateWhenFundServiceReturnsPartialResults(VertxTestContext vertxTestContext) {
+    // given
+    String fundId1 = "fund-id-1";
+    String fundId2 = "fund-id-2";
+    String fundId3 = "fund-id-3";
+    String fundCode1 = "FUND-CODE-1";
+    String fundCode3 = "FUND-CODE-3";
+
+    List<FundDistribution> fundDistributions = List.of(
+      new FundDistribution().withFundId(fundId1), // Missing code, fund will be found
+      new FundDistribution().withFundId(fundId2), // Missing code, fund will NOT be found
+      new FundDistribution().withFundId(fundId3)  // Missing code, fund will be found
+    );
+
+    PoLine poLine = new PoLine()
+      .withId("test-po-line-id")
+      .withPoLineNumber("test-po-line-number")
+      .withFundDistribution(fundDistributions)
+      .withLocations(List.of(new Location().withLocationId("L1")));
+
+    // Service returns only fund1 and fund3, fund2 is missing from response
+    List<Fund> funds = List.of(
+      new Fund().withId(fundId1).withCode(fundCode1).withRestrictByLocations(false),
+      new Fund().withId(fundId3).withCode(fundCode3).withRestrictByLocations(false)
+    );
+
+    when(fundService.getAllFunds(List.of(fundId1, fundId2, fundId3), requestContext))
+      .thenReturn(Future.succeededFuture(funds));
+
+    // when
+    Future<Void> future = openCompositeOrderFlowValidator.validateFundsAndPopulateCodes(List.of(poLine), requestContext);
+
+    // then
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        // Verify that found fund codes were populated
+        assertEquals(fundCode1, poLine.getFundDistribution().get(0).getCode());
+        assertEquals(fundCode3, poLine.getFundDistribution().get(2).getCode());
+        // Verify that missing fund code remains null (fund2 not found in service response)
+        assertNull(poLine.getFundDistribution().get(1).getCode());
+        vertxTestContext.completeNow();
+      });
+  }
+
+  @Test
+  @CopilotGenerated(model = "Claude Sonnet 4")
+  public void testPopulateMissingFundCodes_ShouldThrowErrorWhenFundCodeMismatch(VertxTestContext vertxTestContext) {
+    // given
+    String fundId1 = "fund-id-1";
+    String correctFundCode = "CORRECT-FUND-CODE";
+    String incorrectFundCode = "WRONG-FUND-CODE";
+
+    List<FundDistribution> fundDistributions = List.of(
+      new FundDistribution().withFundId(fundId1).withCode(incorrectFundCode) // Wrong code provided
+    );
+
+    PoLine poLine = new PoLine()
+      .withId("test-po-line-id")
+      .withPoLineNumber("test-po-line-number")
+      .withFundDistribution(fundDistributions)
+      .withLocations(List.of(new Location().withLocationId("L1")));
+
+    List<Fund> funds = List.of(
+      new Fund().withId(fundId1).withCode(correctFundCode).withRestrictByLocations(false)
+    );
+
+    when(fundService.getAllFunds(List.of(fundId1), requestContext))
+      .thenReturn(Future.succeededFuture(funds));
+
+    // when
+    Future<Void> future = openCompositeOrderFlowValidator.validateFundsAndPopulateCodes(List.of(poLine), requestContext);
+
+    // then
+    vertxTestContext.assertFailure(future)
+      .onComplete(result -> {
+        assertTrue(result.failed());
+        HttpException exception = (HttpException) result.cause();
+        assertEquals(422, exception.getCode());
+
+        // Verify error parameters contain the mismatch details
+        List<Parameter> parameters = exception.getError().getParameters();
+        assertTrue(parameters.stream().anyMatch(p -> "fundId".equals(p.getKey()) && fundId1.equals(p.getValue())));
+        assertTrue(parameters.stream().anyMatch(p -> "expectedFundCode".equals(p.getKey()) && correctFundCode.equals(p.getValue())));
+        assertTrue(parameters.stream().anyMatch(p -> "providedFundCode".equals(p.getKey()) && incorrectFundCode.equals(p.getValue())));
+        assertTrue(parameters.stream().anyMatch(p -> "poLineId".equals(p.getKey()) && "test-po-line-id".equals(p.getValue())));
+
         vertxTestContext.completeNow();
       });
   }
