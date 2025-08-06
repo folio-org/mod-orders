@@ -81,7 +81,9 @@ public class OpenCompositeOrderFlowValidator {
       );
 
     futures.add(expenseClassValidationService.validateExpenseClasses(compPO.getPoLines(), true, requestContext));
+    futures.add(checkLocationsAndPiecesConsistency(compPO.getPoLines(), requestContext));
     futures.add(validateFundDistributionTotal(compPO.getPoLines()));
+    futures.add(validateFundsAndPopulateCodes(compPO.getPoLines(), requestContext));
     futures.add(validateMaterialTypesFuture);
     futures.add(validateEncumbrancesFuture);
 
@@ -149,26 +151,11 @@ public class OpenCompositeOrderFlowValidator {
 
         String actualFundCode = fundIdToCodeMap.get(fundDistribution.getFundId());
 
-        if (StringUtils.isNotEmpty(fundDistribution.getCode())) {
-          if (!StringUtils.equals(actualFundCode, fundDistribution.getCode())) {
-            logger.error("Fund code mismatch for fundId '{}': expected '{}' but found '{}'",
-                        fundDistribution.getFundId(), actualFundCode, fundDistribution.getCode());
-
-            List<Parameter> parameters = List.of(
-              new Parameter().withKey("fundId").withValue(fundDistribution.getFundId()),
-              new Parameter().withKey("expectedFundCode").withValue(actualFundCode),
-              new Parameter().withKey("providedFundCode").withValue(fundDistribution.getCode()),
-              new Parameter().withKey("poLineId").withValue(poLine.getId())
-            );
-
-            return Future.failedFuture(new HttpException(422, ErrorCodes.FUND_CODE_MISMATCH, parameters));
-          }
-        } else {
-          // Populate missing fund code
+        if (StringUtils.isEmpty(fundDistribution.getCode()) || !StringUtils.equals(fundDistribution.getCode(), actualFundCode)) {
           fundDistribution.setCode(actualFundCode);
-          logger.info("populateMissingFundCodes:: Set fund code '{}' for fundId '{}'",
-                      actualFundCode, fundDistribution.getFundId());
-        }
+          logger.info("populateMissingFundCodes:: Set correct fund code '{}' for fundId '{}'",
+            actualFundCode, fundDistribution.getFundId());
+          }
       }
     }
 

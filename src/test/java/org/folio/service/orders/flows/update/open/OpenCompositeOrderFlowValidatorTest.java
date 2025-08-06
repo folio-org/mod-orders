@@ -667,6 +667,50 @@ public class OpenCompositeOrderFlowValidatorTest {
 
   @Test
   @CopilotGenerated(model = "Claude Sonnet 4")
+  public void testPopulateMissingFundCodes_ShouldCorrectIncorrectCodes(VertxTestContext vertxTestContext) {
+    // given
+    String fundId1 = "fund-id-1";
+    String fundId2 = "fund-id-2";
+    String correctFundCode1 = "CORRECT-FUND-CODE-1";
+    String correctFundCode2 = "CORRECT-FUND-CODE-2";
+    String incorrectFundCode1 = "INCORRECT-FUND-CODE-1";
+
+    List<FundDistribution> fundDistributions = List.of(
+      new FundDistribution().withFundId(fundId1).withCode(incorrectFundCode1), // Incorrect code
+      new FundDistribution().withFundId(fundId2).withCode(correctFundCode2) // Correct code
+    );
+
+    PoLine poLine = new PoLine()
+      .withId("test-po-line-id")
+      .withPoLineNumber("test-po-line-number")
+      .withFundDistribution(fundDistributions)
+      .withLocations(List.of(new Location().withLocationId("L1")));
+
+    List<Fund> funds = List.of(
+      new Fund().withId(fundId1).withCode(correctFundCode1).withRestrictByLocations(false),
+      new Fund().withId(fundId2).withCode(correctFundCode2).withRestrictByLocations(false)
+    );
+
+    when(fundService.getAllFunds(List.of(fundId1, fundId2), requestContext))
+      .thenReturn(Future.succeededFuture(funds));
+
+    // when
+    Future<Void> future = openCompositeOrderFlowValidator.validateFundsAndPopulateCodes(List.of(poLine), requestContext);
+
+    // then
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        // Verify that incorrect fund code was corrected
+        assertEquals(correctFundCode1, poLine.getFundDistribution().get(0).getCode());
+        // Verify that existing correct fund code was preserved
+        assertEquals(correctFundCode2, poLine.getFundDistribution().get(1).getCode());
+        vertxTestContext.completeNow();
+      });
+  }
+
+  @Test
+  @CopilotGenerated(model = "Claude Sonnet 4")
   public void testPopulateMissingFundCodes_ShouldNotPopulateWhenFundNotFound(VertxTestContext vertxTestContext) {
     // given
     String fundId1 = "fund-id-1";
@@ -709,18 +753,14 @@ public class OpenCompositeOrderFlowValidatorTest {
 
   @Test
   @CopilotGenerated(model = "Claude Sonnet 4")
-  public void testPopulateMissingFundCodes_ShouldNotPopulateWhenFundServiceReturnsPartialResults(VertxTestContext vertxTestContext) {
-    // given
+  public void testPopulateMissingFundCodes_ShouldHandleDuplicateFundIds(VertxTestContext vertxTestContext) {
+    // given - Test case for merge function when funds have same IDs but assigned to different expense classes
     String fundId1 = "fund-id-1";
-    String fundId2 = "fund-id-2";
-    String fundId3 = "fund-id-3";
     String fundCode1 = "FUND-CODE-1";
-    String fundCode3 = "FUND-CODE-3";
 
     List<FundDistribution> fundDistributions = List.of(
-      new FundDistribution().withFundId(fundId1), // Missing code, fund will be found
-      new FundDistribution().withFundId(fundId2), // Missing code, fund will NOT be found
-      new FundDistribution().withFundId(fundId3)  // Missing code, fund will be found
+      new FundDistribution().withFundId(fundId1).withExpenseClassId("expense-class-1"), // First instance
+      new FundDistribution().withFundId(fundId1).withExpenseClassId("expense-class-2")  // Duplicate fund ID with different expense class
     );
 
     PoLine poLine = new PoLine()
@@ -729,13 +769,13 @@ public class OpenCompositeOrderFlowValidatorTest {
       .withFundDistribution(fundDistributions)
       .withLocations(List.of(new Location().withLocationId("L1")));
 
-    // Service returns only fund1 and fund3, fund2 is missing from response
+    // Simulate multiple fund entries with same ID but different expense classes
     List<Fund> funds = List.of(
       new Fund().withId(fundId1).withCode(fundCode1).withRestrictByLocations(false),
-      new Fund().withId(fundId3).withCode(fundCode3).withRestrictByLocations(false)
+      new Fund().withId(fundId1).withCode("DUPLICATE-CODE").withRestrictByLocations(false) // Duplicate ID with different code
     );
 
-    when(fundService.getAllFunds(List.of(fundId1, fundId2, fundId3), requestContext))
+    when(fundService.getAllFunds(List.of(fundId1, fundId1), requestContext))
       .thenReturn(Future.succeededFuture(funds));
 
     // when
@@ -745,57 +785,9 @@ public class OpenCompositeOrderFlowValidatorTest {
     vertxTestContext.assertComplete(future)
       .onComplete(result -> {
         assertTrue(result.succeeded());
-        // Verify that found fund codes were populated
+        // Verify that both fund distributions get the same code (merge function uses existing value)
         assertEquals(fundCode1, poLine.getFundDistribution().get(0).getCode());
-        assertEquals(fundCode3, poLine.getFundDistribution().get(2).getCode());
-        // Verify that missing fund code remains null (fund2 not found in service response)
-        assertNull(poLine.getFundDistribution().get(1).getCode());
-        vertxTestContext.completeNow();
-      });
-  }
-
-  @Test
-  @CopilotGenerated(model = "Claude Sonnet 4")
-  public void testPopulateMissingFundCodes_ShouldThrowErrorWhenFundCodeMismatch(VertxTestContext vertxTestContext) {
-    // given
-    String fundId1 = "fund-id-1";
-    String correctFundCode = "CORRECT-FUND-CODE";
-    String incorrectFundCode = "WRONG-FUND-CODE";
-
-    List<FundDistribution> fundDistributions = List.of(
-      new FundDistribution().withFundId(fundId1).withCode(incorrectFundCode) // Wrong code provided
-    );
-
-    PoLine poLine = new PoLine()
-      .withId("test-po-line-id")
-      .withPoLineNumber("test-po-line-number")
-      .withFundDistribution(fundDistributions)
-      .withLocations(List.of(new Location().withLocationId("L1")));
-
-    List<Fund> funds = List.of(
-      new Fund().withId(fundId1).withCode(correctFundCode).withRestrictByLocations(false)
-    );
-
-    when(fundService.getAllFunds(List.of(fundId1), requestContext))
-      .thenReturn(Future.succeededFuture(funds));
-
-    // when
-    Future<Void> future = openCompositeOrderFlowValidator.validateFundsAndPopulateCodes(List.of(poLine), requestContext);
-
-    // then
-    vertxTestContext.assertFailure(future)
-      .onComplete(result -> {
-        assertTrue(result.failed());
-        HttpException exception = (HttpException) result.cause();
-        assertEquals(422, exception.getCode());
-
-        // Verify error parameters contain the mismatch details
-        List<Parameter> parameters = exception.getError().getParameters();
-        assertTrue(parameters.stream().anyMatch(p -> "fundId".equals(p.getKey()) && fundId1.equals(p.getValue())));
-        assertTrue(parameters.stream().anyMatch(p -> "expectedFundCode".equals(p.getKey()) && correctFundCode.equals(p.getValue())));
-        assertTrue(parameters.stream().anyMatch(p -> "providedFundCode".equals(p.getKey()) && incorrectFundCode.equals(p.getValue())));
-        assertTrue(parameters.stream().anyMatch(p -> "poLineId".equals(p.getKey()) && "test-po-line-id".equals(p.getValue())));
-
+        assertEquals(fundCode1, poLine.getFundDistribution().get(1).getCode());
         vertxTestContext.completeNow();
       });
   }

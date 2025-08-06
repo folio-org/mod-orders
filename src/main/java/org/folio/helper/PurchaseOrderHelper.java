@@ -249,8 +249,6 @@ public class PurchaseOrderHelper {
           .compose(v -> {
             if (isTransitionToOpen) {
               compPO.getPoLines().forEach(poLine -> PoLineCommonUtil.updateLocationsQuantity(poLine.getLocations()));
-              return openCompositeOrderFlowValidator.checkLocationsAndPiecesConsistency(compPO.getPoLines(), requestContext)
-                .compose(ok -> openCompositeOrderFlowValidator.validateFundsAndPopulateCodes(compPO.getPoLines(), requestContext));
             }
             return Future.succeededFuture();
           })
