@@ -1054,7 +1054,13 @@ public class PurchaseOrdersApiTest {
 
     Errors response = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 422).as(Errors.class);
 
-    verifyInventoryNonInteraction();
+    // verify inventory no interaction
+    List<JsonObject> instancesSearches = getInstancesSearches();
+    List<JsonObject> holdingsSearches = getHoldingsSearches();
+    List<JsonObject> itemsSearches = getItemsSearches();
+    assertNull(instancesSearches);
+    assertNull(holdingsSearches);
+    assertNull(itemsSearches);
 
     List<Error> errors = response.getErrors();
     assertThat(errors, hasSize(1));
