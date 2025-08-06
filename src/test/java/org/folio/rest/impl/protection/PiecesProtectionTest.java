@@ -74,7 +74,7 @@ public class PiecesProtectionTest extends ProtectedEntityTestBase {
       headers, APPLICATION_JSON, HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt()).as(Errors.class);
 
     assertThat(errors.getErrors(), hasSize(1));
-    assertThat(errors.getErrors().get(0).getCode(), equalTo(ORDER_UNITS_NOT_FOUND.getCode()));
+    assertThat(errors.getErrors().getFirst().getCode(), equalTo(ORDER_UNITS_NOT_FOUND.getCode()));
     // Verify number of sub-requests
     validateNumberOfRequests(1, 0);
   }
@@ -123,7 +123,7 @@ public class PiecesProtectionTest extends ProtectedEntityTestBase {
       headers, APPLICATION_JSON, HttpStatus.HTTP_FORBIDDEN.toInt()).as(Errors.class);
 
     assertThat(errors.getErrors(), hasSize(1));
-    assertThat(errors.getErrors().get(0).getCode(), equalTo(USER_NOT_A_MEMBER_OF_THE_ACQ.getCode()));
+    assertThat(errors.getErrors().getFirst().getCode(), equalTo(USER_NOT_A_MEMBER_OF_THE_ACQ.getCode()));
 
     validateNumberOfRequests(1, 1);
   }

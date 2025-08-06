@@ -40,7 +40,6 @@ import java.util.stream.Collectors;
 
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.AcqDesiredPermissions.MANAGE;
-import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToApproved;
@@ -171,7 +170,7 @@ public class OrderValidationService {
       });
     }
 
-    return commonSettingsCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
+    return commonSettingsCache.loadSettings(requestContext)
       .compose(tenantConfig -> validateOrderForPost(compPO, tenantConfig, requestContext))
       .map(errors -> {
         resultErrors.addAll(errors);
@@ -222,7 +221,7 @@ public class OrderValidationService {
    * @param compPO composite purchase order
    */
   public Future<Void> checkOrderApprovalRequired(CompositePurchaseOrder compPO, RequestContext requestContext) {
-    return commonSettingsCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
+    return commonSettingsCache.loadSettings(requestContext)
       .map(tenantConfig -> {
         boolean isApprovalRequired = isApprovalRequiredConfiguration(tenantConfig);
         if (isApprovalRequired && !compPO.getApproved().equals(Boolean.TRUE)) {
@@ -248,7 +247,7 @@ public class OrderValidationService {
    * @param compPO composite purchase order for checking permissions
    */
   private Future<Void> checkOrderApprovalPermissions(CompositePurchaseOrder compPO, RequestContext requestContext) {
-    return commonSettingsCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
+    return commonSettingsCache.loadSettings(requestContext)
       .map(tenantConfig -> {
         boolean isApprovalRequired = isApprovalRequiredConfiguration(tenantConfig);
         if (isApprovalRequired && compPO.getApproved()
@@ -348,8 +347,7 @@ public class OrderValidationService {
 
   private List<Error> validatePoLineLimit(CompositePurchaseOrder compPO, JsonObject tenantConfig) {
     if (isNotEmpty(compPO.getPoLines())) {
-      int limit = getPoLineLimit(tenantConfig);
-      if (compPO.getPoLines().size() > limit) {
+      if (compPO.getPoLines().size() > getPoLineLimit(tenantConfig)) {
         return List.of(ErrorCodes.POL_LINES_LIMIT_EXCEEDED.toError());
       }
     }

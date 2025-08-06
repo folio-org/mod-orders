@@ -1,0 +1,31 @@
+{
+  "settings": [
+    {
+      "id": "e3a73e91-aac9-40a4-8f47-b0187bdb1e6b",
+      "key": "poLines-limit",
+      "value": "1",
+      "metadata": {
+        "createdDate": "2018-12-12T08:14:32.743+0000",
+        "createdByUserId": "d16d7615-ad6b-5a57-9cb4-62aca2ba764c",
+        "updatedDate": "2018-12-12T08:24:34.213+0000",
+        "updatedByUserId": "d16d7615-ad6b-5a57-9cb4-62aca2ba764c"
+      }
+    },
+    {
+      "id" : "339bc2b6-4f2d-4fff-a23c-4fbec2a5e27a",
+      "key" : "approvals",
+      "value" : "{\"isApprovalRequired\":true}"
+    },
+    {
+      "id" : "9dfadc8b-feba-40c8-94e9-b9d5de8ed884",
+      "key" : "disableInstanceMatching",
+      "value" : "{\"isInstanceMatchingDisabled\":true}"
+    },
+    {
+      "id" : "582ac200-1793-4015-ad80-4dc4b2a1ea82",
+      "key" : "localeSettings",
+      "value" : "{\"locale\":\"en-US\",\"timezone\":\"UTC\",\"currency\":\"USD\"}"
+    }
+  ],
+  "totalRecords": 4
+}

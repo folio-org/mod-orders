@@ -71,6 +71,7 @@ import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
 import static org.folio.orders.utils.ResourcePathResolver.LEDGERS;
 import static org.folio.orders.utils.ResourcePathResolver.LEDGER_FY_ROLLOVERS;
 import static org.folio.orders.utils.ResourcePathResolver.LEDGER_FY_ROLLOVER_ERRORS;
+import static org.folio.orders.utils.ResourcePathResolver.ORDERS_STORAGE_SETTINGS;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_INVOICE_RELATIONSHIP;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_TEMPLATES;
 import static org.folio.orders.utils.ResourcePathResolver.ORGANIZATION_STORAGE;
@@ -143,6 +144,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -243,6 +245,7 @@ public class MockServer {
   private static final String CONTRIBUTOR_NAME_TYPES_PATH = BASE_MOCK_DATA_PATH + "contributorNameTypes/contributorPersonalNameType.json";
   public static final String CONFIG_MOCK_PATH = BASE_MOCK_DATA_PATH + "configurations.entries/%s.json";
   public static final String SETTINGS_MOCK_PATH = BASE_MOCK_DATA_PATH + "settings.entries/%s.json";
+  public static final String ORDERS_STORAGE_SETTINGS_MOCK_PATH = BASE_MOCK_DATA_PATH + "orders-storage-settings/%s.json";
   public static final String LOAN_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "loanTypes/";
   public static final String LEDGER_FY_ROLLOVERS_PATH = BASE_MOCK_DATA_PATH + "ledgerFyRollovers/";
   public static final String LEDGER_FY_ROLLOVERS_ERRORS_PATH = BASE_MOCK_DATA_PATH + "ledgerFyRolloverErrors/";
@@ -684,7 +687,8 @@ public class MockServer {
     router.get("/material-types").handler(ctx -> handleGetJsonResource(ctx, MOCK_DATA_MATERIAL_TYPES_JSON));
     router.get(resourcesPath(WRAPPER_PIECES_STORAGE)).handler(ctx -> handleGetJsonResource(ctx, MOCK_DATA_WRAPPER_PIECES_JSON));
     router.get(resourcesPath(WRAPPER_PIECES_STORAGE) + "/:id").handler(ctx -> handleGetJsonResource(ctx, MOCK_DATA_WRAPPER_PIECES_BY_ID_JSON));
-    router.get(resourcesPath(CONFIGURATION_ENTRIES)).handler(this::handleConfigurationModuleResponse);
+    router.get(resourcesPath(CONFIGURATION_ENTRIES)).handler(ctx -> handleConfigurationOrSettingsResponse(CONFIG_MOCK_PATH, ctx));
+    router.get(resourcesPath(ORDERS_STORAGE_SETTINGS)).handler(ctx -> handleConfigurationOrSettingsResponse(ORDERS_STORAGE_SETTINGS_MOCK_PATH, ctx));
     router.get(resourcesPath(SETTINGS_ENTRIES)).handler(this::handleSettingsModuleResponse);
     // PUT
     router.put(resourcePath(PURCHASE_ORDER_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER_STORAGE));
@@ -1612,28 +1616,33 @@ public class MockServer {
     return resourceByIdPath(subObjName) + ":id";
   }
 
-  private void handleConfigurationModuleResponse(RoutingContext ctx) {
+  private void handleConfigurationOrSettingsResponse(String mockPath, RoutingContext ctx) {
     try {
-      List<JsonObject> configEntries = serverRqRs.column(HttpMethod.SEARCH).get(CONFIGS);
+      var configEntries = serverRqRs.column(HttpMethod.SEARCH).get(CONFIGS);
       if (configEntries != null && !configEntries.isEmpty()) {
-        JsonObject configs = new JsonObject().put(CONFIGS, configEntries);
+        var configs = new JsonObject().put(CONFIGS, configEntries);
         serverResponse(ctx, 200, APPLICATION_JSON, configs.encodePrettily());
         return;
       }
 
-      String tenant = ctx.request().getHeader(OKAPI_HEADER_TENANT);
-      if (PO_NUMBER_ERROR_X_OKAPI_TENANT.getValue().equals(tenant)) {
+      var tenant = ctx.request().getHeader(OKAPI_HEADER_TENANT);
+      if (StringUtils.equals(PO_NUMBER_ERROR_X_OKAPI_TENANT.getValue(), tenant)) {
         tenant = EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10.getValue();
       }
-      if (NON_EXIST_INSTANCE_STATUS_TENANT_HEADER.getValue().equals(tenant) ||
-        NON_EXIST_INSTANCE_TYPE_TENANT_HEADER.getValue().equals(tenant) ||
-        NON_EXIST_LOAN_TYPE_TENANT_HEADER.getValue().equals(tenant)) {
+
+      if (Set.of(NON_EXIST_INSTANCE_STATUS_TENANT_HEADER, NON_EXIST_INSTANCE_TYPE_TENANT_HEADER, NON_EXIST_LOAN_TYPE_TENANT_HEADER)
+        .stream().map(Header::getValue).toList()
+        .contains(tenant)
+      ) {
         tenant = EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1.getValue();
       }
+
       try {
-        serverResponse(ctx, 200, APPLICATION_JSON, getMockData(String.format(CONFIG_MOCK_PATH, tenant)));
+        var mockData = getMockData(String.format(mockPath, tenant));
+        serverResponse(ctx, 200, APPLICATION_JSON, mockData);
       } catch (Exception exc) {
-        serverResponse(ctx, 200, APPLICATION_JSON, getMockData(String.format(CONFIG_MOCK_PATH, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10.getValue())));
+        var mockData = getMockData(String.format(mockPath, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10.getValue()));
+        serverResponse(ctx, 200, APPLICATION_JSON, mockData);
       }
     } catch (IOException e) {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
@@ -1642,7 +1651,8 @@ public class MockServer {
 
   private void handleSettingsModuleResponse(RoutingContext ctx) {
     try {
-      serverResponse(ctx, 200, APPLICATION_JSON, getMockData(SETTINGS_MOCK_PATH.formatted(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10.getValue())));
+      var mockData = getMockData(SETTINGS_MOCK_PATH.formatted(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10.getValue()));
+      serverResponse(ctx, 200, APPLICATION_JSON, mockData);
     } catch (IOException e) {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     }

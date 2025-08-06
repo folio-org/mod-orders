@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 
 import static java.util.Map.entry;
-import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_HOLDINGS_SOURCE_ID;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_LOAN_TYPE;
@@ -139,7 +138,7 @@ public class InventoryUtils {
   private static Future<String> getEntryTypeValue(CommonSettingsCache commonSettingsCache,
                                                   String entryType,
                                                   RequestContext requestContext) {
-    return commonSettingsCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
+    return commonSettingsCache.loadSettings(requestContext)
       .map(configs -> switch (entryType) {
         case HOLDINGS_SOURCES -> configs.getString(CONFIG_NAME_HOLDINGS_SOURCE_NAME, DEFAULT_HOLDINGS_SOURCE_NAME);
         case INSTANCE_TYPES -> configs.getString(CONFIG_NAME_INSTANCE_TYPE_CODE, DEFAULT_INSTANCE_TYPE_CODE);

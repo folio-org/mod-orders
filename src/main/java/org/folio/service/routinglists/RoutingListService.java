@@ -146,11 +146,11 @@ public class RoutingListService {
     return restClient.get(requestEntry, SettingCollection.class, requestContext)
       .map(settingCollection -> {
         var settings = settingCollection.getSettings();
-        if (ObjectUtils.isEmpty(settings) || StringUtils.isBlank(settings.get(0).getValue())) {
+        if (ObjectUtils.isEmpty(settings) || StringUtils.isBlank((String) settings.getFirst().getValue())) {
           logger.error("getAddressTypeId:: Setting is not found with key={}", ROUTING_USER_ADDRESS_TYPE_ID);
           throw new ResourceNotFoundException(String.format("Setting is not found with key=%s", ROUTING_USER_ADDRESS_TYPE_ID));
         }
-        return settings.get(0).getValue();
+        return (String) settings.getFirst().getValue();
       });
   }
 

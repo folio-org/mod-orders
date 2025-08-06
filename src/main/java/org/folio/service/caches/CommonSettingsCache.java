@@ -2,12 +2,12 @@ package org.folio.service.caches;
 
 import static org.folio.orders.utils.CacheUtils.buildAsyncCache;
 import static org.folio.orders.utils.ResourcePathResolver.CONFIGURATION_ENTRIES;
+import static org.folio.orders.utils.ResourcePathResolver.ORDERS_STORAGE_SETTINGS;
 import static org.folio.orders.utils.ResourcePathResolver.SETTINGS_ENTRIES;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.service.settings.CommonSettingsRetriever.CONFIG_QUERY;
-import static org.folio.service.settings.CommonSettingsRetriever.SETTINGS_QUERY;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -22,7 +22,6 @@ import org.springframework.stereotype.Component;
 import com.github.benmanes.caffeine.cache.AsyncCache;
 
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
 
 import java.util.function.BiFunction;
 
@@ -31,54 +30,70 @@ import java.util.function.BiFunction;
 @RequiredArgsConstructor
 public class CommonSettingsCache {
 
+  public static final String GLOBAL_SETTINGS_QUERY = "(scope==stripes-core.prefs.manage and key==tenantLocaleSettings)";
+  public static final String TENANT_LOCALE_SETTINGS = "tenantLocaleSettings";
+  public static final String CONFIG_QUERY = "module==%s";
   private static final String UNIQUE_CACHE_KEY_PATTERN = "%s_%s_%s";
 
   private final CommonSettingsRetriever commonSettingsRetriever;
   private AsyncCache<String, JsonObject> configsCache;
+  private AsyncCache<String, JsonObject> settingsCache;
   private AsyncCache<String, String> systemCurrencyCache;
   private AsyncCache<String, String> systemTimezoneCache;
 
   @Value("${orders.cache.configuration-entries.expiration.time.seconds:30}")
   private long cacheExpirationTime;
+  @Value("${orders.cache.configuration-entries.bypass-cache:false}")
+  private boolean byPassCache;
 
   @PostConstruct
   void init() {
     var context = Vertx.currentContext();
     this.configsCache = buildAsyncCache(context, cacheExpirationTime);
+    this.settingsCache = buildAsyncCache(context, cacheExpirationTime);
     this.systemCurrencyCache = buildAsyncCache(context, cacheExpirationTime);
     this.systemTimezoneCache = buildAsyncCache(context, cacheExpirationTime);
   }
 
-  /**
-   * Retrieves order related settings from cache by tenantId
-   * @param requestContext {@link RequestContext} connection params
-   * @return Future with {@link JsonObject} describing settings object
-   */
   public Future<JsonObject> loadConfiguration(String module, RequestContext requestContext) {
-    return loadSettingsData(requestContext, resourcesPath(CONFIGURATION_ENTRIES), CONFIG_QUERY.formatted(module),
-      configsCache, commonSettingsRetriever::loadConfiguration);
+    return loadSettingData(resourcesPath(CONFIGURATION_ENTRIES), CONFIG_QUERY.formatted(module), configsCache,
+      commonSettingsRetriever::loadConfiguration, requestContext);
+  }
+
+  public Future<JsonObject> loadSettings(RequestContext requestContext) {
+    return loadSettingData(resourcesPath(ORDERS_STORAGE_SETTINGS), null, settingsCache,
+      commonSettingsRetriever::getLocalSetting, requestContext);
   }
 
   public Future<String> getSystemCurrency(RequestContext requestContext) {
-    return loadSettingsData(requestContext, resourcesPath(SETTINGS_ENTRIES), SETTINGS_QUERY,
-      systemCurrencyCache, commonSettingsRetriever::getSystemCurrency);
+    return loadSettingData(resourcesPath(SETTINGS_ENTRIES), GLOBAL_SETTINGS_QUERY, systemCurrencyCache,
+      commonSettingsRetriever::getSystemCurrency, requestContext);
   }
 
   public Future<String> getSystemTimeZone(RequestContext requestContext) {
-    return loadSettingsData(requestContext, resourcesPath(SETTINGS_ENTRIES), SETTINGS_QUERY,
-      systemTimezoneCache, commonSettingsRetriever::getSystemTimeZone);
+    return loadSettingData(resourcesPath(SETTINGS_ENTRIES), GLOBAL_SETTINGS_QUERY, systemTimezoneCache,
+      commonSettingsRetriever::getSystemTimeZone, requestContext);
   }
 
-  private <T> Future<T> loadSettingsData(RequestContext requestContext,
-                                         String entriesUrl, String query,
-                                         AsyncCache<String, T> cache,
-                                         BiFunction<RequestEntry, RequestContext, Future<T>> configExtractor) {
-    var requestEntry = new RequestEntry(entriesUrl).withQuery(query).withOffset(0).withLimit(Integer.MAX_VALUE);
+  private <T> Future<T> loadSettingData(String url, String query, AsyncCache<String, T> cache,
+                                        BiFunction<RequestEntry, RequestContext, Future<T>> configExtractor,
+                                        RequestContext requestContext) {
+    var requestEntry = new RequestEntry(url).withQuery(query).withOffset(0).withLimit(Integer.MAX_VALUE);
     var cacheKey = buildUniqueKey(requestEntry, requestContext);
+    log.info("loadSettingsData:: Loading setting data, url: '{}', query: '{}', bypass-cache mode: '{}'", url, query, byPassCache);
+    if (byPassCache) {
+      return extractSettingData(configExtractor, requestContext, requestEntry);
+    }
     return Future.fromCompletionStage(cache.get(cacheKey, (key, executor) ->
-      configExtractor.apply(requestEntry, requestContext)
-        .onFailure(t -> log.error("Error loading tenant configuration, tenantId: '{}'", TenantTool.tenantId(requestContext.getHeaders()), t))
+      extractSettingData(configExtractor, requestContext, requestEntry)
         .toCompletionStage().toCompletableFuture()));
+  }
+
+  private <T> Future<T> extractSettingData(BiFunction<RequestEntry, RequestContext, Future<T>> extractor,
+                                           RequestContext requestContext, RequestEntry requestEntry) {
+    var tenantId = TenantTool.tenantId(requestContext.getHeaders());
+    return extractor.apply(requestEntry, requestContext)
+      .onFailure(t -> log.error("Error loading configuration, tenantId: '{}'", tenantId, t));
   }
 
   private String buildUniqueKey(RequestEntry requestEntry, RequestContext requestContext) {
@@ -87,5 +102,4 @@ public class CommonSettingsCache {
     var userId = UserService.getCurrentUserId(requestContext.getHeaders());
     return String.format(UNIQUE_CACHE_KEY_PATTERN, tenantId, userId, endpoint);
   }
-
 }

@@ -60,7 +60,6 @@ public class HelperUtils {
   public static final String CONFIG_NAME = "configName";
   public static final String CONFIG_VALUE = "value";
 
-  public static final String ORDER_CONFIG_MODULE_NAME = "ORDERS";
   public static final String DATA_EXPORT_SPRING_CONFIG_MODULE_NAME = "mod-data-export-spring";
 
   public static final String DEFAULT_POLINE_LIMIT = "1";

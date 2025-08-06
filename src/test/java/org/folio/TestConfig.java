@@ -132,15 +132,15 @@ public final class TestConfig {
   }
 
   private static Context getContext(Verticle verticle) {
-      String parentVerticleUUID = vertx.deploymentIDs().stream()
-        .filter(v -> !((VertxImpl) vertx).getDeployment(v).isChild())
-        .findFirst()
-        .orElseThrow(() -> new NotFoundException("Couldn't find the parent verticle."));
+    String parentVerticleUUID = vertx.deploymentIDs().stream()
+      .filter(v -> !((VertxImpl) vertx).getDeployment(v).isChild())
+      .findFirst()
+      .orElseThrow(() -> new NotFoundException("Couldn't find the parent verticle."));
 
-      Optional<Context> context = Optional.of(((VertxImpl) vertx)
-          .getDeployment(parentVerticleUUID).getContexts().stream()
-          .findFirst())
-        .orElseThrow(() -> new NotFoundException("Couldn't find the spring context."));
+    Optional<Context> context = Optional.of(((VertxImpl) vertx)
+        .getDeployment(parentVerticleUUID).getContexts().stream()
+        .findFirst())
+      .orElseThrow(() -> new NotFoundException("Couldn't find the spring context."));
 
     return context.orElseThrow(() -> new NotFoundException("Couldn't find the spring context."));
   }

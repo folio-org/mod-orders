@@ -18,7 +18,6 @@ import static org.folio.DataImportEventTypes.DI_ORDER_CREATED_READY_FOR_POST_PRO
 import static org.folio.DataImportEventTypes.DI_PENDING_ORDER_CREATED;
 import static org.folio.service.orders.OrderValidationService.isApprovalRequiredConfiguration;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
-import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
 import static org.folio.orders.utils.PermissionsUtil.userDoesNotHaveApprovePermission;
 import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.ELECTRONIC_RESOURCE;
@@ -195,7 +194,7 @@ public class CreateOrderEventHandler implements EventHandler {
           Optional<Integer> poLinesLimitOptional = extractPoLinesLimit(dataImportEventPayload);
 
           RequestContext requestContext = new RequestContext(Vertx.currentContext(), okapiHeaders);
-          Future<JsonObject> tenantConfigFuture = commonSettingsCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
+          Future<JsonObject> tenantConfigFuture = commonSettingsCache.loadSettings(requestContext);
           String temporaryOrderIdForANewOrder = UUID.randomUUID().toString();
 
           tenantConfigFuture
@@ -464,7 +463,7 @@ public class CreateOrderEventHandler implements EventHandler {
   }
 
   private Future<PoLine> saveOrderLines(String orderId, DataImportEventPayload dataImportEventPayload,
-                                                 JsonObject tenantConfig, RequestContext requestContext) {
+                                        JsonObject tenantConfig, RequestContext requestContext) {
     LOGGER.info("saveOrderLines:: jobExecutionId: {}, orderId: {} ", dataImportEventPayload.getJobExecutionId(), orderId);
     PoLine poLine = Json.decodeValue(dataImportEventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
     poLine.setPurchaseOrderId(orderId);

@@ -2,6 +2,7 @@ package org.folio.service.settings;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.folio.rest.acq.model.SettingCollection;
 import org.folio.rest.acq.model.settings.CommonSetting;
 import org.folio.rest.acq.model.settings.CommonSettingsCollection;
 import org.folio.rest.acq.model.settings.Value;
@@ -24,10 +25,6 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class CommonSettingsRetriever {
 
-  public static final String CONFIG_QUERY = "module==%s";
-  public static final String SETTINGS_QUERY = "(scope==stripes-core.prefs.manage and key==tenantLocaleSettings)";
-  public static final String TENANT_LOCALE_SETTINGS = "tenantLocaleSettings";
-
   public static final String CURRENCY_KEY = "currency";
   public static final String CURRENCY_DEFAULT = "USD";
 
@@ -46,27 +43,31 @@ public class CommonSettingsRetriever {
   }
 
   public Future<String> getSystemCurrency(RequestEntry requestEntry, RequestContext requestContext) {
-    return loadTenantLocaleSetting(CURRENCY_KEY, CURRENCY_DEFAULT, requestEntry, requestContext);
+    return getGlobalSetting(CURRENCY_KEY, CURRENCY_DEFAULT, requestEntry, requestContext);
   }
 
   public Future<String> getSystemTimeZone(RequestEntry requestEntry, RequestContext requestContext) {
-    return loadTenantLocaleSetting(TZ_KEY, TZ_DEFAULT, requestEntry, requestContext);
+    return getGlobalSetting(TZ_KEY, TZ_DEFAULT, requestEntry, requestContext);
   }
 
-  public Future<List<CommonSetting>> loadSettings(RequestEntry requestEntry, RequestContext requestContext) {
+  private Future<String> getGlobalSetting(String key, String defaultValue, RequestEntry requestEntry, RequestContext requestContext) {
     return restClient.get(requestEntry, CommonSettingsCollection.class, requestContext)
-      .map(settingsCollection -> Optional.ofNullable(settingsCollection.getItems()).orElse(List.of()));
+      .map(settingsCollection -> Optional.ofNullable(settingsCollection.getItems()).orElse(List.of()))
+      .map(settings -> settings.stream()
+        .findFirst()
+        .map(CommonSetting::getValue)
+        .map(Value::getAdditionalProperties)
+        .map(properties -> properties.get(key))
+        .map(Object::toString)
+        .orElse(defaultValue));
   }
 
-  public Future<String> loadTenantLocaleSetting(String key, String defaultValue, RequestEntry requestEntry, RequestContext requestContext) {
-    return loadSettings(requestEntry, requestContext).map(settings -> settings.stream()
-      .filter(setting -> TENANT_LOCALE_SETTINGS.equals(setting.getKey()))
-      .findFirst()
-      .map(CommonSetting::getValue)
-      .map(Value::getAdditionalProperties)
-      .map(properties -> properties.get(key))
-      .map(Object::toString)
-      .orElse(defaultValue));
+  public Future<JsonObject> getLocalSetting(RequestEntry requestEntry, RequestContext requestContext) {
+    return restClient.get(requestEntry, SettingCollection.class, requestContext)
+      .map(settingsCollection -> {
+        var configs = new JsonObject();
+        settingsCollection.getSettings().forEach(setting -> configs.put(setting.getKey(), setting.getValue()));
+        return configs;
+      });
   }
-
 }

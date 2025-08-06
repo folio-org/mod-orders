@@ -12,6 +12,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.Config;
 import org.folio.rest.jaxrs.model.Configs;
+import org.folio.service.caches.CommonSettingsCache;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -148,7 +149,7 @@ public class CommonSettingsRetrieverTest {
 
   private static CommonSettingsCollection getLocaleSettings() {
     return new CommonSettingsCollection().withItems(List.of(new CommonSetting()
-      .withKey(CommonSettingsRetriever.TENANT_LOCALE_SETTINGS).withValue(new Value()
+      .withKey(CommonSettingsCache.TENANT_LOCALE_SETTINGS).withValue(new Value()
         .withAdditionalProperty(CommonSettingsRetriever.CURRENCY_KEY, "USD")
         .withAdditionalProperty(CommonSettingsRetriever.TZ_KEY, "UTC"))));
   }
