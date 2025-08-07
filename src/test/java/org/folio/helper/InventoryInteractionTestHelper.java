@@ -5,18 +5,18 @@ import static org.assertj.core.api.Assertions.fail;
 import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
 import static org.folio.TestConstants.ID_FOR_INTERNAL_SERVER_ERROR;
 import static org.folio.TestUtils.getMockData;
-import static org.folio.orders.utils.HelperUtils.CONFIGS;
-import static org.folio.orders.utils.HelperUtils.CONFIG_NAME;
-import static org.folio.orders.utils.HelperUtils.CONFIG_VALUE;
+import static org.folio.orders.utils.HelperUtils.VALUE_NAME;
+import static org.folio.orders.utils.HelperUtils.KEY_NAME;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
 import static org.folio.orders.utils.PoLineCommonUtil.getElectronicCostQuantity;
 import static org.folio.orders.utils.PoLineCommonUtil.getPhysicalCostQuantity;
 import static org.folio.orders.utils.PoLineCommonUtil.groupLocationsByLocationId;
-import static org.folio.rest.impl.MockServer.CONFIG_MOCK_PATH;
 import static org.folio.rest.impl.MockServer.INSTANCE_STATUSES_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.INSTANCE_TYPES_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.LOAN_TYPES_MOCK_DATA_PATH;
+import static org.folio.rest.impl.MockServer.ORDERS_STORAGE_SETTINGS_MOCK_PATH;
+import static org.folio.rest.impl.MockServer.SETTINGS;
 import static org.folio.rest.impl.MockServer.getCreatedHoldings;
 import static org.folio.rest.impl.MockServer.getCreatedInstances;
 import static org.folio.rest.impl.MockServer.getCreatedItems;
@@ -439,7 +439,6 @@ public class InventoryInteractionTestHelper {
       long expectedQty = groupedLocations
         .values()
         .stream()
-        .mapToInt(locations -> calculateInventoryItemsQuantity(pol, locations))
         .count();
       assertEquals(expectedQty, actualQty, "Quantity of holdings does not match to expected");
     }
@@ -525,9 +524,9 @@ public class InventoryInteractionTestHelper {
     assertThat(publication.getString(INSTANCE_PUBLISHER), equalTo(line.getPublisher()));
     assertThat(publication.getString(INSTANCE_DATE_OF_PUBLICATION), equalTo(line.getPublicationDate()));
 
-    if (line.getDetails().getProductIds().size() > 0) {
+    if (!line.getDetails().getProductIds().isEmpty()) {
       assertThat(instance.getJsonArray(INSTANCE_IDENTIFIERS).getJsonObject(0).getString(INSTANCE_IDENTIFIER_TYPE_ID), equalTo("8261054f-be78-422d-bd51-4ed9f33c3422"));
-      assertThat(instance.getJsonArray(INSTANCE_IDENTIFIERS).getJsonObject(0).getString(INSTANCE_IDENTIFIER_TYPE_VALUE), equalTo(line.getDetails().getProductIds().get(0).getProductId()));
+      assertThat(instance.getJsonArray(INSTANCE_IDENTIFIERS).getJsonObject(0).getString(INSTANCE_IDENTIFIER_TYPE_VALUE), equalTo(line.getDetails().getProductIds().getFirst().getProductId()));
     }
     Object[] actual = Optional.ofNullable(instance.getJsonArray(INSTANCE_CONTRIBUTORS)).orElse(new JsonArray()).stream()
       .map(o -> (JsonObject) o)
@@ -590,12 +589,12 @@ public class InventoryInteractionTestHelper {
   }
 
   private static String getConfigValue(Header tenant, String configName, String defaultValue) throws IOException {
-    JsonObject configs = new JsonObject(getMockData(String.format(CONFIG_MOCK_PATH, tenant.getValue())));
-    return configs.getJsonArray(CONFIGS)
+    JsonObject configs = new JsonObject(getMockData(String.format(ORDERS_STORAGE_SETTINGS_MOCK_PATH, tenant.getValue())));
+    return configs.getJsonArray(SETTINGS)
       .stream()
       .map(o -> (JsonObject) o)
-      .filter(config -> configName.equals(config.getString(CONFIG_NAME)))
-      .map(config -> config.getString(CONFIG_VALUE))
+      .filter(config -> configName.equals(config.getString(KEY_NAME)))
+      .map(config -> config.getString(VALUE_NAME))
       .findFirst()
       .orElse(defaultValue);
   }

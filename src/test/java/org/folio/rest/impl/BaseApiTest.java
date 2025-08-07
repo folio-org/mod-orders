@@ -24,8 +24,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 public class BaseApiTest {
+
   private AutoCloseable mockitoMocks;
   private BaseApi baseApi;
+
   @Mock
   Handler<AsyncResult<Response>> asyncResultHandler;
   @Captor
@@ -55,9 +57,9 @@ public class BaseApiTest {
 
     // Then
     verify(asyncResultHandler, times(1)).handle(asyncResultCaptor.capture());
-    Response response = asyncResultCaptor.getAllValues().get(0).result();
+    Response response = asyncResultCaptor.getAllValues().getFirst().result();
     assertThat(response.getStatus(), equalTo(123));
     Errors errors = (Errors)response.getEntity();
-    assertThat(errors.getErrors().get(0).getMessage(), equalTo("test"));
+    assertThat(errors.getErrors().getFirst().getMessage(), equalTo("test"));
   }
 }

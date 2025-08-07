@@ -526,8 +526,7 @@ public class PurchaseOrderLineHelper {
     String query = PURCHASE_ORDER_ID + "==" + poLine.getPurchaseOrderId();
     return purchaseOrderLineService.getOrderLineCollection(query, 0, 0, requestContext)
       .map(poLines -> {
-        boolean isValid = poLines.getTotalRecords() < getPoLineLimit(tenantConfiguration);
-        if (!isValid) {
+        if (poLines.getTotalRecords() > getPoLineLimit(tenantConfiguration)) {
           return List.of(ErrorCodes.POL_LINES_LIMIT_EXCEEDED.toError());
         }
         return Collections.emptyList();

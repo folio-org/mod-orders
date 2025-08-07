@@ -21,7 +21,6 @@ import java.util.List;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
-import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_ONGOING;
 import static org.folio.rest.core.exceptions.ErrorCodes.ONGOING_NOT_ALLOWED;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.OrderType.ONE_TIME;
@@ -35,6 +34,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 
 public class OrderValidationServiceTest {
+
   @InjectMocks
   private OrderValidationService orderValidationService;
   @Mock
@@ -82,7 +82,7 @@ public class OrderValidationServiceTest {
     }
     List<Error> errors = future.result();
     assertThat(errors, hasSize(1));
-    assertThat(errors.get(0).getCode(), is(ONGOING_NOT_ALLOWED.getCode()));
+    assertThat(errors.getFirst().getCode(), is(ONGOING_NOT_ALLOWED.getCode()));
   }
 
   @Test
@@ -102,7 +102,7 @@ public class OrderValidationServiceTest {
     }
     List<Error> errors = future.result();
     assertThat(errors, hasSize(1));
-    assertThat(errors.get(0).getCode(), is(MISSING_ONGOING.getCode()));
+    assertThat(errors.getFirst().getCode(), is(MISSING_ONGOING.getCode()));
   }
 
   @Test
@@ -115,7 +115,7 @@ public class OrderValidationServiceTest {
     compPO.setOngoing(new Ongoing());
 
     doReturn(succeededFuture(tenantConfig))
-      .when(commonSettingsCache).loadConfiguration(eq(ORDER_CONFIG_MODULE_NAME), eq(requestContext));
+      .when(commonSettingsCache).loadSettings(eq(requestContext));
 
     // When
     Future<List<Error>> future = orderValidationService.validateOrderForPut(compPO.getId(), compPO, requestContext);
@@ -126,7 +126,7 @@ public class OrderValidationServiceTest {
     }
     List<Error> errors = future.result();
     assertThat(errors, hasSize(1));
-    assertThat(errors.get(0).getCode(), is(ONGOING_NOT_ALLOWED.getCode()));
+    assertThat(errors.getFirst().getCode(), is(ONGOING_NOT_ALLOWED.getCode()));
   }
 
   @Test
@@ -138,7 +138,7 @@ public class OrderValidationServiceTest {
     compPO.setOrderType(ONGOING);
 
     doReturn(succeededFuture(tenantConfig))
-      .when(commonSettingsCache).loadConfiguration(eq(ORDER_CONFIG_MODULE_NAME), eq(requestContext));
+      .when(commonSettingsCache).loadSettings(eq(requestContext));
 
     // When
     Future<List<Error>> future = orderValidationService.validateOrderForPut(compPO.getId(), compPO, requestContext);
@@ -149,7 +149,6 @@ public class OrderValidationServiceTest {
     }
     List<Error> errors = future.result();
     assertThat(errors, hasSize(1));
-    assertThat(errors.get(0).getCode(), is(MISSING_ONGOING.getCode()));
+    assertThat(errors.getFirst().getCode(), is(MISSING_ONGOING.getCode()));
   }
-
 }

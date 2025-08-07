@@ -2,7 +2,6 @@ package org.folio.helper;
 
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 import static org.folio.orders.utils.HelperUtils.PO_LINES;
-import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.REASON_CANCELLED;
 import static org.folio.orders.utils.HelperUtils.WORKFLOW_STATUS;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
@@ -161,7 +160,7 @@ public class PurchaseOrderHelper {
 
   public Future<CompositePurchaseOrder> postCompositeOrder(CompositePurchaseOrder compPO, RequestContext requestContext) {
     // First validate content of the PO and proceed only if all is okay
-    return commonSettingsCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
+    return commonSettingsCache.loadSettings(requestContext)
       .compose(tenantConfig -> orderValidationService.validateOrderForPost(compPO, tenantConfig, requestContext)
         .compose(errors -> {
           if (CollectionUtils.isEmpty(errors)) {
@@ -267,7 +266,7 @@ public class PurchaseOrderHelper {
           .compose(v -> {
             if (isTransitionToOpen) {
               return orderValidationService.checkOrderApprovalRequired(compPO, requestContext)
-                .compose(ok -> commonSettingsCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext))
+                .compose(ok -> commonSettingsCache.loadSettings(requestContext))
                 .compose(tenantConfiguration -> openCompositeOrderManager.process(compPO, poFromStorage, tenantConfiguration, requestContext));
             } else {
               return Future.succeededFuture();

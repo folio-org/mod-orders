@@ -87,7 +87,7 @@ public class PiecesClaimingService {
       log.info("sendClaims:: Cannot send claims piece ids are empty - No claims are sent");
       throwHttpException(CANNOT_SEND_CLAIMS_PIECE_IDS_ARE_EMPTY, claimingCollection, HttpStatus.HTTP_BAD_REQUEST);
     }
-    return commonSettingsCache.loadConfiguration(DATA_EXPORT_SPRING_CONFIG_MODULE_NAME, requestContext)
+    return commonSettingsCache.loadConfigurations(DATA_EXPORT_SPRING_CONFIG_MODULE_NAME, requestContext)
       .compose(config -> {
         if (CollectionUtils.isEmpty(config.getMap())) {
           log.info("sendClaims:: Cannot retrieve config entries - No claims are sent");

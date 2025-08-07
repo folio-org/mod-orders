@@ -1,0 +1,63 @@
+{
+  "settings": [
+    {
+      "id": "e3a73e91-aac9-40a4-8f47-b0187bdb1e6b",
+      "key": "poLines-limit",
+      "value": "10",
+      "metadata": {
+        "createdDate": "2018-12-12T08:14:32.743+0000",
+        "createdByUserId": "d16d7615-ad6b-5a57-9cb4-62aca2ba764c",
+        "updatedDate": "2018-12-12T08:24:34.213+0000",
+        "updatedByUserId": "d16d7615-ad6b-5a57-9cb4-62aca2ba764c"
+      }
+    },
+    {
+      "id": "d16d7615-ad6b-5a57-9cb4-62aca2ba764c",
+      "key": "createInventory",
+      "value": "{\"eresource\":\"Instance, Holding, Item\",\"physical\":\"Instance, Holding, Item\",\"other\":\"Instance, Holding, Item\"}",
+      "metadata": {
+        "createdDate": "2018-12-12T08:14:32.743+0000",
+        "createdByUserId": "d16d7615-ad6b-5a57-9cb4-62aca2ba764c",
+        "updatedDate": "2018-12-12T08:24:34.213+0000",
+        "updatedByUserId": "d16d7615-ad6b-5a57-9cb4-62aca2ba764c"
+      }
+    },
+    {
+      "id": "e48f35bd-1dea-4993-ad3c-dfa7ae668c80",
+      "key": "addresses",
+      "value": "{\n  \"address\": \"sample address\",\n  \"name\": \"sample name\"\n}\n",
+      "metadata": {
+        "createdDate": "2018-12-12T08:14:32.743+0000",
+        "createdByUserId": "d16d7615-ad6b-5a57-9cb4-62aca2ba764c",
+        "updatedDate": "2018-12-12T08:24:34.213+0000",
+        "updatedByUserId": "d16d7615-ad6b-5a57-9cb4-62aca2ba764c"
+      }
+    },
+    {
+      "id": "5534ca06-b395-41b3-9bfa-8df54bc93800",
+      "key": "inventory-instanceTypeCode",
+      "value": "customInstanceType"
+    },
+    {
+      "id": "5fd9dea2-57b0-43e1-951d-dc460fa63622",
+      "key": "inventory-instanceStatusCode",
+      "value": "customInstanceStatus"
+    },
+    {
+      "id": "c19bf0dd-0d82-4c6e-9ff0-774568f937de",
+      "key": "inventory-loanTypeName",
+      "value": "customLoanType"
+    },
+    {
+      "id" : "339bc2b6-4f2d-4fff-a23c-4fbec2a5e27a",
+      "key" : "approvals",
+      "value" : "{\"isApprovalRequired\":false}"
+    },
+    {
+      "id" : "582ac200-1793-4015-ad80-4dc4b2a1ea82",
+      "key" : "localeSettings",
+      "value" : "{\"locale\":\"en-US\",\"timezone\":\"UTC\",\"currency\":\"USD\"}"
+    }
+  ],
+  "totalRecords": 8
+}

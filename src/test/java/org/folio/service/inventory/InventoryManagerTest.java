@@ -16,7 +16,6 @@ import static org.folio.TestConstants.X_OKAPI_TOKEN;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
-import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.extractId;
 import static org.folio.orders.utils.HelperUtils.getFirstObjectFromResponse;
 import static org.folio.rest.RestConstants.NOT_FOUND;
@@ -203,7 +202,6 @@ public class InventoryManagerTest {
         verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
         vertxTestContext.completeNow();
       });
-
   }
 
   @Test
@@ -308,7 +306,6 @@ public class InventoryManagerTest {
     //Then
     verify(restClient, times(0)).delete(any(RequestEntry.class), eq(requestContext));
   }
-
 
   @Test
   void testShouldNotHandleItemRecordsIfCheckinItemsIsTrue() {
@@ -526,7 +523,6 @@ public class InventoryManagerTest {
     verify(inventoryInstanceManager, times(1)).searchInstancesByProducts(any(), eq(requestContext));
   }
 
-
   @Test
   void testShouldCreateItemRecordForEresources()  {
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
@@ -559,7 +555,7 @@ public class InventoryManagerTest {
 
     doReturn(Future.failedFuture(new HttpException(500, "Something went wrong!")))
       .when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), any(JsonObject.class), any(RequestContext.class));
-    doReturn(Future.succeededFuture(new JsonObject())).when(commonSettingsCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
+    doReturn(Future.succeededFuture(new JsonObject())).when(commonSettingsCache).loadSettings(requestContext);
     doReturn(Future.succeededFuture(new JsonObject())).when(inventoryCache).getEntryId(LOAN_TYPES, DEFAULT_LOAN_TYPE_NAME, requestContext);
 
     Future<List<String>> result = inventoryItemManager.createMissingPhysicalItems(order, line, piece, 1, requestContext);
@@ -579,7 +575,7 @@ public class InventoryManagerTest {
 
     doReturn(Future.failedFuture(new HttpException(500, InventoryItemManager.BARCODE_ALREADY_EXIST_ERROR)))
       .when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), any(JsonObject.class), any(RequestContext.class));
-    doReturn(Future.succeededFuture(new JsonObject())).when(commonSettingsCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
+    doReturn(Future.succeededFuture(new JsonObject())).when(commonSettingsCache).loadSettings(requestContext);
     doReturn(Future.succeededFuture(new JsonObject())).when(inventoryCache).getEntryId(LOAN_TYPES, DEFAULT_LOAN_TYPE_NAME, requestContext);
 
     //When
@@ -602,7 +598,7 @@ public class InventoryManagerTest {
 
     doReturn(Future.succeededFuture(expItemId))
       .when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), eq(itemRecord), any(RequestContext.class));
-    doReturn(Future.succeededFuture(new JsonObject())).when(commonSettingsCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
+    doReturn(Future.succeededFuture(new JsonObject())).when(commonSettingsCache).loadSettings(requestContext);
     doReturn(Future.succeededFuture(new JsonObject())).when(inventoryCache).getEntryId(LOAN_TYPES, DEFAULT_LOAN_TYPE_NAME, requestContext);
 
     Future<List<String>> result = inventoryItemManager.createMissingPhysicalItems(order, line, piece, 1, requestContext);
@@ -621,7 +617,7 @@ public class InventoryManagerTest {
 
     doReturn(Future.succeededFuture(expItemId))
       .when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), eq(itemRecord), any(RequestContext.class));
-    doReturn(Future.succeededFuture(new JsonObject())).when(commonSettingsCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
+    doReturn(Future.succeededFuture(new JsonObject())).when(commonSettingsCache).loadSettings(requestContext);
     doReturn(Future.succeededFuture(new JsonObject())).when(inventoryCache).getEntryId(LOAN_TYPES, DEFAULT_LOAN_TYPE_NAME, requestContext);
 
     Future<List<String>> result = inventoryItemManager.createMissingPhysicalItems(order, line, piece, 1, requestContext);
@@ -731,7 +727,6 @@ public class InventoryManagerTest {
         verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), RequestContextMatcher.matchTenant("T2"));
         vertxTestContext.completeNow();
       });
-
   }
 
   @NotNull
@@ -939,5 +934,4 @@ public class InventoryManagerTest {
       return spy(new InventoryInstanceManager(restClient, commonSettingsCache, inventoryCache, sharingInstanceService, consortiumConfigurationService));
     }
   }
-
 }

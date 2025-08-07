@@ -12,6 +12,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.Config;
 import org.folio.rest.jaxrs.model.Configs;
+import org.folio.service.caches.CommonSettingsCache;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -40,7 +41,7 @@ public class CommonSettingsRetrieverTest {
   private CommonSettingsRetriever commonSettingsRetriever;
 
   @Test
-  void shouldLoadConfigurationSuccessfully() {
+  void shouldLoadConfigurationsSuccessfully() {
     RequestEntry requestEntry = new RequestEntry(resourcesPath(ResourcePathResolver.CONFIGURATION_ENTRIES));
     JsonObject expectedConfig = new JsonObject().put("key", "value");
     Configs configs = new Configs().withConfigs(List.of(new Config().withConfigName("key").withValue("value")));
@@ -48,7 +49,7 @@ public class CommonSettingsRetrieverTest {
     doReturn(Future.succeededFuture(configs))
       .when(restClientMock).get(eq(requestEntry), eq(Configs.class), any(RequestContext.class));
 
-    Future<JsonObject> result = commonSettingsRetriever.loadConfiguration(requestEntry, requestContextMock);
+    Future<JsonObject> result = commonSettingsRetriever.loadConfigurations(requestEntry, requestContextMock);
 
     assertEquals(expectedConfig, result.result());
   }
@@ -108,13 +109,13 @@ public class CommonSettingsRetrieverTest {
   }
 
   @Test
-  void shouldFailToLoadConfigurationWhenRestClientFails() {
+  void shouldFailToLoadConfigurationsWhenRestClientFails() {
     RequestEntry requestEntry = new RequestEntry(resourcesPath(ResourcePathResolver.CONFIGURATION_ENTRIES));
 
     when(restClientMock.get(eq(requestEntry), eq(Configs.class), any(RequestContext.class)))
       .thenReturn(Future.failedFuture(new RuntimeException("Service failure")));
 
-    Future<JsonObject> result = commonSettingsRetriever.loadConfiguration(requestEntry, requestContextMock);
+    Future<JsonObject> result = commonSettingsRetriever.loadConfigurations(requestEntry, requestContextMock);
 
     assertTrue(result.failed());
     assertEquals(RuntimeException.class, result.cause().getClass());
@@ -148,7 +149,7 @@ public class CommonSettingsRetrieverTest {
 
   private static CommonSettingsCollection getLocaleSettings() {
     return new CommonSettingsCollection().withItems(List.of(new CommonSetting()
-      .withKey(CommonSettingsRetriever.TENANT_LOCALE_SETTINGS).withValue(new Value()
+      .withKey(CommonSettingsCache.TENANT_LOCALE_SETTINGS).withValue(new Value()
         .withAdditionalProperty(CommonSettingsRetriever.CURRENCY_KEY, "USD")
         .withAdditionalProperty(CommonSettingsRetriever.TZ_KEY, "UTC"))));
   }
