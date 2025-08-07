@@ -20,12 +20,7 @@
       "id" : "9dfadc8b-feba-40c8-94e9-b9d5de8ed884",
       "key" : "disableInstanceMatching",
       "value" : "{\"isInstanceMatchingDisabled\":true}"
-    },
-    {
-      "id" : "582ac200-1793-4015-ad80-4dc4b2a1ea82",
-      "key" : "localeSettings",
-      "value" : "{\"locale\":\"en-US\",\"timezone\":\"UTC\",\"currency\":\"USD\"}"
     }
   ],
-  "totalRecords": 4
+  "totalRecords": 3
 }

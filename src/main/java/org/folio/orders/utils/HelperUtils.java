@@ -58,6 +58,7 @@ public class HelperUtils {
   public static final String PO_LINES = "poLines";
   public static final String CONFIGS = "configs";
   public static final String CONFIG_NAME = "configName";
+  public static final String KEY_NAME = "key";
   public static final String CONFIG_VALUE = "value";
 
   public static final String DATA_EXPORT_SPRING_CONFIG_MODULE_NAME = "mod-data-export-spring";
@@ -71,7 +72,6 @@ public class HelperUtils {
   public static final String WORKFLOW_STATUS = "workflowStatus";
 
   private HelperUtils() {
-
   }
 
   public static Map<String, String> getOkapiHeaders(Message<JsonObject> message) {

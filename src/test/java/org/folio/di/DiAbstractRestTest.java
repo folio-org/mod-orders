@@ -88,7 +88,7 @@ public abstract class DiAbstractRestTest {
   private static final String JOB_EXECUTION_ID_HEADER = "jobExecutionId";
   private static final String RECORDS_PROCESSED_TABLE = "processed_records";
 
-  public static KafkaContainer kafkaContainer = TestConfig.getKafkaContainer();
+  public static KafkaContainer kafkaContainer = TestConfig.getKafkaContainer().withStartupAttempts(20);
   protected static KafkaProducer<String, String> kafkaProducer;
 
   @Rule
@@ -155,9 +155,7 @@ public abstract class DiAbstractRestTest {
         .put(HTTP_PORT, port));
 
     TenantClient tenantClient = new TenantClient(okapiUrl, TENANT_ID, TOKEN);
-    vertx.deployVerticle(RestVerticle.class.getName(), options, res -> {
-      postTenant(context, async, tenantClient);
-    });
+    vertx.deployVerticle(RestVerticle.class.getName(), options, res -> postTenant(context, async, tenantClient));
   }
 
   protected static void postTenant(TestContext context, Async async, TenantClient tenantClient) {
@@ -227,7 +225,6 @@ public abstract class DiAbstractRestTest {
   }
 
   protected  <T> T getBeanFromSpringContext(Vertx vtx, Class<T> clazz) {
-
     String parentVerticleUUID = vertx.deploymentIDs().stream()
       .filter(v -> !((VertxImpl) vertx).getDeployment(v).isChild())
       .findFirst()

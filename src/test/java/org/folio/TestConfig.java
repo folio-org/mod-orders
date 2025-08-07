@@ -119,11 +119,11 @@ public final class TestConfig {
 
   public static KafkaContainer getKafkaContainer() {
     return new KafkaContainer(KAFKA_IMAGE_NAME)
-        .withStartupAttempts(3);
+      .withStartupAttempts(20);
   }
 
   public static Context getFirstContextFromVertx(Vertx vertx) {
-    return vertx.deploymentIDs().stream().flatMap((id) -> ((VertxImpl)vertx)
+    return vertx.deploymentIDs().stream().flatMap((id) -> ((VertxImpl) vertx)
       .getDeployment(id).getVerticles().stream())
       .map(TestConfig::getContext)
       .filter(Objects::nonNull)

@@ -328,7 +328,7 @@ public class MockServer {
   static final String ALL_UNITS_CQL = IS_DELETED_PROP + "=*";
   public static final String OLD_HOLDING_ID = "758258bc-ecc1-41b8-abca-f7b610822ffd";
   public static final String NEW_HOLDING_ID = "fcd64ce1-6995-48f0-840e-89ffa2288371";
-  public static final String CONFIGS = "configs";
+  public static final String SETTINGS = "settings";
   public static final String JOB_EXECUTIONS = "jobExecutions";
   public static final String IF_EQUAL_STR = "==";
   private static final String ITEM_HOLDINGS_RECORD_ID = "holdingsRecordId";
@@ -387,7 +387,7 @@ public class MockServer {
         deploymentComplete.fail(result.cause());
       }
     });
-    deploymentComplete.future().toCompletionStage().toCompletableFuture().get(60, TimeUnit.SECONDS);
+    deploymentComplete.future().toCompletionStage().toCompletableFuture().get(360, TimeUnit.SECONDS);
   }
 
   public void close() {
@@ -687,9 +687,9 @@ public class MockServer {
     router.get("/material-types").handler(ctx -> handleGetJsonResource(ctx, MOCK_DATA_MATERIAL_TYPES_JSON));
     router.get(resourcesPath(WRAPPER_PIECES_STORAGE)).handler(ctx -> handleGetJsonResource(ctx, MOCK_DATA_WRAPPER_PIECES_JSON));
     router.get(resourcesPath(WRAPPER_PIECES_STORAGE) + "/:id").handler(ctx -> handleGetJsonResource(ctx, MOCK_DATA_WRAPPER_PIECES_BY_ID_JSON));
-    router.get(resourcesPath(CONFIGURATION_ENTRIES)).handler(ctx -> handleConfigurationOrSettingsResponse(CONFIG_MOCK_PATH, ctx));
-    router.get(resourcesPath(ORDERS_STORAGE_SETTINGS)).handler(ctx -> handleConfigurationOrSettingsResponse(ORDERS_STORAGE_SETTINGS_MOCK_PATH, ctx));
-    router.get(resourcesPath(SETTINGS_ENTRIES)).handler(this::handleSettingsModuleResponse);
+    router.get(resourcesPath(CONFIGURATION_ENTRIES)).handler(ctx -> handleConfigurationOrSettingResponse(CONFIG_MOCK_PATH, ctx));
+    router.get(resourcesPath(ORDERS_STORAGE_SETTINGS)).handler(ctx -> handleConfigurationOrSettingResponse(ORDERS_STORAGE_SETTINGS_MOCK_PATH, ctx));
+    router.get(resourcesPath(SETTINGS_ENTRIES)).handler(this::handleSettingResponse);
     // PUT
     router.put(resourcePath(PURCHASE_ORDER_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER_STORAGE));
     router.put(resourcePath(PO_LINES_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES_STORAGE));
@@ -786,7 +786,7 @@ public class MockServer {
     List<RoutingList> rLists = getMockEntries(ROUTING_LISTS, RoutingList.class).orElseGet(getFromFile);
 
     if (!poLineId.isEmpty()) {
-      rLists.removeIf(item -> !item.getPoLineId().equals(poLineId.get(0)));
+      rLists.removeIf(item -> !item.getPoLineId().equals(poLineId.getFirst()));
     }
 
     Object record = new RoutingListCollection().withRoutingLists(rLists).withTotalRecords(rLists.size());
@@ -830,7 +830,7 @@ public class MockServer {
       serverResponse(ctx, 404, APPLICATION_JSON, id);
     } else {
       JsonObject fund = new JsonObject()
-        .put("fund", JsonObject.mapFrom(funds.getFunds().get(0)))
+        .put("fund", JsonObject.mapFrom(funds.getFunds().getFirst()))
         .put("groupIds", new JsonArray());
       addServerRqRsData(HttpMethod.GET, FUNDS, fund);
 
@@ -982,28 +982,30 @@ public class MockServer {
 
     addServerRqRsData(HttpMethod.GET, PO_LINES_STORAGE, new JsonObject().put(ID, id));
 
-    if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
-      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
-    } else if (ID_DOES_NOT_EXIST.equals(id)) {
-      serverResponse(ctx, 404, APPLICATION_JSON, id);
-    } else if (id.equals("133a7916-f05e-4df4-8f7f-09eb2a7076d1")) {
-      FiscalYear fiscalYear = new FiscalYear();
-      fiscalYear.setId("ac2164c7-ba3d-1bc2-a12c-e35ceccbfaf2");
-      fiscalYear.setCode("test2020");
-      fiscalYear.setName("test");
-      fiscalYear.setCurrency("USD");
-      fiscalYear.setPeriodStart(Date.from(Instant.now().minus(365, DAYS)));
-      fiscalYear.setPeriodEnd(Date.from(Instant.now().plus(365, DAYS)));
-      serverResponse(ctx, 200, APPLICATION_JSON, JsonObject.mapFrom(fiscalYear).encodePrettily());
-    } else {
-      FiscalYear fiscalYear = new FiscalYear();
-      fiscalYear.setId(UUID.randomUUID().toString());
-      fiscalYear.setCode("test2020");
-      fiscalYear.setName("test");
-      fiscalYear.setCurrency("USD");
-      fiscalYear.setPeriodStart(Date.from(Instant.now().minus(365, DAYS)));
-      fiscalYear.setPeriodEnd(Date.from(Instant.now().plus(365, DAYS)));
-      serverResponse(ctx, 200, APPLICATION_JSON, JsonObject.mapFrom(fiscalYear).encodePrettily());
+    switch (id) {
+      case ID_FOR_INTERNAL_SERVER_ERROR ->
+        serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
+      case ID_DOES_NOT_EXIST -> serverResponse(ctx, 404, APPLICATION_JSON, id);
+      case "133a7916-f05e-4df4-8f7f-09eb2a7076d1" -> {
+        FiscalYear fiscalYear = new FiscalYear();
+        fiscalYear.setId("ac2164c7-ba3d-1bc2-a12c-e35ceccbfaf2");
+        fiscalYear.setCode("test2020");
+        fiscalYear.setName("test");
+        fiscalYear.setCurrency("USD");
+        fiscalYear.setPeriodStart(Date.from(Instant.now().minus(365, DAYS)));
+        fiscalYear.setPeriodEnd(Date.from(Instant.now().plus(365, DAYS)));
+        serverResponse(ctx, 200, APPLICATION_JSON, JsonObject.mapFrom(fiscalYear).encodePrettily());
+      }
+      case null, default -> {
+        FiscalYear fiscalYear = new FiscalYear();
+        fiscalYear.setId(UUID.randomUUID().toString());
+        fiscalYear.setCode("test2020");
+        fiscalYear.setName("test");
+        fiscalYear.setCurrency("USD");
+        fiscalYear.setPeriodStart(Date.from(Instant.now().minus(365, DAYS)));
+        fiscalYear.setPeriodEnd(Date.from(Instant.now().plus(365, DAYS)));
+        serverResponse(ctx, 200, APPLICATION_JSON, JsonObject.mapFrom(fiscalYear).encodePrettily());
+      }
     }
   }
 
@@ -1108,7 +1110,7 @@ public class MockServer {
 
   private void handleGetHoldingsRecords(RoutingContext ctx) {
     logger.info("handleGetHoldingRecord got: {}", ctx.request().path());
-    String queryParam = ctx.queryParam("query").get(0);
+    String queryParam = ctx.queryParam("query").getFirst();
     JsonObject holdings;
     try {
       if ((queryParam.contains(OLD_HOLDING_ID) && queryParam.contains(NEW_HOLDING_ID))) {
@@ -1616,11 +1618,11 @@ public class MockServer {
     return resourceByIdPath(subObjName) + ":id";
   }
 
-  private void handleConfigurationOrSettingsResponse(String mockPath, RoutingContext ctx) {
+  private void handleConfigurationOrSettingResponse(String mockPath, RoutingContext ctx) {
     try {
-      var configEntries = serverRqRs.column(HttpMethod.SEARCH).get(CONFIGS);
+      var configEntries = serverRqRs.column(HttpMethod.SEARCH).get(SETTINGS);
       if (configEntries != null && !configEntries.isEmpty()) {
-        var configs = new JsonObject().put(CONFIGS, configEntries);
+        var configs = new JsonObject().put(SETTINGS, configEntries);
         serverResponse(ctx, 200, APPLICATION_JSON, configs.encodePrettily());
         return;
       }
@@ -1649,7 +1651,7 @@ public class MockServer {
     }
   }
 
-  private void handleSettingsModuleResponse(RoutingContext ctx) {
+  private void handleSettingResponse(RoutingContext ctx) {
     try {
       var mockData = getMockData(SETTINGS_MOCK_PATH.formatted(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10.getValue()));
       serverResponse(ctx, 200, APPLICATION_JSON, mockData);
@@ -1877,20 +1879,23 @@ public class MockServer {
     } else {
       try {
         JsonObject collection;
-        if (REASONS_FOR_CLOSURE.equals(subObj)) {
-          ReasonForClosureCollection reasonsCollection = new ReasonForClosureCollection();
-          List<ReasonForClosure> reasons = Lists.newArrayList(REASON_FOR_CLOSURE.getTestSample().mapTo(ReasonForClosure.class));
-          collection = JsonObject.mapFrom(reasonsCollection.withReasonsForClosure(reasons).withTotalRecords(reasons.size()));
-        } else if (PREFIXES.equals(subObj)) {
-          PrefixCollection prefixCollection = new PrefixCollection();
-          List<Prefix> prefixes = Lists.newArrayList(PREFIX.getTestSample().mapTo(Prefix.class));
-          collection = JsonObject.mapFrom(prefixCollection.withPrefixes(prefixes).withTotalRecords(prefixes.size()));
-        } else if (SUFFIXES.equals(subObj)) {
-          SuffixCollection suffixCollection = new SuffixCollection();
-          List<Suffix> suffixes = Lists.newArrayList(SUFFIX.getTestSample().mapTo(Suffix.class));
-          collection = JsonObject.mapFrom(suffixCollection.withSuffixes(suffixes).withTotalRecords(suffixes.size()));
-        } else {
-          collection = new JsonObject();
+        switch (subObj) {
+          case REASONS_FOR_CLOSURE -> {
+            ReasonForClosureCollection reasonsCollection = new ReasonForClosureCollection();
+            List<ReasonForClosure> reasons = Lists.newArrayList(REASON_FOR_CLOSURE.getTestSample().mapTo(ReasonForClosure.class));
+            collection = JsonObject.mapFrom(reasonsCollection.withReasonsForClosure(reasons).withTotalRecords(reasons.size()));
+          }
+          case PREFIXES -> {
+            PrefixCollection prefixCollection = new PrefixCollection();
+            List<Prefix> prefixes = Lists.newArrayList(PREFIX.getTestSample().mapTo(Prefix.class));
+            collection = JsonObject.mapFrom(prefixCollection.withPrefixes(prefixes).withTotalRecords(prefixes.size()));
+          }
+          case SUFFIXES -> {
+            SuffixCollection suffixCollection = new SuffixCollection();
+            List<Suffix> suffixes = Lists.newArrayList(SUFFIX.getTestSample().mapTo(Suffix.class));
+            collection = JsonObject.mapFrom(suffixCollection.withSuffixes(suffixes).withTotalRecords(suffixes.size()));
+          }
+          case null, default -> collection = new JsonObject();
         }
 
         addServerRqRsData(HttpMethod.GET, subObj, collection);
@@ -1985,7 +1990,7 @@ public class MockServer {
               String poLineId = piece.getPoLineId();
               List<Title> titlesForPoLine = getTitlesByPoLineIds(List.of(poLineId)).mapTo(TitleCollection.class).getTitles();
               if (!titlesForPoLine.isEmpty() && titlesForPoLine.stream().noneMatch(title -> title.getId().equals(piece.getTitleId()))) {
-                piece.setTitleId(titlesForPoLine.get(0).getId());
+                piece.setTitleId(titlesForPoLine.getFirst().getId());
               }
             });
           } else {
@@ -2446,7 +2451,7 @@ public class MockServer {
         body = JsonObject.mapFrom(transactionCollection).encodePrettily();
       } else if (query.contains("id==(9333fd47-4d9b-5bfc-afa3-3f2a49d4adb1)")) {
         TransactionCollection transactionCollection = new JsonObject(getMockData(ENCUMBRANCE_PATH)).mapTo(TransactionCollection.class);
-        transactionCollection.getTransactions().get(0).withId("9333fd47-4d9b-5bfc-afa3-3f2a49d4adb1");
+        transactionCollection.getTransactions().getFirst().withId("9333fd47-4d9b-5bfc-afa3-3f2a49d4adb1");
         body = JsonObject.mapFrom(transactionCollection).encodePrettily();
       } else if (query.contains("awaitingPayment.encumbranceId")) {
         TransactionCollection transactionCollection = new TransactionCollection().withTotalRecords(0);
@@ -2851,7 +2856,7 @@ public class MockServer {
     JsonObject collection = getBudgetsByFundIds(Collections.singletonList(fundId));
     BudgetCollection budgetCollection = collection.mapTo(BudgetCollection.class);
     if (budgetCollection.getTotalRecords() > 0) {
-      Budget budget = budgetCollection.getBudgets().get(0);
+      Budget budget = budgetCollection.getBudgets().getFirst();
       JsonObject budgetJson = JsonObject.mapFrom(budget);
       addServerRqRsData(HttpMethod.GET, CURRENT_BUDGET, budgetJson);
 
