@@ -8,6 +8,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import lombok.Getter;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.impl.MockServer;
 import org.folio.rest.tools.utils.NetworkUtils;
@@ -39,6 +40,8 @@ public final class TestConfig {
   private static MockServer mockServer;
   public static final DockerImageName KAFKA_IMAGE_NAME = DockerImageName.parse("apache/kafka-native:3.8.0");
   public static final KafkaContainer kafkaContainer = getKafkaContainer();
+
+  @Getter
   private static final Vertx vertx = Vertx.vertx();
 
   private TestConfig() {}
@@ -91,10 +94,6 @@ public final class TestConfig {
     kafkaContainer.start();
   }
 
-  public static Vertx getVertx() {
-    return vertx;
-  }
-
   public static void clearServiceInteractions() {
     MockServer.serverRqRs.clear();
     eventMessages.clear();
@@ -117,6 +116,8 @@ public final class TestConfig {
     return vertx.deploymentIDs().isEmpty();
   }
 
+  // Suppress "use try-with-resource" suggestion because in both places it is closed correctly in a deferred fashion
+  @SuppressWarnings("resource")
   public static KafkaContainer getKafkaContainer() {
     return new KafkaContainer(KAFKA_IMAGE_NAME)
       .withStartupAttempts(20);
