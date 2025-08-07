@@ -324,6 +324,6 @@ public class FinanceHoldersBuilderTest {
     financeHoldersBuilder.getLedgerIds(holders, requestContext).result();
 
     assertThat(holders, Matchers.is(empty()));
-    verify(fundService, never()).getFunds(anyCollection(), any());
+    verify(fundService, never()).getAllFunds(anyCollection(), any());
   }
 }
