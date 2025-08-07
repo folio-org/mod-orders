@@ -9,7 +9,9 @@ import static org.folio.rest.core.exceptions.ErrorCodes.FUNDS_NOT_FOUND;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 
@@ -37,30 +39,13 @@ public class FundService {
   }
 
   public Future<List<Fund>> getAllFunds(Collection<String> fundIds, RequestContext requestContext) {
+    Set<String> uniqueFundIds = new LinkedHashSet<>(fundIds);
     return collectResultsOnSuccess(
-        ofSubLists(new ArrayList<>(fundIds), MAX_IDS_FOR_GET_RQ_15).map(ids-> getAllFundsByIds(ids, requestContext))
+        ofSubLists(new ArrayList<>(uniqueFundIds), MAX_IDS_FOR_GET_RQ_15).map(ids-> getAllFundsByIds(ids, requestContext))
           .toList()).map(
               lists -> lists.stream()
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList()));
-  }
-
-  public Future<List<Fund>> getFunds(Collection<String> fundIds, RequestContext requestContext) {
-    return collectResultsOnSuccess(
-        ofSubLists(new ArrayList<>(fundIds), MAX_IDS_FOR_GET_RQ_15).map(ids -> getFundsByIds(ids, requestContext))
-          .toList()).map(
-              lists -> lists.stream()
-                .flatMap(Collection::stream)
-                .collect(Collectors.toList()));
-  }
-
-  private Future<List<Fund>> getFundsByIds(Collection<String> ids, RequestContext requestContext) {
-    String query = convertIdsToCqlQuery(ids);
-    RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query)
-      .withLimit(MAX_IDS_FOR_GET_RQ_15)
-      .withOffset(0);
-    return restClient.get(requestEntry, FundCollection.class, requestContext)
-      .map(FundCollection::getFunds);
   }
 
   public Future<Fund> retrieveFundById(String fundId, RequestContext requestContext) {
