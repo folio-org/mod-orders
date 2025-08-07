@@ -33,7 +33,7 @@ public class CommonSettingsRetriever {
 
   private final RestClient restClient;
 
-  public Future<JsonObject> loadConfiguration(RequestEntry requestEntry, RequestContext requestContext) {
+  public Future<JsonObject> loadConfigurations(RequestEntry requestEntry, RequestContext requestContext) {
     return restClient.get(requestEntry, Configs.class, requestContext)
       .map(configs -> {
         var config = new JsonObject();
@@ -62,12 +62,12 @@ public class CommonSettingsRetriever {
         .orElse(defaultValue));
   }
 
-  public Future<JsonObject> getLocalSetting(RequestEntry requestEntry, RequestContext requestContext) {
+  public Future<JsonObject> getLocalSettings(RequestEntry requestEntry, RequestContext requestContext) {
     return restClient.get(requestEntry, SettingCollection.class, requestContext)
       .map(settingsCollection -> {
-        var configs = new JsonObject();
-        settingsCollection.getSettings().forEach(setting -> configs.put(setting.getKey(), setting.getValue()));
-        return configs;
+        var settings = new JsonObject();
+        settingsCollection.getSettings().forEach(setting -> settings.put(setting.getKey(), setting.getValue()));
+        return settings;
       });
   }
 }

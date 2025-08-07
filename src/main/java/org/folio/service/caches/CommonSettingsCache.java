@@ -55,42 +55,42 @@ public class CommonSettingsCache {
     this.systemTimezoneCache = buildAsyncCache(context, cacheExpirationTime);
   }
 
-  public Future<JsonObject> loadConfiguration(String module, RequestContext requestContext) {
-    return loadSettingData(resourcesPath(CONFIGURATION_ENTRIES), CONFIG_QUERY.formatted(module), configsCache,
-      commonSettingsRetriever::loadConfiguration, requestContext);
+  public Future<JsonObject> loadConfigurations(String module, RequestContext requestContext) {
+    return cacheData(resourcesPath(CONFIGURATION_ENTRIES), CONFIG_QUERY.formatted(module), configsCache,
+      commonSettingsRetriever::loadConfigurations, requestContext);
   }
 
   public Future<JsonObject> loadSettings(RequestContext requestContext) {
-    return loadSettingData(resourcesPath(ORDERS_STORAGE_SETTINGS), null, settingsCache,
-      commonSettingsRetriever::getLocalSetting, requestContext);
+    return cacheData(resourcesPath(ORDERS_STORAGE_SETTINGS), null, settingsCache,
+      commonSettingsRetriever::getLocalSettings, requestContext);
   }
 
   public Future<String> getSystemCurrency(RequestContext requestContext) {
-    return loadSettingData(resourcesPath(SETTINGS_ENTRIES), GLOBAL_SETTINGS_QUERY, systemCurrencyCache,
+    return cacheData(resourcesPath(SETTINGS_ENTRIES), GLOBAL_SETTINGS_QUERY, systemCurrencyCache,
       commonSettingsRetriever::getSystemCurrency, requestContext);
   }
 
   public Future<String> getSystemTimeZone(RequestContext requestContext) {
-    return loadSettingData(resourcesPath(SETTINGS_ENTRIES), GLOBAL_SETTINGS_QUERY, systemTimezoneCache,
+    return cacheData(resourcesPath(SETTINGS_ENTRIES), GLOBAL_SETTINGS_QUERY, systemTimezoneCache,
       commonSettingsRetriever::getSystemTimeZone, requestContext);
   }
 
-  private <T> Future<T> loadSettingData(String url, String query, AsyncCache<String, T> cache,
-                                        BiFunction<RequestEntry, RequestContext, Future<T>> configExtractor,
-                                        RequestContext requestContext) {
+  private <T> Future<T> cacheData(String url, String query, AsyncCache<String, T> cache,
+                                  BiFunction<RequestEntry, RequestContext, Future<T>> configExtractor,
+                                  RequestContext requestContext) {
     var requestEntry = new RequestEntry(url).withQuery(query).withOffset(0).withLimit(Integer.MAX_VALUE);
     var cacheKey = buildUniqueKey(requestEntry, requestContext);
-    log.info("loadSettingsData:: Loading setting data, url: '{}', query: '{}', bypass-cache mode: '{}'", url, query, byPassCache);
+    log.debug("loadSettingsData:: Loading setting data, url: '{}', query: '{}', bypass-cache mode: '{}'", url, query, byPassCache);
     if (byPassCache) {
-      return extractSettingData(configExtractor, requestContext, requestEntry);
+      return extractData(configExtractor, requestContext, requestEntry);
     }
     return Future.fromCompletionStage(cache.get(cacheKey, (key, executor) ->
-      extractSettingData(configExtractor, requestContext, requestEntry)
+      extractData(configExtractor, requestContext, requestEntry)
         .toCompletionStage().toCompletableFuture()));
   }
 
-  private <T> Future<T> extractSettingData(BiFunction<RequestEntry, RequestContext, Future<T>> extractor,
-                                           RequestContext requestContext, RequestEntry requestEntry) {
+  private <T> Future<T> extractData(BiFunction<RequestEntry, RequestContext, Future<T>> extractor,
+                                    RequestContext requestContext, RequestEntry requestEntry) {
     var tenantId = TenantTool.tenantId(requestContext.getHeaders());
     return extractor.apply(requestEntry, requestContext)
       .onFailure(t -> log.error("Error loading configuration, tenantId: '{}'", tenantId, t));

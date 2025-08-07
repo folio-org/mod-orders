@@ -41,7 +41,7 @@ public class CommonSettingsRetrieverTest {
   private CommonSettingsRetriever commonSettingsRetriever;
 
   @Test
-  void shouldLoadConfigurationSuccessfully() {
+  void shouldLoadConfigurationsSuccessfully() {
     RequestEntry requestEntry = new RequestEntry(resourcesPath(ResourcePathResolver.CONFIGURATION_ENTRIES));
     JsonObject expectedConfig = new JsonObject().put("key", "value");
     Configs configs = new Configs().withConfigs(List.of(new Config().withConfigName("key").withValue("value")));
@@ -49,7 +49,7 @@ public class CommonSettingsRetrieverTest {
     doReturn(Future.succeededFuture(configs))
       .when(restClientMock).get(eq(requestEntry), eq(Configs.class), any(RequestContext.class));
 
-    Future<JsonObject> result = commonSettingsRetriever.loadConfiguration(requestEntry, requestContextMock);
+    Future<JsonObject> result = commonSettingsRetriever.loadConfigurations(requestEntry, requestContextMock);
 
     assertEquals(expectedConfig, result.result());
   }
@@ -109,13 +109,13 @@ public class CommonSettingsRetrieverTest {
   }
 
   @Test
-  void shouldFailToLoadConfigurationWhenRestClientFails() {
+  void shouldFailToLoadConfigurationsWhenRestClientFails() {
     RequestEntry requestEntry = new RequestEntry(resourcesPath(ResourcePathResolver.CONFIGURATION_ENTRIES));
 
     when(restClientMock.get(eq(requestEntry), eq(Configs.class), any(RequestContext.class)))
       .thenReturn(Future.failedFuture(new RuntimeException("Service failure")));
 
-    Future<JsonObject> result = commonSettingsRetriever.loadConfiguration(requestEntry, requestContextMock);
+    Future<JsonObject> result = commonSettingsRetriever.loadConfigurations(requestEntry, requestContextMock);
 
     assertTrue(result.failed());
     assertEquals(RuntimeException.class, result.cause().getClass());

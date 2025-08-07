@@ -49,7 +49,7 @@ public class CommonSettingsCacheTest {
   void shouldLoadSettingsFromCache() {
     JsonObject config = new JsonObject().put("key", "value");
 
-    when(commonSettingsRetrieverMock.getLocalSetting(any(RequestEntry.class), any(RequestContext.class)))
+    when(commonSettingsRetrieverMock.getLocalSettings(any(RequestEntry.class), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture(config));
 
     Future<JsonObject> result = commonSettingsCache.loadSettings(requestContextMock);
@@ -83,7 +83,7 @@ public class CommonSettingsCacheTest {
 
   @Test
   void shouldFailToLoadSettingsWhenServiceFails() {
-    when(commonSettingsRetrieverMock.getLocalSetting(any(RequestEntry.class), any(RequestContext.class)))
+    when(commonSettingsRetrieverMock.getLocalSettings(any(RequestEntry.class), any(RequestContext.class)))
       .thenReturn(Future.failedFuture(new RuntimeException("Service failure")));
 
     Future<JsonObject> result = commonSettingsCache.loadSettings(requestContextMock);
@@ -125,7 +125,7 @@ public class CommonSettingsCacheTest {
     var currency = "EUR";
     var timeZone = "EST";
 
-    when(commonSettingsRetrieverMock.getLocalSetting(any(RequestEntry.class), any(RequestContext.class)))
+    when(commonSettingsRetrieverMock.getLocalSettings(any(RequestEntry.class), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture(config));
     when(commonSettingsRetrieverMock.getSystemCurrency(any(RequestEntry.class), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture(currency));
@@ -150,7 +150,7 @@ public class CommonSettingsCacheTest {
 
     // Assert - Verify that retriever methods were called multiple times (proving cache bypass)
     // When byPassCache=true, each call should go directly to the retriever, not use cache
-    verify(commonSettingsRetrieverMock, times(2)).getLocalSetting(any(RequestEntry.class), any(RequestContext.class));
+    verify(commonSettingsRetrieverMock, times(2)).getLocalSettings(any(RequestEntry.class), any(RequestContext.class));
     verify(commonSettingsRetrieverMock, times(2)).getSystemCurrency(any(RequestEntry.class), any(RequestContext.class));
     verify(commonSettingsRetrieverMock, times(2)).getSystemTimeZone(any(RequestEntry.class), any(RequestContext.class));
   }
