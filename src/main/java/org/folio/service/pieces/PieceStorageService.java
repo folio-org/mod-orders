@@ -173,7 +173,7 @@ public class PieceStorageService {
         var configuration = consortiumConfiguration.get();
         return settingsRetriever.getSettingByKey(SettingKey.CENTRAL_ORDERING_ENABLED, requestContext)
           .map(centralOrdering -> centralOrdering.map(Setting::getValue).orElse(null))
-          .compose(orderingEnabled -> shouldFilterPiecesForTenant(configuration.centralTenantId(), Boolean.parseBoolean((String) orderingEnabled), requestContext)
+          .compose(orderingEnabled -> shouldFilterPiecesForTenant(configuration.centralTenantId(), Boolean.parseBoolean(orderingEnabled), requestContext)
             ? consortiumUserTenantsRetriever.getUserTenants(configuration.consortiumId(), configuration.centralTenantId(), requestContext)
             : Future.succeededFuture());
       });
