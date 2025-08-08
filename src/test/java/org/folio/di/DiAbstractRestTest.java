@@ -139,7 +139,7 @@ public abstract class DiAbstractRestTest {
   public static void tearDownClass(final TestContext context) {
     Async async = context.async();
     EventManager.clearEventHandlers();
-    vertx.close(context.asyncAssertSuccess(res -> {
+    vertx.close().onComplete(context.asyncAssertSuccess(res -> {
       kafkaContainer.stop();
       kafkaProducer.close();
       async.complete();
@@ -155,7 +155,7 @@ public abstract class DiAbstractRestTest {
         .put(HTTP_PORT, port));
 
     TenantClient tenantClient = new TenantClient(okapiUrl, TENANT_ID, TOKEN);
-    vertx.deployVerticle(RestVerticle.class.getName(), options, res -> {
+    vertx.deployVerticle(RestVerticle.class.getName(), options).onComplete(res -> {
       postTenant(context, async, tenantClient);
     });
   }

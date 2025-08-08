@@ -235,6 +235,6 @@ public class ReceiptStatusConsistencyTest {
     // Add okapi url header
     DeliveryOptions deliveryOptions = new DeliveryOptions().addHeader(X_OKAPI_URL.getName(), X_OKAPI_URL.getValue());
 
-    vertx.eventBus().request(TEST_ADDRESS, data, deliveryOptions, replyHandler);
+    vertx.eventBus().<String>request(TEST_ADDRESS, data, deliveryOptions).onComplete(replyHandler);
   }
 }
