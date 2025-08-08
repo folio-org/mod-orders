@@ -1,6 +1,5 @@
 package org.folio.service.inventory;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -291,7 +290,7 @@ public class InventoryInstanceManager {
 
     Future<Void> contributorNameTypeIdFuture = verifyContributorNameTypesExist(poLine.getContributors(), requestContext);
 
-    return CompositeFuture.join(instanceTypeFuture, statusFuture, contributorNameTypeIdFuture)
+    return GenericCompositeFuture.join(List.of(instanceTypeFuture, statusFuture, contributorNameTypeIdFuture))
       .map(v -> buildInstanceRecordJsonObject(poLine, lookupObj))
       .compose(instanceRecJson -> {
         RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCES));

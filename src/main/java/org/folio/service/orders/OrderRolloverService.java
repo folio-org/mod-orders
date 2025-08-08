@@ -23,13 +23,13 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import javax.money.Monetary;
 import javax.money.MonetaryAmount;
 import javax.money.convert.CurrencyConversion;
 
 import io.vertx.core.AsyncResult;
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -40,6 +40,7 @@ import org.folio.models.FailedLedgerRolloverPoLineDto;
 import org.folio.models.PoLineEncumbrancesHolder;
 import org.folio.models.RolloverConversionHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.ExchangeRate;
 import org.folio.rest.acq.model.finance.Fund;
@@ -70,7 +71,6 @@ import com.google.common.collect.Lists;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
-import io.vertxconcurrent.Semaphore;
 
 public class OrderRolloverService {
 
@@ -143,33 +143,11 @@ public class OrderRolloverService {
   }
 
   private Future<Void> rolloverOrdersByFundIds(List<String> ledgerFundIds, LedgerFiscalYearRollover ledgerFYRollover, String systemCurrency, RequestContext requestContext) {
-    if (CollectionUtils.isEmpty(ledgerFundIds)) {
-      return Future.succeededFuture();
-    }
-    var fundIdChunks = Lists.partition(ledgerFundIds, MAX_IDS_FOR_GET_RQ_15);
-    var ctx = requestContext.getContext();
-    return ctx
-      .<List<Future<Void>>>executeBlocking(promise -> {
-        var futures = new ArrayList<Future<Void>>();
-        // process fundId chunks one by one
-        var semaphore = new Semaphore(1, requestContext.getContext().owner());
-        for (var fundIds : fundIdChunks) {
-          semaphore.acquire(() -> {
-            // perform rollover for open orders and then for closed orders
-            var future = rolloverOrdersByFundIds(fundIds, ledgerFYRollover, systemCurrency, true, requestContext)
-              .andThen(openOrdersResult -> rolloverOrdersByFundIds(fundIds, ledgerFYRollover, systemCurrency,
-                false, requestContext)
-                .andThen(closedOrdersResult -> throwExceptionIfOneOfFailed(openOrdersResult, closedOrdersResult)))
-              .onComplete(asyncResult -> semaphore.release());
-
-            futures.add(future);
-            if (futures.size() == fundIdChunks.size()) {
-              promise.complete(futures);
-            }
-          });
-        }
-      })
-      .compose(GenericCompositeFuture::join)
+    List<List<String>> fundIdChunks = Lists.partition(ledgerFundIds, MAX_IDS_FOR_GET_RQ_15);
+    return HelperUtils.executeWithSemaphores(requestContext.getContext(), 1, fundIdChunks, fundIds ->
+        rolloverOrdersByFundIds(fundIds, ledgerFYRollover, systemCurrency, true, requestContext)
+          .andThen(openOrdersResult -> rolloverOrdersByFundIds(fundIds, ledgerFYRollover, systemCurrency, false, requestContext)
+            .andThen(closedOrdersResult -> throwExceptionIfOneOfFailed(openOrdersResult, closedOrdersResult))))
       .mapEmpty();
   }
 
@@ -185,36 +163,17 @@ public class OrderRolloverService {
   private Future<Void> rolloverOrdersByFundIds(List<String> chunkFundIds, LedgerFiscalYearRollover ledgerFYRollover,
                                                String systemCurrency, boolean openOrders, RequestContext requestContext) {
     var query = buildOpenOrClosedOrderQueryByFundIdsAndTypes(chunkFundIds, openOrders, ledgerFYRollover);
-    var totalRecordsFuture = purchaseOrderLineService.getOrderLineCollection(query, 0, 0, requestContext)
-      .map(PoLineCollection::getTotalRecords);
-    var ctx = requestContext.getContext();
-    return totalRecordsFuture.compose(totalRecords ->
-        ctx.<List<Future<Void>>>executeBlocking(promise -> {
-          var futures = new ArrayList<Future<Void>>();
-          if (totalRecords == 0) {
-            promise.complete(emptyList());
-            return;
-          }
-          var numberOfChunks = (int) Math.ceil((double) totalRecords / POLINES_CHUNK_SIZE_200);
-          // only 1 active thread because of chunk size = 200 records
-          var semaphore = new Semaphore(1, ctx.owner());
-          var atomicChunkCounter = new AtomicInteger();
-          for (var chunkNumber = 0; chunkNumber < numberOfChunks; chunkNumber++) {
-            // can produce "thread blocked" warnings because of large number of data
-            semaphore.acquire(() -> {
-              var future = purchaseOrderLineService.getOrderLines(query, atomicChunkCounter.getAndIncrement() * POLINES_CHUNK_SIZE_200, POLINES_CHUNK_SIZE_200, requestContext)
-                .compose(poLines -> rolloverOrders(systemCurrency, poLines, ledgerFYRollover, openOrders, requestContext))
-                .compose(modifiedPoLines -> saveOrderLines(modifiedPoLines, ledgerFYRollover, openOrders, requestContext))
-                .onComplete(asyncResult -> semaphore.release());
-              futures.add(future);
-              if (futures.size() == numberOfChunks) {
-                promise.complete(futures);
-              }
-            });
-          }
-        }))
-      .compose(GenericCompositeFuture::join)
-      .mapEmpty();
+    return purchaseOrderLineService.getOrderLineCollection(query, 0, 0, requestContext)
+      .map(PoLineCollection::getTotalRecords)
+      .compose(totalRecords -> {
+        var numberOfChunks = (int) Math.ceil((double) totalRecords / POLINES_CHUNK_SIZE_200);
+        var atomicChunkCounter = new AtomicInteger();
+        var chunkList = IntStream.range(0, numberOfChunks).boxed().toList();
+        return HelperUtils.executeWithSemaphores(requestContext.getContext(), 1, chunkList, chunk ->
+          purchaseOrderLineService.getOrderLines(query, atomicChunkCounter.getAndIncrement() * POLINES_CHUNK_SIZE_200, POLINES_CHUNK_SIZE_200, requestContext)
+            .compose(poLines -> rolloverOrders(systemCurrency, poLines, ledgerFYRollover, openOrders, requestContext))
+            .compose(modifiedPoLines -> saveOrderLines(modifiedPoLines, ledgerFYRollover, openOrders, requestContext)));
+      }).mapEmpty();
   }
 
   private Future<Void> saveOrderLines(List<PoLine> orderLines, LedgerFiscalYearRollover ledgerFYRollover,
@@ -261,7 +220,7 @@ public class OrderRolloverService {
       .toList();
     return getEncumbrancesForRollover(poLineIds, ledgerFYRollover, requestContext)
       .compose(encumbrances -> getExchangeRatesPerPoLine(poLines, systemCurrency, requestContext)
-      .compose(poLineExchangeRates -> Future.succeededFuture(Pair.of(encumbrances, poLineExchangeRates))))
+        .compose(poLineExchangeRates -> Future.succeededFuture(Pair.of(encumbrances, poLineExchangeRates))))
       .compose(encumbrancePoLineExchangeRates -> {
         if (openOrders) {
           var holders = buildPoLineEncumbrancesHolders(poLines, encumbrancePoLineExchangeRates);
