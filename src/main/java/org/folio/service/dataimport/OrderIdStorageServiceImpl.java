@@ -18,7 +18,7 @@ public class OrderIdStorageServiceImpl implements IdStorageService {
   private final static Logger LOGGER = LogManager.getLogger();
   public static final String PG_CONSTRAINT_ERROR_CODE = "23505";
 
-  private RecordIdStorageDao orderRecordIdStorageDao;
+  private final RecordIdStorageDao orderRecordIdStorageDao;
 
   @Autowired
   public OrderIdStorageServiceImpl(RecordIdStorageDao orderRecordIdStorageDao) {
@@ -34,9 +34,8 @@ public class OrderIdStorageServiceImpl implements IdStorageService {
     orderRecordIdStorageDao.store(recordId, tenantId)
       .onSuccess(future::complete)
       .onFailure(ex -> {
-        if (ex instanceof PgException) {
-          PgException currentException = (PgException) ex;
-          if (StringUtils.equals(currentException.getCode(), PG_CONSTRAINT_ERROR_CODE)) {
+        if (ex instanceof PgException currentException) {
+          if (StringUtils.equals(currentException.getSqlState(), PG_CONSTRAINT_ERROR_CODE)) {
             LOGGER.info("handle:: Source record with {} id is already exists: {}",
               recordId, DuplicateEventException.class);
             future.completeExceptionally(new DuplicateEventException(String.format("Source record with %s id is already exists", recordId)));
