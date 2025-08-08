@@ -83,6 +83,7 @@ public class OpenCompositeOrderFlowValidator {
     futures.add(expenseClassValidationService.validateExpenseClasses(compPO.getPoLines(), true, requestContext));
     futures.add(checkLocationsAndPiecesConsistency(compPO.getPoLines(), requestContext));
     futures.add(validateFundDistributionTotal(compPO.getPoLines()));
+    futures.add(validateFundsAndPopulateCodes(compPO.getPoLines(), requestContext));
     futures.add(validateMaterialTypesFuture);
     futures.add(validateEncumbrancesFuture);
 
@@ -120,7 +121,7 @@ public class OpenCompositeOrderFlowValidator {
     }
   }
 
-  public Future<Void> checkFundLocationRestrictions(List<PoLine> poLines, RequestContext requestContext) {
+  public Future<Void> validateFundsAndPopulateCodes(List<PoLine> poLines, RequestContext requestContext) {
     logger.debug("checkFundLocationRestrictions start");
     List<Future<Void>> checkFunds = poLines
       .stream()
@@ -130,10 +131,35 @@ public class OpenCompositeOrderFlowValidator {
         List<String> fundIdList = poLine.getFundDistribution().stream()
           .map(FundDistribution::getFundId)
           .toList();
-        return fundService.getFunds(fundIdList, requestContext)
-          .compose(funds -> validateLocationRestrictions(poLine, funds, requestContext));
+        return fundService.getAllFunds(fundIdList, requestContext)
+          .compose(funds -> populateMissingFundCodes(poLine, funds)
+            .compose(v -> validateLocationRestrictions(poLine, funds, requestContext)));
       }).toList();
     return GenericCompositeFuture.join(checkFunds).mapEmpty();
+  }
+
+  private Future<Void> populateMissingFundCodes(PoLine poLine, List<Fund> funds) {
+    logger.debug("populateMissingFundCodes:: Populating missing fund codes for poLine '{}'", poLine.getId());
+
+    // added merge function for cases when funds have the same ids but assigned to different expense classes
+    Map<String, String> fundIdToCodeMap = funds.stream()
+      .collect(Collectors.toMap(Fund::getId, Fund::getCode, (existing, replacement) -> existing));
+
+    for (FundDistribution fundDistribution : poLine.getFundDistribution()) {
+      if (StringUtils.isNotEmpty(fundDistribution.getFundId()) &&
+          fundIdToCodeMap.containsKey(fundDistribution.getFundId())) {
+
+        String actualFundCode = fundIdToCodeMap.get(fundDistribution.getFundId());
+
+        if (StringUtils.isEmpty(fundDistribution.getCode()) || !StringUtils.equals(fundDistribution.getCode(), actualFundCode)) {
+          fundDistribution.setCode(actualFundCode);
+          logger.info("populateMissingFundCodes:: Set correct fund code '{}' for fundId '{}'",
+            actualFundCode, fundDistribution.getFundId());
+          }
+      }
+    }
+
+    return Future.succeededFuture();
   }
 
   private Future<Void> validateLocationRestrictions(PoLine poLine, List<Fund> funds, RequestContext requestContext) {
