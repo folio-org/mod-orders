@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 
+import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.acq.model.finance.BudgetExpenseClass;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
@@ -22,7 +23,6 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 
 public class ExpenseClassValidationService {
@@ -53,7 +53,7 @@ public class ExpenseClassValidationService {
       .filter(fundDistribution -> Objects.nonNull(fundDistribution.getExpenseClassId()))
       .collect(toMap(Function.identity(), FundDistribution::getExpenseClassId));
 
-    return CompositeFuture.join(expenseClassesByFundId.entrySet()
+    return GenericCompositeFuture.join(expenseClassesByFundId.entrySet()
       .stream()
       .map(expenseClassByFundId -> checkExpenseClassIsActiveByFundDistribution(expenseClassByFundId, isActiveExpenseClassCheckRequired, requestContext))
       .collect(toList()))

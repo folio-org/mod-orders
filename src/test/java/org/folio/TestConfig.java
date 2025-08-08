@@ -58,7 +58,7 @@ public final class TestConfig {
     System.setProperty(KAFKA_PORT, kafkaContainer.getFirstMappedPort() + "");
     System.setProperty(KAFKA_ENV, KAFKA_ENV_VALUE);
 
-    vertx.deployVerticle(RestVerticle.class.getName(), opt, res -> {
+    vertx.deployVerticle(RestVerticle.class.getName(), opt).onComplete(res -> {
       if(res.succeeded()) {
         deploymentComplete.complete(res.result());
       }

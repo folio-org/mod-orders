@@ -292,7 +292,7 @@ public class ReceiveOrderStatusChangeHandlerTest {
     // Add okapi url header
     DeliveryOptions deliveryOptions = new DeliveryOptions().addHeader(X_OKAPI_URL.getName(), X_OKAPI_URL.getValue());
 
-    vertx.eventBus().request(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE.address, data, deliveryOptions, replyHandler);
+    vertx.eventBus().<String>request(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE.address, data, deliveryOptions).onComplete(replyHandler);
   }
 
 }
