@@ -60,7 +60,7 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
     <!--Dependency Management Properties-->
-    <vertx.version>4.5.16</vertx.version>
+    <vertx.version>5.0.1</vertx.version>
     <jackson-bom.version>2.19.2</jackson-bom.version>
     <log4j.version>2.25.1</log4j.version>
     <testcontainers-bom.version>1.21.3</testcontainers-bom.version>
@@ -272,7 +272,7 @@
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-rx-java</artifactId>
-      <version>${vertx.version}</version>
+      <version>4.5.17</version>
       <scope>provided</scope>
     </dependency>
     <dependency>

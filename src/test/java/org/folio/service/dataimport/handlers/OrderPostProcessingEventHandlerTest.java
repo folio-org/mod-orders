@@ -14,6 +14,7 @@ import org.folio.JobProfile;
 import org.folio.MappingProfile;
 import org.folio.TestConfig;
 import org.folio.di.DiAbstractRestTest;
+import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.RestConstants;
 import org.folio.rest.impl.MockServer;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -353,10 +354,10 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
 
     // when
     Future<CompositeFuture> future = polProgressService.savePoLinesAmountPerOrder(order.getId(), 2, TENANT_ID)
-      .compose(v -> CompositeFuture.join(
+      .compose(v -> GenericCompositeFuture.join(List.of(
         Future.fromCompletionStage(orderPostProcessingHandler.handle(dataImportEventPayload)),
         Future.fromCompletionStage(orderPostProcessingHandler.handle(dataImportEventPayload))
-      ));
+      )));
 
     // then
     future.onComplete(ar -> {
