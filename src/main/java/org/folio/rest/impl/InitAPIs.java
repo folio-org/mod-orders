@@ -2,6 +2,7 @@ package org.folio.rest.impl;
 
 import javax.money.convert.MonetaryConversions;
 
+import io.vertx.core.ThreadingModel;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.config.ApplicationConfig;
@@ -21,7 +22,6 @@ import io.vertx.core.Context;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.jackson.DatabindCodec;
 import io.vertx.core.spi.VerticleFactory;
@@ -40,36 +40,28 @@ public class InitAPIs implements InitAPI {
 
   @Override
   public void init(Vertx vertx, Context context, Handler<AsyncResult<Boolean>> resultHandler) {
-    vertx.executeBlocking(
-      handler -> {
-        SerializationConfig serializationConfig = ObjectMapperTool.getMapper().getSerializationConfig();
-        DeserializationConfig deserializationConfig = ObjectMapperTool.getMapper().getDeserializationConfig();
+    vertx.executeBlocking(() -> {
+      SerializationConfig serializationConfig = ObjectMapperTool.getMapper().getSerializationConfig();
+      DeserializationConfig deserializationConfig = ObjectMapperTool.getMapper().getDeserializationConfig();
 
-        DatabindCodec.mapper().setConfig(serializationConfig);
-        DatabindCodec.prettyMapper().setConfig(serializationConfig);
-        DatabindCodec.mapper().setConfig(deserializationConfig);
-        DatabindCodec.prettyMapper().setConfig(deserializationConfig);
-        SpringContextUtil.init(vertx, context, ApplicationConfig.class);
-        SpringContextUtil.autowireDependencies(this, context);
-        initJavaMoney();
+      DatabindCodec.mapper().setConfig(serializationConfig);
+      DatabindCodec.prettyMapper().setConfig(serializationConfig);
+      DatabindCodec.mapper().setConfig(deserializationConfig);
+      DatabindCodec.prettyMapper().setConfig(deserializationConfig);
+      SpringContextUtil.init(vertx, context, ApplicationConfig.class);
+      SpringContextUtil.autowireDependencies(this, context);
+      initJavaMoney();
 
-        deployConsumersVerticles(vertx).onSuccess(hdr -> {
-            handler.handle(Future.succeededFuture());
-            log.info("Consumer Verticles were successfully started");
-          })
-          .onFailure(th -> {
-            handler.handle(Future.failedFuture(th));
-            log.error("Consumer Verticles were not started", th);
-          });
-      })
-      .onComplete(result -> {
+      return deployConsumersVerticles(vertx).onComplete(result -> {
         if (result.succeeded()) {
           resultHandler.handle(Future.succeededFuture(true));
+          log.info("Consumer Verticles were successfully started");
         } else {
-          log.error("Failure to init API", result.cause());
+          log.error("Consumer Verticles were not started", result.cause());
           resultHandler.handle(Future.failedFuture(result.cause()));
         }
       });
+    });
   }
 
   private Future<?> deployConsumersVerticles(Vertx vertx) {
@@ -77,14 +69,10 @@ public class InitAPIs implements InitAPI {
     VerticleFactory verticleFactory = springContext.getBean(SpringVerticleFactory.class);
     vertx.registerVerticleFactory(verticleFactory);
 
-    Promise<String> deployDataImportConsumerPromise = Promise.promise();
-
-    vertx.deployVerticle(getVerticleName(verticleFactory, DataImportConsumerVerticle.class),
-      new DeploymentOptions()
-        .setWorker(true)
-        .setInstances(dataImportConsumerInstancesNumber), deployDataImportConsumerPromise);
-
-    return deployDataImportConsumerPromise.future();
+    var deploymentOptions = new DeploymentOptions()
+      .setThreadingModel(ThreadingModel.WORKER)
+      .setInstances(dataImportConsumerInstancesNumber);
+    return vertx.deployVerticle(getVerticleName(verticleFactory, DataImportConsumerVerticle.class), deploymentOptions);
   }
 
   private <T> String getVerticleName(VerticleFactory verticleFactory, Class<T> clazz) {
@@ -94,7 +82,7 @@ public class InitAPIs implements InitAPI {
   private void initJavaMoney() {
     try {
       log.info("Available currency rates providers {}", MonetaryConversions.getDefaultConversionProviderChain());
-    } catch (Exception e){
+    } catch (Exception e) {
       log.error("Java Money API preload failed", e);
     }
   }

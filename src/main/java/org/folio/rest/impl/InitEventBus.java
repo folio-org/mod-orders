@@ -2,6 +2,7 @@ package org.folio.rest.impl;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.rest.resource.interfaces.PostDeployVerticle;
 import org.folio.spring.SpringContextUtil;
@@ -9,16 +10,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.vertx.core.AsyncResult;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
+
+import java.util.List;
 
 /**
  * The class initializes event bus handlers
@@ -44,39 +45,25 @@ public class InitEventBus implements PostDeployVerticle {
 
   @Override
   public void init(Vertx vertx, Context context, Handler<AsyncResult<Boolean>> resultHandler) {
-    vertx.executeBlocking(blockingCodeFuture -> {
+    vertx.executeBlocking(() -> {
       EventBus eb = vertx.eventBus();
-
-      // Create consumers and assign handlers
-      Promise<Void> orderStatusRegistrationHandler = Promise.promise();
-      Promise<Void> checkInOrderStatusRegistrationHandler = Promise.promise();
-      Promise<Void> receiptStatusConsistencyHandler = Promise.promise();
 
       MessageConsumer<JsonObject> orderStatusConsumer = eb.localConsumer(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE.address);
       MessageConsumer<JsonObject> checkInOrderStatusChangeConsumer = eb.localConsumer(MessageAddress.CHECKIN_ORDER_STATUS_UPDATE.address);
       MessageConsumer<JsonObject> receiptStatusConsumer = eb.localConsumer(MessageAddress.RECEIPT_STATUS.address);
-      orderStatusConsumer.handler(receiveOrderStatusChangeHandler)
-        .completionHandler(orderStatusRegistrationHandler);
-      checkInOrderStatusChangeConsumer.handler(checkInOrderStatusChangeHandler)
-        .completionHandler(checkInOrderStatusRegistrationHandler);
-      receiptStatusConsumer.handler(receiptStatusHandler)
-        .completionHandler(receiptStatusConsistencyHandler);
+      orderStatusConsumer.handler(receiveOrderStatusChangeHandler);
+      checkInOrderStatusChangeConsumer.handler(checkInOrderStatusChangeHandler);
+      receiptStatusConsumer.handler(receiptStatusHandler);
 
-      CompositeFuture.join(orderStatusRegistrationHandler.future(), receiptStatusConsistencyHandler.future(), checkInOrderStatusRegistrationHandler.future())
+      return GenericCompositeFuture.join(List.of(orderStatusConsumer.completion(), checkInOrderStatusChangeConsumer.completion(), receiptStatusConsumer.completion()))
         .onComplete(result -> {
           if (result.succeeded()) {
-            blockingCodeFuture.complete();
+            resultHandler.handle(Future.succeededFuture(true));
           } else {
-            blockingCodeFuture.fail(result.cause());
+            logger.error(result.cause());
+            resultHandler.handle(Future.failedFuture(result.cause()));
           }
         });
-    }, result -> {
-      if (result.succeeded()) {
-        resultHandler.handle(Future.succeededFuture(true));
-      } else {
-        logger.error(result.cause());
-        resultHandler.handle(Future.failedFuture(result.cause()));
-      }
     });
   }
 }
