@@ -79,6 +79,7 @@
     <folio-di-support.version>3.0.0</folio-di-support.version>
     <mod-di-converter-storage-client.version>2.3.1</mod-di-converter-storage-client.version>
     <data-import-processing-core.version>4.5.0-SNAPSHOT</data-import-processing-core.version>
+    <folio-kafka-wrapper.version>3.4.0-SNAPSHOT</folio-kafka-wrapper.version>
 
     <!--Maven plugin dependencies-->
     <build-helper-maven-plugin.version>3.6.0</build-helper-maven-plugin.version>
@@ -258,6 +259,11 @@
       <groupId>org.folio</groupId>
       <artifactId>data-import-processing-core</artifactId>
       <version>${data-import-processing-core.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.folio</groupId>
+      <artifactId>folio-kafka-wrapper</artifactId>
+      <version>${folio-kafka-wrapper.version}</version>
     </dependency>
     <dependency>
       <groupId>com.github.rworsnop</groupId>

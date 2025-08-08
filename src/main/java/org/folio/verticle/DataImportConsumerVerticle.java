@@ -24,6 +24,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
@@ -83,6 +84,7 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
         .globalLoadSensor(globalLoadSensor)
         .subscriptionDefinition(subscriptionDefinition)
         .processRecordErrorHandler(getErrorHandler())
+        .groupInstanceId(getClass().getSimpleName() + "-" + UUID.randomUUID())
         .build();
 
       futures.add(consumerWrapper.start(getHandler(),
