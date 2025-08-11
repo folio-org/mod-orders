@@ -37,6 +37,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 
 import org.folio.ApiTestSuite;
+import org.folio.CopilotGenerated;
 import org.folio.models.consortium.ConsortiumConfiguration;
 import org.folio.rest.acq.model.Setting;
 import org.folio.rest.core.RestClient;
@@ -58,6 +59,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -210,6 +212,86 @@ public class PieceStorageServiceTest {
       Arguments.of(Optional.of(new ConsortiumConfiguration("centralTenantId", UUID.randomUUID().toString())), false),
       Arguments.of(Optional.empty(), false)
     );
+  }
+
+  @Test
+  @CopilotGenerated(model = "Gemini")
+  void testGetPiecesWithChunkingAndPagination(VertxTestContext vertxTestContext) {
+    // GIVEN
+    List<String> userTenants = Stream.iterate(0, i -> i + 1).limit(20).map(i -> "tenant" + i).toList();
+    var consortiumConfig = new ConsortiumConfiguration(REQUEST_TENANT_ID, UUID.randomUUID().toString());
+    doReturn(succeededFuture(Optional.of(consortiumConfig)))
+      .when(consortiumConfigurationService).getConsortiumConfiguration(any(RequestContext.class));
+    doReturn(succeededFuture(Optional.of(new Setting().withValue("true"))))
+      .when(settingsRetriever).getSettingByKey(eq(SettingKey.CENTRAL_ORDERING_ENABLED), any(RequestContext.class));
+    doReturn(succeededFuture(userTenants))
+      .when(pieceStorageService).getUserTenantsIfNeeded(any(RequestContext.class));
+
+    // Create 5 unique pieces. The order of results from RestClient is deterministic.
+    Piece p1 = new Piece().withId(UUID.randomUUID().toString());
+    Piece p2 = new Piece().withId(UUID.randomUUID().toString());
+    Piece p3 = new Piece().withId(UUID.randomUUID().toString());
+    Piece p4 = new Piece().withId(UUID.randomUUID().toString());
+    Piece p5 = new Piece().withId(UUID.randomUUID().toString());
+
+    when(restClient.get(any(RequestEntry.class), eq(PieceCollection.class), any(RequestContext.class)))
+      .thenReturn(succeededFuture(new PieceCollection().withPieces(List.of(p1, p2)).withTotalRecords(2))) // For first chunk
+      .thenReturn(succeededFuture(new PieceCollection().withPieces(List.of(p3)).withTotalRecords(1)))      // For second chunk
+      .thenReturn(succeededFuture(new PieceCollection().withPieces(List.of(p4, p5)).withTotalRecords(2))); // For null-tenant
+
+    // WHEN
+    // Combined list will be [p1, p2, p3, p4, p5]. Request the middle 2 pieces.
+    var future = pieceStorageService.getPieces(2, 2, null, requestContext);
+
+    // THEN
+    vertxTestContext.assertComplete(future)
+      .onSuccess(result -> vertxTestContext.verify(() -> {
+        assertThat(result.getTotalRecords()).isEqualTo(5);
+        assertThat(result.getPieces()).hasSize(2);
+        assertThat(result.getPieces()).extracting(Piece::getId).containsExactly(p3.getId(), p4.getId());
+        vertxTestContext.completeNow();
+      }));
+  }
+
+  @Test
+  @CopilotGenerated(model = "Gemini")
+  void testGetPiecesWithChunkingReturnsOnlyNullTenantPieces(VertxTestContext vertxTestContext) {
+    // GIVEN
+    // A user with many tenants to trigger the chunking logic
+    List<String> userTenants = Stream.iterate(0, i -> i + 1).limit(20).map(i -> "tenant" + i).toList();
+    var consortiumConfig = new ConsortiumConfiguration(REQUEST_TENANT_ID, UUID.randomUUID().toString());
+    doReturn(succeededFuture(Optional.of(consortiumConfig)))
+      .when(consortiumConfigurationService).getConsortiumConfiguration(any(RequestContext.class));
+    doReturn(succeededFuture(Optional.of(new Setting().withValue("true"))))
+      .when(settingsRetriever).getSettingByKey(eq(SettingKey.CENTRAL_ORDERING_ENABLED), any(RequestContext.class));
+    doReturn(succeededFuture(userTenants))
+      .when(pieceStorageService).getUserTenantsIfNeeded(any(RequestContext.class));
+
+    // Mock pieces that only exist for the "null" tenant
+    Piece nullTenantPiece = new Piece().withId(UUID.randomUUID().toString());
+    PieceCollection nullTenantPieces = new PieceCollection().withPieces(List.of(nullTenantPiece)).withTotalRecords(1);
+    PieceCollection emptyPieceCollection = new PieceCollection().withPieces(Collections.emptyList()).withTotalRecords(0);
+
+    // Mock RestClient to return empty collections for tenant chunks, and the actual pieces for the null-tenant query
+    when(restClient.get(any(RequestEntry.class), eq(PieceCollection.class), any(RequestContext.class)))
+      .thenReturn(succeededFuture(emptyPieceCollection))      // For first chunk
+      .thenReturn(succeededFuture(emptyPieceCollection))      // For second chunk
+      .thenReturn(succeededFuture(nullTenantPieces));         // For null-tenant query
+
+    // WHEN
+    var future = pieceStorageService.getPieces(10, 0, null, requestContext);
+
+    // THEN
+    vertxTestContext.assertComplete(future)
+      .onSuccess(result -> vertxTestContext.verify(() -> {
+        // Verify that only the null-tenant piece is returned
+        assertThat(result.getTotalRecords()).isEqualTo(1);
+        assertThat(result.getPieces()).hasSize(1);
+        assertThat(result.getPieces().get(0).getId()).isEqualTo(nullTenantPiece.getId());
+        // Verify that RestClient was called for each chunk (2) and for the null-tenant query (1)
+        verify(restClient, times(3)).get(any(RequestEntry.class), eq(PieceCollection.class), any(RequestContext.class));
+        vertxTestContext.completeNow();
+      }));
   }
 
   private static Stream<Arguments> getQueryForUserTenantsParamProvider() {
