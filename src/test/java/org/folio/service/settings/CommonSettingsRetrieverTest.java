@@ -12,7 +12,6 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.Config;
 import org.folio.rest.jaxrs.model.Configs;
-import org.folio.service.caches.CommonSettingsCache;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -22,6 +21,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import static org.folio.service.caches.CommonSettingsCache.TENANT_LOCALE_SETTINGS;
+import static org.folio.service.settings.CommonSettingsRetriever.CURRENCY_KEY;
+import static org.folio.service.settings.CommonSettingsRetriever.TZ_KEY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -149,9 +151,8 @@ public class CommonSettingsRetrieverTest {
 
   private static CommonSettingsCollection getLocaleSettings() {
     return new CommonSettingsCollection().withItems(List.of(new CommonSetting()
-      .withKey(CommonSettingsCache.TENANT_LOCALE_SETTINGS).withValue(new Value()
-        .withAdditionalProperty(CommonSettingsRetriever.CURRENCY_KEY, "USD")
-        .withAdditionalProperty(CommonSettingsRetriever.TZ_KEY, "UTC"))));
+      .withKey(TENANT_LOCALE_SETTINGS).withValue(new Value()
+        .withAdditionalProperty(CURRENCY_KEY, "USD")
+        .withAdditionalProperty(TZ_KEY, "UTC"))));
   }
-
 }

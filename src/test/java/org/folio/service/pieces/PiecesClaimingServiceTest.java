@@ -398,11 +398,11 @@ public class PiecesClaimingServiceTest {
         assertEquals("pieceId2", copiedSortedResults.get(1).getPieceId());
         assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.get(1).getStatus());
         assertEquals("pieceId3", copiedSortedResults.get(2).getPieceId());
-        assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.get(1).getStatus());
+        assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.get(2).getStatus());
         assertEquals("pieceId4", copiedSortedResults.get(3).getPieceId());
-        assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.get(1).getStatus());
+        assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.get(3).getStatus());
         assertEquals("pieceId5", copiedSortedResults.get(4).getPieceId());
-        assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.get(1).getStatus());
+        assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.get(4).getStatus());
         testContext.completeNow();
       })));
   }
