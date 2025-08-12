@@ -6,6 +6,7 @@ import io.vertx.core.json.JsonObject;
 import lombok.extern.log4j.Log4j2;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
@@ -262,8 +263,11 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
   }
 
   private Future<Void> deleteAbandonedHoldingsAndUpdateHolder(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
+    if (BooleanUtils.isNotTrue(holder.getPatchOrderLineRequest().getReplaceInstanceRef().getDeleteAbandonedHoldings())) {
+      return Future.succeededFuture();
+    }
     return getDeletableHoldings(holder, requestContext)
-      .compose(deletableHoldings -> deleteAbandonedHoldings(holder.getPatchOrderLineRequest().getReplaceInstanceRef().getDeleteAbandonedHoldings(), deletableHoldings, requestContext))
+      .compose(deletableHoldings -> deleteAbandonedHoldings(deletableHoldings, requestContext))
       .compose(deletedHoldings -> asFuture(() -> holder.getDeletedHoldingIds().addAll(deletedHoldings)))
       .mapEmpty();
   }
