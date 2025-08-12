@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections4.CollectionUtils;
@@ -150,8 +151,49 @@ public class PieceStorageService {
 
   public Future<PieceCollection> getPieces(int limit, int offset, String query, RequestContext requestContext) {
     return getUserTenantsIfNeeded(requestContext)
-      .map(userTenants -> getQueryForUserTenants(userTenants, query))
-      .compose(cql -> getAllPieces(limit, offset, cql, requestContext));
+      .compose(userTenants -> getPiecesWithUserTenants(limit, offset, userTenants, query, requestContext));
+  }
+
+  private Future<PieceCollection> getPiecesWithUserTenants(int limit, int offset, List<String> userTenants, String query, RequestContext requestContext) {
+    if (CollectionUtils.isEmpty(userTenants)) {
+      return getAllPieces(limit, offset, query, requestContext);
+    }
+
+    if (userTenants.size() <= MAX_IDS_FOR_GET_RQ_15) {
+      String cql = getQueryForUserTenants(userTenants, query);
+      return getAllPieces(limit, offset, cql, requestContext);
+    }
+
+    // We query pieces for tenants in chunks and, separately, pieces that have no tenant assigned.
+    List<Future<PieceCollection>> futures = ofSubLists(new ArrayList<>(userTenants), MAX_IDS_FOR_GET_RQ_15)
+      .map(tenantChunk -> {
+        String tenantCql = convertIdsToCqlQuery(tenantChunk, "receivingTenantId");
+        return StringUtils.isNotBlank(query) ? combineCqlExpressions("and", tenantCql, query) : tenantCql;
+      })
+      .map(chunkQuery -> getAllPieces(Integer.MAX_VALUE, 0, chunkQuery, requestContext))
+      .collect(Collectors.toCollection(ArrayList::new));
+
+    String nullTenantCql = getCqlExpressionForFieldNullValue("receivingTenantId");
+    String nullTenantQuery = StringUtils.isNotBlank(query) ? combineCqlExpressions("and", nullTenantCql, query) : nullTenantCql;
+    futures.add(getAllPieces(Integer.MAX_VALUE, 0, nullTenantQuery, requestContext));
+
+    return collectResultsOnSuccess(futures)
+      .map(collections -> {
+        var allPieces = collections.stream()
+          .map(PieceCollection::getPieces)
+          .flatMap(Collection::stream)
+          .distinct()
+          .toList();
+
+        List<Piece> paginatedPieces = allPieces.stream()
+          .skip(offset)
+          .limit(limit)
+          .toList();
+
+        return new PieceCollection()
+          .withPieces(paginatedPieces)
+          .withTotalRecords(allPieces.size());
+      });
   }
 
   public Future<PieceCollection> getAllPieces(String query, RequestContext requestContext) {
