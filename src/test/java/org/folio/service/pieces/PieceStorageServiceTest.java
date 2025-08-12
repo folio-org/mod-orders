@@ -59,7 +59,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.ArgumentCaptor;
 import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -110,7 +109,7 @@ public class PieceStorageServiceTest {
 
   @AfterEach
   void resetMocks() throws Exception {
-    reset(restClient);
+    reset(restClient, pieceStorageService);
     if (openMocks != null) {
       openMocks.close();
     }
