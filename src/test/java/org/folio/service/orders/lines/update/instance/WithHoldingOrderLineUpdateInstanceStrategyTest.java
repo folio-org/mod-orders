@@ -17,6 +17,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,11 +35,13 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.Physical;
+import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemManager;
+import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.pieces.PieceStorageService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -69,6 +72,8 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
   private InventoryHoldingManager inventoryHoldingManager;
   @Mock
   private PieceStorageService pieceStorageService;
+  @Mock
+  private PurchaseOrderLineService purchaseOrderLineService;
 
   @Mock
   RequestContext requestContext;
@@ -347,14 +352,18 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
   public void updateInstanceForFindOrCreateHoldingOperationAndDeleteAbandonedHoldings(VertxTestContext vertxTestContext) throws IOException {
     String instanceId = UUID.randomUUID().toString();
 
-    JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
-
-    List<JsonObject> holdings = holdingsCollection.getJsonArray("holdingsRecords").stream()
-        .map(o -> ((JsonObject) o))
-        .collect(toList());
+    List<JsonObject> holdings = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH))
+      .getJsonArray("holdingsRecords").stream()
+      .map(o -> ((JsonObject) o))
+      .collect(toList());
+    holdings.addLast(JsonObject.of(
+        ID, UUID.randomUUID().toString(),
+        "purchaseOrderLineIdentifier", UUID.randomUUID().toString()
+    ));
 
     List<String> holdingIds = holdings.stream().map(holding ->  holding.getString(ID)).collect(toList());
-    String orderLineId = holdings.get(0).getString("purchaseOrderLineIdentifier");
+    String usedHoldingId = holdingIds.getLast();
+    String orderLineId = holdings.getFirst().getString("purchaseOrderLineIdentifier");
 
     ArrayList<Location> locations = new ArrayList<>();
     locations.add(new Location()
@@ -363,6 +372,10 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
         .withQuantityPhysical(1));
     locations.add(new Location()
         .withHoldingId(holdingIds.get(1))
+        .withQuantity(1)
+        .withQuantityPhysical(1));
+    locations.add(new Location()
+        .withHoldingId(usedHoldingId)
         .withQuantity(1)
         .withQuantityPhysical(1));
 
@@ -384,35 +397,40 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
         .withStoragePoLine(poLine)
         .withPathOrderLineRequest(patchOrderLineRequest);
 
-    List<JsonObject> items = holdingIds.stream().map(holdingId -> {
-      JsonObject item = new JsonObject().put(TestConstants.ID, UUID.randomUUID().toString());
-      item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ItemStatus.ON_ORDER.value()));
-      item.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
-      return item;
-    }).collect(toList());
+    List<JsonObject> items = holdingIds.stream().filter(id -> !id.equals(usedHoldingId))
+      .map(holdingId -> JsonObject.of(
+        TestConstants.ID, UUID.randomUUID().toString(),
+        ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ItemStatus.ON_ORDER.value()),
+        ITEM_HOLDINGS_RECORD_ID, holdingId))
+      .toList();
 
-    doReturn(succeededFuture()).when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(instanceId), any(RequestContext.class));
-    doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryHoldingManager)
-        .getOrCreateHoldingRecordByInstanceAndLocation(eq(instanceId), eq(locations.get(0)), eq(requestContext));
-    doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryHoldingManager)
-        .getOrCreateHoldingRecordByInstanceAndLocation(eq(instanceId), eq(locations.get(1)), eq(requestContext));
-    doReturn(succeededFuture(new ArrayList())).when(inventoryItemManager).getItemsByHoldingId(eq(holdingIds.get(0)), eq(requestContext));
-    doReturn(succeededFuture(new ArrayList())).when(inventoryItemManager).getItemsByHoldingId(eq(holdingIds.get(1)), eq(requestContext));
-    doReturn(succeededFuture(null)).when(inventoryHoldingManager).deleteHoldingById(eq(holdingIds.get(0)), eq(true), any(RequestContext.class));
-    doReturn(succeededFuture(null)).when(inventoryHoldingManager).deleteHoldingById(eq(holdingIds.get(1)), eq(true), any(RequestContext.class));
-    doReturn(succeededFuture(List.of(items.get(0)))).when(inventoryItemManager).getItemsByHoldingIdAndOrderLineId(eq(holdingIds.get(0)), eq(orderLineId), any(RequestContext.class));
-    doReturn(succeededFuture(List.of(items.get(1)))).when(inventoryItemManager).getItemsByHoldingIdAndOrderLineId(eq(holdingIds.get(1)), eq(orderLineId), any(RequestContext.class));
-    doReturn(succeededFuture(null)).when(inventoryItemManager).updateItem(any(JsonObject.class), eq(requestContext));
+    when(inventoryInstanceManager.createShadowInstanceIfNeeded(eq(instanceId), any(RequestContext.class))).thenReturn(succeededFuture());
+    when(inventoryHoldingManager.getOrCreateHoldingRecordByInstanceAndLocation(eq(instanceId), eq(locations.get(0)), eq(requestContext))).thenReturn(succeededFuture(UUID.randomUUID().toString()));
+    when(inventoryHoldingManager.getOrCreateHoldingRecordByInstanceAndLocation(eq(instanceId), eq(locations.get(1)), eq(requestContext))).thenReturn(succeededFuture(UUID.randomUUID().toString()));
+    when(inventoryHoldingManager.getOrCreateHoldingRecordByInstanceAndLocation(eq(instanceId), eq(locations.get(2)), eq(requestContext))).thenReturn(succeededFuture(UUID.randomUUID().toString()));
+    when(inventoryItemManager.getItemsByHoldingId(eq(holdingIds.get(0)), eq(requestContext))).thenReturn(succeededFuture(new ArrayList()));
+    when(inventoryItemManager.getItemsByHoldingId(eq(holdingIds.get(1)), eq(requestContext))).thenReturn(succeededFuture(new ArrayList()));
+    when(inventoryItemManager.getItemsByHoldingId(eq(usedHoldingId), eq(requestContext))).thenReturn(succeededFuture(new ArrayList()));
+    when(inventoryItemManager.getItemsByHoldingIdAndOrderLineId(eq(holdingIds.get(0)), eq(orderLineId), any(RequestContext.class))).thenReturn(succeededFuture(List.of(items.get(0))));
+    when(inventoryItemManager.getItemsByHoldingIdAndOrderLineId(eq(holdingIds.get(1)), eq(orderLineId), any(RequestContext.class))).thenReturn(succeededFuture(List.of(items.get(1))));
+    when(inventoryItemManager.getItemsByHoldingIdAndOrderLineId(eq(usedHoldingId), eq(orderLineId), any(RequestContext.class))).thenReturn(succeededFuture(List.of()));
+    when(inventoryHoldingManager.deleteHoldingById(eq(holdingIds.get(0)), eq(true), any(RequestContext.class))).thenReturn(succeededFuture(null));
+    when(inventoryHoldingManager.deleteHoldingById(eq(holdingIds.get(1)), eq(true), any(RequestContext.class))).thenReturn(succeededFuture(null));
+    when(inventoryItemManager.updateItem(any(JsonObject.class), eq(requestContext))).thenReturn(succeededFuture(null));
+    when(pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext)).thenReturn(succeededFuture(List.of(new Piece().withHoldingId(usedHoldingId))));
+    when(purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext)).thenReturn(succeededFuture(List.of(new PoLine().withLocations(List.of(new Location().withHoldingId(usedHoldingId))))));
 
     var future = withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext);
 
     vertxTestContext.assertComplete(future).onComplete(res-> {
-      verify(inventoryInstanceManager, times(2)).createShadowInstanceIfNeeded(eq(instanceId), any(RequestContext.class));
+      verify(inventoryInstanceManager, times(3)).createShadowInstanceIfNeeded(eq(instanceId), any(RequestContext.class));
       verify(inventoryHoldingManager, times(1)).getOrCreateHoldingRecordByInstanceAndLocation(instanceId, locations.get(0), requestContext);
       verify(inventoryHoldingManager, times(1)).getOrCreateHoldingRecordByInstanceAndLocation(instanceId, locations.get(1), requestContext);
+      verify(inventoryHoldingManager, times(1)).getOrCreateHoldingRecordByInstanceAndLocation(instanceId, locations.get(2), requestContext);
       verify(inventoryHoldingManager, times(1)).deleteHoldingById(eq(holdingIds.get(0)), eq(true), any(RequestContext.class));
       verify(inventoryHoldingManager, times(1)).deleteHoldingById(eq(holdingIds.get(1)), eq(true), any(RequestContext.class));
-      verify(inventoryItemManager, times(2)).getItemsByHoldingIdAndOrderLineId(anyString(), anyString(), any(RequestContext.class));
+      verify(inventoryHoldingManager, times(0)).deleteHoldingById(eq(usedHoldingId), eq(true), any(RequestContext.class));
+      verify(inventoryItemManager, times(3)).getItemsByHoldingIdAndOrderLineId(anyString(), anyString(), any(RequestContext.class));
       verify(inventoryItemManager, times(2)).updateItem(any(JsonObject.class), any(RequestContext.class));
       vertxTestContext.completeNow();
     });
