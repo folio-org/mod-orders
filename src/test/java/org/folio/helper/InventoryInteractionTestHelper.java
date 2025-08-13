@@ -15,7 +15,7 @@ import static org.folio.orders.utils.PoLineCommonUtil.groupLocationsByLocationId
 import static org.folio.rest.impl.MockServer.INSTANCE_STATUSES_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.INSTANCE_TYPES_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.LOAN_TYPES_MOCK_DATA_PATH;
-import static org.folio.rest.impl.MockServer.ORDERS_STORAGE_SETTINGS_MOCK_PATH;
+import static org.folio.rest.impl.MockServer.ORDER_SETTINGS_MOCK_PATH;
 import static org.folio.rest.impl.MockServer.SETTINGS;
 import static org.folio.rest.impl.MockServer.getCreatedHoldings;
 import static org.folio.rest.impl.MockServer.getCreatedInstances;
@@ -436,10 +436,7 @@ public class InventoryInteractionTestHelper {
     if (itemsQuantity == 0) {
       assertEquals(0, actualQty, "No holdings expected");
     } else {
-      long expectedQty = groupedLocations
-        .values()
-        .stream()
-        .count();
+      long expectedQty = groupedLocations.size();
       assertEquals(expectedQty, actualQty, "Quantity of holdings does not match to expected");
     }
   }
@@ -589,7 +586,7 @@ public class InventoryInteractionTestHelper {
   }
 
   private static String getConfigValue(Header tenant, String configName, String defaultValue) throws IOException {
-    JsonObject configs = new JsonObject(getMockData(String.format(ORDERS_STORAGE_SETTINGS_MOCK_PATH, tenant.getValue())));
+    JsonObject configs = new JsonObject(getMockData(String.format(ORDER_SETTINGS_MOCK_PATH, tenant.getValue())));
     return configs.getJsonArray(SETTINGS)
       .stream()
       .map(o -> (JsonObject) o)

@@ -2,7 +2,7 @@ package org.folio.service.caches;
 
 import static org.folio.orders.utils.CacheUtils.buildAsyncCache;
 import static org.folio.orders.utils.ResourcePathResolver.CONFIGURATION_ENTRIES;
-import static org.folio.orders.utils.ResourcePathResolver.ORDERS_STORAGE_SETTINGS;
+import static org.folio.orders.utils.ResourcePathResolver.ORDER_SETTINGS;
 import static org.folio.orders.utils.ResourcePathResolver.SETTINGS_ENTRIES;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
@@ -61,7 +61,7 @@ public class CommonSettingsCache {
   }
 
   public Future<JsonObject> loadSettings(RequestContext requestContext) {
-    return cacheData(resourcesPath(ORDERS_STORAGE_SETTINGS), null, settingsCache,
+    return cacheData(resourcesPath(ORDER_SETTINGS), null, settingsCache,
       commonSettingsRetriever::getLocalSettings, requestContext);
   }
 

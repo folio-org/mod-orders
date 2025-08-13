@@ -71,7 +71,7 @@ import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
 import static org.folio.orders.utils.ResourcePathResolver.LEDGERS;
 import static org.folio.orders.utils.ResourcePathResolver.LEDGER_FY_ROLLOVERS;
 import static org.folio.orders.utils.ResourcePathResolver.LEDGER_FY_ROLLOVER_ERRORS;
-import static org.folio.orders.utils.ResourcePathResolver.ORDERS_STORAGE_SETTINGS;
+import static org.folio.orders.utils.ResourcePathResolver.ORDER_SETTINGS;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_INVOICE_RELATIONSHIP;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_TEMPLATES;
 import static org.folio.orders.utils.ResourcePathResolver.ORGANIZATION_STORAGE;
@@ -245,7 +245,7 @@ public class MockServer {
   private static final String CONTRIBUTOR_NAME_TYPES_PATH = BASE_MOCK_DATA_PATH + "contributorNameTypes/contributorPersonalNameType.json";
   public static final String CONFIG_MOCK_PATH = BASE_MOCK_DATA_PATH + "configurations.entries/%s.json";
   public static final String SETTINGS_MOCK_PATH = BASE_MOCK_DATA_PATH + "settings.entries/%s.json";
-  public static final String ORDERS_STORAGE_SETTINGS_MOCK_PATH = BASE_MOCK_DATA_PATH + "orders-storage-settings/%s.json";
+  public static final String ORDER_SETTINGS_MOCK_PATH = BASE_MOCK_DATA_PATH + "order-settings/%s.json";
   public static final String LOAN_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "loanTypes/";
   public static final String LEDGER_FY_ROLLOVERS_PATH = BASE_MOCK_DATA_PATH + "ledgerFyRollovers/";
   public static final String LEDGER_FY_ROLLOVERS_ERRORS_PATH = BASE_MOCK_DATA_PATH + "ledgerFyRolloverErrors/";
@@ -692,7 +692,7 @@ public class MockServer {
     router.get(resourcesPath(WRAPPER_PIECES_STORAGE)).handler(ctx -> handleGetJsonResource(ctx, MOCK_DATA_WRAPPER_PIECES_JSON));
     router.get(resourcesPath(WRAPPER_PIECES_STORAGE) + "/:id").handler(ctx -> handleGetJsonResource(ctx, MOCK_DATA_WRAPPER_PIECES_BY_ID_JSON));
     router.get(resourcesPath(CONFIGURATION_ENTRIES)).handler(ctx -> handleConfigurationOrSettingResponse(CONFIG_MOCK_PATH, ctx));
-    router.get(resourcesPath(ORDERS_STORAGE_SETTINGS)).handler(ctx -> handleConfigurationOrSettingResponse(ORDERS_STORAGE_SETTINGS_MOCK_PATH, ctx));
+    router.get(resourcesPath(ORDER_SETTINGS)).handler(ctx -> handleConfigurationOrSettingResponse(ORDER_SETTINGS_MOCK_PATH, ctx));
     router.get(resourcesPath(SETTINGS_ENTRIES)).handler(this::handleSettingResponse);
     // PUT
     router.put(resourcePath(PURCHASE_ORDER_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER_STORAGE));
