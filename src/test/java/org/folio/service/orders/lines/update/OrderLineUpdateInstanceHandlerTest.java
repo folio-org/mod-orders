@@ -302,31 +302,30 @@ public class OrderLineUpdateInstanceHandlerTest {
       return new CommonSettingsCache(commonSettingsRetriever);
     }
 
-    @Bean OrderLinePatchOperationService orderLinePatchOperationService(
-        RestClient restClient,
-        OrderLineUpdateInstanceStrategyResolver orderLineUpdateInstanceStrategyResolver,
-        PurchaseOrderLineService purchaseOrderLineService,
-        InventoryCache inventoryCache,
-        InventoryInstanceManager inventoryInstanceManager) {
+    @Bean
+    OrderLinePatchOperationService orderLinePatchOperationService(RestClient restClient, OrderLineUpdateInstanceStrategyResolver orderLineUpdateInstanceStrategyResolver,
+                                                                  PurchaseOrderLineService purchaseOrderLineService, InventoryInstanceManager inventoryInstanceManager) {
       return new OrderLinePatchOperationService(restClient, orderLineUpdateInstanceStrategyResolver, purchaseOrderLineService, inventoryInstanceManager);
     }
 
-    @Bean OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy(InventoryInstanceManager inventoryInstanceManager,
-                                                                                     InventoryItemManager inventoryItemManager,
-                                                                                     InventoryHoldingManager inventoryHoldingManager,
-                                                                                     PieceStorageService pieceStorageService) {
-      return new WithHoldingOrderLineUpdateInstanceStrategy(inventoryInstanceManager, inventoryItemManager, inventoryHoldingManager, pieceStorageService);
+    @Bean
+    OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy(InventoryInstanceManager inventoryInstanceManager,
+                                                                               InventoryItemManager inventoryItemManager,
+                                                                               InventoryHoldingManager inventoryHoldingManager,
+                                                                               PieceStorageService pieceStorageService,
+                                                                               PurchaseOrderLineService purchaseOrderLineService) {
+      return new WithHoldingOrderLineUpdateInstanceStrategy(inventoryInstanceManager, inventoryItemManager,
+        inventoryHoldingManager, pieceStorageService, purchaseOrderLineService);
     }
 
-    @Bean OrderLineUpdateInstanceStrategyResolver updateInstanceStrategyResolver(OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy,
-        OrderLineUpdateInstanceStrategy withoutHoldingOrderLineUpdateInstanceStrategy) {
+    @Bean
+    OrderLineUpdateInstanceStrategyResolver updateInstanceStrategyResolver(OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy,
+                                                                                 OrderLineUpdateInstanceStrategy withoutHoldingOrderLineUpdateInstanceStrategy) {
       Map<CreateInventoryType, OrderLineUpdateInstanceStrategy> strategies = new HashMap<>();
-
       strategies.put(CreateInventoryType.INSTANCE_HOLDING_ITEM, withHoldingOrderLineUpdateInstanceStrategy);
       strategies.put(CreateInventoryType.INSTANCE_HOLDING, withHoldingOrderLineUpdateInstanceStrategy);
       strategies.put(CreateInventoryType.INSTANCE, withoutHoldingOrderLineUpdateInstanceStrategy);
       strategies.put(CreateInventoryType.NONE, withoutHoldingOrderLineUpdateInstanceStrategy);
-
       return new OrderLineUpdateInstanceStrategyResolver(strategies);
     }
 

@@ -41,10 +41,7 @@ public abstract class BaseOrderLineUpdateInstanceStrategy implements OrderLineUp
     return processHoldings(holder, requestContext);
   }
 
-  Future<List<String>> deleteAbandonedHoldings(boolean isDeleteAbandonedHoldings, List<Location> locations, RequestContext requestContext) {
-    if (!isDeleteAbandonedHoldings) {
-      return Future.succeededFuture(Collections.emptyList());
-    }
+  Future<List<String>> deleteAbandonedHoldings(List<Location> locations, RequestContext requestContext) {
     var deleteHoldingFutures = locations.stream()
       .filter(location -> StringUtils.isNotEmpty(location.getHoldingId()))
       .map(location -> {

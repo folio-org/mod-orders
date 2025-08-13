@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import lombok.extern.log4j.Log4j2;
+import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.utils.QueryUtils;
@@ -32,6 +33,7 @@ import io.vertx.core.Future;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
 import org.folio.service.consortium.ConsortiumConfigurationService;
+import org.folio.service.pieces.util.PieceFields;
 import org.folio.service.settings.SettingsRetriever;
 import org.folio.service.settings.util.SettingKey;
 
@@ -246,8 +248,19 @@ public class PieceStorageService {
         .toList());
   }
 
+  public Future<List<Piece>> getPiecesByHoldingIds(List<String> holdingId, RequestContext requestContext) {
+    var futures = ofSubLists(new ArrayList<>(holdingId), MAX_IDS_FOR_GET_RQ_15)
+      .map(holdingIdsChunk -> convertIdsToCqlQuery(holdingIdsChunk, PieceFields.HOLDING_ID.getValue()))
+      .map(query -> getAllPieces(query, requestContext))
+      .toList();
+    return collectResultsOnSuccess(futures)
+      .map(lists -> StreamEx.of(lists)
+        .flatMap(pieceCollection -> pieceCollection.getPieces().stream())
+        .toList());
+  }
+
   private Future<List<Piece>> getPieceChunkByLineIds(Collection<String> poLineIds, RequestContext requestContext) {
-    String query = convertIdsToCqlQuery(poLineIds, "poLineId");
+    String query = convertIdsToCqlQuery(poLineIds, PieceFields.PO_LINE_ID.getValue());
     RequestEntry requestEntry = new RequestEntry(resourcesPath(PIECES_STORAGE)).withQuery(query)
       .withOffset(0)
       .withLimit(Integer.MAX_VALUE);
@@ -259,8 +272,8 @@ public class PieceStorageService {
     if (CollectionUtils.isEmpty(userTenants)) {
       return query;
     }
-    String tenantCql = convertIdsToCqlQuery(userTenants, "receivingTenantId");
-    String nullTenantCql = getCqlExpressionForFieldNullValue("receivingTenantId");
+    String tenantCql = convertIdsToCqlQuery(userTenants, PieceFields.RECEIVING_TENANT_ID.getValue());
+    String nullTenantCql = getCqlExpressionForFieldNullValue(PieceFields.RECEIVING_TENANT_ID.getValue());
     String combinedTenantCql = combineCqlExpressions("or", tenantCql, nullTenantCql);
     return StringUtils.isNotBlank(query)
       ? combineCqlExpressions("and", combinedTenantCql, query)
