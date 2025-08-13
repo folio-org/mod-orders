@@ -806,11 +806,14 @@ public class ApplicationConfig {
       purchaseOrderLineService, inventoryInstanceManager);
   }
 
-  @Bean OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy(InventoryInstanceManager inventoryInstanceManager,
-                                                                                   InventoryItemManager inventoryItemManager,
-                                                                                   InventoryHoldingManager inventoryHoldingManager,
-                                                                                   PieceStorageService pieceStorageService) {
-    return new WithHoldingOrderLineUpdateInstanceStrategy(inventoryInstanceManager, inventoryItemManager, inventoryHoldingManager, pieceStorageService);
+  @Bean
+  OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy(InventoryInstanceManager inventoryInstanceManager,
+                                                                             InventoryItemManager inventoryItemManager,
+                                                                             InventoryHoldingManager inventoryHoldingManager,
+                                                                             PieceStorageService pieceStorageService,
+                                                                             PurchaseOrderLineService purchaseOrderLineService) {
+    return new WithHoldingOrderLineUpdateInstanceStrategy(inventoryInstanceManager, inventoryItemManager,
+      inventoryHoldingManager, pieceStorageService, purchaseOrderLineService);
   }
 
   @Bean

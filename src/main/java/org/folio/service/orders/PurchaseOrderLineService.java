@@ -39,6 +39,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 import org.folio.service.inventory.InventoryHoldingManager;
+import org.folio.service.orders.utils.PoLineFields;
 
 public class PurchaseOrderLineService {
   private static final Logger logger = LogManager.getLogger(PurchaseOrderLineService.class);
@@ -62,7 +63,6 @@ public class PurchaseOrderLineService {
     return restClient.get(requestEntry, PoLineCollection.class, requestContext);
   }
 
-
   public Future<List<PoLine>> getOrderLines(String query, int offset, int limit, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query).withOffset(offset).withLimit(limit);
     return restClient.get(requestEntry, PoLineCollection.class, requestContext)
@@ -75,7 +75,6 @@ public class PurchaseOrderLineService {
   }
 
   public Future<List<PoLine>> getOrderLinesByIds(List<String> orderLineIds, RequestContext requestContext) {
-
     return collectResultsOnSuccess(ofSubLists(orderLineIds, MAX_IDS_FOR_GET_RQ_15)
       .map(ids -> getOrderLinesChunk(ids, requestContext)).toList())
       .map(lists -> lists.stream()
@@ -220,8 +219,17 @@ public class PurchaseOrderLineService {
     }
   }
 
-  private Future<List<PoLine>> getOrderLinesChunk(List<String> orderLineIds, RequestContext requestContext) {
+  public Future<List<PoLine>> getPoLinesByHoldingIds(List<String> holdingIds, RequestContext requestContext) {
+    holdingIds = StreamEx.of(holdingIds).map("*\"%s\"*"::formatted).distinct().toList();
+    var futures = ofSubLists(holdingIds, MAX_IDS_FOR_GET_RQ_15)
+      .map(holdingIdsChunk -> convertIdsToCqlQuery(holdingIdsChunk, PoLineFields.LOCATIONS.getValue()))
+      .map(query -> getOrderLines(query, 0, Integer.MAX_VALUE, requestContext))
+      .toList();
+    return collectResultsOnSuccess(futures)
+      .map(lists -> StreamEx.of(lists).flatMap(List::stream).toList());
+  }
 
+  private Future<List<PoLine>> getOrderLinesChunk(List<String> orderLineIds, RequestContext requestContext) {
     String query = convertIdsToCqlQuery(orderLineIds);
     RequestEntry requestEntry = new RequestEntry(ENDPOINT)
       .withQuery(query)

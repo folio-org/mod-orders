@@ -1,6 +1,7 @@
 package org.folio.service.orders.lines.update.instance;
 
 import io.vertx.core.Future;
+import org.apache.commons.lang3.BooleanUtils;
 import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
 import org.folio.rest.acq.model.StoragePatchOrderLineRequest;
 import org.folio.rest.core.models.RequestContext;
@@ -26,8 +27,9 @@ public class WithoutHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLine
 
     holder.createStoragePatchOrderLineRequest(StoragePatchOrderLineRequest.PatchOrderLineOperationType.REPLACE_INSTANCE_REF, newInstanceId);
 
-    return deleteAbandonedHoldings(replaceInstanceRef.getDeleteAbandonedHoldings(), holder.getStoragePoLine().getLocations(), requestContext)
-      .mapEmpty();
+    return BooleanUtils.isNotTrue(holder.getPatchOrderLineRequest().getReplaceInstanceRef().getDeleteAbandonedHoldings())
+      ? Future.succeededFuture()
+      : deleteAbandonedHoldings(holder.getStoragePoLine().getLocations(), requestContext).mapEmpty();
   }
 
 }
