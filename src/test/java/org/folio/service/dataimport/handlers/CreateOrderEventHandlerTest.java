@@ -6,7 +6,6 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.folio.AcquisitionsUnit;
@@ -49,7 +48,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
-import org.junit.runner.RunWith;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -81,13 +79,13 @@ import static org.folio.DataImportEventTypes.DI_ORDER_CREATED_READY_FOR_POST_PRO
 import static org.folio.DataImportEventTypes.DI_PENDING_ORDER_CREATED;
 import static org.folio.TestConfig.closeMockServer;
 import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
-import static org.folio.orders.utils.HelperUtils.CONFIG_NAME;
+import static org.folio.orders.utils.HelperUtils.KEY_NAME;
 import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
-import static org.folio.rest.impl.MockServer.CONFIGS;
+import static org.folio.rest.impl.MockServer.SETTINGS;
 import static org.folio.rest.impl.MockServer.JOB_EXECUTIONS;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.ELECTRONIC_RESOURCE;
@@ -110,13 +108,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@RunWith(VertxUnitRunner.class)
 public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
   private static final String PARSED_CONTENT = "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"245\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"a\":\"titleValue\"}]}},{\"336\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"b\":\"b6698d38-149f-11ec-82a8-0242ac130003\"}]}},{\"780\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"Houston oil directory\"}]}},{\"785\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"SAIS review of international affairs\"},{\"x\":\"1945-4724\"}]}},{\"500\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Adaptation of Xi xiang ji by Wang Shifu.\"}]}},{\"520\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\"}]}}]}";
   private static final String JOB_PROFILE_SNAPSHOT_ID_KEY = "JOB_PROFILE_SNAPSHOT_ID";
   private static final String PO_LINE_KEY = "PO_LINE";
-  private static final String GROUP_ID = "test-consumers-group";
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String ID_FIELD = "id";
   private static final String JOB_PROFILE_SNAPSHOTS_MOCK = "jobProfileSnapshots";
@@ -205,6 +201,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
   @BeforeClass
   public static void setupClass(final TestContext testContext) throws ExecutionException, InterruptedException, TimeoutException {
+    System.setProperty("orders.cache.configuration-entries.expiration.time.seconds", "0");
     TestConfig.startMockServer();
     String okapiUrl = "http://localhost:" + port;
     TenantClient tenantClient = new TenantClient(okapiUrl, TENANT_APPROVAL_REQUIRED, TOKEN);
@@ -237,7 +234,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldCreatePendingOrderAndPublishDiCompletedEvent() throws InterruptedException {
+  public void shouldCreatePendingOrderAndPublishDiCompletedEvent() {
     // given
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
@@ -271,7 +268,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldCreatePendingOrderAndPublishDiCompletedEventWithSystemUser() throws InterruptedException {
+  public void shouldCreatePendingOrderAndPublishDiCompletedEventWithSystemUser() {
     // given
     System.setProperty(SYSTEM_USER_ENABLED, "false");
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
@@ -307,7 +304,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldCreatePendingOrderAndPublishDiCompletedEventWhenActionProfileIsNotTheLastOne() throws InterruptedException {
+  public void shouldCreatePendingOrderAndPublishDiCompletedEventWhenActionProfileIsNotTheLastOne() {
     // given
     ProfileSnapshotWrapper profileSnapshotWrapper =
       new ProfileSnapshotWrapper()
@@ -368,7 +365,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldCreatePendingOrderAndPublishDiCompletedEventAndSetApprovedFalseWhenApprovalIsRequiredAndUserHaveNotPermission() throws InterruptedException {
+  public void shouldCreatePendingOrderAndPublishDiCompletedEventAndSetApprovedFalseWhenApprovalIsRequiredAndUserHaveNotPermission() {
     // given
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
@@ -406,7 +403,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldCreatePendingOrderAndPublishDiReadyForPostProcessingEventWhenOpenStatusSpecified() throws InterruptedException {
+  public void shouldCreatePendingOrderAndPublishDiReadyForPostProcessingEventWhenOpenStatusSpecified() {
     // given
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, openOrderMappingProfile);
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
@@ -440,7 +437,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldCreatePendingOrderAndPublishDiPendingOrderCreatedEventWhenOpenStatusSpecifiedAndActionProfileIsNotTheLastOne() throws InterruptedException {
+  public void shouldCreatePendingOrderAndPublishDiPendingOrderCreatedEventWhenOpenStatusSpecifiedAndActionProfileIsNotTheLastOne() {
     // given
     ProfileSnapshotWrapper profileSnapshotWrapper =
       new ProfileSnapshotWrapper()
@@ -506,7 +503,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldCreatePendingOrderAndPublishDiReadyForPostProcessingEventWhenOpenStatusSpecifiedAndApprovalIsNotRequiredAndApprovedFalse() throws InterruptedException {
+  public void shouldCreatePendingOrderAndPublishDiReadyForPostProcessingEventWhenOpenStatusSpecifiedAndApprovalIsNotRequiredAndApprovedFalse() {
     // given
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, openOrderMappingProfileApprovedFalse);
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
@@ -540,7 +537,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldCreatePendingOrderAndPublishDiReadyForPostProcessingEventWhenOpenStatusSpecifiedAndApprovalIsRequiredAndApprovedFalse() throws InterruptedException {
+  public void shouldCreatePendingOrderAndPublishDiReadyForPostProcessingEventWhenOpenStatusSpecifiedAndApprovalIsRequiredAndApprovedFalse() {
     // given
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, openOrderMappingProfileApprovedFalse);
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
@@ -579,7 +576,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldCreatePendingOrderAndPublishDiCompletedEventWhenOpenStatusSpecifiedAndUserHaveNotPermission() throws InterruptedException {
+  public void shouldCreatePendingOrderAndPublishDiCompletedEventWhenOpenStatusSpecifiedAndUserHaveNotPermission() {
     // given
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, openOrderMappingProfile);
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
@@ -615,7 +612,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldCreatePendingOrderAndPublishDiCompletedEventWhenOpenStatusSpecifiedAndUserHaveNotPermissionAndActionProfileNotTheLastOne() throws InterruptedException {
+  public void shouldCreatePendingOrderAndPublishDiCompletedEventWhenOpenStatusSpecifiedAndUserHaveNotPermissionAndActionProfileNotTheLastOne() {
     // given
     ProfileSnapshotWrapper profileSnapshotWrapper =
       new ProfileSnapshotWrapper()
@@ -679,7 +676,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldCreatePendingOrderAndPublishDiReadyForPostProcessingEventWhenOpenStatusSpecifiedAndUserHavePermission() throws InterruptedException {
+  public void shouldCreatePendingOrderAndPublishDiReadyForPostProcessingEventWhenOpenStatusSpecifiedAndUserHavePermission() {
     // given
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, openOrderMappingProfile);
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
@@ -719,7 +716,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldCreateOrderAndPoLineWithPopulatedInstanceIdWhenPayloadContainsInventoryInstance() throws InterruptedException {
+  public void shouldCreateOrderAndPoLineWithPopulatedInstanceIdWhenPayloadContainsInventoryInstance() {
     //given
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, openOrderMappingProfile);
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
@@ -750,7 +747,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldPublishDiErrorEventWhenHasNoSourceRecord() throws InterruptedException {
+  public void shouldPublishDiErrorEventWhenHasNoSourceRecord() {
     // given
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
@@ -778,7 +775,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldCreatePoLineAndCalculateActivationDueFieldWhenActivationDueSpecified() throws InterruptedException {
+  public void shouldCreatePoLineAndCalculateActivationDueFieldWhenActivationDueSpecified() {
     // given
     int expectedActivationDue = 3;
     String activationDueValue = LocalDate.now(ZoneId.of(UTC.getId())).plusDays(expectedActivationDue).toString();
@@ -815,7 +812,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldCreatePoLineAndCalculateActivationDueFieldWhenActivationDueSpecifiedAsTodayExpression() throws InterruptedException {
+  public void shouldCreatePoLineAndCalculateActivationDueFieldWhenActivationDueSpecifiedAsTodayExpression() {
     // given
     int expectedActivationDue = 1;
     MappingRule activationDueRule = new MappingRule()
@@ -853,10 +850,10 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldOverrideConfiguredPoLinesLimitWhenPoLinesLimitSpecifiedAtMappingProfile() throws InterruptedException {
+  public void shouldOverrideConfiguredPoLinesLimitWhenPoLinesLimitSpecifiedAtMappingProfile() {
     // given
     JsonObject polLimitConfig = new JsonObject()
-      .put("configName", PO_LINES_LIMIT_PROPERTY)
+      .put(KEY_NAME, PO_LINES_LIMIT_PROPERTY)
       .put("value", "1");
 
     MappingRule poLineLimitRule = new MappingRule()
@@ -868,7 +865,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     mappingProfile.getMappingDetails().getMappingFields().add(poLineLimitRule);
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
-    addMockEntry(CONFIGS, polLimitConfig);
+    addMockEntry(SETTINGS, polLimitConfig);
     addMockEntry(PO_LINES_STORAGE, new PoLine().withTitleOrPackage("Mocked poLine for data-import"));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
@@ -895,7 +892,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldSetPhysicalPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatPhysicalAndInstanceActionExists() throws InterruptedException {
+  public void shouldSetPhysicalPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatPhysicalAndInstanceActionExists() {
     List<ActionProfile> nextInventoryActionProfiles = List.of(new ActionProfile().withFolioRecord(INSTANCE));
 
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, PHYSICAL_RESOURCE);
@@ -906,7 +903,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldSetPhysicalPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatPhysicalAndInstanceHoldingActionsExist() throws InterruptedException {
+  public void shouldSetPhysicalPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatPhysicalAndInstanceHoldingActionsExist() {
     List<ActionProfile> nextInventoryActionProfiles = List.of(
       new ActionProfile().withFolioRecord(INSTANCE),
       new ActionProfile().withFolioRecord(HOLDINGS));
@@ -919,7 +916,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldSetPhysicalPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatPhysicalAndInstanceHoldingItemActionsExist() throws InterruptedException {
+  public void shouldSetPhysicalPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatPhysicalAndInstanceHoldingItemActionsExist() {
     List<ActionProfile> nextInventoryActionProfiles = List.of(
       new ActionProfile().withFolioRecord(INSTANCE),
       new ActionProfile().withFolioRecord(HOLDINGS),
@@ -933,7 +930,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldSetPhysicalPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatPhysicalAndHaveNoInventoryActionsProfiles() throws InterruptedException {
+  public void shouldSetPhysicalPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatPhysicalAndHaveNoInventoryActionsProfiles() {
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(List.of(), PHYSICAL_RESOURCE);
 
     PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
@@ -942,7 +939,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldSetElectronicPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatElectronicAndInstanceActionExists() throws InterruptedException {
+  public void shouldSetElectronicPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatElectronicAndInstanceActionExists() {
     List<ActionProfile> inventoryActionProfiles = List.of(new ActionProfile().withFolioRecord(INSTANCE));
 
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(inventoryActionProfiles, ELECTRONIC_RESOURCE);
@@ -953,7 +950,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldSetElectronicPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatElectronicAndInstanceHoldingActionsExist() throws InterruptedException {
+  public void shouldSetElectronicPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatElectronicAndInstanceHoldingActionsExist() {
     List<ActionProfile> nextInventoryActionProfiles = List.of(
       new ActionProfile().withFolioRecord(INSTANCE),
       new ActionProfile().withFolioRecord(HOLDINGS));
@@ -966,7 +963,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldSetElectronicPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatElectronicAndInstanceHoldingItemActionsExist() throws InterruptedException {
+  public void shouldSetElectronicPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatElectronicAndInstanceHoldingItemActionsExist() {
     List<ActionProfile> nextInventoryActionProfiles = List.of(
       new ActionProfile().withFolioRecord(INSTANCE),
       new ActionProfile().withFolioRecord(HOLDINGS),
@@ -980,7 +977,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldSetElectronicPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatElectronicAndHaveNoInventoryActionProfiles() throws InterruptedException {
+  public void shouldSetElectronicPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatElectronicAndHaveNoInventoryActionProfiles() {
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(List.of(), ELECTRONIC_RESOURCE);
 
     PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
@@ -989,7 +986,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldSetPhysicalPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatOtherAndInstanceActionExists() throws InterruptedException {
+  public void shouldSetPhysicalPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatOtherAndInstanceActionExists() {
     List<ActionProfile> nextInventoryActionProfiles = List.of(new ActionProfile().withFolioRecord(INSTANCE));
 
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, OTHER);
@@ -1000,7 +997,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldSetPhysicalPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatOtherAndInstanceHoldingActionsExist() throws InterruptedException {
+  public void shouldSetPhysicalPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatOtherAndInstanceHoldingActionsExist() {
     List<ActionProfile> nextInventoryActionProfiles = List.of(
       new ActionProfile().withFolioRecord(INSTANCE),
       new ActionProfile().withFolioRecord(HOLDINGS));
@@ -1013,7 +1010,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldSetPhysicalPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatOtherAndInstanceHoldingItemActionsExist() throws InterruptedException {
+  public void shouldSetPhysicalPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatOtherAndInstanceHoldingItemActionsExist() {
     List<ActionProfile> nextInventoryActionProfiles = List.of(
       new ActionProfile().withFolioRecord(INSTANCE),
       new ActionProfile().withFolioRecord(HOLDINGS),
@@ -1027,7 +1024,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldSetPhysicalPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatOtherAndHaveNoInventoryActionProfiles() throws InterruptedException {
+  public void shouldSetPhysicalPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatOtherAndHaveNoInventoryActionProfiles() {
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(List.of(), OTHER);
 
     PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
@@ -1036,7 +1033,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldSetPhysicalAndElectronicPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatMixAndInstanceActionExists() throws InterruptedException {
+  public void shouldSetPhysicalAndElectronicPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatMixAndInstanceActionExists() {
     List<ActionProfile> nextInventoryActionProfiles = List.of(new ActionProfile().withFolioRecord(INSTANCE));
 
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, P_E_MIX);
@@ -1049,7 +1046,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldSetPhysicalAndElectronicPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatMixAndInstanceHoldingActionsExist() throws InterruptedException {
+  public void shouldSetPhysicalAndElectronicPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatMixAndInstanceHoldingActionsExist() {
     List<ActionProfile> nextInventoryActionProfiles = List.of(
       new ActionProfile().withFolioRecord(INSTANCE),
       new ActionProfile().withFolioRecord(HOLDINGS));
@@ -1064,7 +1061,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldSetPhysicalAndElectronicPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatMixAndInstanceHoldingItemActionsExist() throws InterruptedException {
+  public void shouldSetPhysicalAndElectronicPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatMixAndInstanceHoldingItemActionsExist() {
     List<ActionProfile> nextInventoryActionProfiles = List.of(
       new ActionProfile().withFolioRecord(INSTANCE),
       new ActionProfile().withFolioRecord(HOLDINGS),
@@ -1080,7 +1077,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldSetPhysicalAndElectronicPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatMixAndHaveNoInventoryActionProfiles() throws InterruptedException {
+  public void shouldSetPhysicalAndElectronicPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatMixAndHaveNoInventoryActionProfiles() {
     DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(List.of(), P_E_MIX);
 
     PoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), PoLine.class);
@@ -1091,7 +1088,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   private DataImportEventPayload importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(List<ActionProfile> inventoryActionProfiles,
-                                                                                                  PoLine.OrderFormat orderFormat) throws InterruptedException {
+                                                                                                  PoLine.OrderFormat orderFormat) {
     // given
     openOrderMappingProfile.getMappingDetails().getMappingFields().stream()
       .filter(mappingRule -> mappingRule.getPath().equals("order.poLine.orderFormat"))
@@ -1128,7 +1125,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldCreateOrderWithSpecifiedAcquisitionUnitWhenUserHasUnitsAssignmentsPermission() throws InterruptedException {
+  public void shouldCreateOrderWithSpecifiedAcquisitionUnitWhenUserHasUnitsAssignmentsPermission() {
     // given
     String expectedAcqUnitId = "f6d2cc9d-82ca-437c-a4e6-e5c30323df00";
     String acqUnitName = "Not protected";
@@ -1170,7 +1167,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldPublishDiErrorWhenMappedOrderIsInvalid() throws InterruptedException {
+  public void shouldPublishDiErrorWhenMappedOrderIsInvalid() {
     // given
     // reproduces invalid order case where: order.orderType == One-Time && order.ongoing != null
     MappingRule isSubscriptionRule = new MappingRule()
@@ -1208,7 +1205,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldPublishDiErrorEventAndClearOrderIdInPoLineWhenPoLineIsInvalid() throws InterruptedException {
+  public void shouldPublishDiErrorEventAndClearOrderIdInPoLineWhenPoLineIsInvalid() {
     // given
     MappingRule isSubscriptionRule = new MappingRule()
       .withPath("order.poLine.cost.quantityPhysical")
@@ -1244,7 +1241,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldIncrementPoLinesProgressWhenFailedToCreatePoLineAndPublishDiCompletedEvent(TestContext context) throws InterruptedException {
+  public void shouldIncrementPoLinesProgressWhenFailedToCreatePoLineAndPublishDiCompletedEvent(TestContext context) {
     // given
     // reproduces invalid order line case when physical quantity and Locations physical quantity do not match
     MappingRule physicalQuantityRule = new MappingRule()
@@ -1320,7 +1317,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
 
   @Test
-  public void shouldCreateNumberOfOrdersRelatedToPoLinesLimit() throws InterruptedException {
+  public void shouldCreateNumberOfOrdersRelatedToPoLinesLimit() {
     // given
     Integer poLimit = 2;
     Integer recordsNumber = 3;
@@ -1337,8 +1334,8 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
-    JsonObject polLimitConfig = new JsonObject().put(CONFIG_NAME, PO_LINES_LIMIT_PROPERTY).put("value", poLimit);
-    addMockEntry(CONFIGS, polLimitConfig);
+    JsonObject polLimitConfig = new JsonObject().put(KEY_NAME, PO_LINES_LIMIT_PROPERTY).put("value", poLimit);
+    addMockEntry(SETTINGS, polLimitConfig);
 
     // when
     DataImportEventPayload dataImportEventPayload;
@@ -1367,7 +1364,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
       if (i == 1) {
         MockServer.release();
         addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
-        addMockEntry(CONFIGS, polLimitConfig);
+        addMockEntry(SETTINGS, polLimitConfig);
         addMockEntry(JOB_EXECUTIONS, jobExecutionJson);
         addMockEntry(ORGANIZATIONS_MOCK, organization);
       }
@@ -1377,7 +1374,6 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     Assertions.assertEquals(poLimit, ordersIds.size());
     Assertions.assertEquals(recordsNumber, orderLinesIds.size());
   }
-
 
   @Test
   public void shouldReturnTrueWhenHandlerIsEligibleForActionProfile() {
@@ -1410,7 +1406,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldCreatePendingOrderAndMapVendorMaterialSupplierAndAccessProviderFieldsWhenIncomingOrganizationCodeIsValid() throws InterruptedException {
+  public void shouldCreatePendingOrderAndMapVendorMaterialSupplierAndAccessProviderFieldsWhenIncomingOrganizationCodeIsValid() {
     // given
     MappingProfile mappingProfile = new MappingProfile()
       .withId(UUID.randomUUID().toString())
@@ -1468,7 +1464,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldCreatePendingOrderAndNotMapVendorMaterialSupplierAndAccessProviderFieldsWhenIncomingOrganizationCodeIsNotValid() throws InterruptedException {
+  public void shouldCreatePendingOrderAndNotMapVendorMaterialSupplierAndAccessProviderFieldsWhenIncomingOrganizationCodeIsNotValid() {
     // given
     MappingProfile mappingProfile = new MappingProfile()
       .withId(UUID.randomUUID().toString())
@@ -1524,7 +1520,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldCreatePoLineWithFundIdAndFundCode() throws InterruptedException {
+  public void shouldCreatePoLineWithFundIdAndFundCode() {
     // given
     String expectedFundId = "7fbd5d84-62d1-44c6-9c45-6cb173998bbd";
     String expectedFundCode = "AFRICAHIST";
@@ -1648,7 +1644,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldFailValidationWhenImportingOrderWithReceiptNotRequiredAndCheckinItemsFalse(TestContext context) throws InterruptedException {
+  public void shouldFailValidationWhenImportingOrderWithReceiptNotRequiredAndCheckinItemsFalse(TestContext context) {
     // given
     List<MappingRule> mappingRules = new ArrayList<>(Stream.concat(
       // Exclude checkinItems rule from original mapping profile
@@ -1695,6 +1691,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     vertx.runOnContext(event -> Future.fromCompletionStage(createOrderHandler.handle(dataImportEventPayload))
       .onComplete(context.asyncAssertFailure(th -> {
         context.assertTrue(th instanceof HttpException);
+        assert th instanceof HttpException;
         HttpException httpException = (HttpException) th;
         context.assertEquals(httpException.getErrors().getTotalRecords(), 1);
         context.assertEquals(httpException.getErrors().getErrors().getFirst(), ErrorCodes.RECEIVING_WORKFLOW_INCORRECT_FOR_RECEIPT_NOT_REQUIRED.toError());

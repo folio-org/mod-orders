@@ -60,6 +60,7 @@ import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
  */
 @Component
 public class MappingParametersCache {
+
   private static final Logger LOGGER = LogManager.getLogger();
 
   private static final String ORGANIZATIONS = "/organizations/organizations";

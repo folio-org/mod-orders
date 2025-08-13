@@ -1,7 +1,6 @@
 package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
-import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_BUSINESS;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
@@ -70,7 +69,7 @@ public class PoLineAPI extends BaseApi implements OrdersOrderLines {
   public void postOrdersOrderLines(PoLine poLine, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
-    commonSettingsCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
+    commonSettingsCache.loadSettings(requestContext)
       .compose(tenantConfig -> helper.createPoLine(poLine, tenantConfig, requestContext))
       .onSuccess(pol -> {
         String okapiUrl = okapiHeaders.get(OKAPI_URL);
@@ -116,7 +115,7 @@ public class PoLineAPI extends BaseApi implements OrdersOrderLines {
     if (!lineId.equals(poLine.getId())) {
       errors.add(ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.toError());
     }
-    commonSettingsCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
+    commonSettingsCache.loadSettings(requestContext)
       .compose(tenantConfig -> helper.setTenantDefaultCreateInventoryValues(poLine, tenantConfig))
       .compose(v -> poLineValidationService.validatePoLine(poLine, requestContext))
       .map(errors::addAll)

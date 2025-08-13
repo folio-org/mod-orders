@@ -184,6 +184,7 @@ public class PurchaseOrderLinesApiTest {
   static void before() throws InterruptedException, ExecutionException, TimeoutException {
     // Disable caching to avoid test failures
     System.setProperty("orders.cache.consortium-data.expiration.time.seconds", "0");
+    System.setProperty("orders.cache.configuration-entries.expiration.time.seconds", "0");
     if (isVerticleNotDeployed()) {
       ApiTestSuite.before();
       runningOnOwn = true;

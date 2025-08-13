@@ -79,7 +79,7 @@ public class PiecesClaimingServiceTest {
 
     var throwable = Assertions.assertThrows(HttpException.class, () -> piecesClaimingService.sendClaims(claimingCollection, requestContext));
     Assertions.assertInstanceOf(HttpException.class, throwable);
-    var error = throwable.getErrors().getErrors().get(0);
+    var error = throwable.getErrors().getErrors().getFirst();
     assertEquals(CANNOT_SEND_CLAIMS_PIECE_IDS_ARE_EMPTY.getCode(), error.getCode());
     assertEquals(CANNOT_SEND_CLAIMS_PIECE_IDS_ARE_EMPTY.getDescription(), error.getMessage());
     Assertions.assertTrue(error.getParameters().isEmpty());
@@ -92,17 +92,17 @@ public class PiecesClaimingServiceTest {
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of(pieceId1)).withClaimingInterval(1);
     var requestContext = mock(RequestContext.class);
 
-    when(commonSettingsCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject()));
+    when(commonSettingsCache.loadConfigurations(any(), any())).thenReturn(Future.succeededFuture(new JsonObject()));
 
     piecesClaimingService.sendClaims(claimingCollection, requestContext)
       .onComplete(testContext.failing(throwable -> testContext.verify(() -> {
         Assertions.assertInstanceOf(HttpException.class, throwable);
         var httpException = (HttpException) throwable;
-        var error = httpException.getErrors().getErrors().get(0);
+        var error = httpException.getErrors().getErrors().getFirst();
         assertEquals(CANNOT_RETRIEVE_CONFIG_ENTRIES.getCode(), error.getCode());
         assertEquals(CANNOT_RETRIEVE_CONFIG_ENTRIES.getDescription(), error.getMessage());
         Assertions.assertEquals(1, error.getParameters().size());
-        var parameter = error.getParameters().get(0);
+        var parameter = error.getParameters().getFirst();
         Assertions.assertEquals("pieceId", parameter.getKey());
         Assertions.assertEquals(pieceId1, parameter.getValue());
         testContext.completeNow();
@@ -115,18 +115,18 @@ public class PiecesClaimingServiceTest {
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of(pieceId1)).withClaimingInterval(1);
     var requestContext = mock(RequestContext.class);
 
-    when(commonSettingsCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("key", "value")));
+    when(commonSettingsCache.loadConfigurations(any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("key", "value")));
     when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of()));
 
     piecesClaimingService.sendClaims(claimingCollection, requestContext)
       .onComplete(testContext.failing(throwable -> testContext.verify(() -> {
         Assertions.assertInstanceOf(HttpException.class, throwable);
         var httpException = (HttpException) throwable;
-        var error = httpException.getErrors().getErrors().get(0);
+        var error = httpException.getErrors().getErrors().getFirst();
         assertEquals(CANNOT_FIND_PIECES_WITH_LATE_STATUS_TO_PROCESS.getCode(), error.getCode());
         assertEquals(CANNOT_FIND_PIECES_WITH_LATE_STATUS_TO_PROCESS.getDescription(), error.getMessage());
         Assertions.assertEquals(1, error.getParameters().size());
-        var parameter = error.getParameters().get(0);
+        var parameter = error.getParameters().getFirst();
         Assertions.assertEquals("pieceId", parameter.getKey());
         Assertions.assertEquals(pieceId1, parameter.getValue());
         testContext.completeNow();
@@ -138,7 +138,7 @@ public class PiecesClaimingServiceTest {
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1")).withClaimingInterval(1);
     var requestContext = mock(RequestContext.class);
 
-    when(commonSettingsCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("CLAIMS_vendorId", createIntegrationDetail())));
+    when(commonSettingsCache.loadConfigurations(any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("CLAIMS_vendorId", createIntegrationDetail())));
     when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of(new Piece().withId("pieceId1").withPoLineId("poLineId1").withReceivingStatus(Piece.ReceivingStatus.RECEIVED))));
     when(purchaseOrderLineService.getOrderLineById(any(), any())).thenReturn(Future.succeededFuture(new PoLine().withPurchaseOrderId("orderId1")));
     when(purchaseOrderStorageService.getPurchaseOrderById(any(), any())).thenReturn(Future.succeededFuture(new PurchaseOrder().withVendor("vendorId")));
@@ -151,11 +151,11 @@ public class PiecesClaimingServiceTest {
      .onComplete(testContext.failing(throwable -> testContext.verify(() -> {
         Assertions.assertInstanceOf(HttpException.class, throwable);
         var httpException = (HttpException) throwable;
-        var error = httpException.getErrors().getErrors().get(0);
+        var error = httpException.getErrors().getErrors().getFirst();
         assertEquals(CANNOT_FIND_PIECES_WITH_LATE_STATUS_TO_PROCESS.getCode(), error.getCode());
         assertEquals(CANNOT_FIND_PIECES_WITH_LATE_STATUS_TO_PROCESS.getDescription(), error.getMessage());
         Assertions.assertEquals(1, error.getParameters().size());
-        var parameter = error.getParameters().get(0);
+        var parameter = error.getParameters().getFirst();
         Assertions.assertEquals("pieceId", parameter.getKey());
         Assertions.assertEquals("pieceId1", parameter.getValue());
         testContext.completeNow();
@@ -169,7 +169,7 @@ public class PiecesClaimingServiceTest {
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of(pieceId));
     var requestContext = mock(RequestContext.class);
 
-    when(commonSettingsCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject()
+    when(commonSettingsCache.loadConfigurations(any(), any())).thenReturn(Future.succeededFuture(new JsonObject()
       .put("CLAIMS_vendorId1", createIntegrationDetail())));
     when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of(piece)));
     when(purchaseOrderLineService.getOrderLineById(any(), any())).thenReturn(Future.succeededFuture(new PoLine().withPurchaseOrderId("orderId")));
@@ -180,11 +180,11 @@ public class PiecesClaimingServiceTest {
       .onComplete(testContext.failing(throwable -> testContext.verify(() -> {
         Assertions.assertInstanceOf(HttpException.class, throwable);
         var httpException = (HttpException) throwable;
-        var error = httpException.getErrors().getErrors().get(0);
+        var error = httpException.getErrors().getErrors().getFirst();
         assertEquals(UNABLE_TO_GENERATE_CLAIMS_FOR_ORG_NO_INTEGRATION_DETAILS.getCode(), error.getCode());
         assertEquals(String.format(UNABLE_TO_GENERATE_CLAIMS_FOR_ORG_NO_INTEGRATION_DETAILS.getDescription(), "VENDOR2"), error.getMessage());
         Assertions.assertEquals(2, error.getParameters().size());
-        var parameter1 = error.getParameters().get(0);
+        var parameter1 = error.getParameters().getFirst();
         Assertions.assertEquals("pieceId", parameter1.getKey());
         Assertions.assertEquals(pieceId, parameter1.getValue());
         var parameter2 = error.getParameters().get(1);
@@ -205,7 +205,7 @@ public class PiecesClaimingServiceTest {
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of(pieceId1, pieceId2, pieceId3));
     var requestContext = mock(RequestContext.class);
 
-    when(commonSettingsCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject()
+    when(commonSettingsCache.loadConfigurations(any(), any())).thenReturn(Future.succeededFuture(new JsonObject()
       .put("CLAIMS_vendorId1", createIntegrationDetail())));
     when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of(piece1, piece2, piece3)));
     when(purchaseOrderLineService.getOrderLineById(any(), any())).thenAnswer(invocation -> {
@@ -225,11 +225,11 @@ public class PiecesClaimingServiceTest {
       .onComplete(testContext.failing(throwable -> testContext.verify(() -> {
         Assertions.assertInstanceOf(HttpException.class, throwable);
         var httpException = (HttpException) throwable;
-        var error = httpException.getErrors().getErrors().get(0);
+        var error = httpException.getErrors().getErrors().getFirst();
         assertEquals(UNABLE_TO_GENERATE_CLAIMS_FOR_ORG_NO_INTEGRATION_DETAILS.getCode(), error.getCode());
         assertEquals(String.format(UNABLE_TO_GENERATE_CLAIMS_FOR_ORG_NO_INTEGRATION_DETAILS.getDescription(), "VENDOR2"), error.getMessage());
         Assertions.assertEquals(4, error.getParameters().size());
-        var parameter1 = error.getParameters().get(0);
+        var parameter1 = error.getParameters().getFirst();
         Assertions.assertEquals("pieceId", parameter1.getKey());
         Assertions.assertEquals(pieceId1, parameter1.getValue());
         var parameter2 = error.getParameters().get(1);
@@ -250,7 +250,7 @@ public class PiecesClaimingServiceTest {
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1")).withClaimingInterval(1);
     var requestContext = mock(RequestContext.class);
 
-    when(commonSettingsCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("CLAIMS_vendorId", createIntegrationDetail())));
+    when(commonSettingsCache.loadConfigurations(any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("CLAIMS_vendorId", createIntegrationDetail())));
     when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of(new Piece().withId("pieceId1").withPoLineId("poLineId1").withReceivingStatus(Piece.ReceivingStatus.LATE))));
     when(purchaseOrderLineService.getOrderLineById(any(), any())).thenReturn(Future.succeededFuture(new PoLine().withPurchaseOrderId("orderId1")));
     when(purchaseOrderStorageService.getPurchaseOrderById(any(), any())).thenReturn(Future.succeededFuture(new PurchaseOrder().withVendor("vendorId")));
@@ -262,8 +262,8 @@ public class PiecesClaimingServiceTest {
     piecesClaimingService.sendClaims(claimingCollection, requestContext)
       .onComplete(testContext.succeeding(result -> testContext.verify(() -> {
         assertEquals(1, result.getClaimingPieceResults().size());
-        assertEquals("pieceId1", result.getClaimingPieceResults().get(0).getPieceId());
-        assertEquals(ClaimingPieceResult.Status.SUCCESS, result.getClaimingPieceResults().get(0).getStatus());
+        assertEquals("pieceId1", result.getClaimingPieceResults().getFirst().getPieceId());
+        assertEquals(ClaimingPieceResult.Status.SUCCESS, result.getClaimingPieceResults().getFirst().getStatus());
         testContext.completeNow();
       })));
   }
@@ -273,7 +273,7 @@ public class PiecesClaimingServiceTest {
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1", "pieceId2")).withClaimingInterval(1);
     var requestContext = mock(RequestContext.class);
 
-    when(commonSettingsCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("CLAIMS_vendorId", createIntegrationDetail())));
+    when(commonSettingsCache.loadConfigurations(any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("CLAIMS_vendorId", createIntegrationDetail())));
     when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of(
       new Piece().withId("pieceId1").withPoLineId("poLineId1").withReceivingStatus(Piece.ReceivingStatus.LATE),
       new Piece().withId("pieceId2").withPoLineId("poLineId2").withReceivingStatus(Piece.ReceivingStatus.LATE)
@@ -288,8 +288,8 @@ public class PiecesClaimingServiceTest {
     piecesClaimingService.sendClaims(claimingCollection, requestContext)
       .onComplete(testContext.succeeding(result -> testContext.verify(() -> {
         assertEquals(2, result.getClaimingPieceResults().size());
-        assertEquals("pieceId1", result.getClaimingPieceResults().get(0).getPieceId());
-        assertEquals(ClaimingPieceResult.Status.SUCCESS, result.getClaimingPieceResults().get(0).getStatus());
+        assertEquals("pieceId1", result.getClaimingPieceResults().getFirst().getPieceId());
+        assertEquals(ClaimingPieceResult.Status.SUCCESS, result.getClaimingPieceResults().getFirst().getStatus());
         assertEquals("pieceId2", result.getClaimingPieceResults().get(1).getPieceId());
         assertEquals(ClaimingPieceResult.Status.SUCCESS, result.getClaimingPieceResults().get(1).getStatus());
         testContext.completeNow();
@@ -301,7 +301,7 @@ public class PiecesClaimingServiceTest {
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1", "pieceId2", "pieceId3", "pieceId4", "pieceId5")).withClaimingInterval(1);
     var requestContext = mock(RequestContext.class);
 
-    when(commonSettingsCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject()
+    when(commonSettingsCache.loadConfigurations(any(), any())).thenReturn(Future.succeededFuture(new JsonObject()
       .put("CLAIMS_vendorId1", createIntegrationDetail())
       .put("CLAIMS_vendorId2", createIntegrationDetail())));
 
@@ -337,8 +337,8 @@ public class PiecesClaimingServiceTest {
         assertEquals(5, result.getClaimingPieceResults().size());
         var copiedSortedResults = new ArrayList<>(result.getClaimingPieceResults());
         copiedSortedResults.sort(Comparator.comparing(ClaimingPieceResult::getPieceId));
-        assertEquals("pieceId1", copiedSortedResults.get(0).getPieceId());
-        assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.get(0).getStatus());
+        assertEquals("pieceId1", copiedSortedResults.getFirst().getPieceId());
+        assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.getFirst().getStatus());
         assertEquals("pieceId2", copiedSortedResults.get(1).getPieceId());
         assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.get(1).getStatus());
         assertEquals("pieceId3", copiedSortedResults.get(2).getPieceId());
@@ -356,7 +356,7 @@ public class PiecesClaimingServiceTest {
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1", "pieceId2", "pieceId3", "pieceId4", "pieceId5")).withClaimingInterval(1);
     var requestContext = mock(RequestContext.class);
 
-    when(commonSettingsCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject()
+    when(commonSettingsCache.loadConfigurations(any(), any())).thenReturn(Future.succeededFuture(new JsonObject()
       .put("CLAIMS_vendorId1", createIntegrationDetail())
       .put("CLAIMS_vendorId2", createIntegrationDetail())
     ));
@@ -393,16 +393,16 @@ public class PiecesClaimingServiceTest {
         assertEquals(5, result.getClaimingPieceResults().size());
         var copiedSortedResults = new ArrayList<>(result.getClaimingPieceResults());
         copiedSortedResults.sort(Comparator.comparing(ClaimingPieceResult::getPieceId));
-        assertEquals("pieceId1", copiedSortedResults.get(0).getPieceId());
-        assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.get(0).getStatus());
+        assertEquals("pieceId1", copiedSortedResults.getFirst().getPieceId());
+        assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.getFirst().getStatus());
         assertEquals("pieceId2", copiedSortedResults.get(1).getPieceId());
         assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.get(1).getStatus());
         assertEquals("pieceId3", copiedSortedResults.get(2).getPieceId());
-        assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.get(1).getStatus());
+        assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.get(2).getStatus());
         assertEquals("pieceId4", copiedSortedResults.get(3).getPieceId());
-        assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.get(1).getStatus());
+        assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.get(3).getStatus());
         assertEquals("pieceId5", copiedSortedResults.get(4).getPieceId());
-        assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.get(1).getStatus());
+        assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.get(4).getStatus());
         testContext.completeNow();
       })));
   }

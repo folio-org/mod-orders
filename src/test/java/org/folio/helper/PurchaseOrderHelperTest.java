@@ -5,7 +5,6 @@ import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestUtils.getMinimalContentCompositePoLine;
 import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
 import static org.folio.TestUtils.getMockData;
-import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
@@ -73,9 +72,9 @@ import org.mockito.stubbing.Answer;
 
 @ExtendWith(VertxExtension.class)
 public class PurchaseOrderHelperTest {
+
   public static final String BASE_MOCK_DATA_PATH = "mockdata/";
   private static final String LISTED_PRINT_SERIAL_PATH = "po_listed_print_serial.json";
-
   private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af20";
   public static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";
 
@@ -131,7 +130,7 @@ public class PurchaseOrderHelperTest {
 
     JsonObject tenantConfig = new JsonObject();
     doReturn(succeededFuture(tenantConfig))
-      .when(commonSettingsCache).loadConfiguration(eq(ORDER_CONFIG_MODULE_NAME), eq(requestContext));
+      .when(commonSettingsCache).loadSettings(eq(requestContext));
     doReturn(succeededFuture(List.of()))
       .when(orderValidationService).validateOrderForPost(any(CompositePurchaseOrder.class), eq(tenantConfig), eq(requestContext));
     doReturn(succeededFuture(null))

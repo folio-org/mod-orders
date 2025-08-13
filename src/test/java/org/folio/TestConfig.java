@@ -39,7 +39,7 @@ public final class TestConfig {
   private static MockServer mockServer;
   public static final DockerImageName KAFKA_IMAGE_NAME = DockerImageName.parse("apache/kafka-native:3.8.0");
   public static final KafkaContainer kafkaContainer = getKafkaContainer();
-  private static final Vertx vertx = Vertx.vertx();
+  public static final Vertx vertx = Vertx.vertx();
 
   private TestConfig() {}
 
@@ -77,6 +77,10 @@ public final class TestConfig {
     SpringContextUtil.autowireDependenciesFromFirstContext(target, getVertx());
   }
 
+  public static Vertx getVertx() {
+    return vertx;
+  }
+
   public static void clearVertxContext() {
     Context context = getFirstContextFromVertx(vertx);
     context.remove("springContext");
@@ -89,10 +93,6 @@ public final class TestConfig {
 
   public static void startKafkaMockServer() {
     kafkaContainer.start();
-  }
-
-  public static Vertx getVertx() {
-    return vertx;
   }
 
   public static void clearServiceInteractions() {
@@ -117,13 +117,15 @@ public final class TestConfig {
     return vertx.deploymentIDs().isEmpty();
   }
 
+  // Suppress "use try-with-resource" suggestion because in both places it is closed correctly in a deferred fashion
+  @SuppressWarnings("resource")
   public static KafkaContainer getKafkaContainer() {
     return new KafkaContainer(KAFKA_IMAGE_NAME)
-        .withStartupAttempts(3);
+      .withStartupAttempts(20);
   }
 
   public static Context getFirstContextFromVertx(Vertx vertx) {
-    return vertx.deploymentIDs().stream().flatMap((id) -> ((VertxImpl)vertx)
+    return vertx.deploymentIDs().stream().flatMap((id) -> ((VertxImpl) vertx)
       .getDeployment(id).getVerticles().stream())
       .map(TestConfig::getContext)
       .filter(Objects::nonNull)
@@ -132,15 +134,15 @@ public final class TestConfig {
   }
 
   private static Context getContext(Verticle verticle) {
-      String parentVerticleUUID = vertx.deploymentIDs().stream()
-        .filter(v -> !((VertxImpl) vertx).getDeployment(v).isChild())
-        .findFirst()
-        .orElseThrow(() -> new NotFoundException("Couldn't find the parent verticle."));
+    String parentVerticleUUID = vertx.deploymentIDs().stream()
+      .filter(v -> !((VertxImpl) vertx).getDeployment(v).isChild())
+      .findFirst()
+      .orElseThrow(() -> new NotFoundException("Couldn't find the parent verticle."));
 
-      Optional<Context> context = Optional.of(((VertxImpl) vertx)
-          .getDeployment(parentVerticleUUID).getContexts().stream()
-          .findFirst())
-        .orElseThrow(() -> new NotFoundException("Couldn't find the spring context."));
+    Optional<Context> context = Optional.of(((VertxImpl) vertx)
+        .getDeployment(parentVerticleUUID).getContexts().stream()
+        .findFirst())
+      .orElseThrow(() -> new NotFoundException("Couldn't find the spring context."));
 
     return context.orElseThrow(() -> new NotFoundException("Couldn't find the spring context."));
   }

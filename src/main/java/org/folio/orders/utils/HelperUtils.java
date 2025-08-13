@@ -56,11 +56,9 @@ public class HelperUtils {
   public static final String ID = "id";
   public static final String FUND_ID = "fundId";
   public static final String PO_LINES = "poLines";
-  public static final String CONFIGS = "configs";
-  public static final String CONFIG_NAME = "configName";
-  public static final String CONFIG_VALUE = "value";
+  public static final String KEY_NAME = "key";
+  public static final String VALUE_NAME = "value";
 
-  public static final String ORDER_CONFIG_MODULE_NAME = "ORDERS";
   public static final String DATA_EXPORT_SPRING_CONFIG_MODULE_NAME = "mod-data-export-spring";
 
   public static final String DEFAULT_POLINE_LIMIT = "1";
@@ -72,7 +70,6 @@ public class HelperUtils {
   public static final String WORKFLOW_STATUS = "workflowStatus";
 
   private HelperUtils() {
-
   }
 
   public static Map<String, String> getOkapiHeaders(Message<JsonObject> message) {

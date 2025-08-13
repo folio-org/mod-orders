@@ -40,7 +40,6 @@ import java.util.stream.Collectors;
 
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.AcqDesiredPermissions.MANAGE;
-import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToApproved;
@@ -59,6 +58,7 @@ import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_UNOPEN_PERMI
 import static org.folio.service.UserService.getCurrentUserId;
 
 public class OrderValidationService {
+
   private static final Logger logger = LogManager.getLogger();
 
   private final PoLineValidationService poLineValidationService;
@@ -123,13 +123,11 @@ public class OrderValidationService {
   public Future<Void> validateOrderForCreation(CompositePurchaseOrder compPO, RequestContext requestContext) {
     logger.info("validateOrderForCreation :: orderId: {}", compPO.getId());
     List<Future<Void>> futures = new ArrayList<>();
-
     futures.add(protectionService.validateAcqUnitsOnCreate(compPO.getAcqUnitIds(), AcqDesiredPermissions.ASSIGN, requestContext));
     futures.add(checkOrderApprovalPermissions(compPO, requestContext));
     futures.add(prefixService.validatePrefixAvailability(compPO.getPoNumberPrefix(), requestContext));
     futures.add(suffixService.validateSuffixAvailability(compPO.getPoNumberSuffix(), requestContext));
     futures.add(poNumberHelper.checkPONumberUnique(compPO.getPoNumber(), requestContext));
-
     return GenericCompositeFuture.join(futures)
       .onSuccess(v -> logger.info("validateOrderForCreation :: successful"))
       .onFailure(t -> logger.error("validateOrderForCreation :: failed", t))
@@ -171,7 +169,7 @@ public class OrderValidationService {
       });
     }
 
-    return commonSettingsCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
+    return commonSettingsCache.loadSettings(requestContext)
       .compose(tenantConfig -> validateOrderForPost(compPO, tenantConfig, requestContext))
       .map(errors -> {
         resultErrors.addAll(errors);
@@ -209,7 +207,6 @@ public class OrderValidationService {
     List<Future<List<Error>>> poLinesErrors = compositeOrder.getPoLines().stream()
       .map(poLine -> poLineValidationService.validatePoLine(poLine, requestContext))
       .toList();
-
     return collectResultsOnSuccess(poLinesErrors).map(
       lists -> lists.stream()
         .flatMap(Collection::stream)
@@ -222,7 +219,7 @@ public class OrderValidationService {
    * @param compPO composite purchase order
    */
   public Future<Void> checkOrderApprovalRequired(CompositePurchaseOrder compPO, RequestContext requestContext) {
-    return commonSettingsCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
+    return commonSettingsCache.loadSettings(requestContext)
       .map(tenantConfig -> {
         boolean isApprovalRequired = isApprovalRequiredConfiguration(tenantConfig);
         if (isApprovalRequired && !compPO.getApproved().equals(Boolean.TRUE)) {
@@ -240,7 +237,6 @@ public class OrderValidationService {
       .orElse(false);
   }
 
-
   /**
    * Checks the value of "isApprovalRequired" in configurations, if the value is set to true, and order is being approved, verifies
    * if the user has required permissions to approve order
@@ -248,7 +244,7 @@ public class OrderValidationService {
    * @param compPO composite purchase order for checking permissions
    */
   private Future<Void> checkOrderApprovalPermissions(CompositePurchaseOrder compPO, RequestContext requestContext) {
-    return commonSettingsCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
+    return commonSettingsCache.loadSettings(requestContext)
       .map(tenantConfig -> {
         boolean isApprovalRequired = isApprovalRequiredConfiguration(tenantConfig);
         if (isApprovalRequired && compPO.getApproved()
@@ -261,7 +257,6 @@ public class OrderValidationService {
         }
         return null;
       });
-
   }
 
   /**
@@ -319,7 +314,6 @@ public class OrderValidationService {
       .stream()
       .map(poLine -> purchaseOrderLineHelper.setTenantDefaultCreateInventoryValues(poLine, tenantConfiguration))
       .toList();
-
     return GenericCompositeFuture.join(futures)
       .mapEmpty();
   }
@@ -347,11 +341,8 @@ public class OrderValidationService {
   }
 
   private List<Error> validatePoLineLimit(CompositePurchaseOrder compPO, JsonObject tenantConfig) {
-    if (isNotEmpty(compPO.getPoLines())) {
-      int limit = getPoLineLimit(tenantConfig);
-      if (compPO.getPoLines().size() > limit) {
-        return List.of(ErrorCodes.POL_LINES_LIMIT_EXCEEDED.toError());
-      }
+    if (isNotEmpty(compPO.getPoLines()) && compPO.getPoLines().size() > getPoLineLimit(tenantConfig)) {
+      return List.of(ErrorCodes.POL_LINES_LIMIT_EXCEEDED.toError());
     }
     return Collections.emptyList();
   }
@@ -363,9 +354,7 @@ public class OrderValidationService {
           PoLineCommonUtil.sortPoLinesByPoLineNumber(poLines);
           return poLines;
         });
-    } else {
-      return Future.succeededFuture(compPO.getPoLines());
     }
+    return Future.succeededFuture(compPO.getPoLines());
   }
-
 }
