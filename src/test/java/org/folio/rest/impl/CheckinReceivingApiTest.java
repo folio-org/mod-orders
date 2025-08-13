@@ -8,9 +8,11 @@ import java.util.stream.Stream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
+import org.folio.CopilotGenerated;
 import org.folio.HttpStatus;
 import org.folio.config.ApplicationConfig;
 import org.folio.rest.acq.model.PieceCollection;
+import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.jaxrs.model.BindPiecesCollection;
 import org.folio.rest.jaxrs.model.BindPiecesResult;
 import org.folio.rest.jaxrs.model.CheckInPiece;
@@ -1785,6 +1787,126 @@ public class CheckinReceivingApiTest {
       .getErrors();
 
     assertThat(errors.get(0).getMessage(), equalTo(PIECES_MUST_HAVE_RECEIVED_STATUS.getDescription()));
+  }
+
+  @Test
+  @CopilotGenerated(model = "Claude")
+  void testBindHelperRollbackNewHoldingOnBarcodeConflict() {
+    logger.info("=== Test BindHelper rollback new holding on barcode conflict ===");
+
+    var order = getMinimalContentCompositePurchaseOrder()
+      .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    var poLine = getMinimalContentCompositePoLine(order.getId());
+    var bindingPiece = getMinimalContentPiece(poLine.getId())
+      .withReceivingStatus(Piece.ReceivingStatus.UNRECEIVABLE)
+      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC);
+
+    var bindPiecesCollection = new BindPiecesCollection()
+      .withPoLineId(poLine.getId())
+      .withBindItem(getMinimalContentBindItem()
+        .withLocationId(UUID.randomUUID().toString())
+        .withBarcode("duplicate-barcode")  // This should cause a conflict
+        .withTenantId("tenant-id"))
+      .withBindPieceIds(List.of(bindingPiece.getId()));
+
+    addMockEntry(PURCHASE_ORDER_STORAGE, order);
+    addMockEntry(PO_LINES_STORAGE, poLine);
+    addMockEntry(PIECES_STORAGE, bindingPiece);
+    addMockEntry(TITLES, getTitle(poLine));
+
+    // Mock server should simulate barcode conflict when creating new holding/item
+    // This test verifies that the integration properly handles barcode conflicts
+    // and rolls back newly created holdings
+    var response = verifyPostResponse(ORDERS_BIND_ENDPOINT,
+      JsonObject.mapFrom(bindPiecesCollection).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 409);
+
+    // Verify that holdings delete was called during rollback
+    List<JsonObject> holdingDeletes = MockServer.getHoldingsDeletions();
+    assertThat(holdingDeletes, not(nullValue()));
+    assertThat(holdingDeletes, hasSize(1));
+
+    // Verify that the response contains the barcode conflict error
+    var errors = response.as(Errors.class);
+    assertThat(errors.getErrors(), hasSize(1));
+    assertThat(errors.getErrors().getFirst().getCode(), is(ErrorCodes.BARCODE_IS_NOT_UNIQUE.getCode()));
+  }
+
+  @Test
+  @CopilotGenerated(model = "Claude")
+  void testBindHelperDoNotRollbackExistingHolding() {
+    logger.info("=== Test BindHelper do not rollback existing holding ===");
+
+    var existingHoldingId = UUID.randomUUID().toString();
+    var order = getMinimalContentCompositePurchaseOrder()
+      .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    var poLine = getMinimalContentCompositePoLine(order.getId());
+    var bindingPiece = getMinimalContentPiece(poLine.getId())
+      .withReceivingStatus(Piece.ReceivingStatus.UNRECEIVABLE)
+      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC);
+
+    var bindPiecesCollection = new BindPiecesCollection()
+      .withPoLineId(poLine.getId())
+      .withBindItem(getMinimalContentBindItem()
+        .withHoldingId(existingHoldingId)  // Using existing holding
+        .withLocationId(null)
+        .withBarcode("duplicate-barcode")  // This should cause a conflict
+        .withTenantId("tenant-id"))
+      .withBindPieceIds(List.of(bindingPiece.getId()));
+
+    addMockEntry(PURCHASE_ORDER_STORAGE, order);
+    addMockEntry(PO_LINES_STORAGE, poLine);
+    addMockEntry(PIECES_STORAGE, bindingPiece);
+    addMockEntry(TITLES, getTitle(poLine));
+
+    var response = verifyPostResponse(ORDERS_BIND_ENDPOINT,
+      JsonObject.mapFrom(bindPiecesCollection).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 409);
+
+    // Verify that holdings delete was not called because we used an existing holding
+    List<JsonObject> holdingDeletes = MockServer.getHoldingsDeletions();
+    assertThat(holdingDeletes, is(nullValue()));
+
+    // Verify that the response contains the barcode conflict error
+    var errors = response.as(Errors.class);
+    assertThat(errors.getErrors(), hasSize(1));
+    assertThat(errors.getErrors().getFirst().getCode(), is(ErrorCodes.BARCODE_IS_NOT_UNIQUE.getCode()));
+  }
+
+  @Test
+  @CopilotGenerated(model = "Claude")
+  void testBindHelperSucceedWhenNoErrors() {
+    logger.info("=== Test BindHelper succeed when no errors ===");
+
+    var order = getMinimalContentCompositePurchaseOrder()
+      .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    var poLine = getMinimalContentCompositePoLine(order.getId());
+    var bindingPiece = getMinimalContentPiece(poLine.getId())
+      .withReceivingStatus(Piece.ReceivingStatus.UNRECEIVABLE)
+      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC);
+
+    var bindPiecesCollection = new BindPiecesCollection()
+      .withPoLineId(poLine.getId())
+      .withBindItem(getMinimalContentBindItem()
+        .withLocationId(UUID.randomUUID().toString())
+        .withBarcode("unique-barcode")  // This should not cause a conflict
+        .withTenantId("tenant-id"))
+      .withBindPieceIds(List.of(bindingPiece.getId()));
+
+    addMockEntry(PURCHASE_ORDER_STORAGE, order);
+    addMockEntry(PO_LINES_STORAGE, poLine);
+    addMockEntry(PIECES_STORAGE, bindingPiece);
+    addMockEntry(TITLES, getTitle(poLine));
+
+    // This test verifies successful binding when no errors occur
+    var response = verifyPostResponse(ORDERS_BIND_ENDPOINT,
+      JsonObject.mapFrom(bindPiecesCollection).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 200);
+
+    var result = response.as(BindPiecesResult.class);
+    assertThat(result.getPoLineId(), is(poLine.getId()));
+    assertThat(result.getBoundPieceIds(), hasSize(1));
+    assertThat(result.getItemId(), notNullValue());
   }
 
   @Test

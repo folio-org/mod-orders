@@ -454,6 +454,10 @@ public class MockServer {
     return serverRqRs.get(HOLDINGS_RECORD, HttpMethod.POST);
   }
 
+  public static List<JsonObject> getHoldingsDeletions() {
+    return serverRqRs.get(HOLDINGS_RECORD, HttpMethod.DELETE);
+  }
+
   public static List<JsonObject> getInstancesSearches() {
     return serverRqRs.get(INSTANCE_RECORD, HttpMethod.GET);
   }
@@ -721,6 +725,7 @@ public class MockServer {
     router.delete(resourcePath(PREFIXES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PREFIXES));
     router.delete(resourcePath(SUFFIXES)).handler(ctx -> handleDeleteGenericSubObj(ctx, SUFFIXES));
     router.delete("/inventory/items/:id").handler(ctx -> handleDeleteGenericSubObj(ctx, ITEM_RECORDS));
+    router.delete("/holdings-storage/holdings/:id").handler(ctx -> handleDeleteGenericSubObj(ctx, HOLDINGS_RECORD));
     // PATCH
     router.patch(resourcePath(PO_LINES_STORAGE)).handler(this::handlePatchOrderLines);
     return router;
@@ -1058,11 +1063,15 @@ public class MockServer {
   }
 
   private void handlePostItemStorRecord(RoutingContext ctx) {
-    String bodyAsString = ctx.body().toString();
+    String bodyAsString = ctx.body().asJsonObject().encode();
     logger.info("handlePostItemRecord got: {}", bodyAsString);
 
     if (bodyAsString.contains(ID_FOR_INTERNAL_SERVER_ERROR)) {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
+    } else if (bodyAsString.contains("duplicate-barcode")) {
+      // Simulate barcode conflict error for testing BindHelper rollback functionality
+      String errorMessage = "lower(jsonb ->> 'barcode'::text) value already exists in table item";
+      serverResponse(ctx, 500, APPLICATION_JSON, errorMessage);
     } else {
       JsonObject bodyAsJson = ctx.body().asJsonObject();
       bodyAsJson.put(ID, UUID.randomUUID().toString());
