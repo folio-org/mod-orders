@@ -1211,6 +1211,7 @@
             "inventory-storage.items.item.post",
             "inventory-storage.holdings-sources.collection.get",
             "inventory-storage.holdings.item.post",
+            "inventory-storage.holdings.item.delete",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
             "circulation.requests.collection.get",

@@ -105,7 +105,7 @@ public abstract class BaseHelper {
 
   public Response buildErrorResponse(int code) {
     final Response.ResponseBuilder responseBuilder = switch (code) {
-      case 400, 403, 404, 422 -> Response.status(code);
+      case 400, 403, 404, 422, 409 -> Response.status(code);
       default -> Response.status(INTERNAL_SERVER_ERROR);
     };
 

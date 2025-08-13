@@ -236,14 +236,33 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
       });
   }
 
-  private Future<String> createInventoryObjects(PoLine poLine, String instanceId, BindItem bindItem, RequestContext requestContext) {
+  Future<String> createInventoryObjects(PoLine poLine, String instanceId, BindItem bindItem, RequestContext requestContext) {
     if (!Boolean.TRUE.equals(poLine.getIsPackage())) {
       instanceId = poLine.getInstanceId();
     }
     var locationContext = createContextWithNewTenantId(requestContext, bindItem.getTenantId());
     return handleInstance(instanceId, bindItem.getTenantId(), locationContext, requestContext)
-      .compose(instId -> handleHolding(bindItem, instId, locationContext))
-      .compose(holdingId -> inventoryItemManager.createBindItem(poLine, holdingId, bindItem, locationContext));
+      .compose(instId -> {
+        boolean holdingExisted = bindItem.getHoldingId() != null;
+        return handleHolding(bindItem, instId, locationContext)
+          .compose(holdingId -> inventoryItemManager.createBindItem(poLine, holdingId, bindItem, locationContext)
+            .recover(failure -> handleBarcodeConflict(failure, holdingId, holdingExisted, locationContext)));
+      });
+  }
+
+  private Future<String> handleBarcodeConflict(Throwable failure, String holdingId, boolean holdingExisted, RequestContext locationContext) {
+    if (isBarcodeConflict(failure) && !holdingExisted) {
+      logger.warn("handleBarcodeConflict:: rolling back newly created holding {} due to barcode conflict", holdingId);
+      return inventoryHoldingManager.deleteHoldingById(holdingId, true, locationContext)
+        .compose(v -> Future.failedFuture(failure));
+    }
+    return Future.failedFuture(failure);
+  }
+
+  private boolean isBarcodeConflict(Throwable failure) {
+    return failure instanceof HttpException httpException
+      && httpException.getCode() == 409
+      && ErrorCodes.BARCODE_IS_NOT_UNIQUE.getCode().equals(httpException.getError().getCode());
   }
 
   private Future<String> handleInstance(String instanceId, String targetTenantId,
