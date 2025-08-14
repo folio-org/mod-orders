@@ -11,6 +11,7 @@ import org.folio.ApiTestSuite;
 import org.folio.CopilotGenerated;
 import org.folio.HttpStatus;
 import org.folio.config.ApplicationConfig;
+import org.folio.models.ItemFields;
 import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.jaxrs.model.BindPiecesCollection;
@@ -1826,6 +1827,10 @@ public class CheckinReceivingApiTest {
     assertThat(holdingDeletes, not(nullValue()));
     assertThat(holdingDeletes, hasSize(1));
 
+    // Verify that existing items linked to existing pieces were not updated to Unavailable status
+    List<JsonObject> itemUpdates = getItemUpdates();
+    assertThat(itemUpdates, nullValue());
+
     // Verify that the response contains the barcode conflict error
     var errors = response.as(Errors.class);
     assertThat(errors.getErrors(), hasSize(1));
@@ -1867,6 +1872,10 @@ public class CheckinReceivingApiTest {
     List<JsonObject> holdingDeletes = MockServer.getHoldingsDeletions();
     assertThat(holdingDeletes, is(nullValue()));
 
+    // Verify that existing items linked to existing pieces were not updated to Unavailable status
+    List<JsonObject> itemUpdates = getItemUpdates();
+    assertThat(itemUpdates, nullValue());
+
     // Verify that the response contains the barcode conflict error
     var errors = response.as(Errors.class);
     assertThat(errors.getErrors(), hasSize(1));
@@ -1902,6 +1911,14 @@ public class CheckinReceivingApiTest {
     var response = verifyPostResponse(ORDERS_BIND_ENDPOINT,
       JsonObject.mapFrom(bindPiecesCollection).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 200);
+
+    // Verify that existing items linked to existing pieces were updated to Unavailable status
+    List<JsonObject> itemUpdates = getItemUpdates();
+    assertThat(itemUpdates, not(nullValue()));
+    for (JsonObject item: itemUpdates) {
+      var itemStatus = item.getJsonObject(ItemFields.STATUS.value()).getString(ItemFields.STATUS_NAME.value());
+      assertEquals(ReceivedItem.ItemStatus.UNAVAILABLE.value(), itemStatus);
+    }
 
     var result = response.as(BindPiecesResult.class);
     assertThat(result.getPoLineId(), is(poLine.getId()));
