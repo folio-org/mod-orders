@@ -123,10 +123,10 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
       .compose(bindPiecesHolder -> checkRequestsForPieceItems(bindPiecesHolder, requestContext))
       // 4. Update piece isBound flag
       .map(this::updatePieceRecords)
-      // 5. Update currently associated items
-      .compose(bindPiecesHolder -> updateItemStatus(bindPiecesHolder, requestContext))
-      // 6. Crate item for pieces with specific fields
+      // 5. Crate item for pieces with specific fields
       .compose(bindPiecesHolder -> createItemForPieces(bindPiecesHolder, requestContext))
+      // 6. Update currently associated items
+      .compose(bindPiecesHolder -> updateItemStatus(bindPiecesHolder, requestContext))
       // 7. Update received piece records in the storage
       .compose(bindPiecesHolder -> storeUpdatedPieces(bindPiecesHolder, requestContext))
       // 8. Update Title with new bind items
