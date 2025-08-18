@@ -1,5 +1,17 @@
 ## 13.1.0 - Unreleased
 
+## 13.0.7 - Released (Sunflower R1 2025 Bug Fix)
+The primary focus of this release was to provide consumer configuration for preventing rebalancing issues.
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v13.0.6...v13.0.7)
+
+### Bug Fixes
+* [MODORDERS-1341](https://issues.folio.org/browse/MODORDERS-1341) - Configure consumer groupInstanceId
+
+### Dependencies
+* Bump `folio-kafka-wrapper` from `3.3.1` to `3.3.2`
+
+
 ## 13.0.6 - Released (Sunflower R1 2025 Bug Fix)
 The primary focus of this release was to resolve issue with updating receiving piece overwriting data in related item record.
 
@@ -25,7 +37,7 @@ Bump vulnerable dependencies.
 
 ### Bug Fixes
 * [MODORDERS-1290](https://issues.folio.org/browse/MODORDERS-1290) - data-import-processing-core 4.4.3, kafka-clients 3.7.1 fixing vulns
-* [MODORDERS-1284]((https://issues.folio.org/browse/MODORDERS-1284) - Replace net.mguenther.kafka:kafka-junit (EOL)
+* [MODORDERS-1284](https://issues.folio.org/browse/MODORDERS-1284) - Replace net.mguenther.kafka:kafka-junit (EOL)
 
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v13.0.3...v13.0.4)
 
