@@ -12,9 +12,9 @@ import java.util.stream.IntStream;
 
 import lombok.extern.log4j.Log4j2;
 import one.util.streamex.StreamEx;
+import org.apache.commons.lang3.StringUtils;
 import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.rest.acq.model.finance.ExchangeRate;
-import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.invoice.Invoice;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
@@ -70,7 +70,7 @@ public class CompositeOrderTotalFieldsPopulateService implements CompositeOrderD
     var query = "transactionType==Encumbrance AND encumbrance.sourcePurchaseOrderId==%s AND fiscalYearId==%s"
       .formatted(holder.getOrderId(), holder.getFiscalYearId());
     return invoiceService.getInvoicesByOrderId(holder.getOrderId(), requestContext)
-      .compose(invoices -> getCurrentFiscalYearIds(invoices, holder.getFiscalYear(), requestContext)
+      .compose(invoices -> getCurrentFiscalYearIds(invoices, holder.getFiscalYearId(), requestContext)
         .compose(fiscalYears -> getInvoiceLinesByInvoiceIds(invoices, fiscalYears, requestContext))
         .map(invoiceLines -> filterInvoiceLinesWithPoLines(invoiceLines, holder.getOrder().getPoLines()))
         .map(invoiceLines -> groupInvoiceLinesByInvoices(invoices, invoiceLines))
@@ -82,14 +82,14 @@ public class CompositeOrderTotalFieldsPopulateService implements CompositeOrderD
         holder.getOrderId(), holder.getFiscalYearId(), t));
   }
 
-  private Future<Set<String>> getCurrentFiscalYearIds(List<Invoice> invoices, FiscalYear fiscalYear, RequestContext requestContext) {
-    if (fiscalYear != null && fiscalYear.getId() != null) {
-      return Future.succeededFuture(Set.of(fiscalYear.getId()));
+  private Future<Set<String>> getCurrentFiscalYearIds(List<Invoice> invoices, String fiscalYearId, RequestContext requestContext) {
+    if (StringUtils.isNotBlank(fiscalYearId)) {
+      return Future.succeededFuture(Set.of(fiscalYearId));
     }
     return collectResultsOnSuccess(invoices.stream()
       .map(Invoice::getFiscalYearId)
       .filter(Objects::nonNull)
-      .map(fiscalYearId -> fiscalYearService.getCurrentFYForSeriesByFYId(fiscalYearId, requestContext)).toList())
+      .map(invoiceFiscalYearId -> fiscalYearService.getCurrentFYForSeriesByFYId(invoiceFiscalYearId, requestContext)).toList())
       .map(fiscalYearsIds -> fiscalYearsIds.stream().filter(Objects::nonNull).collect(Collectors.toSet()));
   }
 

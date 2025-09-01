@@ -135,6 +135,21 @@
             "finance-storage.ledgers.collection.get",
             "inventory-storage.holdings.collection.get"
           ]
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "pathPattern": "/orders/composite-orders/{id}/fiscal-years",
+          "permissionsRequired": [
+            "orders.fiscal-years.collection.get"
+          ],
+          "modulePermissions": [
+            "finance.transactions.collection.get",
+            "finance.fiscal-years.collection.get",
+            "finance.fiscal-years.item.get",
+            "mod-settings.global.read.stripes-core.prefs.manage"
+          ]
         }
       ]
     },

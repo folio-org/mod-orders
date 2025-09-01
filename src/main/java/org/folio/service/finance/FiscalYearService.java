@@ -1,19 +1,28 @@
 package org.folio.service.finance;
 
+import static one.util.streamex.StreamEx.ofSubLists;
 import static org.folio.orders.utils.CacheUtils.buildAsyncCache;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.QueryUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.ResourcePathResolver.FISCAL_YEARS;
 import static org.folio.orders.utils.ResourcePathResolver.LEDGER_CURRENT_FISCAL_YEAR;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.core.exceptions.ErrorCodes.CURRENT_FISCAL_YEAR_NOT_FOUND;
 
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletionException;
+import java.util.stream.Collectors;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
 import io.vertx.core.Vertx;
@@ -103,10 +112,30 @@ public class FiscalYearService {
         .toCompletionStage().toCompletableFuture()));
   }
 
-  private Future<FiscalYear> getFiscalYearById(String fiscalYearId, RequestContext requestContext) {
+  public Future<FiscalYear> getFiscalYearById(String fiscalYearId, RequestContext requestContext) {
     var requestEntry = new RequestEntry(FISCAL_YEAR_BY_ID_ENDPOINT).withId(fiscalYearId);
     return restClient.get(requestEntry, FiscalYear.class, requestContext)
       .onFailure(t -> log.error("Unable to fetch fiscal year by id: {}", fiscalYearId, t));
+  }
+
+  public Future<List<FiscalYear>> getAllFiscalYears(Collection<String> fiscalYearIds, RequestContext requestContext) {
+    Set<String> uniqueFiscalYearIds = new LinkedHashSet<>(fiscalYearIds);
+    return collectResultsOnSuccess(
+      ofSubLists(new ArrayList<>(uniqueFiscalYearIds), MAX_IDS_FOR_GET_RQ_15)
+        .map(ids-> getAllFiscalYearsByIds(ids, requestContext))
+        .toList())
+      .map(lists -> lists.stream()
+        .flatMap(Collection::stream)
+        .collect(Collectors.toList()));
+  }
+
+  private Future<List<FiscalYear>> getAllFiscalYearsByIds(Collection<String> ids, RequestContext requestContext) {
+    String query = convertIdsToCqlQuery(ids);
+    RequestEntry requestEntry = new RequestEntry(FISCAL_YEARS_ENDPOINT).withQuery(query)
+      .withLimit(MAX_IDS_FOR_GET_RQ_15)
+      .withOffset(0);
+    return restClient.get(requestEntry, FiscalYearCollection.class, requestContext)
+      .map(FiscalYearCollection::getFiscalYears);
   }
 
   private Future<String> getCurrentFiscalYearForSeries(String series, RequestContext requestContext) {
