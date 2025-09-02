@@ -203,41 +203,23 @@ public class UnOpenCompositeOrderManager {
       .mapEmpty();
   }
 
-  private Future<List<Pair<String, String>>> deleteHoldings(String tenantId, List<JsonObject> holdings, RequestContext requestContext) {
+  private Future<List<Pair<String, String>>> deleteHoldings(PoLine poLine, String tenantId, List<JsonObject> holdings, RequestContext requestContext) {
     if (CollectionUtils.isEmpty(holdings)) {
       return Future.succeededFuture(List.of());
     }
-    RequestContext newContext = createContextWithNewTenantId(requestContext, tenantId);
-    List<Future<Pair<String, String>>> deletedHoldingIds = new ArrayList<>(holdings.size());
-    holdings.forEach(holding -> {
-      String holdingId = holding.getString(ID);
-      String permanentLocationId = holding.getString(HOLDING_PERMANENT_LOCATION_ID);
-      if (holdingId != null) {
-        deletedHoldingIds.add(inventoryItemManager.getItemsByHoldingId(holdingId, newContext)
-          .compose(items -> {
-            if (items.isEmpty()) {
-              log.info("deleteHoldings:: Deleting holdings, holdingId: {}", holdingId);
-              return inventoryHoldingManager.deleteHoldingById(holdingId, true, newContext)
-                .map(v -> Pair.of(holdingId, permanentLocationId));
-            } else {
-              log.info("deleteHoldings:: Cannot delete holdings with items, holdingId: {}, items: {}", holdingId, items.size());
-            }
-            return Future.succeededFuture();
-          }));
-      }
-    });
-    return collectResultsOnSuccess(deletedHoldingIds)
-      .map(resultDeletedHoldingVsLocationIds -> resultDeletedHoldingVsLocationIds.stream()
-        .filter(pair -> Objects.nonNull(pair) && Objects.nonNull(pair.getKey()))
-        .toList())
-      .map(resultDeletedHoldingVsLocationIds -> {
-        if (log.isDebugEnabled()) {
-          log.debug("Holdings were removed: {}", resultDeletedHoldingVsLocationIds.stream().map(Pair::getKey).toList());
-        }
-        return resultDeletedHoldingVsLocationIds;
-      });
+    var holdingIds = holdings.stream().map(holding -> holding.getString(ID)).toList();
+    return getDeletableHoldings(poLine, holdingIds, requestContext)
+      .map(deletableHoldings -> holdings.stream()
+        .filter(holding -> StringUtils.isNotBlank(holding.getString(ID)))
+        .filter(holding -> deletableHoldings.contains(holding.getString(ID)))
+        .map(holding -> {
+          String holdingId = holding.getString(ID);
+          String permanentLocationId = holding.getString(HOLDING_PERMANENT_LOCATION_ID);
+          return deleteHolding(holdingId, permanentLocationId, createContextWithNewTenantId(requestContext, tenantId));
+        }).toList())
+      .compose(HelperUtils::collectResultsOnSuccess)
+      .map(this::filterHoldingAndLocationPairs);
   }
-
 
   private Future<Void> processInventoryOnlyWithItems(PoLine poLine, RequestContext requestContext) {
     return deleteExpectedPieces(poLine, requestContext)
@@ -280,7 +262,7 @@ public class UnOpenCompositeOrderManager {
         List<String> itemIds = onOrderItems.stream().map(item -> item.getString(ID)).toList();
         if (PoLineCommonUtil.isReceiptNotRequired(poLine.getReceiptStatus())) {
           return inventoryItemManager.deleteItems(itemIds, false, locationContext)
-            .compose(deletedItemIds -> deleteHoldingsByItems(onOrderItems, locationContext))
+            .compose(deletedItemIds -> deleteHoldingsByItems(poLine, onOrderItems, locationContext))
             .map(deletedHoldingVsLocationIds -> asFuture(() -> updateLocations(poLine, deletedHoldingVsLocationIds)))
             .onSuccess(v -> log.debug("Items and holdings deleted after UnOpen order"))
             .mapEmpty();
@@ -293,7 +275,7 @@ public class UnOpenCompositeOrderManager {
             return inventoryItemManager.getItemRecordsByIds(itemIds, locationContext)
               .map(items -> filterItemsByStatus(items, ItemStatus.ON_ORDER.value()))
               .compose(onOrderItemsP -> deletePiecesAndItems(onOrderItemsP, pieceCollection.getPieces(), centralTenantContext, locationContext))
-              .compose(deletedItems -> deleteHoldingsByItems(deletedItems, locationContext))
+              .compose(deletedItems -> deleteHoldingsByItems(poLine, deletedItems, locationContext))
               .map(deletedHoldingVsLocationIds -> asFuture(() -> updateLocations(poLine, deletedHoldingVsLocationIds)))
               .onSuccess(v -> log.debug("Pieces, Items, Holdings deleted after UnOpen order"))
               .onFailure(e -> log.error("Pieces, Items, Holdings failed to be deleted after UnOpen order for order id: {}",
@@ -303,38 +285,22 @@ public class UnOpenCompositeOrderManager {
       });
   }
 
-  private Future<List<Pair<String, String>>> deleteHoldingsByItems(List<JsonObject> deletedItems, RequestContext requestContext) {
-    List<Future<Pair<String, String>>> deletedHoldingIds = new ArrayList<>(deletedItems.size());
-    var holdingIdVsItemMap = deletedItems.stream()
-      .collect(groupingBy(item -> Optional.ofNullable(item.getString(ITEM_HOLDINGS_RECORD_ID))));
-    holdingIdVsItemMap.forEach((optionalHoldingId, holdingDeletedItems) -> {
-      if (optionalHoldingId.isEmpty()) {
-        return;
-      }
-      String holdingId = optionalHoldingId.get();
-      String effectiveLocationId = holdingDeletedItems.get(0).getJsonObject(ITEM_EFFECTIVE_LOCATION).getString(ID);
-      deletedHoldingIds.add(inventoryItemManager.getItemsByHoldingId(holdingId, requestContext)
-        .compose(items -> {
-          if (items.isEmpty()) {
-            log.info("deleteHoldingsByItems:: Deleting holdings, holdingId: {}", holdingId);
-            return inventoryHoldingManager.deleteHoldingById(holdingId, true, requestContext)
-              .map(v -> Pair.of(holdingId, effectiveLocationId));
-          } else {
-            log.info("deleteHoldingsByItems:: Cannot delete holdings with items, holdingId: {}, items: {}", holdingId, items.size());
-          }
-          return Future.succeededFuture();
-        }));
-    });
-    return collectResultsOnSuccess(deletedHoldingIds)
-      .map(resultDeletedHoldingVsLocationIds -> resultDeletedHoldingVsLocationIds.stream()
-        .filter(pair -> Objects.nonNull(pair) && Objects.nonNull(pair.getKey()))
-        .collect(toList()))
-      .map(resultDeletedHoldingVsLocationIds -> {
-        if (log.isDebugEnabled()) {
-          log.debug("Holdings were removed: {}", resultDeletedHoldingVsLocationIds.stream().map(Pair::getKey).toList());
-        }
-        return resultDeletedHoldingVsLocationIds;
-      });
+  private Future<List<Pair<String, String>>> deleteHoldingsByItems(PoLine poLine, List<JsonObject> deletedItems, RequestContext requestContext) {
+    var holdingIdVsItemMap = StreamEx.of(deletedItems)
+      .filter(item -> StringUtils.isNotBlank(item.getString(ITEM_HOLDINGS_RECORD_ID)))
+      .groupingBy(item -> item.getString(ITEM_HOLDINGS_RECORD_ID));
+    var holdingIds = holdingIdVsItemMap.keySet().stream().toList();
+    return getDeletableHoldings(poLine, holdingIds, requestContext)
+      .map(deletableHoldings -> holdingIdVsItemMap.entrySet().stream()
+        .filter(entry -> deletableHoldings.contains(entry.getKey()))
+        .map(entry -> {
+          var holdingId = entry.getKey();
+          var holdingDeletedItems = entry.getValue();
+          String effectiveLocationId = holdingDeletedItems.getFirst().getJsonObject(ITEM_EFFECTIVE_LOCATION).getString(ID);
+          return deleteHolding(holdingId, effectiveLocationId, requestContext);
+        }).toList())
+      .compose(HelperUtils::collectResultsOnSuccess)
+      .map(this::filterHoldingAndLocationPairs);
   }
 
   private Future<List<JsonObject>> deletePiecesAndItems(List<JsonObject> onOrderItems,
@@ -431,6 +397,48 @@ public class UnOpenCompositeOrderManager {
       holdingIdVsLocations.getOrDefault(holdingId, List.of())
         .forEach(location -> location.withHoldingId(null).withLocationId(locationId));
     });
+  }
+
+  private Future<List<String>> getDeletableHoldings(PoLine storagePoLine, List<String> holdingIds, RequestContext requestContext) {
+    var poLinesHoldingIds = purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext)
+      .map(poLines -> poLines.stream()
+        .filter(poLine -> !Objects.equals(poLine.getId(), storagePoLine.getId()))
+        .flatMap(poLine -> StreamEx.of(poLine.getLocations()).map(Location::getHoldingId).nonNull().distinct())
+        .toList());
+    var piecesHoldingIds = pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext)
+      .map(pieces -> StreamEx.of(pieces)
+        .filter(piece -> !Objects.equals(piece.getPoLineId(), storagePoLine.getId()))
+        .map(Piece::getHoldingId)
+        .nonNull().distinct()
+        .toList());
+    return collectResultsOnSuccess(List.of(poLinesHoldingIds, piecesHoldingIds))
+      .map(results -> results.stream().flatMap(Collection::stream).toList())
+      .map(usedHoldingIds -> holdingIds.stream()
+        .filter(id -> !usedHoldingIds.contains(id))
+        .toList());
+  }
+
+  private Future<Pair<String, String>> deleteHolding(String holdingId, String locationId, RequestContext requestContext) {
+    return inventoryItemManager.getItemsByHoldingId(holdingId, requestContext)
+      .compose(items -> {
+        if (items.isEmpty()) {
+          log.info("deleteHolding:: Deleting holdings, holdingId: {}", holdingId);
+          return inventoryHoldingManager.deleteHoldingById(holdingId, true, requestContext)
+            .map(v -> Pair.of(holdingId, locationId));
+        }
+        log.info("deleteHolding:: Cannot delete holdings with items, holdingId: {}, items: {}", holdingId, items.size());
+        return Future.succeededFuture();
+      });
+  }
+
+  private List<Pair<String, String>> filterHoldingAndLocationPairs(List<Pair<String, String>> holdingAndLocationPairs) {
+    var validPairs = holdingAndLocationPairs.stream()
+      .filter(pair -> Objects.nonNull(pair) && Objects.nonNull(pair.getKey()))
+      .toList();
+    if (log.isDebugEnabled()) {
+      log.debug("Holdings were removed: {}", validPairs.stream().map(Pair::getKey).toList());
+    }
+    return validPairs;
   }
 
 }
