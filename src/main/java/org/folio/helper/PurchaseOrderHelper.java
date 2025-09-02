@@ -388,10 +388,11 @@ public class PurchaseOrderHelper {
   /**
    * Gets purchase order by id
    *
-   * @param orderId purchase order uuid
+   * @param orderId      purchase order uuid
+   * @param fiscalYearId fiscal year id for fetching totals
    * @return completable future with {@link CompositePurchaseOrder} on success or an exception if processing fails
    */
-  public Future<CompositePurchaseOrder> getCompositeOrder(String orderId, RequestContext requestContext) {
+  public Future<CompositePurchaseOrder> getCompositeOrder(String orderId, String fiscalYearId, RequestContext requestContext) {
     Promise<CompositePurchaseOrder> promise = Promise.promise();
     purchaseOrderStorageService.getPurchaseOrderByIdAsJson(orderId, requestContext)
       .map(HelperUtils::convertToCompositePurchaseOrder)
@@ -407,7 +408,8 @@ public class PurchaseOrderHelper {
             populateInstanceId(linesIdTitles, compPO.getPoLines());
             return null;
           })
-          .compose(po -> combinedPopulateService.populate(new CompositeOrderRetrieveHolder(compPO), requestContext)))
+          .compose(po -> combinedPopulateService.populate(new CompositeOrderRetrieveHolder(compPO)
+            .withFiscalYearId(fiscalYearId), requestContext)))
         .map(CompositeOrderRetrieveHolder::getOrder))
       .onSuccess(promise::complete)
       .onFailure(t -> {

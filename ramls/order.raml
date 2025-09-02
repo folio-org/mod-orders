@@ -12,6 +12,7 @@ types:
   composite-purchase-order: !include acq-models/mod-orders/schemas/composite_purchase_order.json
   purchase-order-collection: !include acq-models/mod-orders-storage/schemas/purchase_order_collection.json
   purchase_order: !include acq-models/mod-orders-storage/schemas/purchase_order.json
+  fiscal-year-collection: !include acq-models/mod-finance/schemas/fiscal_year_collection.json
   errors: !include raml-util/schemas/errors.schema
 
   UUID:
@@ -54,6 +55,12 @@ resourceTypes:
       is: [validate]
       get:
         description: Return a purchase order with given {id}
+        queryParameters:
+          fiscalYearId:
+            displayName: Fiscal Year ID
+            type: UUID
+            required: false
+            description: Filter order by fiscal year ID
       put:
         description: |
           Update a purchase order with given {id}
@@ -102,4 +109,42 @@ resourceTypes:
                     value: !include raml-util/examples/errors.sample
                 text/plain:
                   example: "Internal server error, contact administrator"
-
+      /fiscal-years:
+        get:
+          description: Get available fiscal years for a purchase order
+          responses:
+            200:
+              description: "Fiscal years retrieved successfully"
+              body:
+                application/json:
+                  type: fiscal-year-collection
+                  example:
+                    strict: false
+                    value: !include acq-models/mod-finance/examples/fiscal_year_collection.sample
+            400:
+              description: "Bad request"
+              body:
+                application/json:
+                  example:
+                    strict: false
+                    value: !include raml-util/examples/errors.sample
+                text/plain:
+                  example: "Bad request"
+            404:
+              description: "Order not found"
+              body:
+                application/json:
+                  example:
+                    strict: false
+                    value: !include raml-util/examples/errors.sample
+                text/plain:
+                  example: "Order not found"
+            500:
+              description: "Internal server error"
+              body:
+                application/json:
+                  example:
+                    strict: false
+                    value: !include raml-util/examples/errors.sample
+                text/plain:
+                  example: "Internal server error, contact administrator"

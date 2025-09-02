@@ -1,37 +1,30 @@
 package org.folio.models;
 
-import java.util.Optional;
-
-import org.folio.rest.acq.model.finance.FiscalYear;
+import lombok.Data;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 
+@Data
 public class CompositeOrderRetrieveHolder {
     private CompositePurchaseOrder order;
-    private FiscalYear fiscalYear;
+    private String fiscalYearId;
+    private String fiscalYearCurrency;
 
     public CompositeOrderRetrieveHolder(CompositePurchaseOrder order) {
         this.order = order;
     }
 
-    public FiscalYear getFiscalYear() {
-        return fiscalYear;
-    }
-
-    public CompositeOrderRetrieveHolder withFiscalYear(FiscalYear fiscalYear) {
-        this.fiscalYear = fiscalYear;
+    public CompositeOrderRetrieveHolder withFiscalYearId(String fiscalYearId) {
+        this.fiscalYearId = fiscalYearId;
         return this;
     }
 
-    public CompositePurchaseOrder getOrder() {
-        return order;
+    public CompositeOrderRetrieveHolder withFiscalYearCurrency(String currency) {
+      this.fiscalYearCurrency = currency;
+      return this;
     }
 
     public String getOrderId() {
         return order.getId();
-    }
-
-    public String getFiscalYearId() {
-        return Optional.ofNullable(fiscalYear).map(FiscalYear::getId).orElse(null);
     }
 
     public CompositeOrderRetrieveHolder withTotalEncumbered(double transactionsTotal) {
