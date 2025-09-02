@@ -16,6 +16,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
 import org.folio.rest.jaxrs.resource.OrdersCompositeOrders;
 import org.folio.rest.jaxrs.resource.OrdersRollover;
+import org.folio.service.orders.OrderFiscalYearService;
 import org.folio.service.orders.OrderReEncumberService;
 import org.folio.service.orders.OrderRolloverService;
 import org.folio.spring.SpringContextUtil;
@@ -34,6 +35,8 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
   private OrderReEncumberService orderReEncumberService;
   @Autowired
   private PurchaseOrderHelper purchaseOrderHelper;
+  @Autowired
+  private OrderFiscalYearService orderFiscalYearService;
 
   public OrdersApi(Vertx vertx, String tenantId) {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
@@ -51,10 +54,10 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
 
   @Override
   @Validate
-  public void getOrdersCompositeOrdersById(String id, Map<String, String> okapiHeaders,
+  public void getOrdersCompositeOrdersById(String id, String fiscalYearId, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
-    purchaseOrderHelper.getCompositeOrder(id, new RequestContext(vertxContext, okapiHeaders))
+    purchaseOrderHelper.getCompositeOrder(id, fiscalYearId, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(order -> asyncResultHandler.handle(succeededFuture(buildOkResponse(order))))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
@@ -108,5 +111,13 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
     orderRolloverService.rollover(ledgerFYRollover, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
+  }
+
+  @Override
+  @Validate
+  public void getOrdersCompositeOrdersFiscalYearsById(String id, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    orderFiscalYearService.getAvailableFiscalYears(id, new RequestContext(vertxContext, okapiHeaders))
+      .onSuccess(fiscalYears -> asyncResultHandler.handle(succeededFuture(buildOkResponse(fiscalYears))))
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 }

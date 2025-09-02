@@ -114,7 +114,7 @@ public class CompositeOrderTotalFieldsPopulateServiceTest {
       .withId(UUID.randomUUID().toString())
       .withPoLines(List.of(poLine1, poLine2, poLine3));
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order)
-      .withFiscalYear(new FiscalYear().withId(fiscalYearId));
+      .withFiscalYearId(fiscalYearId);
 
     when(invoiceService.getInvoicesByOrderId(anyString(), any()))
       .thenReturn(Future.succeededFuture(invoices));
@@ -136,7 +136,7 @@ public class CompositeOrderTotalFieldsPopulateServiceTest {
   void shouldReturnZeroWhenNoInvoicesAndTransactionsExist() {
     CompositePurchaseOrder order = new CompositePurchaseOrder().withId(UUID.randomUUID().toString());
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order)
-      .withFiscalYear(new FiscalYear().withId(UUID.randomUUID().toString()));
+      .withFiscalYearId(UUID.randomUUID().toString());
 
     when(invoiceService.getInvoicesByOrderId(anyString(), any())).thenReturn(Future.succeededFuture(Collections.emptyList()));
     when(transactionService.getTransactions(anyString(), any())).thenReturn(Future.succeededFuture(Collections.emptyList()));
@@ -156,7 +156,7 @@ public class CompositeOrderTotalFieldsPopulateServiceTest {
     List<Invoice> invoices = List.of(invoice);
     CompositePurchaseOrder order = new CompositePurchaseOrder().withId(UUID.randomUUID().toString());
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order)
-      .withFiscalYear(new FiscalYear().withId(fiscalYearId));
+      .withFiscalYearId(fiscalYearId);
 
     when(invoiceService.getInvoicesByOrderId(anyString(), any())).thenReturn(Future.succeededFuture(invoices));
     when(invoiceLineService.getInvoiceLinesByInvoiceIdAndStatus(anyString(), eq(PAID), any())).thenReturn(Future.succeededFuture(Collections.emptyList()));
@@ -309,7 +309,7 @@ public class CompositeOrderTotalFieldsPopulateServiceTest {
       .withId(UUID.randomUUID().toString())
       .withPoLines(List.of(poLine));
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order)
-      .withFiscalYear(new FiscalYear().withId(fiscalYearId));
+      .withFiscalYearId(fiscalYearId);
 
     when(invoiceService.getInvoicesByOrderId(anyString(), any()))
       .thenReturn(Future.succeededFuture(List.of(invoice1, invoice2)));
@@ -340,7 +340,7 @@ public class CompositeOrderTotalFieldsPopulateServiceTest {
       .withId(UUID.randomUUID().toString())
       .withPoLines(List.of(poLine));
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order)
-      .withFiscalYear(new FiscalYear().withId(fiscalYearId));
+      .withFiscalYearId(fiscalYearId);
 
     when(invoiceService.getInvoicesByOrderId(anyString(), any()))
       .thenReturn(Future.succeededFuture(List.of()));

@@ -135,6 +135,21 @@
             "finance-storage.ledgers.collection.get",
             "inventory-storage.holdings.collection.get"
           ]
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "pathPattern": "/orders/composite-orders/{id}/fiscal-years",
+          "permissionsRequired": [
+            "orders.fiscal-years.collection.get"
+          ],
+          "modulePermissions": [
+            "finance.transactions.collection.get",
+            "finance.fiscal-years.collection.get",
+            "finance.fiscal-years.item.get",
+            "mod-settings.global.read.stripes-core.prefs.manage"
+          ]
         }
       ]
     },
@@ -1562,6 +1577,11 @@
       "description": "Re-encumber an order"
     },
     {
+      "permissionName": "orders.fiscal-years.collection.get",
+      "displayName": "orders - get available fiscal years",
+      "description": "Get available fiscal years for an order"
+    },
+    {
       "permissionName": "orders.po-lines.collection.get",
       "displayName": "Orders - get collection of PO lines",
       "description": "Get collection of PO lines"
@@ -2170,6 +2190,7 @@
         "orders.configuration.prefixes.all",
         "orders.configuration.suffixes.all",
         "orders.re-encumber.item.post",
+        "orders.fiscal-years.collection.get",
         "orders.rollover.item.post",
         "orders.holding-summary.collection.get",
         "orders.acquisition-methods.all",

@@ -81,6 +81,7 @@ import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.orders.ReEncumbranceHoldersBuilder;
 import org.folio.service.orders.CompositeOrderTotalFieldsPopulateService;
+import org.folio.service.orders.OrderFiscalYearService;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderFlowValidator;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderHolderBuilder;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderInventoryService;
@@ -876,5 +877,10 @@ public class ApplicationConfig {
   @Bean
   SettingsRetriever settingsRetriever(RestClient restClient) {
     return new SettingsRetriever(restClient);
+  }
+
+  @Bean
+  OrderFiscalYearService orderFiscalYearService(TransactionService transactionService, FiscalYearService fiscalYearService) {
+    return new OrderFiscalYearService(transactionService, fiscalYearService);
   }
 }

@@ -193,4 +193,62 @@ public class FiscalYearServiceTest {
     assertEquals(HttpException.class, result.cause().getClass());
     assertEquals(404, ((HttpException) result.cause()).getCode());
   }
+
+  @Test
+  void shouldReturnAllFiscalYearsForSingleBatch() {
+    // Test basic functionality with small number of IDs
+    String fyId1 = UUID.randomUUID().toString();
+    String fyId2 = UUID.randomUUID().toString();
+    List<String> fiscalYearIds = List.of(fyId1, fyId2);
+
+    FiscalYear fy1 = new FiscalYear().withId(fyId1).withSeries("FY2023");
+    FiscalYear fy2 = new FiscalYear().withId(fyId2).withSeries("FY2024");
+    FiscalYearCollection mockCollection = new FiscalYearCollection()
+      .withFiscalYears(List.of(fy1, fy2))
+      .withTotalRecords(2);
+
+    doReturn(Future.succeededFuture(mockCollection))
+      .when(restClientMock).get(any(RequestEntry.class), eq(FiscalYearCollection.class), any(RequestContext.class));
+
+    Future<List<FiscalYear>> result = fiscalYearService.getAllFiscalYears(fiscalYearIds, requestContextMock);
+
+    List<FiscalYear> fiscalYears = result.result();
+    assertEquals(2, fiscalYears.size());
+    assertEquals(fyId1, fiscalYears.get(0).getId());
+    assertEquals(fyId2, fiscalYears.get(1).getId());
+  }
+
+  @Test
+  void shouldReturnEmptyCollectionWhenNoFiscalYearsProvided() {
+    // Test edge case with empty input
+    List<String> emptyIds = List.of();
+
+    Future<List<FiscalYear>> result = fiscalYearService.getAllFiscalYears(emptyIds, requestContextMock);
+
+    List<FiscalYear> fiscalYears = result.result();
+    assertEquals(0, fiscalYears.size());
+  }
+
+  @Test
+  void shouldHandleDuplicateIdsInGetAllFiscalYears() {
+    // Test deduplication logic
+    String fyId1 = UUID.randomUUID().toString();
+    String fyId2 = UUID.randomUUID().toString();
+    List<String> fiscalYearIds = List.of(fyId1, fyId2, fyId1); // Contains duplicate
+
+    FiscalYear fy1 = new FiscalYear().withId(fyId1).withSeries("FY2023");
+    FiscalYear fy2 = new FiscalYear().withId(fyId2).withSeries("FY2024");
+    FiscalYearCollection mockCollection = new FiscalYearCollection()
+      .withFiscalYears(List.of(fy1, fy2))
+      .withTotalRecords(2);
+
+    doReturn(Future.succeededFuture(mockCollection))
+      .when(restClientMock).get(any(RequestEntry.class), eq(FiscalYearCollection.class), any(RequestContext.class));
+
+    Future<List<FiscalYear>> result = fiscalYearService.getAllFiscalYears(fiscalYearIds, requestContextMock);
+
+    List<FiscalYear> fiscalYears = result.result();
+
+    assertEquals(2, fiscalYears.size());
+  }
 }
