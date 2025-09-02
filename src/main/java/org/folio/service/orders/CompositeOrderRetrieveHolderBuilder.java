@@ -59,7 +59,7 @@ public class CompositeOrderRetrieveHolderBuilder {
     if (cause instanceof HttpException && ((HttpException) cause).getCode() == 404) {
       return holder;
     }
-    throw new RuntimeException(cause);
+    throw new HttpException(500, cause.getMessage(), cause);
   }
 
 }
