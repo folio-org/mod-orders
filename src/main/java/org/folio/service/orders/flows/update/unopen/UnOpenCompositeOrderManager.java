@@ -6,6 +6,7 @@ import static org.folio.orders.utils.FutureUtils.asFuture;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
+import static org.folio.orders.utils.StreamUtils.map;
 import static org.folio.service.inventory.InventoryHoldingManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.inventory.InventoryItemManager.ID;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_EFFECTIVE_LOCATION;
@@ -153,7 +154,7 @@ public class UnOpenCompositeOrderManager {
     if (PoLineCommonUtil.isInventoryUpdateNotRequired(poLine) || PoLineCommonUtil.isOnlyInstanceUpdateRequired(poLine)) {
       return deleteExpectedPieces(poLine, requestContext).onSuccess(pieces -> {
         if (log.isDebugEnabled()) {
-          log.debug("Pieces were removed: {}", pieces.stream().map(Piece::getId).toList());
+          log.debug("Pieces were removed: {}", map(pieces, Piece::getId));
         }
       }).mapEmpty();
     }
@@ -324,7 +325,7 @@ public class UnOpenCompositeOrderManager {
     });
     return collectResultsOnSuccess(deletedItems).map(resultDeletedItems -> {
       if (log.isDebugEnabled()) {
-        log.debug("Item were removed: {}", resultDeletedItems.stream().map(item -> item.getString(ID)).toList());
+        log.debug("Item were removed: {}", map(resultDeletedItems, item -> item.getString(ID)));
       }
       return resultDeletedItems;
     });
@@ -379,7 +380,7 @@ public class UnOpenCompositeOrderManager {
         if (CollectionUtils.isEmpty(pieceCollection.getPieces())) {
           return Future.succeededFuture(List.of());
         }
-        return pieceStorageService.deletePiecesByIds(pieceCollection.getPieces().stream().map(Piece::getId).collect(toList()), requestContext)
+        return pieceStorageService.deletePiecesByIds(pieceCollection.getPieces().stream().map(Piece::getId).toList(), requestContext)
           .map(v -> pieceCollection.getPieces());
       });
   }
@@ -436,7 +437,7 @@ public class UnOpenCompositeOrderManager {
       .filter(pair -> Objects.nonNull(pair) && Objects.nonNull(pair.getKey()))
       .toList();
     if (log.isDebugEnabled()) {
-      log.debug("Holdings were removed: {}", validPairs.stream().map(Pair::getKey).toList());
+      log.debug("Holdings were removed: {}", map(validPairs, Pair::getKey));
     }
     return validPairs;
   }
