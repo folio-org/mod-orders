@@ -12,6 +12,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import io.vertx.junit5.VertxExtension;
 import org.folio.CopilotGenerated;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.FiscalYearCollection;
@@ -19,26 +20,27 @@ import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.service.finance.FiscalYearService;
 import org.folio.service.finance.transaction.TransactionService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
 import io.vertx.core.Future;
+import org.mockito.MockitoAnnotations;
 
-@ExtendWith(MockitoExtension.class)
+@ExtendWith(VertxExtension.class)
 @CopilotGenerated(model = "Claude Sonnet 4")
-class OrderFiscalYearServiceTest {
+public class OrderFiscalYearServiceTest {
 
   @Mock
   private TransactionService transactionService;
   @Mock
   private FiscalYearService fiscalYearService;
-
   @Mock
   private RequestContext requestContext;
+  private AutoCloseable openMocks;
 
   @InjectMocks
   private OrderFiscalYearService orderFiscalYearService;
@@ -49,7 +51,15 @@ class OrderFiscalYearServiceTest {
 
   @BeforeEach
   void setUp() {
+    openMocks = MockitoAnnotations.openMocks(this);
     orderFiscalYearService = new OrderFiscalYearService(transactionService, fiscalYearService);
+  }
+
+  @AfterEach
+  public void closeMocks() throws Exception {
+    if (openMocks != null) {
+      openMocks.close();
+    }
   }
 
   @Test

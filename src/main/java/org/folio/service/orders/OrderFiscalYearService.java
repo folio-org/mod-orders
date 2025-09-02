@@ -1,5 +1,6 @@
 package org.folio.service.orders;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -54,7 +55,7 @@ public class OrderFiscalYearService {
 
         return fiscalYearService.getFiscalYearById(currentFiscalYearId, requestContext)
           .map(currentFiscalYear -> {
-            var updatedFiscalYears = new java.util.ArrayList<>(fiscalYears);
+            var updatedFiscalYears = new ArrayList<>(fiscalYears);
             updatedFiscalYears.add(currentFiscalYear);
             return updatedFiscalYears;
           });
