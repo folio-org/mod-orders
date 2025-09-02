@@ -118,7 +118,9 @@ resourceTypes:
               body:
                 application/json:
                   type: fiscal-year-collection
-                  example: !include acq-models/mod-finance/examples/fiscal_year_collection.sample
+                  example:
+                    strict: false
+                    value: !include acq-models/mod-finance/examples/fiscal_year_collection.sample
             400:
               description: "Bad request"
               body:

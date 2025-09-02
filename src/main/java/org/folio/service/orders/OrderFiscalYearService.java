@@ -33,7 +33,7 @@ public class OrderFiscalYearService {
         .map(Transaction::getFiscalYearId)
         .filter(Objects::nonNull)
         .distinct()
-        .collect(Collectors.toList()))
+        .toList())
       .compose(fiscalYearIds -> {
         if (fiscalYearIds.isEmpty()) {
           return Future.succeededFuture(new FiscalYearCollection()
@@ -66,7 +66,7 @@ public class OrderFiscalYearService {
   private FiscalYearCollection sortAndCreateCollection(List<FiscalYear> fiscalYears) {
     var sortedFiscalYears = fiscalYears.stream()
       .sorted(java.util.Comparator.comparing(FiscalYear::getName))
-      .collect(Collectors.toList());
+      .toList();
 
     return new FiscalYearCollection()
       .withFiscalYears(sortedFiscalYears)

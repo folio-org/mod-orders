@@ -1,7 +1,6 @@
 package org.folio.service.orders;
 
 import java.util.Objects;
-import java.util.concurrent.CompletionException;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;

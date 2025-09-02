@@ -126,7 +126,7 @@ public class FiscalYearService {
         .toList())
       .map(lists -> lists.stream()
         .flatMap(Collection::stream)
-        .collect(Collectors.toList()));
+        .toList());
   }
 
   private Future<List<FiscalYear>> getAllFiscalYearsByIds(Collection<String> ids, RequestContext requestContext) {
