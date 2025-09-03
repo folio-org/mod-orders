@@ -52,6 +52,7 @@ import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.RestConstants;
 import org.folio.rest.acq.model.SequenceNumbers;
+import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
@@ -283,7 +284,15 @@ public class PurchaseOrderLineHelper {
     if (isReleaseEncumbrances(compOrderLine, poLineFromStorage)) {
       logger.info("updateEncumbranceStatus:: Encumbrances releasing for poLineId={} where paymentStatus={}", compOrderLine.getId(), compOrderLine.getPaymentStatus());
       return encumbranceService.getPoLineUnreleasedEncumbrances(compOrderLine, requestContext)
-        .compose(transactionList -> encumbranceService.releaseEncumbrances(transactionList, requestContext));
+        .compose(transactionList -> {
+          // only unrelease encumbrances with expended + credited + awaiting payment = 0
+          List<Transaction> encToUnrelease = transactionList.stream()
+            .filter(tr -> tr.getEncumbrance().getAmountExpended() == 0
+              && tr.getEncumbrance().getAmountCredited() == 0
+              && tr.getEncumbrance().getAmountAwaitingPayment() == 0)
+            .toList();
+          return encumbranceService.releaseEncumbrances(encToUnrelease, requestContext);
+        });
     } else if (isUnreleasedEncumbrances(compOrderLine, poLineFromStorage)) {
       logger.info("updateEncumbranceStatus:: Encumbrances unreleasing for poLineId={} where paymentStatus={}", compOrderLine.getId(), compOrderLine.getPaymentStatus());
       return encumbranceService.getPoLineReleasedEncumbrances(compOrderLine, requestContext)
