@@ -61,7 +61,7 @@ public class CompositeOrderRetrieveHolderBuilderTest {
     CompositeOrderRetrieveHolder resultHolder = holderBuilder.withCurrentFiscalYear(holder, requestContext)
       .result();
 
-    assertNull(resultHolder.getFiscalYear());
+    assertNull(resultHolder.getFiscalYearId());
   }
 
   @Test
@@ -95,7 +95,7 @@ public class CompositeOrderRetrieveHolderBuilderTest {
     CompositeOrderRetrieveHolder resultHolder = holderBuilder.withCurrentFiscalYear(holder, requestContext)
       .result();
 
-    assertNull(resultHolder.getFiscalYear());
+    assertNull(resultHolder.getFiscalYearId());
   }
 
 }

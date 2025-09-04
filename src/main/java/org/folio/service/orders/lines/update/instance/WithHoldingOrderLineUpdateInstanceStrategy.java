@@ -16,7 +16,6 @@ import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Piece;
@@ -34,6 +33,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -221,8 +221,9 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
 
         holder.getProcessedLocations().addAll(uniqueLocations);
         log.info("retrieveProcessableLocations:: Locations to process: {}", Json.encodePrettily(uniqueLocations));
-        return uniqueLocations.stream()
-          .collect(Collectors.groupingBy(location -> Objects.requireNonNullElse(location.getTenantId(), TenantTool.tenantId(requestContext.getHeaders()))));
+
+        var defaultTenantId = TenantTool.tenantId(requestContext.getHeaders());
+        return StreamEx.of(uniqueLocations).groupingBy(location -> Optional.ofNullable(location.getTenantId()).orElse(defaultTenantId));
       });
   }
 
@@ -250,16 +251,11 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
             parameters.add(tenantIdParam);
             return null;
           }))
-        .toList()
-      )
+        .toList())
       .mapEmpty()
-      .map(v -> {
-        if (CollectionUtils.isNotEmpty(parameters)) {
-          Error error = ErrorCodes.ITEM_UPDATE_FAILED.toError().withParameters(parameters);
-          throw new HttpException(500, error);
-        }
-        return null;
-      });
+      .compose(v -> CollectionUtils.isNotEmpty(parameters)
+        ? Future.failedFuture(new HttpException(500, ErrorCodes.ITEM_UPDATE_FAILED.toError().withParameters(parameters)))
+        : Future.succeededFuture());
   }
 
   private Future<Void> deleteAbandonedHoldingsAndUpdateHolder(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {

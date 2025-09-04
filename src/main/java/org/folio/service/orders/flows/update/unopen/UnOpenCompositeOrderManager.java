@@ -2,9 +2,11 @@ package org.folio.service.orders.flows.update.unopen;
 
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
+import static org.folio.orders.utils.FutureUtils.asFuture;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
+import static org.folio.orders.utils.StreamUtils.map;
 import static org.folio.service.inventory.InventoryHoldingManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.inventory.InventoryItemManager.ID;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_EFFECTIVE_LOCATION;
@@ -13,22 +15,24 @@ import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletionException;
-import java.util.stream.Collectors;
+import java.util.function.Function;
 
+import lombok.extern.log4j.Log4j2;
+import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.models.ItemStatus;
 import org.folio.models.pieces.PieceDeletionHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
@@ -50,8 +54,9 @@ import org.folio.service.pieces.PieceStorageService;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
+@Log4j2
 public class UnOpenCompositeOrderManager {
-  private static final Logger logger = LogManager.getLogger(UnOpenCompositeOrderManager.class);
+
   private static final EnumSet<PoLine.PaymentStatus> SUPPORTED_PAYMENT_STATUSES =
     EnumSet.of(PoLine.PaymentStatus.AWAITING_PAYMENT, PoLine.PaymentStatus.ONGOING);
   private static final EnumSet<PoLine.ReceiptStatus> SUPPORTED_RECEIPT_STATUSES =
@@ -84,16 +89,12 @@ public class UnOpenCompositeOrderManager {
     this.circulationRequestsRetriever = circulationRequestsRetriever;
   }
 
-
   public Future<Void> process(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, boolean deleteHoldings, RequestContext requestContext) {
     return updateAndGetOrderWithLines(compPO, requestContext)
       .map(aVoid -> encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.OPEN_TO_PENDING))
       .compose(strategy -> strategy.processEncumbrances(compPO, poFromStorage, requestContext))
       .compose(ok -> processInventory(compPO.getPoLines(), deleteHoldings, requestContext))
-      .map(ok -> {
-        compPO.getPoLines().forEach(this::makePoLinePending);
-        return null;
-      })
+      .compose(ok -> asFuture(() -> compPO.getPoLines().forEach(this::makePoLinePending)))
       .compose(ok -> updatePoLinesSummary(compPO.getPoLines(), requestContext));
 
   }
@@ -103,10 +104,7 @@ public class UnOpenCompositeOrderManager {
       return Future.succeededFuture(compPO);
     }
     return purchaseOrderLineService.getPoLinesByOrderId(compPO.getId(), requestContext)
-      .map(poLines -> {
-        PoLineCommonUtil.sortPoLinesByPoLineNumber(poLines);
-        return compPO.withPoLines(poLines);
-      })
+      .map(poLines -> compPO.withPoLines(PoLineCommonUtil.sortPoLinesByPoLineNumber(poLines)))
       .map(v -> compPO);
   }
 
@@ -120,24 +118,19 @@ public class UnOpenCompositeOrderManager {
   }
 
   private Future<Void> updatePoLinesSummary(List<PoLine> poLines, RequestContext requestContext) {
-    return GenericCompositeFuture.join(poLines.stream()
-        .map(line -> purchaseOrderLineService.saveOrderLine(line, requestContext))
-        .toList())
-      .map(ok -> null);
+    return processPoLines(poLines, poLine -> purchaseOrderLineService.saveOrderLine(poLine, requestContext));
   }
 
   public Future<Void> rollbackInventory(CompositePurchaseOrder compPO, RequestContext requestContext) {
-    return processInventory(compPO.getPoLines(), true, requestContext);
+    return processPoLines(compPO.getPoLines(), poLine -> processInventory(poLine, true, requestContext));
   }
 
   private Future<Void> processInventory(List<PoLine> poLines, boolean deleteHoldings, RequestContext requestContext) {
-    return GenericCompositeFuture.join(
-        poLines
-          .stream()
-          .map(line -> processInventory(line, deleteHoldings, requestContext))
-          .toList()
-      )
-      .mapEmpty();
+    return processPoLines(poLines, poLine -> processInventory(poLine, deleteHoldings, requestContext));
+  }
+
+  private Future<Void> processPoLines(List<PoLine> poLines, Function<PoLine, Future<?>> poLineProcessor) {
+    return GenericCompositeFuture.join(poLines.stream().map(poLineProcessor::apply).toList()).mapEmpty();
   }
 
   /**
@@ -160,12 +153,10 @@ public class UnOpenCompositeOrderManager {
     }
     if (PoLineCommonUtil.isInventoryUpdateNotRequired(poLine) || PoLineCommonUtil.isOnlyInstanceUpdateRequired(poLine)) {
       return deleteExpectedPieces(poLine, requestContext).onSuccess(pieces -> {
-          if (logger.isDebugEnabled()) {
-            String deletedIds = pieces.stream().map(Piece::getId).collect(Collectors.joining(","));
-            logger.debug("Pieces were removed: {}", deletedIds);
-          }
-        })
-        .mapEmpty();
+        if (log.isDebugEnabled()) {
+          log.debug("Pieces were removed: {}", map(pieces, Piece::getId));
+        }
+      }).mapEmpty();
     }
     if (PoLineCommonUtil.isItemsUpdateRequired(poLine)) {
       if (poLine.getCheckinItems()) { // independent workflow
@@ -193,14 +184,12 @@ public class UnOpenCompositeOrderManager {
     return Future.succeededFuture();
   }
 
-
   private Future<Void> processInventoryOnlyWithHolding(PoLine poLine, RequestContext requestContext) {
     return deleteExpectedPieces(poLine, requestContext)
       .compose(deletedPieces -> {
         var deleteHoldingsVsLocations = inventoryHoldingManager.getHoldingsByLocationTenants(poLine, requestContext)
-          .entrySet()
-          .stream()
-          .map(entry -> entry.getValue().compose(holdings -> deleteHoldings(entry.getKey(), holdings, requestContext)))
+          .entrySet().stream().map(entry -> entry.getValue()
+            .compose(holdings -> deleteHoldings(poLine, entry.getKey(), holdings, requestContext)))
           .toList();
         return GenericCompositeFuture.all(deleteHoldingsVsLocations).map(ar -> {
           var deletedHoldingVsLocationIds = deleteHoldingsVsLocations.stream()
@@ -211,56 +200,35 @@ public class UnOpenCompositeOrderManager {
           return null;
         });
       })
-      .onSuccess(v -> logger.debug("Pieces, Holdings deleted after UnOpen order"))
+      .onSuccess(v -> log.debug("Pieces, Holdings deleted after UnOpen order"))
       .mapEmpty();
   }
 
-  private Future<List<Pair<String, String>>> deleteHoldings(String tenantId, List<JsonObject> holdings, RequestContext requestContext) {
+  private Future<List<Pair<String, String>>> deleteHoldings(PoLine poLine, String tenantId, List<JsonObject> holdings, RequestContext requestContext) {
     if (CollectionUtils.isEmpty(holdings)) {
       return Future.succeededFuture(List.of());
     }
-    RequestContext newContext = createContextWithNewTenantId(requestContext, tenantId);
-    List<Future<Pair<String, String>>> deletedHoldingIds = new ArrayList<>(holdings.size());
-    holdings.forEach(holding -> {
-      String holdingId = holding.getString(ID);
-      String permanentLocationId = holding.getString(HOLDING_PERMANENT_LOCATION_ID);
-      if (holdingId != null) {
-        deletedHoldingIds.add(inventoryItemManager.getItemsByHoldingId(holdingId, newContext)
-          .compose(items -> {
-            if (items.isEmpty()) {
-              logger.info("deleteHoldings:: Deleting holdings, holdingId: {}", holdingId);
-              return inventoryHoldingManager.deleteHoldingById(holdingId, true, newContext)
-                .map(v -> Pair.of(holdingId, permanentLocationId));
-            } else {
-              logger.info("deleteHoldings:: Cannot delete holdings with items, holdingId: {}, items: {}", holdingId, items.size());
-            }
-            return Future.succeededFuture();
-          }));
-      }
-    });
-    return collectResultsOnSuccess(deletedHoldingIds)
-      .map(resultDeletedHoldingVsLocationIds -> resultDeletedHoldingVsLocationIds.stream()
-        .filter(pair -> Objects.nonNull(pair) && Objects.nonNull(pair.getKey())).collect(toList()))
-      .map(resultDeletedHoldingVsLocationIds -> {
-        if (logger.isDebugEnabled()) {
-          String deletedIds = resultDeletedHoldingVsLocationIds.stream().map(Pair::getKey).collect(Collectors.joining(","));
-          logger.debug("Holdings were removed: {}", deletedIds);
-        }
-        return resultDeletedHoldingVsLocationIds;
-      });
+    var holdingIds = holdings.stream().map(holding -> holding.getString(ID)).toList();
+    return getDeletableHoldings(poLine, holdingIds, requestContext)
+      .map(deletableHoldings -> holdings.stream()
+        .filter(holding -> StringUtils.isNotBlank(holding.getString(ID)))
+        .filter(holding -> deletableHoldings.contains(holding.getString(ID)))
+        .map(holding -> {
+          String holdingId = holding.getString(ID);
+          String permanentLocationId = holding.getString(HOLDING_PERMANENT_LOCATION_ID);
+          return deleteHolding(holdingId, permanentLocationId, createContextWithNewTenantId(requestContext, tenantId));
+        }).toList())
+      .compose(HelperUtils::collectResultsOnSuccess)
+      .map(this::filterHoldingAndLocationPairs);
   }
-
 
   private Future<Void> processInventoryOnlyWithItems(PoLine poLine, RequestContext requestContext) {
     return deleteExpectedPieces(poLine, requestContext)
-      .compose(deletedPieces ->
-        GenericCompositeFuture.all(
-          PoLineCommonUtil.getTenantsFromLocations(poLine)
-            .stream()
-            .map(tenantId -> processInventoryOnlyWithItemsForTenant(poLine, createContextWithNewTenantId(requestContext, tenantId)))
-            .toList()
-        )
-      ).mapEmpty();
+      .map(deletedPieces -> PoLineCommonUtil.getTenantsFromLocations(poLine).stream()
+        .map(tenantId -> processInventoryOnlyWithItemsForTenant(poLine, createContextWithNewTenantId(requestContext, tenantId)))
+        .toList())
+      .compose(GenericCompositeFuture::all)
+      .mapEmpty();
   }
 
   private Future<?> processInventoryOnlyWithItemsForTenant(PoLine poLine, RequestContext requestContext) {
@@ -272,18 +240,16 @@ public class UnOpenCompositeOrderManager {
         List<String> itemIds = onOrderItems.stream().map(item -> item.getString(ID)).toList();
         return inventoryItemManager.deleteItems(itemIds, false, requestContext);
       })
-      .onSuccess(v -> logger.info("Items and pieces deleted after Un-Open order with id: {}", poLine.getId()))
-      .onFailure(e -> logger.error("Items and pieces deletion failed after Un-Open order with id: {}", poLine.getId(), e));
+      .onSuccess(v -> log.info("Items and pieces deleted after Un-Open order with id: {}", poLine.getId()))
+      .onFailure(e -> log.error("Items and pieces deletion failed after Un-Open order with id: {}", poLine.getId(), e));
   }
 
 
   private Future<Void> processInventoryHoldingWithItems(PoLine poLine, RequestContext requestContext) {
-    return GenericCompositeFuture.all(
-      PoLineCommonUtil.getTenantsFromLocations(poLine)
-        .stream()
+    return GenericCompositeFuture.all(PoLineCommonUtil.getTenantsFromLocations(poLine).stream()
         .map(tenantId -> processInventoryHoldingWithItemsForTenant(poLine, requestContext, createContextWithNewTenantId(requestContext, tenantId)))
-        .toList()
-    ).mapEmpty();
+        .toList())
+      .mapEmpty();
   }
 
   private Future<Void> processInventoryHoldingWithItemsForTenant(PoLine poLine,
@@ -297,12 +263,9 @@ public class UnOpenCompositeOrderManager {
         List<String> itemIds = onOrderItems.stream().map(item -> item.getString(ID)).toList();
         if (PoLineCommonUtil.isReceiptNotRequired(poLine.getReceiptStatus())) {
           return inventoryItemManager.deleteItems(itemIds, false, locationContext)
-            .compose(deletedItemIds -> deleteHoldingsByItems(onOrderItems, locationContext))
-            .map(deletedHoldingVsLocationIds -> {
-              updateLocations(poLine, deletedHoldingVsLocationIds);
-              return null;
-            })
-            .onSuccess(v -> logger.debug("Items and holdings deleted after UnOpen order"))
+            .compose(deletedItemIds -> deleteHoldingsByItems(poLine, onOrderItems, locationContext))
+            .map(deletedHoldingVsLocationIds -> asFuture(() -> updateLocations(poLine, deletedHoldingVsLocationIds)))
+            .onSuccess(v -> log.debug("Items and holdings deleted after UnOpen order"))
             .mapEmpty();
         }
         return pieceStorageService.getExpectedPiecesByLineId(poLine.getId(), centralTenantContext)
@@ -313,54 +276,32 @@ public class UnOpenCompositeOrderManager {
             return inventoryItemManager.getItemRecordsByIds(itemIds, locationContext)
               .map(items -> filterItemsByStatus(items, ItemStatus.ON_ORDER.value()))
               .compose(onOrderItemsP -> deletePiecesAndItems(onOrderItemsP, pieceCollection.getPieces(), centralTenantContext, locationContext))
-              .compose(deletedItems -> deleteHoldingsByItems(deletedItems, locationContext))
-              .map(deletedHoldingVsLocationIds -> {
-                updateLocations(poLine, deletedHoldingVsLocationIds);
-                return null;
-              })
-              .onSuccess(v -> logger.debug("Pieces, Items, Holdings deleted after UnOpen order"))
-              .onFailure(e -> logger.error("Pieces, Items, Holdings failed to be deleted after UnOpen order for order id: {}",
+              .compose(deletedItems -> deleteHoldingsByItems(poLine, deletedItems, locationContext))
+              .map(deletedHoldingVsLocationIds -> asFuture(() -> updateLocations(poLine, deletedHoldingVsLocationIds)))
+              .onSuccess(v -> log.debug("Pieces, Items, Holdings deleted after UnOpen order"))
+              .onFailure(e -> log.error("Pieces, Items, Holdings failed to be deleted after UnOpen order for order id: {}",
                 poLine.getId(), e))
               .mapEmpty();
           });
       });
   }
 
-  private Future<List<Pair<String, String>>> deleteHoldingsByItems(List<JsonObject> deletedItems, RequestContext requestContext) {
-    List<Future<Pair<String, String>>> deletedHoldingIds = new ArrayList<>(deletedItems.size());
-    var holdingIdVsItemMap = deletedItems.stream()
-      .collect(groupingBy(item -> Optional.ofNullable(item.getString(ITEM_HOLDINGS_RECORD_ID))));
-    holdingIdVsItemMap.forEach((optionalHoldingId, holdingDeletedItems) -> {
-      if (optionalHoldingId.isEmpty()) {
-        return;
-      }
-      String holdingId = optionalHoldingId.get();
-      String effectiveLocationId = holdingDeletedItems.get(0).getJsonObject(ITEM_EFFECTIVE_LOCATION).getString(ID);
-      deletedHoldingIds.add(inventoryItemManager.getItemsByHoldingId(holdingId, requestContext)
-        .compose(items -> {
-          if (items.isEmpty()) {
-            logger.info("deleteHoldingsByItems:: Deleting holdings, holdingId: {}", holdingId);
-            return inventoryHoldingManager.deleteHoldingById(holdingId, true, requestContext)
-              .map(v -> Pair.of(holdingId, effectiveLocationId));
-          } else {
-            logger.info("deleteHoldingsByItems:: Cannot delete holdings with items, holdingId: {}, items: {}", holdingId, items.size());
-          }
-          return Future.succeededFuture();
-        }));
-    });
-    return collectResultsOnSuccess(deletedHoldingIds)
-      .map(resultDeletedHoldingVsLocationIds -> resultDeletedHoldingVsLocationIds.stream()
-        .filter(pair -> Objects.nonNull(pair) && Objects.nonNull(pair.getKey()))
-        .collect(toList()))
-      .map(resultDeletedHoldingVsLocationIds -> {
-        if (logger.isDebugEnabled()) {
-          String deletedIds = resultDeletedHoldingVsLocationIds.stream()
-            .map(Pair::getKey)
-            .collect(Collectors.joining(","));
-          logger.debug("Holdings were removed: {}", deletedIds);
-        }
-        return resultDeletedHoldingVsLocationIds;
-      });
+  private Future<List<Pair<String, String>>> deleteHoldingsByItems(PoLine poLine, List<JsonObject> deletedItems, RequestContext requestContext) {
+    var holdingIdVsItemMap = StreamEx.of(deletedItems)
+      .filter(item -> StringUtils.isNotBlank(item.getString(ITEM_HOLDINGS_RECORD_ID)))
+      .groupingBy(item -> item.getString(ITEM_HOLDINGS_RECORD_ID));
+    var holdingIds = holdingIdVsItemMap.keySet().stream().toList();
+    return getDeletableHoldings(poLine, holdingIds, requestContext)
+      .map(deletableHoldings -> holdingIdVsItemMap.entrySet().stream()
+        .filter(entry -> deletableHoldings.contains(entry.getKey()))
+        .map(entry -> {
+          var holdingId = entry.getKey();
+          var holdingDeletedItems = entry.getValue();
+          String effectiveLocationId = holdingDeletedItems.getFirst().getJsonObject(ITEM_EFFECTIVE_LOCATION).getString(ID);
+          return deleteHolding(holdingId, effectiveLocationId, requestContext);
+        }).toList())
+      .compose(HelperUtils::collectResultsOnSuccess)
+      .map(this::filterHoldingAndLocationPairs);
   }
 
   private Future<List<JsonObject>> deletePiecesAndItems(List<JsonObject> onOrderItems,
@@ -383,9 +324,8 @@ public class UnOpenCompositeOrderManager {
       }
     });
     return collectResultsOnSuccess(deletedItems).map(resultDeletedItems -> {
-      if (logger.isDebugEnabled()) {
-        String deletedIds = resultDeletedItems.stream().map(item -> item.getString(ID)).collect(Collectors.joining(","));
-        logger.debug("Item were removed: {}", deletedIds);
+      if (log.isDebugEnabled()) {
+        log.debug("Item were removed: {}", map(resultDeletedItems, item -> item.getString(ID)));
       }
       return resultDeletedItems;
     });
@@ -394,18 +334,11 @@ public class UnOpenCompositeOrderManager {
   private Future<Void> deletePieceWithItem(String pieceId, RequestContext requestContext, RequestContext itemContext) {
     PieceDeletionHolder holder = new PieceDeletionHolder().withDeleteHolding(true);
     return pieceStorageService.getPieceById(pieceId, requestContext)
-      .map(piece -> {
-        holder.setPieceToDelete(piece);
-        return null;
-      })
-      .compose(aVoid -> purchaseOrderLineService.getOrderLineById(holder.getPieceToDelete().getPoLineId(), requestContext))
+      .map(holder::withPieceToDelete)
+      .compose(vHolder -> purchaseOrderLineService.getOrderLineById(holder.getPieceToDelete().getPoLineId(), requestContext))
       .compose(poLine -> purchaseOrderStorageService.getPurchaseOrderById(poLine.getPurchaseOrderId(), requestContext)
-        .map(purchaseOrder -> {
-          holder.withOrderInformation(purchaseOrder, poLine);
-          return null;
-        })
-      )
-      .compose(aVoid -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(), DELETE, requestContext))
+        .map(purchaseOrder -> holder.withOrderInformation(purchaseOrder, poLine)))
+      .compose(aHolder -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(), DELETE, requestContext))
       .compose(vVoid -> canDeletePieceWithItem(holder.getPieceToDelete(), requestContext))
       .compose(aVoid -> pieceStorageService.deletePiece(pieceId, requestContext))
       .compose(aVoid -> deletePieceConnectedItem(holder.getPieceToDelete(), itemContext));
@@ -432,18 +365,14 @@ public class UnOpenCompositeOrderManager {
 
   private Future<Void> canDeletePieceWithItem(Piece piece, RequestContext requestContext) {
     return circulationRequestsRetriever.getNumberOfRequestsByItemId(piece.getItemId(), requestContext)
-      .map(numOfRequests -> {
-        if (numOfRequests != null && numOfRequests > 0) {
-          throw new HttpException(422, ErrorCodes.REQUEST_FOUND.toError());
-        }
-        return null;
-      });
+      .compose(numOfRequests -> numOfRequests != null && numOfRequests > 0
+        ? Future.failedFuture(new HttpException(422, ErrorCodes.REQUEST_FOUND.toError()))
+        : Future.succeededFuture());
   }
-
 
   private Future<List<Piece>> deleteExpectedPieces(PoLine poLine, RequestContext requestContext) {
     if (PoLineCommonUtil.isReceiptNotRequired(poLine.getReceiptStatus()) || Boolean.TRUE.equals(poLine.getCheckinItems())) {
-      logger.info("Receipt is not required or independent receiving flow is used, skipping deleting pieces, poLineId: {}", poLine.getId());
+      log.info("Receipt is not required or independent receiving flow is used, skipping deleting pieces, poLineId: {}", poLine.getId());
       return Future.succeededFuture(List.of());
     }
     return pieceStorageService.getExpectedPiecesByLineId(poLine.getId(), requestContext)
@@ -451,7 +380,7 @@ public class UnOpenCompositeOrderManager {
         if (CollectionUtils.isEmpty(pieceCollection.getPieces())) {
           return Future.succeededFuture(List.of());
         }
-        return pieceStorageService.deletePiecesByIds(pieceCollection.getPieces().stream().map(Piece::getId).collect(toList()), requestContext)
+        return pieceStorageService.deletePiecesByIds(pieceCollection.getPieces().stream().map(Piece::getId).toList(), requestContext)
           .map(v -> pieceCollection.getPieces());
       });
   }
@@ -460,19 +389,57 @@ public class UnOpenCompositeOrderManager {
     if (CollectionUtils.isEmpty(deletedHoldingVsLocationIds)) {
       return;
     }
-    Map<String, List<Location>> holdingIdVsLocations = poLine.getLocations().stream().filter(entity -> Objects.nonNull(entity.getHoldingId()))
-      .collect(groupingBy(Location::getHoldingId));
+    Map<String, List<Location>> holdingIdVsLocations = StreamEx.of(poLine.getLocations())
+      .filter(entity -> Objects.nonNull(entity.getHoldingId()))
+      .groupingBy(Location::getHoldingId);
     deletedHoldingVsLocationIds.forEach(holdingIdVsLocationId -> {
       String holdingId = holdingIdVsLocationId.getKey();
       String locationId = holdingIdVsLocationId.getValue();
-      List<Location> locations = holdingIdVsLocations.get(holdingId);
-      if (CollectionUtils.isNotEmpty(locations)) {
-        locations.forEach(location -> {
-          location.setHoldingId(null);
-          location.setLocationId(locationId);
-        });
-      }
+      holdingIdVsLocations.getOrDefault(holdingId, List.of())
+        .forEach(location -> location.withHoldingId(null).withLocationId(locationId));
     });
+  }
+
+  private Future<List<String>> getDeletableHoldings(PoLine storagePoLine, List<String> holdingIds, RequestContext requestContext) {
+    var poLinesHoldingIds = purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext)
+      .map(poLines -> poLines.stream()
+        .filter(poLine -> !Objects.equals(poLine.getId(), storagePoLine.getId()))
+        .flatMap(poLine -> StreamEx.of(poLine.getLocations()).map(Location::getHoldingId).nonNull().distinct())
+        .toList());
+    var piecesHoldingIds = pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext)
+      .map(pieces -> StreamEx.of(pieces)
+        .filter(piece -> !Objects.equals(piece.getPoLineId(), storagePoLine.getId()))
+        .map(Piece::getHoldingId)
+        .nonNull().distinct()
+        .toList());
+    return collectResultsOnSuccess(List.of(poLinesHoldingIds, piecesHoldingIds))
+      .map(results -> results.stream().flatMap(Collection::stream).toList())
+      .map(usedHoldingIds -> holdingIds.stream()
+        .filter(id -> !usedHoldingIds.contains(id))
+        .toList());
+  }
+
+  private Future<Pair<String, String>> deleteHolding(String holdingId, String locationId, RequestContext requestContext) {
+    return inventoryItemManager.getItemsByHoldingId(holdingId, requestContext)
+      .compose(items -> {
+        if (items.isEmpty()) {
+          log.info("deleteHolding:: Deleting holdings, holdingId: {}", holdingId);
+          return inventoryHoldingManager.deleteHoldingById(holdingId, true, requestContext)
+            .map(v -> Pair.of(holdingId, locationId));
+        }
+        log.info("deleteHolding:: Cannot delete holdings with items, holdingId: {}, items: {}", holdingId, items.size());
+        return Future.succeededFuture();
+      });
+  }
+
+  private List<Pair<String, String>> filterHoldingAndLocationPairs(List<Pair<String, String>> holdingAndLocationPairs) {
+    var validPairs = holdingAndLocationPairs.stream()
+      .filter(pair -> Objects.nonNull(pair) && Objects.nonNull(pair.getKey()))
+      .toList();
+    if (log.isDebugEnabled()) {
+      log.debug("Holdings were removed: {}", map(validPairs, Pair::getKey));
+    }
+    return validPairs;
   }
 
 }

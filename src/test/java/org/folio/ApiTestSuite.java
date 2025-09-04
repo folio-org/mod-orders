@@ -77,15 +77,16 @@ import org.folio.service.invoice.InvoiceLineServiceTest;
 import org.folio.service.orders.AcquisitionsUnitsServiceTest;
 import org.folio.service.orders.CombinedOrderDataPopulateServiceTest;
 import org.folio.service.orders.CompositeOrderRetrieveHolderBuilderTest;
-import org.folio.service.orders.PoLineValidationServiceTest;
+import org.folio.service.orders.CompositeOrderTotalFieldsPopulateServiceTest;
 import org.folio.service.orders.FundsDistributionServiceTest;
+import org.folio.service.orders.OrderFiscalYearServiceTest;
 import org.folio.service.orders.OrderInvoiceRelationServiceTest;
 import org.folio.service.orders.OrderReEncumberServiceTest;
 import org.folio.service.orders.OrderRolloverServiceTest;
+import org.folio.service.orders.PoLineValidationServiceTest;
 import org.folio.service.orders.PurchaseOrderLineServiceTest;
 import org.folio.service.orders.PurchaseOrderStorageServiceTest;
 import org.folio.service.orders.ReEncumbranceHoldersBuilderTest;
-import org.folio.service.orders.CompositeOrderTotalFieldsPopulateServiceTest;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderFlowValidatorTest;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderHolderBuilderTest;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderInventoryServiceTest;
@@ -518,6 +519,10 @@ public class ApiTestSuite {
 
   @Nested
   class FiscalYearServiceTestNested extends FiscalYearServiceTest {
+  }
+
+  @Nested
+  class OrderFiscalYearServiceTestNested extends OrderFiscalYearServiceTest {
   }
 
   @Nested
