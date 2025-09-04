@@ -8,6 +8,7 @@ import org.folio.config.ApplicationConfig;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.rest.resource.interfaces.InitAPI;
 import org.folio.spring.SpringContextUtil;
+import org.folio.verticle.CancelledJobExecutionConsumerVerticle;
 import org.folio.verticle.DataImportConsumerVerticle;
 import org.folio.verticle.consumers.SpringVerticleFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,6 +26,8 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.jackson.DatabindCodec;
 import io.vertx.core.spi.VerticleFactory;
+
+import static io.vertx.core.ThreadingModel.WORKER;
 
 /**
  * The class initializes vertx context adding spring context
@@ -72,19 +75,25 @@ public class InitAPIs implements InitAPI {
       });
   }
 
-  private Future<?> deployConsumersVerticles(Vertx vertx) {
+  private Future<Void> deployConsumersVerticles(Vertx vertx) {
     AbstractApplicationContext springContext = vertx.getOrCreateContext().get(SPRING_CONTEXT_KEY);
     VerticleFactory verticleFactory = springContext.getBean(SpringVerticleFactory.class);
     vertx.registerVerticleFactory(verticleFactory);
 
     Promise<String> deployDataImportConsumerPromise = Promise.promise();
+    Promise<String> deployCancelledJobConsumerPromise = Promise.promise();
 
     vertx.deployVerticle(getVerticleName(verticleFactory, DataImportConsumerVerticle.class),
       new DeploymentOptions()
-        .setWorker(true)
+        .setThreadingModel(WORKER)
         .setInstances(dataImportConsumerInstancesNumber), deployDataImportConsumerPromise);
 
-    return deployDataImportConsumerPromise.future();
+    vertx.deployVerticle(getVerticleName(verticleFactory, CancelledJobExecutionConsumerVerticle.class),
+      new DeploymentOptions()
+        .setThreadingModel(WORKER), deployCancelledJobConsumerPromise);
+
+    return Future.all(deployDataImportConsumerPromise.future(), deployCancelledJobConsumerPromise.future())
+      .mapEmpty();
   }
 
   private <T> String getVerticleName(VerticleFactory verticleFactory, Class<T> clazz) {
