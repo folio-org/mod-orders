@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class CancelledJobsIdsCacheTest {
+public class CancelledJobsIdsCacheTest {
 
   public static final long CACHE_EXPIRATION_TIME_MINS = 5;
 

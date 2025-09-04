@@ -89,8 +89,7 @@ public class InitAPIs implements InitAPI {
         .setInstances(dataImportConsumerInstancesNumber), deployDataImportConsumerPromise);
 
     vertx.deployVerticle(getVerticleName(verticleFactory, CancelledJobExecutionConsumerVerticle.class),
-      new DeploymentOptions()
-        .setThreadingModel(WORKER), deployCancelledJobConsumerPromise);
+      new DeploymentOptions().setThreadingModel(WORKER), deployCancelledJobConsumerPromise);
 
     return Future.all(deployDataImportConsumerPromise.future(), deployCancelledJobConsumerPromise.future())
       .mapEmpty();
