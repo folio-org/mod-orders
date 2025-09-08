@@ -44,7 +44,7 @@ public class InitAPIs implements InitAPI {
   @Override
   public void init(Vertx vertx, Context context, Handler<AsyncResult<Boolean>> resultHandler) {
     vertx.executeBlocking(
-      handler -> {
+      () -> {
         SerializationConfig serializationConfig = ObjectMapperTool.getMapper().getSerializationConfig();
         DeserializationConfig deserializationConfig = ObjectMapperTool.getMapper().getDeserializationConfig();
 
@@ -56,14 +56,9 @@ public class InitAPIs implements InitAPI {
         SpringContextUtil.autowireDependencies(this, context);
         initJavaMoney();
 
-        deployConsumersVerticles(vertx).onSuccess(hdr -> {
-            handler.handle(Future.succeededFuture());
-            log.info("Consumer Verticles were successfully started");
-          })
-          .onFailure(th -> {
-            handler.handle(Future.failedFuture(th));
-            log.error("Consumer Verticles were not started", th);
-          });
+        return deployConsumersVerticles(vertx)
+          .onSuccess(hdr -> log.info("Consumer Verticles were successfully started"))
+          .onFailure(th -> log.error("Consumer Verticles were not started", th));
       })
       .onComplete(result -> {
         if (result.succeeded()) {

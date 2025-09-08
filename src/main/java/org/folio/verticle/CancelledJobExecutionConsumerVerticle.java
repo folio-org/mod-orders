@@ -97,6 +97,7 @@ public class CancelledJobExecutionConsumerVerticle extends AbstractVerticle {
     return ModuleName.getModuleName() + "-" + getClass().getSimpleName() + "-" + UUID.randomUUID();
   }
 
+  @SuppressWarnings("squid:S2629")
   private Future<String> handle(KafkaConsumerRecord<String, String> kafkaRecord) {
     try {
       String tenantId = extractHeader(kafkaRecord.headers(), TENANT_ID);
