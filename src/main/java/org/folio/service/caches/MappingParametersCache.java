@@ -77,11 +77,7 @@ public class MappingParametersCache {
   private static final String VALUE_RESPONSE = "value";
   public static final String ERROR_LOADING_CACHE_MESSAGE = "Error loading cache for mapping parameter: '%s', tenantId: '%s', status code: %s, response message: %s";
 
-  @Value("${orders.cache.mapping.parameters.settings.limit:5000}")
-  private int settingsLimit;
-
-  @Value("${orders.cache.mapping.parameters.expiration.seconds:3600}")
-  private long cacheExpirationTime;
+  private final int settingsLimit;
 
   private final AsyncCache<String, MappingParameters> cache;
   private final RestClient restClient;
@@ -90,13 +86,17 @@ public class MappingParametersCache {
 
   @Autowired
   public MappingParametersCache(Vertx vertx, RestClient restClient,
-                                AcquisitionsUnitsService acquisitionsUnitsService,
-                                AcquisitionMethodsService acquisitionMethodsService) {
-    LOGGER.info("MappingParametersCache:: settings limit: '{}'", settingsLimit);
+    AcquisitionsUnitsService acquisitionsUnitsService,
+    AcquisitionMethodsService acquisitionMethodsService,
+    @Value("${orders.cache.mapping.parameters.settings.limit:5000}") int settingsLimit,
+    @Value("${orders.cache.mapping.parameters.expiration.seconds:3600}") long cacheExpirationTime) {
+    LOGGER.info("MappingParametersCache:: settings limit: '{}', expiration time: '{}'",
+      settingsLimit, cacheExpirationTime);
     cache = buildAsyncCache(vertx, cacheExpirationTime);
     this.restClient = restClient;
     this.acquisitionsUnitsService = acquisitionsUnitsService;
     this.acquisitionMethodsService = acquisitionMethodsService;
+    this.settingsLimit = settingsLimit;
   }
 
   /**
