@@ -53,6 +53,9 @@ import org.springframework.test.util.ReflectionTestUtils;
 @RunWith(VertxUnitRunner.class)
 public class CacheTest {
 
+  private static final int CACHE_EXPIRATION_TIME_SEC = 3600;
+  private static final int SETTINGS_LIMIT_PER_REQUEST = 5000;
+
   @Rule
   public RunTestOnContext rule = new RunTestOnContext();
 
@@ -69,8 +72,9 @@ public class CacheTest {
   @Before
   public void setUp() {
     Vertx vertx = rule.vertx();
-    jobProfileSnapshotCache = new JobProfileSnapshotCache(vertx);
-    mappingParametersCache = new MappingParametersCache(vertx, new RestClient(), acquisitionsUnitsService, acquisitionMethodsService);
+    jobProfileSnapshotCache = new JobProfileSnapshotCache(vertx, CACHE_EXPIRATION_TIME_SEC);
+    mappingParametersCache = new MappingParametersCache(vertx, new RestClient(), acquisitionsUnitsService,
+      acquisitionMethodsService, SETTINGS_LIMIT_PER_REQUEST, CACHE_EXPIRATION_TIME_SEC);
 
     HashMap<String, String> headers = new HashMap<>();
     headers.put(OKAPI_URL_HEADER, "http://localhost:" + snapshotMockServer.port());
@@ -246,38 +250,38 @@ public class CacheTest {
     String addressQueryParam = "query=" + encodeQuery("(module==TENANT and configName==tenant.addresses)");
     String acqUnitsQueryParam = "&query=" + encodeQuery("isDeleted==false");
     WireMock.stubFor(
-      get("/organizations/organizations?limit=0" + queryParam)
+      get("/organizations/organizations?limit=5000" + queryParam)
         .willReturn(serverError()));
     WireMock.stubFor(
-      get("/locations?limit=0")
-        .willReturn(serverError()));
-
-    WireMock.stubFor(
-      get("/material-types?limit=0")
+      get("/locations?limit=5000")
         .willReturn(serverError()));
 
     WireMock.stubFor(
-      get("/identifier-types?limit=0")
+      get("/material-types?limit=5000")
         .willReturn(serverError()));
 
     WireMock.stubFor(
-      get("/contributor-name-types?limit=0")
+      get("/identifier-types?limit=5000")
         .willReturn(serverError()));
 
     WireMock.stubFor(
-      get("/finance/expense-classes?limit=0")
+      get("/contributor-name-types?limit=5000")
         .willReturn(serverError()));
 
     WireMock.stubFor(
-      get("/finance/funds?limit=0")
+      get("/finance/expense-classes?limit=5000")
         .willReturn(serverError()));
 
     WireMock.stubFor(
-      get("/orders-storage/acquisition-methods?offset=0&limit=0")
+      get("/finance/funds?limit=5000")
         .willReturn(serverError()));
 
     WireMock.stubFor(
-      get("/acquisitions-units-storage/units?offset=0" + acqUnitsQueryParam + "&limit=0")
+      get("/orders-storage/acquisition-methods?offset=0&limit=5000")
+        .willReturn(serverError()));
+
+    WireMock.stubFor(
+      get("/acquisitions-units-storage/units?offset=0" + acqUnitsQueryParam + "&limit=5000")
         .willReturn(serverError()));
 
     WireMock.stubFor(
