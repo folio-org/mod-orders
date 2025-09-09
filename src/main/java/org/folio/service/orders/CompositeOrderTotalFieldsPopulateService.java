@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -136,8 +137,8 @@ public class CompositeOrderTotalFieldsPopulateService implements CompositeOrderD
   }
 
   private Future<ExchangeRate> getInvoiceExchangeRate(Invoice invoice, String systemCurrency, RequestContext requestContext) {
-    return cacheableExchangeRateService.getExchangeRate(invoice.getCurrency(), systemCurrency,
-      invoice.getExchangeRate(), OperationMode.fromValue(invoice.getOperationMode()), requestContext);
+    return cacheableExchangeRateService.getExchangeRate(invoice.getCurrency(), systemCurrency, invoice.getExchangeRate(),
+      Optional.ofNullable(invoice.getOperationMode()).map(OperationMode::fromValue).orElse(OperationMode.MULTIPLY), requestContext);
   }
 
   private Future<Map<Transaction, ExchangeRate>> getEncumbranceExchangeRates(List<Transaction> transactions,
