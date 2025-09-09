@@ -284,6 +284,10 @@ public class PurchaseOrderLineHelper {
     if (isReleaseEncumbrances(compOrderLine, poLineFromStorage)) {
       logger.info("updateEncumbranceStatus:: Encumbrances releasing for poLineId={} where paymentStatus={}", compOrderLine.getId(), compOrderLine.getPaymentStatus());
       return encumbranceService.getPoLineUnreleasedEncumbrances(compOrderLine, requestContext)
+        .compose(transactionList -> encumbranceService.releaseEncumbrances(transactionList, requestContext));
+    } else if (isUnreleasedEncumbrances(compOrderLine, poLineFromStorage)) {
+      logger.info("updateEncumbranceStatus:: Encumbrances unreleasing for poLineId={} where paymentStatus={}", compOrderLine.getId(), compOrderLine.getPaymentStatus());
+      return encumbranceService.getPoLineReleasedEncumbrances(compOrderLine, requestContext)
         .compose(transactionList -> {
           // only unrelease encumbrances with expended + credited + awaiting payment = 0
           List<Transaction> encToUnrelease = transactionList.stream()
@@ -291,12 +295,8 @@ public class PurchaseOrderLineHelper {
               && tr.getEncumbrance().getAmountCredited() == 0
               && tr.getEncumbrance().getAmountAwaitingPayment() == 0)
             .toList();
-          return encumbranceService.releaseEncumbrances(encToUnrelease, requestContext);
+          return encumbranceService.unreleaseEncumbrances(transactionList, requestContext);
         });
-    } else if (isUnreleasedEncumbrances(compOrderLine, poLineFromStorage)) {
-      logger.info("updateEncumbranceStatus:: Encumbrances unreleasing for poLineId={} where paymentStatus={}", compOrderLine.getId(), compOrderLine.getPaymentStatus());
-      return encumbranceService.getPoLineReleasedEncumbrances(compOrderLine, requestContext)
-        .compose(transactionList -> encumbranceService.unreleaseEncumbrances(transactionList, requestContext));
     }
     return Future.succeededFuture();
   }
