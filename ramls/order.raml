@@ -13,6 +13,7 @@ types:
   purchase-order-collection: !include acq-models/mod-orders-storage/schemas/purchase_order_collection.json
   purchase_order: !include acq-models/mod-orders-storage/schemas/purchase_order.json
   fiscal-year-collection: !include acq-models/mod-finance/schemas/fiscal_year_collection.json
+  fiscal-years-holder: !include schemas/fiscal_years_holder.json
   errors: !include raml-util/schemas/errors.schema
 
   UUID:
@@ -117,10 +118,7 @@ resourceTypes:
               description: "Fiscal years retrieved successfully"
               body:
                 application/json:
-                  type: fiscal-year-collection
-                  example:
-                    strict: false
-                    value: !include acq-models/mod-finance/examples/fiscal_year_collection.sample
+                  type: fiscal-years-holder
             400:
               description: "Bad request"
               body:
