@@ -28,12 +28,11 @@ public class JobProfileSnapshotCache {
   private static final Logger LOGGER = LogManager.getLogger();
   public static final String DATA_IMPORT_PROFILES_JOB_PROFILE_SNAPSHOTS = "/data-import-profiles/jobProfileSnapshots/";
 
-  @Value("${orders.cache.jobprofile.expiration.seconds:3600}")
-  private long cacheExpirationTime;
-  private AsyncCache<String, Optional<ProfileSnapshotWrapper>> cache;
+  private final AsyncCache<String, Optional<ProfileSnapshotWrapper>> cache;
 
   @Autowired
-  public JobProfileSnapshotCache(Vertx vertx) {
+  public JobProfileSnapshotCache(Vertx vertx,
+    @Value("${orders.cache.jobprofile.expiration.seconds:3600}") long cacheExpirationTime) {
     cache = buildAsyncCache(vertx, cacheExpirationTime);
   }
 

@@ -5,16 +5,19 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import lombok.extern.log4j.Log4j2;
+import one.util.streamex.IntStreamEx;
 import one.util.streamex.StreamEx;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.rest.acq.model.finance.ExchangeRate;
+import org.folio.rest.acq.model.finance.ExchangeRate.OperationMode;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.invoice.Invoice;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
@@ -112,38 +115,30 @@ public class CompositeOrderTotalFieldsPopulateService implements CompositeOrderD
         .collect(Collectors.toList())));
   }
 
-  private static class ExchangeRateMaps {
-    public Map<Invoice, ExchangeRate> invoiceRates;
-    public Map<Transaction, ExchangeRate> encumbranceRates;
-  }
-
   private Future<ExchangeRateMaps> getExchangeRates(List<Invoice> invoices, List<Transaction> transactions,
       RequestContext requestContext) {
     return commonSettingsCache.getSystemCurrency(requestContext)
       .compose(systemCurrency -> getInvoiceExchangeRates(invoices, systemCurrency, requestContext)
-        .compose(invoiceRates -> getEncumbranceExchangeRates(transactions, systemCurrency,
-            requestContext)
-          .map(encumbranceRates -> {
-            ExchangeRateMaps maps = new ExchangeRateMaps();
-            maps.invoiceRates = invoiceRates;
-            maps.encumbranceRates = encumbranceRates;
-            return maps;
-          })
+        .compose(invoiceRates -> getEncumbranceExchangeRates(transactions, systemCurrency, requestContext)
+          .map(encumbranceRates -> new ExchangeRateMaps(invoiceRates, encumbranceRates))
       ));
   }
 
-  private Future<Map<Invoice, ExchangeRate>> getInvoiceExchangeRates(List<Invoice> invoices, String systemCurrency,
-      RequestContext requestContext) {
+  private Future<Map<Invoice, ExchangeRate>> getInvoiceExchangeRates(List<Invoice> invoices, String systemCurrency, RequestContext requestContext) {
     if (invoices.isEmpty()) {
       return Future.succeededFuture(emptyMap());
     }
-    var exchangeRatesFutures = new ArrayList<Future<ExchangeRate>>();
-    invoices.forEach(invoice -> exchangeRatesFutures.add(cacheableExchangeRateService.getExchangeRate(
-      invoice.getCurrency(), systemCurrency, invoice.getExchangeRate(), requestContext)));
+    List<Future<ExchangeRate>> exchangeRatesFutures = invoices.stream()
+      .map(invoice -> getInvoiceExchangeRate(invoice, systemCurrency, requestContext))
+      .toList();
     return collectResultsOnSuccess(exchangeRatesFutures)
-      .map(exchangeRates -> IntStream.range(0, invoices.size())
-        .boxed()
-        .collect(toMap(invoices::get, exchangeRates::get)));
+      .map(exchangeRates -> IntStreamEx.range(0, invoices.size())
+        .boxed().toMap(invoices::get, exchangeRates::get));
+  }
+
+  private Future<ExchangeRate> getInvoiceExchangeRate(Invoice invoice, String systemCurrency, RequestContext requestContext) {
+    return cacheableExchangeRateService.getExchangeRate(invoice.getCurrency(), systemCurrency, invoice.getExchangeRate(),
+      Optional.ofNullable(invoice.getOperationMode()).map(OperationMode::fromValue).orElse(OperationMode.MULTIPLY), requestContext);
   }
 
   private Future<Map<Transaction, ExchangeRate>> getEncumbranceExchangeRates(List<Transaction> transactions,
@@ -164,15 +159,11 @@ public class CompositeOrderTotalFieldsPopulateService implements CompositeOrderD
         .collect(toMap(transactions::get, i -> exchangeRates.get(currencies.indexOf(transactions.get(i).getCurrency())))));
   }
 
-  private CompositeOrderRetrieveHolder populateTotalFields(CompositeOrderRetrieveHolder holder,
-      Map<Invoice, List<InvoiceLine>> invoiceToInvoiceLinesMap, List<Transaction> transactions,
-      ExchangeRateMaps exchangeRateMaps) {
-    return holder
-      .withTotalEncumbered(getTotalAmountSum(transactions, exchangeRateMaps.encumbranceRates))
-      .withTotalExpended(getTotalAmountSum(invoiceToInvoiceLinesMap, total -> Double.max(total, 0),
-        exchangeRateMaps.invoiceRates))
-      .withTotalCredited(getTotalAmountSum(invoiceToInvoiceLinesMap, total -> Double.min(total, 0),
-        exchangeRateMaps.invoiceRates));
+  private CompositeOrderRetrieveHolder populateTotalFields(CompositeOrderRetrieveHolder holder, Map<Invoice, List<InvoiceLine>> invoiceToInvoiceLinesMap,
+                                                           List<Transaction> transactions, ExchangeRateMaps exchangeRateMaps) {
+    return holder.withTotalEncumbered(getTotalAmountSum(transactions, exchangeRateMaps.encumbranceRates))
+      .withTotalExpended(getTotalAmountSum(invoiceToInvoiceLinesMap, total -> Double.max(total, 0), exchangeRateMaps.invoiceRates))
+      .withTotalCredited(getTotalAmountSum(invoiceToInvoiceLinesMap, total -> Double.min(total, 0), exchangeRateMaps.invoiceRates));
   }
 
   private double getTotalAmountSum(List<Transaction> transactions, Map<Transaction, ExchangeRate> encumbranceRates) {
@@ -209,5 +200,8 @@ public class CompositeOrderTotalFieldsPopulateService implements CompositeOrderD
       .map(amount -> amount.with(MonetaryOperators.rounding()).getNumber().doubleValue())
       .orElse(0d);
   }
+
+  private record ExchangeRateMaps (Map<Invoice, ExchangeRate> invoiceRates,
+                                   Map<Transaction, ExchangeRate> encumbranceRates) {}
 
 }
