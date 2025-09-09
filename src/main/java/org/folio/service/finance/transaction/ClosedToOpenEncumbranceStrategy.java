@@ -16,6 +16,7 @@ import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.service.FundsDistributionService;
+import org.folio.service.finance.EncumbranceUtils;
 import org.folio.service.finance.budget.BudgetRestrictionService;
 import org.folio.service.orders.OrderWorkflowType;
 
@@ -82,11 +83,7 @@ public class ClosedToOpenEncumbranceStrategy implements EncumbranceWorkflowStrat
                 .collect(toList());
               holder.withEncumbrancesForCreate(toBeCreatedHolders);
               // only unrelease encumbrances with expended + credited + awaiting payment = 0
-              List<Transaction> encToUnrelease = transactions.stream()
-                .filter(tr -> tr.getEncumbrance().getAmountExpended() == 0
-                  && tr.getEncumbrance().getAmountCredited() == 0
-                  && tr.getEncumbrance().getAmountAwaitingPayment() == 0)
-                .toList();
+              List<Transaction> encToUnrelease = EncumbranceUtils.collectAllowedTransactionsForUnrelease(transactions);
               holder.withEncumbrancesForUnrelease(encToUnrelease);
               return encumbranceService.createOrUpdateEncumbrances(holder, requestContext);
             });

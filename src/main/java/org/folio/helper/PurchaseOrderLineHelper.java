@@ -69,6 +69,7 @@ import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.service.ProtectionService;
+import org.folio.service.finance.EncumbranceUtils;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
@@ -290,12 +291,8 @@ public class PurchaseOrderLineHelper {
       return encumbranceService.getPoLineReleasedEncumbrances(compOrderLine, requestContext)
         .compose(transactionList -> {
           // only unrelease encumbrances with expended + credited + awaiting payment = 0
-          List<Transaction> encToUnrelease = transactionList.stream()
-            .filter(tr -> tr.getEncumbrance().getAmountExpended() == 0
-              && tr.getEncumbrance().getAmountCredited() == 0
-              && tr.getEncumbrance().getAmountAwaitingPayment() == 0)
-            .toList();
-          return encumbranceService.unreleaseEncumbrances(transactionList, requestContext);
+          List<Transaction> encToUnrelease = EncumbranceUtils.collectAllowedTransactionsForUnrelease(transactionList);
+          return encumbranceService.unreleaseEncumbrances(encToUnrelease, requestContext);
         });
     }
     return Future.succeededFuture();
