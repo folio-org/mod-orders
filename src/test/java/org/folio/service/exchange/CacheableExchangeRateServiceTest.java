@@ -12,6 +12,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -63,13 +65,14 @@ public class CacheableExchangeRateServiceTest {
       }));
   }
 
-  @Test
-  void testCustomExchangeRateReturnsProvidedRate(VertxTestContext testContext) {
+  @ParameterizedTest
+  @EnumSource(ExchangeRate.OperationMode.class)
+  void testCustomExchangeRateReturnsProvidedRate(ExchangeRate.OperationMode operationMode, VertxTestContext testContext) {
     var from = "USD";
     var to = "EUR";
     var customExchangeRate = 2d;
 
-    service.getExchangeRate(from, to, customExchangeRate, requestContext)
+    service.getExchangeRate(from, to, customExchangeRate, operationMode, requestContext)
       .onComplete(ar -> testContext.verify(() -> {
         var rate = ar.result();
         assertEquals(from, rate.getFrom());
