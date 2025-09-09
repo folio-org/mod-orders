@@ -101,6 +101,10 @@ public abstract class DiAbstractRestTest {
 
   @BeforeClass
   public static void setUpClass(final TestContext context) {
+    // set the MappingParametersCache expiration time to 0 seconds to achieve quick data eviction
+    // and ensure the cache loads data every time it is called.
+    // This allows the data added to the mock server in specific tests to be loaded by the cache.
+    System.setProperty("orders.cache.mapping.parameters.expiration.seconds", "0");
     vertx = Vertx.vertx();
     kafkaContainer.start();
     System.setProperty(KAFKA_HOST, kafkaContainer.getHost());

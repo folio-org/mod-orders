@@ -22,21 +22,24 @@ public class CurrencyConversionMockHelper {
   }
 
   public void mockExchangeRateProviderResolver(String fromCurrency, String toCurrency, Double exchangeRateAmount) {
-    when(cacheableExchangeRateService.getExchangeRate(eq(fromCurrency), eq(toCurrency), any(), any()))
-      .thenReturn(succeededFuture(new ExchangeRate()
-        .withFrom(fromCurrency)
-        .withTo(toCurrency)
-        .withExchangeRate(exchangeRateAmount)));
+    var result = succeededFuture(new ExchangeRate()
+      .withFrom(fromCurrency)
+      .withTo(toCurrency)
+      .withExchangeRate(exchangeRateAmount));
+    when(cacheableExchangeRateService.getExchangeRate(eq(fromCurrency), eq(toCurrency), any(), any())).thenReturn(result);
+    when(cacheableExchangeRateService.getExchangeRate(eq(fromCurrency), eq(toCurrency), any(), any(), any())).thenReturn(result);
   }
 
   public void mockCustomExchangeRate(String fromCurrency, String toCurrency) {
-    when(cacheableExchangeRateService.getExchangeRate(eq(fromCurrency), eq(toCurrency), any(Double.class), any()))
+    when(cacheableExchangeRateService.getExchangeRate(eq(fromCurrency), eq(toCurrency), any(Double.class), any(), any()))
       .thenAnswer(invocation -> {
         Double rate = invocation.getArgument(2);
+        ExchangeRate.OperationMode operationMode = invocation.getArgument(3);
         return succeededFuture(new ExchangeRate()
           .withFrom(fromCurrency)
           .withTo(toCurrency)
-          .withExchangeRate(rate));
+          .withExchangeRate(rate)
+          .withOperationMode(operationMode));
       });
   }
 }
