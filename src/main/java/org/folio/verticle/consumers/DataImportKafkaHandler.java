@@ -19,6 +19,7 @@ import org.folio.processing.mapping.mapper.reader.record.marc.MarcBibReaderFacto
 import org.folio.rest.RestVerticle;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.util.OkapiConnectionParams;
+import org.folio.service.caches.CancelledJobsIdsCache;
 import org.folio.service.caches.JobProfileSnapshotCache;
 import org.folio.service.dataimport.OrderWriterFactory;
 import org.folio.service.dataimport.handlers.CreateOrderEventHandler;
@@ -29,6 +30,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static java.lang.String.format;
 import static org.folio.DataImportEventTypes.DI_ERROR;
@@ -46,12 +48,15 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
 
   private final Vertx vertx;
   private final JobProfileSnapshotCache profileSnapshotCache;
+  private final CancelledJobsIdsCache cancelledJobsIdsCache;
 
   @Autowired
   public DataImportKafkaHandler(Vertx vertx, JobProfileSnapshotCache profileSnapshotCache,
+                                CancelledJobsIdsCache cancelledJobsIdsCache,
                                 List<EventHandler> eventHandlers) {
     this.vertx = vertx;
     this.profileSnapshotCache = profileSnapshotCache;
+    this.cancelledJobsIdsCache = cancelledJobsIdsCache;
     MappingManager.registerReaderFactory(new MarcBibReaderFactory());
     MappingManager.registerWriterFactory(new OrderWriterFactory());
     eventHandlers.forEach(EventManager::registerEventHandler);
@@ -69,6 +74,12 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
       String jobExecutionId = eventPayload.getJobExecutionId();
       LOGGER.debug("handle:: Data import event payload has been received with event type: {}, jobExecutionId: {}, recordId: {}, chunkId: {}",
         eventPayload.getEventType(), jobExecutionId, recordId, chunkId);
+
+      if (cancelledJobsIdsCache.contains(UUID.fromString(eventPayload.getJobExecutionId()))) {
+        LOGGER.info("Skipping processing of event, topic: '{}', tenantId: '{}', jobExecutionId: '{}' because the job has been cancelled",
+          kafkaRecord.topic(), eventPayload.getTenant(), eventPayload.getJobExecutionId());
+        return Future.succeededFuture(kafkaRecord.key());
+      }
 
       OkapiConnectionParams okapiParams = new OkapiConnectionParams(headersMap, vertx);
       eventPayload.getContext().put(RECORD_ID_HEADER, recordId);
