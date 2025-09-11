@@ -88,7 +88,7 @@ public class OrderFiscalYearService {
 
   private Set<String> getCurrentFiscalYearIds(Set<String> orderFundIds, List<Transaction> allTransactions) {
     List<Transaction> currentTransactions = allTransactions.stream()
-      .filter(transaction -> orderFundIds.contains(transaction.getToFundId()))
+      .filter(transaction -> orderFundIds.contains(transaction.getFromFundId()))
       .toList();
 
     return currentTransactions.stream()

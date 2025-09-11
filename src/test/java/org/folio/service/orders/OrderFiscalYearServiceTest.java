@@ -75,9 +75,9 @@ public class OrderFiscalYearServiceTest {
     // Given - Order has fund distributions, transactions match some funds
     CompositePurchaseOrder order = createOrderWithFunds(List.of(FUND_ID_1, FUND_ID_2));
 
-    Transaction transaction1 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withToFundId(FUND_ID_1);
-    Transaction transaction2 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_2).withToFundId(FUND_ID_2);
-    Transaction transaction3 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_3).withToFundId("other-fund");
+    Transaction transaction1 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withFromFundId(FUND_ID_1);
+    Transaction transaction2 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_2).withFromFundId(FUND_ID_2);
+    Transaction transaction3 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_3).withFromFundId("other-fund");
     List<Transaction> transactions = List.of(transaction1, transaction2, transaction3);
 
     FiscalYear fy1 = new FiscalYear().withId(FISCAL_YEAR_ID_1).withName("FY2024");
@@ -110,8 +110,8 @@ public class OrderFiscalYearServiceTest {
     // Given - Order has funds but no transactions match them, so use current FY fallback
     CompositePurchaseOrder order = createOrderWithFunds(List.of(FUND_ID_1));
 
-    Transaction transaction1 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withToFundId("other-fund");
-    Transaction transaction2 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_2).withToFundId("other-fund-2");
+    Transaction transaction1 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withFromFundId("other-fund");
+    Transaction transaction2 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_2).withFromFundId("other-fund-2");
     List<Transaction> transactions = List.of(transaction1, transaction2);
 
     FiscalYear fy1 = new FiscalYear().withId(FISCAL_YEAR_ID_1).withName("FY2023");
@@ -144,7 +144,7 @@ public class OrderFiscalYearServiceTest {
     // Given - Order has no fund distributions
     CompositePurchaseOrder order = createEmptyOrder();
 
-    Transaction transaction1 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withToFundId("some-fund");
+    Transaction transaction1 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withFromFundId("some-fund");
     List<Transaction> transactions = List.of(transaction1);
 
     FiscalYear fy1 = new FiscalYear().withId(FISCAL_YEAR_ID_1).withName("FY2023");
@@ -192,8 +192,8 @@ public class OrderFiscalYearServiceTest {
     // Given - No fund matches, but current FY exists in transactions
     CompositePurchaseOrder order = createOrderWithFunds(List.of(FUND_ID_1));
 
-    Transaction transaction1 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withToFundId("other-fund");
-    Transaction transaction2 = new Transaction().withFiscalYearId(CURRENT_FISCAL_YEAR_ID).withToFundId("another-fund");
+    Transaction transaction1 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withFromFundId("other-fund");
+    Transaction transaction2 = new Transaction().withFiscalYearId(CURRENT_FISCAL_YEAR_ID).withFromFundId("another-fund");
     List<Transaction> transactions = List.of(transaction1, transaction2);
 
     FiscalYear fy1 = new FiscalYear().withId(FISCAL_YEAR_ID_1).withName("FY2022");
@@ -224,10 +224,10 @@ public class OrderFiscalYearServiceTest {
     // Given - Multiple fiscal years to test sorting
     CompositePurchaseOrder order = createOrderWithFunds(List.of(FUND_ID_1));
 
-    Transaction t1 = new Transaction().withFiscalYearId("fy-2021").withToFundId(FUND_ID_1);
-    Transaction t2 = new Transaction().withFiscalYearId("fy-2023").withToFundId(FUND_ID_1);
-    Transaction t3 = new Transaction().withFiscalYearId("fy-2022").withToFundId("other-fund");
-    Transaction t4 = new Transaction().withFiscalYearId("fy-2024").withToFundId("other-fund");
+    Transaction t1 = new Transaction().withFiscalYearId("fy-2021").withFromFundId(FUND_ID_1);
+    Transaction t2 = new Transaction().withFiscalYearId("fy-2023").withFromFundId(FUND_ID_1);
+    Transaction t3 = new Transaction().withFiscalYearId("fy-2022").withFromFundId("other-fund");
+    Transaction t4 = new Transaction().withFiscalYearId("fy-2024").withFromFundId("other-fund");
     List<Transaction> transactions = List.of(t1, t2, t3, t4);
 
     FiscalYear fy2021 = new FiscalYear().withId("fy-2021").withName("FY2021");
