@@ -5,9 +5,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
-import com.google.common.collect.Sets;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.models.RequestContext;
@@ -16,6 +16,8 @@ import org.folio.service.finance.FiscalYearService;
 import org.folio.service.finance.transaction.TransactionService;
 
 import io.vertx.core.Future;
+
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 
 public class OrderFiscalYearService {
 
@@ -32,36 +34,56 @@ public class OrderFiscalYearService {
 
   public Future<FiscalYearsHolder> getAvailableFiscalYears(String orderId, RequestContext requestContext) {
     return purchaseOrderStorageService.getCompositeOrderById(orderId, requestContext)
-      .compose(order -> getFiscalYearsFromTransactions(orderId, requestContext))
-      .compose(fiscalYearIds -> processFiscalYears(fiscalYearIds, requestContext));
+      .compose(order -> getTransactionsAndProcessFiscalYears(orderId, requestContext));
   }
 
-  private Future<List<String>> getFiscalYearsFromTransactions(String orderId, RequestContext requestContext) {
+  private Future<FiscalYearsHolder> getTransactionsAndProcessFiscalYears(String orderId, RequestContext requestContext) {
     String query = "transactionType==Encumbrance AND encumbrance.sourcePurchaseOrderId==%s".formatted(orderId);
     return transactionService.getTransactions(query, requestContext)
-      .map(transactions -> {
-        return transactions.stream()
+      .compose(transactions -> {
+        List<String> fiscalYearIds = transactions.stream()
           .map(Transaction::getFiscalYearId)
           .filter(Objects::nonNull)
           .distinct()
           .toList();
+
+        if (fiscalYearIds.isEmpty()) {
+          return Future.succeededFuture(new FiscalYearsHolder());
+        }
+
+        return fiscalYearService.getAllFiscalYears(fiscalYearIds, requestContext)
+          .compose(fiscalYears -> getCurrentFiscalYearsFromFunds(transactions, fiscalYears, requestContext));
       });
   }
 
-  private Future<FiscalYearsHolder> processFiscalYears(List<String> fiscalYearIds, RequestContext requestContext) {
-    if (fiscalYearIds.isEmpty()) {
-      return Future.succeededFuture(new FiscalYearsHolder());
+  private Future<FiscalYearsHolder> getCurrentFiscalYearsFromFunds(List<Transaction> transactions, List<FiscalYear> allFiscalYears, RequestContext requestContext) {
+    Set<String> distinctFundIds = transactions.stream()
+      .map(Transaction::getFromFundId)
+      .filter(Objects::nonNull)
+      .collect(Collectors.toSet());
+
+    if (distinctFundIds.isEmpty()) {
+      return Future.succeededFuture(buildResultHolder(allFiscalYears, Set.of()));
     }
 
-    return fiscalYearService.getAllFiscalYears(fiscalYearIds, requestContext)
-      .compose(fiscalYears -> {
-        String currentFiscalYearId = fiscalYearService.extractCurrentFiscalYearId(fiscalYears);
+    List<Future<FiscalYear>> currentFiscalYearFutures = distinctFundIds.stream()
+      .map(fundId -> fiscalYearService.getCurrentFiscalYearByFundId(fundId, requestContext)
+        .recover(throwable -> Future.succeededFuture(null)))
+      .toList();
 
-        if (StringUtils.isNotBlank(currentFiscalYearId)) {
-          return Future.succeededFuture(buildResultHolder(fiscalYears, Sets.newHashSet(currentFiscalYearId)));
+    return collectResultsOnSuccess(currentFiscalYearFutures)
+      .compose(currentFiscalYears -> {
+        Set<String> currentFiscalYearIds = currentFiscalYears.stream()
+          .filter(Objects::nonNull)
+          .map(FiscalYear::getId)
+          .collect(Collectors.toSet());
+
+        // If no current fiscal years found from funds, try to add current fiscal year from series
+        if (currentFiscalYearIds.isEmpty() && CollectionUtils.isNotEmpty(allFiscalYears)) {
+          return addCurrentFiscalYearIfMissing(allFiscalYears.getFirst().getId(), allFiscalYears, requestContext);
         }
 
-        return addCurrentFiscalYearIfMissing(fiscalYearIds.getFirst(), fiscalYears, requestContext);
+        return Future.succeededFuture(buildResultHolder(allFiscalYears, currentFiscalYearIds));
       });
   }
 

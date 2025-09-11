@@ -149,7 +149,9 @@
             "finance.transactions.collection.get",
             "finance.fiscal-years.collection.get",
             "finance.fiscal-years.item.get",
-            "mod-settings.global.read.stripes-core.prefs.manage"
+            "mod-settings.global.read.stripes-core.prefs.manage",
+            "finance.funds.item.get",
+            "finance.ledgers.current-fiscal-year.item.get"
           ]
         }
       ]
