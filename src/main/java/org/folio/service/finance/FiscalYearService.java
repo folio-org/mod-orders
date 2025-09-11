@@ -151,7 +151,7 @@ public class FiscalYearService {
         .toCompletionStage().toCompletableFuture()));
   }
 
-  private String extractCurrentFiscalYearId(List<FiscalYear> fiscalYears) {
+  public String extractCurrentFiscalYearId(List<FiscalYear> fiscalYears) {
     if (fiscalYears.isEmpty()) {
       return null;
     }
