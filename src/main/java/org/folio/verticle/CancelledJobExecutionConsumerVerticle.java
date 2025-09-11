@@ -54,7 +54,7 @@ public class CancelledJobExecutionConsumerVerticle extends AbstractVerticle {
 
   @Override
   public void start(Promise<Void> startPromise) {
-    LOGGER.debug("CancelledJobExecutionConsumerVerticle:: start");
+    LOGGER.debug("start:: Starting the verticle");
     String moduleName = getModuleName();
     String groupName = KafkaTopicNameHelper.formatGroupName(DI_JOB_CANCELLED.value(), moduleName);
 

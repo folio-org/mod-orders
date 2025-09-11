@@ -9,6 +9,7 @@ import org.folio.service.dataimport.OrderIdStorageServiceImplTest;
 import org.folio.service.dataimport.handlers.CreateOrderEventHandlerTest;
 import org.folio.service.dataimport.handlers.OrderPostProcessingEventHandlerTest;
 import org.folio.verticle.CancelledJobExecutionConsumerVerticleTest;
+import org.folio.verticle.consumers.DataImportKafkaHandlerTest;
 import org.junit.platform.suite.api.SelectClasses;
 import org.junit.platform.suite.api.Suite;
 
@@ -22,7 +23,8 @@ import org.junit.platform.suite.api.Suite;
   CreateOrderEventHandlerTest.class,
   OrderPostProcessingEventHandlerTest.class,
   VertxFutureRepeaterTest.class,
-  CancelledJobExecutionConsumerVerticleTest.class
+  CancelledJobExecutionConsumerVerticleTest.class,
+  DataImportKafkaHandlerTest.class,
 })
 public class DataImportTestSuite {
 }

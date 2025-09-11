@@ -76,8 +76,8 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
         eventPayload.getEventType(), jobExecutionId, recordId, chunkId);
 
       if (cancelledJobsIdsCache.contains(UUID.fromString(eventPayload.getJobExecutionId()))) {
-        LOGGER.info("Skipping processing of event, topic: '{}', tenantId: '{}', jobExecutionId: '{}' because the job has been cancelled",
-          kafkaRecord.topic(), eventPayload.getTenant(), eventPayload.getJobExecutionId());
+        LOGGER.info("handle:: Skipping processing of event, topic: '{}', jobExecutionId: '{}' because the job has been cancelled",
+          kafkaRecord.topic(), eventPayload.getJobExecutionId()); //NOSONAR
         return Future.succeededFuture(kafkaRecord.key());
       }
 
