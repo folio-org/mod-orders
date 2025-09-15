@@ -190,7 +190,7 @@ public class TitlesService {
     }
     var requestEntry = new RequestEntry(SEQUENCE_NUMBERS_ENDPOINT).withId(title.getId())
       .withQueryParameter(SEQUENCE_NUMBER_PARAM, String.valueOf(pieces.size()));
-    return restClient.get(requestEntry, SequenceNumbers.class, requestContext)
+    return restClient.post(requestEntry, null, SequenceNumbers.class, requestContext)
       .compose(titleSequenceNumbers -> {
         Set<Integer> assignedNumbers = StreamEx.of(pieces)
           .map(Piece::getSequenceNumber)
