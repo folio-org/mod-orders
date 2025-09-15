@@ -8,7 +8,6 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.folio.AcquisitionsUnit;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.DataImportEventTypes;

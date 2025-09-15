@@ -63,6 +63,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
   }
 
   @Override
+  @SuppressWarnings("squid:S2629")
   public Future<String> handle(KafkaConsumerRecord<String, String> kafkaRecord) {
     try {
       Promise<String> promise = Promise.promise();
@@ -77,7 +78,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
 
       if (cancelledJobsIdsCache.contains(UUID.fromString(eventPayload.getJobExecutionId()))) {
         LOGGER.info("handle:: Skipping processing of event, topic: '{}', jobExecutionId: '{}' because the job has been cancelled",
-          kafkaRecord.topic(), eventPayload.getJobExecutionId()); //NOSONAR
+          kafkaRecord.topic(), eventPayload.getJobExecutionId());
         return Future.succeededFuture(kafkaRecord.key());
       }
 
