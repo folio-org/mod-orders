@@ -880,7 +880,8 @@ public class ApplicationConfig {
   }
 
   @Bean
-  OrderFiscalYearService orderFiscalYearService(TransactionService transactionService, FiscalYearService fiscalYearService) {
-    return new OrderFiscalYearService(transactionService, fiscalYearService);
+  OrderFiscalYearService orderFiscalYearService(TransactionService transactionService, FiscalYearService fiscalYearService,
+    FundService fundService, PurchaseOrderStorageService purchaseOrderStorageService) {
+    return new OrderFiscalYearService(transactionService, fiscalYearService, fundService, purchaseOrderStorageService);
   }
 }

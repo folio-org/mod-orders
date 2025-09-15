@@ -4,6 +4,7 @@ import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestConstants.ID_DOES_NOT_EXIST;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -250,5 +251,62 @@ public class FiscalYearServiceTest {
     List<FiscalYear> fiscalYears = result.result();
 
     assertEquals(2, fiscalYears.size());
+  }
+
+  @Test
+  void testShouldReturnPlannedFiscalYearForLedger() {
+    // Test successful retrieval of planned fiscal year
+    String ledgerId = UUID.randomUUID().toString();
+    FiscalYear plannedFiscalYear = new FiscalYear()
+      .withId(UUID.randomUUID().toString())
+      .withName("FY2025")
+      .withSeries("FY");
+
+    doReturn(succeededFuture(plannedFiscalYear))
+      .when(restClientMock)
+      .get(any(RequestEntry.class), eq(FiscalYear.class), any(RequestContext.class));
+
+    Future<FiscalYear> result = fiscalYearService.getPlannedFiscalYear(ledgerId, requestContextMock);
+
+    assertTrue(result.succeeded());
+    FiscalYear fy = result.result();
+    assertNotNull(fy);
+    assertEquals("FY2025", fy.getName());
+    assertEquals("FY", fy.getSeries());
+  }
+
+  @Test
+  void testShouldReturnNullWhenPlannedFiscalYearNotFound() {
+    // Test that method returns null instead of throwing exception when planned fiscal year is not found
+    String ledgerId = UUID.randomUUID().toString();
+
+    doReturn(failedFuture(new HttpException(404, "Planned fiscal year not found")))
+      .when(restClientMock)
+      .get(any(RequestEntry.class), eq(FiscalYear.class), any(RequestContext.class));
+
+    Future<FiscalYear> result = fiscalYearService.getPlannedFiscalYear(ledgerId, requestContextMock);
+
+    assertTrue(result.succeeded());
+    assertNull(result.result());
+  }
+
+  @Test
+  void testShouldHandleGenericExceptionForPlannedFiscalYear(VertxTestContext vertxTestContext) {
+    // Test that generic exceptions are wrapped and propagated
+    String ledgerId = UUID.randomUUID().toString();
+    RuntimeException genericException = new RuntimeException("Network error");
+
+    doReturn(failedFuture(genericException))
+      .when(restClientMock)
+      .get(any(RequestEntry.class), eq(FiscalYear.class), any(RequestContext.class));
+
+    Future<FiscalYear> result = fiscalYearService.getPlannedFiscalYear(ledgerId, requestContextMock);
+
+    vertxTestContext.assertFailure(result)
+      .onComplete(expectedException -> {
+        assertInstanceOf(RuntimeException.class, expectedException.cause());
+        assertTrue(expectedException.cause().getMessage().contains("Network error"));
+        vertxTestContext.completeNow();
+      });
   }
 }

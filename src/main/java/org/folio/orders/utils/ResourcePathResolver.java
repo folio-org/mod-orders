@@ -51,6 +51,7 @@ public class ResourcePathResolver {
   public static final String LEDGER_FY_ROLLOVERS = "finance.ledger-rollovers";
   public static final String LEDGER_FY_ROLLOVER_ERRORS = "finance.ledger-rollovers-errors";
   public static final String LEDGER_CURRENT_FISCAL_YEAR = "finance.ledger.current-fiscal-year";
+  public static final String LEDGER_PLANNED_FISCAL_YEAR = "finance.ledger.planned-fiscal-year";
   public static final String FISCAL_YEARS = "finance.fiscal-years";
   public static final String ORDER_INVOICE_RELATIONSHIP = "order-invoice-relationship";
   public static final String EXPORT_HISTORY = "export-history";
@@ -105,6 +106,7 @@ public class ResourcePathResolver {
     apis.put(LEDGER_FY_ROLLOVERS, "/finance/ledger-rollovers");
     apis.put(LEDGER_FY_ROLLOVER_ERRORS, "/finance/ledger-rollovers-errors");
     apis.put(LEDGER_CURRENT_FISCAL_YEAR, "/finance/ledgers/{id}/current-fiscal-year");
+    apis.put(LEDGER_PLANNED_FISCAL_YEAR, "/finance/ledgers/{id}/planned-fiscal-year");
     apis.put(FISCAL_YEARS, "/finance/fiscal-years");
     apis.put(ORDER_INVOICE_RELATIONSHIP, "/orders-storage/order-invoice-relns");
     apis.put(EXPORT_HISTORY, "/orders-storage/export-history");
