@@ -6,6 +6,7 @@ import static org.folio.orders.utils.HelperUtils.chainCall;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
 import static org.folio.service.pieces.PieceUtil.updatePieceStatus;
+import static org.folio.service.pieces.flows.DefaultPieceFlowsValidator.validatePieceSequenceNumber;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -95,23 +96,22 @@ public class OpenCompositeOrderPieceService {
     piecesToCreate.addAll(holder.getPiecesWithHoldingToProcess());
     piecesToCreate.addAll(holder.getPiecesWithoutLocationId());
 
-    List<Piece> preparedPieces = piecesToCreate.stream()
-      .map(piece -> piece.withTitleId(holder.getTitleId()))
-      .toList();
+    piecesToCreate.stream()
+      .peek(piece -> piece.withTitleId(holder.getTitle().getId()))
+      .forEach(piece -> validatePieceSequenceNumber(piece, holder.getTitle(), piecesToCreate.size()));
 
     // Collect pieces after validation
     List<Future<Piece>> piecesFutures = new ArrayList<>();
 
     // Use chainCallCollect to sequentially process each piece with openOrderUpdateInventory.
-    return chainCall(preparedPieces, piece ->
-      openOrderUpdateInventory(piece, order, isInstanceMatchingDisabled, requestContext)
-        .map(validatedPiece -> piecesFutures.add(Future.succeededFuture(validatedPiece)))
-      )
+    return chainCall(piecesToCreate, piece -> openOrderUpdateInventory(piece, holder.getTitle(), order, isInstanceMatchingDisabled, requestContext)
+      .map(validatedPiece -> piecesFutures.add(Future.succeededFuture(validatedPiece))))
       .compose(ignored -> collectResultsOnSuccess(piecesFutures))
       .compose(validatedPieces -> {
         logger.info("createPieces:: Passed acq unit validation and open order '{}' inventory update", order.getId());
         // Once all pieces have been updated, insert them in batch.
-        return pieceStorageService.insertPiecesBatch(validatedPieces, requestContext)
+        return titlesService.generateNextSequenceNumbers(validatedPieces, holder.getTitle(), requestContext)
+          .compose(updatedPieces -> pieceStorageService.insertPiecesBatch(updatedPieces, requestContext))
           .map(PieceCollection::getPieces);
       })
       .recover(th -> {
