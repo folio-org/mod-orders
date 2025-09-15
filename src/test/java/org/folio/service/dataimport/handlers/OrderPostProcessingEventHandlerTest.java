@@ -151,7 +151,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldOpenOrderAndUseExistingInstanceHoldingsItemWhenAllPoLinesProcessed(TestContext context) throws InterruptedException {
+  public void shouldOpenOrderAndUseExistingInstanceHoldingsItemWhenAllPoLinesProcessed(TestContext context) {
     // given
     JsonObject itemJson = new JsonObject()
       .put(ID, ITEM_ID)
@@ -171,7 +171,8 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     createPieceAndTitle(mockPoLine);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0).getChildSnapshotWrappers().get(0))
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst().getChildSnapshotWrappers().getFirst())
       .withEventType(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -197,12 +198,12 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
-    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().getLast());
     verifyPoLine(eventPayload);
 
     // verifies that request was performed to update po line with instance id
     List<JsonObject> updatedPoLines = MockServer.getRqRsEntries(HttpMethod.PUT, PO_LINES_STORAGE);
-    PoLine updatedPoLine = updatedPoLines.get(0).mapTo(PoLine.class);
+    PoLine updatedPoLine = updatedPoLines.getFirst().mapTo(PoLine.class);
     assertEquals(instanceJson.getString(ID_FIELD), updatedPoLine.getInstanceId());
 
     assertNull(getCreatedInstances());
@@ -211,13 +212,13 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
 
     List<JsonObject> createdPieces = getCreatedPiecesBatch();
     assertEquals(1, createdPieces.size());
-    Piece piece = createdPieces.get(0).mapTo(PieceCollection.class).getPieces().get(0);
+    Piece piece = createdPieces.getFirst().mapTo(PieceCollection.class).getPieces().getFirst();
     assertEquals(poLine.getId(), piece.getPoLineId());
     assertEquals(itemJson.getString(ID), piece.getItemId());
 
     List<JsonObject> ordersResp = getPurchaseOrderUpdates();
     assertFalse(ordersResp.isEmpty());
-    CompositePurchaseOrder openedOrder = ordersResp.get(0).mapTo(CompositePurchaseOrder.class);
+    CompositePurchaseOrder openedOrder = ordersResp.getFirst().mapTo(CompositePurchaseOrder.class);
     assertEquals(order.getId(), openedOrder.getId());
     assertEquals(WorkflowStatus.OPEN, openedOrder.getWorkflowStatus());
 
@@ -225,7 +226,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldNotUpdateOrderStatusToOpenWhenNotAllPoLinesProcessed(TestContext context) throws InterruptedException {
+  public void shouldNotUpdateOrderStatusToOpenWhenNotAllPoLinesProcessed(TestContext context) {
     // given
     JsonObject instanceJson = new JsonObject().put(ID_FIELD, INSTANCE_ID);
 
@@ -233,7 +234,8 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0).getChildSnapshotWrappers().get(0))
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst().getChildSnapshotWrappers().getFirst())
       .withEventType(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -258,13 +260,13 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
-    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().getLast());
     verifyPoLine(eventPayload);
     assertNull(getPurchaseOrderUpdates());
   }
 
   @Test
-  public void shouldOpenOrderWhenAllPoLinesProcessedAndInventoryCreationIsNotRequired(TestContext context) throws InterruptedException {
+  public void shouldOpenOrderWhenAllPoLinesProcessedAndInventoryCreationIsNotRequired(TestContext context) {
     // given
     poLine.setInstanceId(null);
     poLine.getEresource().setCreateInventory(Eresource.CreateInventory.NONE);
@@ -277,7 +279,8 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     createPieceAndTitle(poLine);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0).getChildSnapshotWrappers().get(0))
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst().getChildSnapshotWrappers().getFirst())
       .withEventType(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -302,11 +305,11 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
-    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().getLast());
     verifyPoLine(eventPayload);
 
     List<JsonObject> updatedPoLines = MockServer.getRqRsEntries(HttpMethod.PUT, PO_LINES_STORAGE);
-    PoLine updatedPoLine = updatedPoLines.get(0).mapTo(PoLine.class);
+    PoLine updatedPoLine = updatedPoLines.getFirst().mapTo(PoLine.class);
     assertNull(updatedPoLine.getInstanceId());
 
     assertNull(getCreatedInstances());
@@ -315,7 +318,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
 
     List<JsonObject> ordersResp = getPurchaseOrderUpdates();
     assertFalse(ordersResp.isEmpty());
-    CompositePurchaseOrder openedOrder = ordersResp.get(0).mapTo(CompositePurchaseOrder.class);
+    CompositePurchaseOrder openedOrder = ordersResp.getFirst().mapTo(CompositePurchaseOrder.class);
     assertEquals(order.getId(), openedOrder.getId());
     assertEquals(WorkflowStatus.OPEN, openedOrder.getWorkflowStatus());
 
@@ -337,7 +340,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     createPieceAndTitle(mockPoLine);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0).getChildSnapshotWrappers().get(0))
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst().getChildSnapshotWrappers().getFirst())
       .withEventType(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -353,7 +356,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
 
     // when
     Future<CompositeFuture> future = polProgressService.savePoLinesAmountPerOrder(order.getId(), 2, TENANT_ID)
-      .compose(v -> CompositeFuture.join(
+      .compose(v -> Future.join(
         Future.fromCompletionStage(orderPostProcessingHandler.handle(dataImportEventPayload)),
         Future.fromCompletionStage(orderPostProcessingHandler.handle(dataImportEventPayload))
       ));
@@ -366,7 +369,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
       // verifies that the order opening process was triggered only one time
       // by checking that request to update the order with status "Open" was performed once
       context.assertEquals(1, ordersResp.size());
-      CompositePurchaseOrder openedOrder = ordersResp.get(0).mapTo(CompositePurchaseOrder.class);
+      CompositePurchaseOrder openedOrder = ordersResp.getFirst().mapTo(CompositePurchaseOrder.class);
       context.assertEquals(order.getId(), openedOrder.getId());
       context.assertEquals(WorkflowStatus.OPEN, openedOrder.getWorkflowStatus());
       async.complete();
@@ -374,13 +377,14 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldPublishDiErrorEventWhenHasNoPoLine() throws InterruptedException {
+  public void shouldPublishDiErrorEventWhenHasNoPoLine() {
     // given
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0).getChildSnapshotWrappers().get(0))
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst().getChildSnapshotWrappers().getFirst())
       .withEventType(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -397,17 +401,18 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_ERROR.value());
-    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().getLast());
   }
 
   @Test
-  public void shouldPublishDiErrorEventWhenHasNoInstanceAndInventoryRecordsCreationIsRequired() throws InterruptedException {
+  public void shouldPublishDiErrorEventWhenHasNoInstanceAndInventoryRecordsCreationIsRequired() {
     // given
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0).getChildSnapshotWrappers().get(0))
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst().getChildSnapshotWrappers().getFirst())
       .withEventType(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -425,7 +430,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_ERROR.value());
-    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().getLast());
   }
 
   @Test
@@ -500,7 +505,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     return producerRecord;
   }
 
-  private DataImportEventPayload observeEvent(String eventType) throws InterruptedException {
+  private DataImportEventPayload observeEvent(String eventType) {
     String topicToObserve = formatToKafkaTopicName(eventType);
     var value = observeTopic(topicToObserve);
     Event obtainedEvent = Json.decodeValue(value, Event.class);

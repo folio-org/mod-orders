@@ -8,6 +8,7 @@ import java.util.Objects;
 
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
+import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
 
 public class EncumbrancesProcessingHolderBuilder {
@@ -37,16 +38,22 @@ public class EncumbrancesProcessingHolderBuilder {
   private boolean isTransactionUpdated(EncumbranceRelationsHolder holder) {
     double amountBeforeUpdate = holder.getOldEncumbrance().getAmount();
     double updatedAmount = holder.getNewEncumbrance().getAmount();
+
     double initialAmountBeforeUpdate = holder.getOldEncumbrance()
       .getEncumbrance().getInitialAmountEncumbered();
     double updatedInitialAmount = holder.getNewEncumbrance()
       .getEncumbrance().getInitialAmountEncumbered();
+
     String newExpenseClassId = holder.getNewEncumbrance().getExpenseClassId();
     String oldExpenseClassId = holder.getOldEncumbrance().getExpenseClassId();
 
+    Encumbrance.Status oldStatus = holder.getOldEncumbrance().getEncumbrance().getStatus();
+    Encumbrance.Status newStatus = holder.getNewEncumbrance().getEncumbrance().getStatus();
+
     return Double.compare(amountBeforeUpdate, updatedAmount) != 0
       || Double.compare(initialAmountBeforeUpdate, updatedInitialAmount) != 0
-      || !Objects.equals(oldExpenseClassId, newExpenseClassId);
+      || !Objects.equals(oldExpenseClassId, newExpenseClassId)
+      || !Objects.equals(oldStatus, newStatus);
   }
 
   private List<EncumbranceRelationsHolder> getToBeCreatedHolders(List<EncumbranceRelationsHolder> encumbranceRelationsHolders) {

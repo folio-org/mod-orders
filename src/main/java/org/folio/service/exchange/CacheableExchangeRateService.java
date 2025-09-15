@@ -7,6 +7,7 @@ import jakarta.annotation.PostConstruct;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.acq.model.finance.ExchangeRate;
+import org.folio.rest.acq.model.finance.ExchangeRate.OperationMode;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
@@ -44,22 +45,24 @@ public class CacheableExchangeRateService {
   }
 
   public Future<ExchangeRate> getExchangeRate(String from, String to, Number customExchangeRate, RequestContext requestContext) {
+    return getExchangeRate(from, to, customExchangeRate, OperationMode.MULTIPLY, requestContext);
+  }
+
+  public Future<ExchangeRate> getExchangeRate(String from, String to, Number customExchangeRate, OperationMode operationMode, RequestContext requestContext) {
     if (StringUtils.equals(from, to)) {
       return Future.succeededFuture(createDefaultExchangeRate(from, to, 1d));
     }
     if (Objects.nonNull(customExchangeRate)) {
       log.info("getExchangeRate:: Retrieving an exchange rate, {} -> {}, customExchangeRate: {}", from, to, customExchangeRate);
-      return Future.succeededFuture(createDefaultExchangeRate(from, to, customExchangeRate));
+      return Future.succeededFuture(createDefaultExchangeRate(from, to, customExchangeRate).withOperationMode(operationMode));
     }
     try {
       var cacheKey = String.format("%s-%s", from, to);
       return Future.fromCompletionStage(asyncCache.get(cacheKey, (key, executor) -> getExchangeRateFromRemote(from, to, requestContext)))
-        .compose(exchangeRateOptional -> exchangeRateOptional.map(exchangeRate -> {
-          log.info("getExchangeRate:: Retrieving an exchange rate, {} -> {}, exchangeRate: {}, operationMode: {}",
-            from, to, exchangeRate.getExchangeRate(), exchangeRate.getOperationMode());
-          return Future.succeededFuture(exchangeRate);
-        })
-        .orElseThrow(() -> new IllegalStateException("Cannot retrieve exchange rate from API using from=%s, and to=%s currencies".formatted(from, to))));
+        .compose(exchangeRateOptional -> exchangeRateOptional.map(Future::succeededFuture)
+          .orElse(Future.failedFuture(new IllegalStateException("Cannot retrieve exchange rate from API using from=%s, and to=%s currencies".formatted(from, to))))
+          .onSuccess(exchangeRate -> log.info("getExchangeRate:: Retrieving an exchange rate, {} -> {}, exchangeRate: {}, operationMode: {}",
+            from, to, exchangeRate.getExchangeRate(), exchangeRate.getOperationMode())));
     } catch (Exception e) {
       log.error("Error when retrieving cacheable exchange rate", e);
       return Future.failedFuture(e);

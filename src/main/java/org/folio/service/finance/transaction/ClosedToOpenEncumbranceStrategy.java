@@ -11,10 +11,12 @@ import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
+import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.service.FundsDistributionService;
+import org.folio.service.finance.EncumbranceUtils;
 import org.folio.service.finance.budget.BudgetRestrictionService;
 import org.folio.service.orders.OrderWorkflowType;
 
@@ -41,15 +43,13 @@ public class ClosedToOpenEncumbranceStrategy implements EncumbranceWorkflowStrat
 
   @Override
   public Future<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
-      RequestContext requestContext) {
-
+                                          RequestContext requestContext) {
     if (isFundDistributionsPresent(compPO.getPoLines())) {
       // get the encumbrances to unrelease
       return encumbranceRelationsHoldersBuilder.retrieveMapFiscalYearsWithPoLines(compPO, poAndLinesFromStorage, requestContext)
         .compose(mapFiscalYearIdsWithPoLines -> encumbranceService.getOrderEncumbrancesToUnrelease(compPO, mapFiscalYearIdsWithPoLines, requestContext))
         .compose(transactions -> {
           // stop if nothing needs to be done
-
           if (transactions.isEmpty() && compPO.getPoLines().stream().noneMatch(
               pol -> pol.getFundDistribution().stream().anyMatch(f -> f.getEncumbrance() == null))) {
             return Future.succeededFuture();
@@ -82,7 +82,9 @@ public class ClosedToOpenEncumbranceStrategy implements EncumbranceWorkflowStrat
                 .filter(h -> h.getOldEncumbrance() == null)
                 .collect(toList());
               holder.withEncumbrancesForCreate(toBeCreatedHolders);
-              holder.withEncumbrancesForUnrelease(transactions);
+              // only unrelease encumbrances with expended + credited + awaiting payment = 0
+              List<Transaction> encToUnrelease = EncumbranceUtils.collectAllowedTransactionsForUnrelease(transactions);
+              holder.withEncumbrancesForUnrelease(encToUnrelease);
               return encumbranceService.createOrUpdateEncumbrances(holder, requestContext);
             });
         })

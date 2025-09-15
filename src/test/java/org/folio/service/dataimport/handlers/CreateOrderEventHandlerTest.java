@@ -8,7 +8,6 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.folio.AcquisitionsUnit;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.DataImportEventTypes;
@@ -81,7 +80,6 @@ import static org.folio.TestConfig.closeMockServer;
 import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
 import static org.folio.orders.utils.HelperUtils.KEY_NAME;
 import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
-import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
@@ -1127,7 +1125,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   @Test
   public void shouldCreateOrderWithSpecifiedAcquisitionUnitWhenUserHasUnitsAssignmentsPermission() {
     // given
-    String expectedAcqUnitId = "f6d2cc9d-82ca-437c-a4e6-e5c30323df00";
+    String expectedAcqUnitId = "0e9525aa-d123-4e4d-9f7e-1b302a97eb90";
     String acqUnitName = "Not protected";
     MappingRule acqUnitIdsRule = new MappingRule()
       .withName("acqUnitIds")
@@ -1137,9 +1135,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     mappingProfile.getMappingDetails().getMappingFields().add(acqUnitIdsRule);
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
-    AcquisitionsUnit acquisitionsUnit = new AcquisitionsUnit().withId(expectedAcqUnitId).withName(acqUnitName);
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
-    addMockEntry(ACQUISITIONS_UNITS, acquisitionsUnit);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))

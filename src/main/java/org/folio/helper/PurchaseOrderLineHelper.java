@@ -52,6 +52,7 @@ import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.RestConstants;
 import org.folio.rest.acq.model.SequenceNumbers;
+import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
@@ -68,6 +69,7 @@ import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.service.ProtectionService;
+import org.folio.service.finance.EncumbranceUtils;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
@@ -287,7 +289,11 @@ public class PurchaseOrderLineHelper {
     } else if (isUnreleasedEncumbrances(compOrderLine, poLineFromStorage)) {
       logger.info("updateEncumbranceStatus:: Encumbrances unreleasing for poLineId={} where paymentStatus={}", compOrderLine.getId(), compOrderLine.getPaymentStatus());
       return encumbranceService.getPoLineReleasedEncumbrances(compOrderLine, requestContext)
-        .compose(transactionList -> encumbranceService.unreleaseEncumbrances(transactionList, requestContext));
+        .compose(transactionList -> {
+          // only unrelease encumbrances with expended + credited + awaiting payment = 0
+          List<Transaction> encToUnrelease = EncumbranceUtils.collectAllowedTransactionsForUnrelease(transactionList);
+          return encumbranceService.unreleaseEncumbrances(encToUnrelease, requestContext);
+        });
     }
     return Future.succeededFuture();
   }
