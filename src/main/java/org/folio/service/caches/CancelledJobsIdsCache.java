@@ -5,7 +5,6 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -14,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class CancelledJobsIdsCache {
 
-  private final Cache<UUID, Boolean> cache;
+  private final Cache<String, Boolean> cache;
 
   public CancelledJobsIdsCache(
     @Value("${orders.cache.cancelled.jobs.expiration.minutes:1440}") long cacheExpirationTimeMins) {
@@ -26,19 +25,19 @@ public class CancelledJobsIdsCache {
   /**
    * Puts the specified {@code jobId} into the cache.
    *
-   * @param jobId the UUID to put into the cache
+   * @param jobId import job id to put into the cache
    */
-  public void put(UUID jobId) {
+  public void put(String jobId) {
     cache.put(jobId, Boolean.TRUE);
   }
 
   /**
    * Checks if the cache contains the specified {@code jobId}.
    *
-   * @param jobId the job UUID to check
+   * @param jobId import job id to check
    * @return {@code true} if the cache contains the {@code jobId}, {@code false} otherwise
    */
-  public boolean contains(UUID jobId) {
+  public boolean contains(String jobId) {
     return cache.asMap().containsKey(jobId);
   }
 }

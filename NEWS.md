@@ -1,6 +1,7 @@
 ## 13.1.0 - Unreleased
 * [MODDATAIMP-1225](https://folio-org.atlassian.net/browse/MODDATAIMP-1225) - Change dependencies on SRM and mod-di-converter-storage interfaces to optional
 * [MODORDERS-1040](https://folio-org.atlassian.net/browse/MODORDERS-1040) - Subscribe to JobExecution status change and add cache
+* [MODORDERS-1042](https://folio-org.atlassian.net/browse/MODORDERS-1042) - Do not process event if JobExecution status is Cancelled
 
 ## 13.0.0 - Released (Sunflower R1 2025)
 The primary focus of this release was to enhance multi-tenant functionality, improve piece management, and implement various inventory and order processing features.
