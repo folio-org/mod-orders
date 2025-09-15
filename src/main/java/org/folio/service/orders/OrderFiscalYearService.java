@@ -81,11 +81,10 @@ public class OrderFiscalYearService {
         }
 
         List<Future<FiscalYear>> allFiscalYearFutures = distinctLedgerIds.stream()
-          .flatMap(ledgerId -> Stream.of(
+          .map(ledgerId ->
             fiscalYearService.getCurrentFiscalYear(ledgerId, requestContext)
-              .recover(throwable -> Future.succeededFuture(null)),
-            fiscalYearService.getPlannedFiscalYear(ledgerId, requestContext)
-          ))
+              .recover(throwable -> fiscalYearService.getPlannedFiscalYear(ledgerId, requestContext))
+          )
           .toList();
 
         return collectResultsOnSuccess(allFiscalYearFutures)

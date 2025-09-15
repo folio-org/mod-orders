@@ -140,9 +140,9 @@ public class OrderFiscalYearServiceTest {
 
     mockServices(transactions, fiscalYears, funds);
     when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_1, requestContext))
-      .thenReturn(Future.succeededFuture(null));
+      .thenReturn(Future.failedFuture(new RuntimeException("No current fiscal year")));
     when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_2, requestContext))
-      .thenReturn(Future.succeededFuture(null));
+      .thenReturn(Future.failedFuture(new RuntimeException("No current fiscal year")));
     when(fiscalYearService.getPlannedFiscalYear(LEDGER_ID_1, requestContext))
       .thenReturn(Future.succeededFuture(null));
     when(fiscalYearService.getPlannedFiscalYear(LEDGER_ID_2, requestContext))
@@ -435,6 +435,54 @@ public class OrderFiscalYearServiceTest {
     // Previous should contain all transaction fiscal years
     assertEquals(2, holder.getPrevious().size());
     assertEquals("FY2023", holder.getPrevious().get(0).getName());
+    assertEquals("FY2022", holder.getPrevious().get(1).getName());
+  }
+
+  @Test
+  void testGetAvailableFiscalYears_FallbackToPlannedFiscalYear_WhenCurrentFails() {
+    // Given - getCurrentFiscalYear fails but getPlannedFiscalYear succeeds
+    Transaction transaction1 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withFromFundId(FUND_ID_1);
+    Transaction transaction2 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_2).withFromFundId(FUND_ID_2);
+    List<Transaction> transactions = List.of(transaction1, transaction2);
+
+    FiscalYear fy1 = new FiscalYear().withId(FISCAL_YEAR_ID_1).withName("FY2023");
+    FiscalYear fy2 = new FiscalYear().withId(FISCAL_YEAR_ID_2).withName("FY2022");
+    List<FiscalYear> fiscalYears = List.of(fy1, fy2);
+
+    Fund fund1 = new Fund().withId(FUND_ID_1).withLedgerId(LEDGER_ID_1);
+    Fund fund2 = new Fund().withId(FUND_ID_2).withLedgerId(LEDGER_ID_2);
+    List<Fund> funds = List.of(fund1, fund2);
+
+    FiscalYear plannedFy1 = new FiscalYear().withId("planned-fy-1").withName("FY2025");
+    FiscalYear plannedFy2 = new FiscalYear().withId("planned-fy-2").withName("FY2024");
+
+    mockServices(transactions, fiscalYears, funds);
+    // getCurrentFiscalYear fails for both ledgers
+    when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_1, requestContext))
+      .thenReturn(Future.failedFuture(new RuntimeException("No current fiscal year")));
+    when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_2, requestContext))
+      .thenReturn(Future.failedFuture(new RuntimeException("No current fiscal year")));
+    // getPlannedFiscalYear succeeds as fallback
+    when(fiscalYearService.getPlannedFiscalYear(LEDGER_ID_1, requestContext))
+      .thenReturn(Future.succeededFuture(plannedFy1));
+    when(fiscalYearService.getPlannedFiscalYear(LEDGER_ID_2, requestContext))
+      .thenReturn(Future.succeededFuture(plannedFy2));
+
+    // When
+    Future<FiscalYearsHolder> result = orderFiscalYearService.getAvailableFiscalYears(ORDER_ID, requestContext);
+
+    // Then
+    assertTrue(result.succeeded());
+    FiscalYearsHolder holder = result.result();
+
+    // Current should contain planned fiscal years (fallback was successful)
+    assertEquals(2, holder.getCurrent().size());
+    assertEquals("FY2025", holder.getCurrent().get(0).getName()); // FY2025 > FY2024
+    assertEquals("FY2024", holder.getCurrent().get(1).getName());
+
+    // Previous should contain all transaction fiscal years
+    assertEquals(2, holder.getPrevious().size());
+    assertEquals("FY2023", holder.getPrevious().get(0).getName()); // FY2023 > FY2022
     assertEquals("FY2022", holder.getPrevious().get(1).getName());
   }
 
