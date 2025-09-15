@@ -104,7 +104,7 @@ public class CancelledJobExecutionConsumerVerticle extends AbstractVerticle {
       LOGGER.debug("handle:: Received cancelled job event, key: '{}', tenantId: '{}'", kafkaRecord.key(), tenantId);
 
       String jobId = Json.decodeValue(kafkaRecord.value(), Event.class).getEventPayload();
-      cancelledJobsIdsCache.put(UUID.fromString(jobId));
+      cancelledJobsIdsCache.put(jobId);
       LOGGER.info("handle:: Processed cancelled job, jobId: '{}', tenantId: '{}', topic: '{}'",
         jobId, tenantId, kafkaRecord.topic());
       return Future.succeededFuture(kafkaRecord.key());

@@ -94,7 +94,7 @@ public class DataImportKafkaHandlerTest {
   void shouldReturnSucceededFutureAndSkipEventProcessingIfEventPayloadContainsCancelledJobExecutionId() {
     // Given
     String cancelledJobId = UUID.randomUUID().toString();
-    cancelledJobsIdsCache.put(UUID.fromString(cancelledJobId));
+    cancelledJobsIdsCache.put(cancelledJobId);
 
     DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withJobExecutionId(cancelledJobId)

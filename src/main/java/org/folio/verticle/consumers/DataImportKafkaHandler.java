@@ -30,7 +30,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import static java.lang.String.format;
 import static org.folio.DataImportEventTypes.DI_ERROR;
@@ -76,7 +75,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
       LOGGER.debug("handle:: Data import event payload has been received with event type: {}, jobExecutionId: {}, recordId: {}, chunkId: {}",
         eventPayload.getEventType(), jobExecutionId, recordId, chunkId);
 
-      if (cancelledJobsIdsCache.contains(UUID.fromString(eventPayload.getJobExecutionId()))) {
+      if (cancelledJobsIdsCache.contains(eventPayload.getJobExecutionId())) {
         LOGGER.info("handle:: Skipping processing of event, topic: '{}', jobExecutionId: '{}' because the job has been cancelled",
           kafkaRecord.topic(), eventPayload.getJobExecutionId());
         return Future.succeededFuture(kafkaRecord.key());

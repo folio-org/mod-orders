@@ -82,7 +82,7 @@ public class CancelledJobExecutionConsumerVerticleTest {
     sendJobIdsToKafka(ids);
 
     await().atMost(ofSeconds(3))
-      .untilAsserted(() -> ids.forEach(id -> assertTrue(cancelledJobsIdsCache.contains(UUID.fromString(id)))));
+      .untilAsserted(() -> ids.forEach(id -> assertTrue(cancelledJobsIdsCache.contains(id))));
   }
 
   @Test
@@ -92,7 +92,7 @@ public class CancelledJobExecutionConsumerVerticleTest {
     List<String> idsBatch1 = generateJobIds(100);
     sendJobIdsToKafka(idsBatch1);
     await().atMost(ofSeconds(3))
-      .untilAsserted(() -> idsBatch1.forEach(id -> assertTrue(cancelledJobsIdsCache.contains(UUID.fromString(id)))));
+      .untilAsserted(() -> idsBatch1.forEach(id -> assertTrue(cancelledJobsIdsCache.contains(id))));
 
     // stop currently deployed verticle
     Async async = context.async();
@@ -109,9 +109,9 @@ public class CancelledJobExecutionConsumerVerticleTest {
 
     async2.await(3000);
     await().atMost(ofSeconds(3))
-      .untilAsserted(() -> idsBatch1.forEach(id -> assertTrue(cancelledJobsIdsCache.contains(UUID.fromString(id)))));
+      .untilAsserted(() -> idsBatch1.forEach(id -> assertTrue(cancelledJobsIdsCache.contains(id))));
     await().atMost(ofSeconds(3))
-      .untilAsserted(() -> idsBatch2.forEach(id -> assertTrue(cancelledJobsIdsCache.contains(UUID.fromString(id)))));
+      .untilAsserted(() -> idsBatch2.forEach(id -> assertTrue(cancelledJobsIdsCache.contains(id))));
   }
 
   private KafkaConfig getKafkaConfig() {
