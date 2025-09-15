@@ -1,5 +1,6 @@
 package org.folio.service.orders;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -7,6 +8,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Transaction;
@@ -66,7 +68,7 @@ public class OrderFiscalYearService {
       .collect(Collectors.toSet());
 
     if (distinctFundIds.isEmpty()) {
-      return Future.succeededFuture(buildResultHolder(allFiscalYears, List.of()));
+      return Future.succeededFuture(buildResultHolder(allFiscalYears, List.of(), List.of()));
     }
 
     return fundService.getAllFunds(distinctFundIds, requestContext)
@@ -77,30 +79,56 @@ public class OrderFiscalYearService {
           .collect(Collectors.toSet());
 
         if (distinctLedgerIds.isEmpty()) {
-          return Future.succeededFuture(buildResultHolder(allFiscalYears, List.of()));
+          return Future.succeededFuture(buildResultHolder(allFiscalYears, List.of(), List.of()));
         }
 
-        List<Future<FiscalYear>> allFiscalYearFutures = distinctLedgerIds.stream()
-          .map(ledgerId ->
-            fiscalYearService.getCurrentFiscalYear(ledgerId, requestContext)
-              .recover(throwable -> fiscalYearService.getPlannedFiscalYear(ledgerId, requestContext))
-          )
+        List<Future<FiscalYear>> currentFiscalYearFutures = distinctLedgerIds.stream()
+          .map(ledgerId -> fiscalYearService.getCurrentFiscalYear(ledgerId, requestContext)
+            .recover(throwable -> Future.succeededFuture(null)))
           .toList();
 
-        return collectResultsOnSuccess(allFiscalYearFutures)
-          .compose(allCurrentFiscalYears -> {
-            List<FiscalYear> filteredCurrentFiscalYears = allCurrentFiscalYears.stream()
+        return collectResultsOnSuccess(currentFiscalYearFutures)
+          .compose(currentResults -> {
+            List<FiscalYear> currentFiscalYears = currentResults.stream()
               .filter(Objects::nonNull)
               .toList();
-            return Future.succeededFuture(buildResultHolder(allFiscalYears, filteredCurrentFiscalYears));
+
+            if (CollectionUtils.isEqualCollection(allFiscalYears, currentFiscalYears)) {
+              return Future.succeededFuture(buildResultHolder(allFiscalYears, currentFiscalYears, List.of()));
+            }
+
+            List<Future<FiscalYear>> plannedFiscalYearFutures = distinctLedgerIds.stream()
+              .map(ledgerId -> fiscalYearService.getPlannedFiscalYear(ledgerId, requestContext))
+              .toList();
+            return collectResultsOnSuccess(plannedFiscalYearFutures)
+              .compose(plannedResults -> {
+                List<FiscalYear> plannedFiscalYears = plannedResults.stream()
+                  .filter(Objects::nonNull)
+                  .toList();
+
+                return Future.succeededFuture(buildResultHolder(allFiscalYears, currentFiscalYears, plannedFiscalYears));
+              });
           });
       });
   }
 
-  private FiscalYearsHolder buildResultHolder(List<FiscalYear> availableFiscalYears, List<FiscalYear> currentFiscalYears) {
+  private FiscalYearsHolder buildResultHolder(List<FiscalYear> availableFiscalYears, List<FiscalYear> currentFiscalYears, List<FiscalYear> plannedFiscalYears) {
     Comparator<FiscalYear> nameComparator = Comparator.comparing(FiscalYear::getName).reversed();
 
-    Set<String> currentFiscalYearIds = currentFiscalYears.stream()
+    Set<String> plannedFiscalYearIds = plannedFiscalYears.stream()
+      .map(FiscalYear::getId)
+      .collect(Collectors.toSet());
+
+    List<FiscalYear> mutableCurrentFiscalYears = new ArrayList<>(currentFiscalYears);
+
+    // Add planned fiscal years that exist in available fiscal years to current
+    for (FiscalYear availableFy : availableFiscalYears) {
+      if (plannedFiscalYearIds.contains(availableFy.getId())) {
+        mutableCurrentFiscalYears.add(availableFy);
+      }
+    }
+
+    Set<String> currentFiscalYearIds = mutableCurrentFiscalYears.stream()
       .map(FiscalYear::getId)
       .collect(Collectors.toSet());
 
@@ -109,7 +137,7 @@ public class OrderFiscalYearService {
       .toList();
 
     return new FiscalYearsHolder()
-      .withCurrent(currentFiscalYears.stream()
+      .withCurrent(mutableCurrentFiscalYears.stream()
         .sorted(nameComparator)
         .toList())
       .withPrevious(filteredAvailableFiscalYears.stream()
