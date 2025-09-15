@@ -3,19 +3,21 @@ package org.folio.models.pieces;
 import java.util.Collections;
 import java.util.List;
 
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.Title;
 
+@RequiredArgsConstructor
+@Getter
 public class OpenOrderPieceHolder {
-  private final String titleId;
+
+  private final Title title;
   private List<Piece> existingPieces = Collections.emptyList();
   private List<Piece> piecesWithLocationToProcess = Collections.emptyList();
   private List<Piece> piecesWithHoldingToProcess = Collections.emptyList();
   private List<Piece> piecesWithChangedLocation = Collections.emptyList();
   private List<Piece> piecesWithoutLocationId = Collections.emptyList();
-
-  public OpenOrderPieceHolder(String titleId) {
-    this.titleId = titleId;
-  }
 
   public OpenOrderPieceHolder withExistingPieces(List<Piece> existingPieces) {
     this.existingPieces = existingPieces;
@@ -42,27 +44,4 @@ public class OpenOrderPieceHolder {
     return this;
   }
 
-  public List<Piece> getPiecesWithLocationToProcess() {
-    return piecesWithLocationToProcess;
-  }
-
-  public List<Piece> getPiecesWithHoldingToProcess() {
-    return piecesWithHoldingToProcess;
-  }
-
-  public List<Piece> getPiecesWithChangedLocation() {
-    return piecesWithChangedLocation;
-  }
-
-  public List<Piece> getPiecesWithoutLocationId() {
-    return piecesWithoutLocationId;
-  }
-
-  public List<Piece> getExistingPieces() {
-    return existingPieces;
-  }
-
-  public String getTitleId() {
-    return titleId;
-  }
 }
