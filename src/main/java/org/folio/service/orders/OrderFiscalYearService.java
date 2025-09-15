@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Fund;
@@ -79,13 +80,21 @@ public class OrderFiscalYearService {
           return Future.succeededFuture(buildResultHolder(allFiscalYears, List.of()));
         }
 
-        List<Future<FiscalYear>> currentFiscalYearFutures = distinctLedgerIds.stream()
-          .map(ledgerId -> fiscalYearService.getCurrentFiscalYear(ledgerId, requestContext)
-            .recover(throwable -> Future.succeededFuture(null)))
+        List<Future<FiscalYear>> allFiscalYearFutures = distinctLedgerIds.stream()
+          .flatMap(ledgerId -> Stream.of(
+            fiscalYearService.getCurrentFiscalYear(ledgerId, requestContext)
+              .recover(throwable -> Future.succeededFuture(null)),
+            fiscalYearService.getPlannedFiscalYear(ledgerId, requestContext)
+          ))
           .toList();
 
-        return collectResultsOnSuccess(currentFiscalYearFutures)
-          .compose(currentFiscalYears -> Future.succeededFuture(buildResultHolder(allFiscalYears, currentFiscalYears)));
+        return collectResultsOnSuccess(allFiscalYearFutures)
+          .compose(allCurrentFiscalYears -> {
+            List<FiscalYear> filteredCurrentFiscalYears = allCurrentFiscalYears.stream()
+              .filter(Objects::nonNull)
+              .toList();
+            return Future.succeededFuture(buildResultHolder(allFiscalYears, filteredCurrentFiscalYears));
+          });
       });
   }
 
@@ -93,7 +102,6 @@ public class OrderFiscalYearService {
     Comparator<FiscalYear> nameComparator = Comparator.comparing(FiscalYear::getName).reversed();
 
     Set<String> currentFiscalYearIds = currentFiscalYears.stream()
-      .filter(Objects::nonNull)
       .map(FiscalYear::getId)
       .collect(Collectors.toSet());
 
@@ -103,11 +111,9 @@ public class OrderFiscalYearService {
 
     return new FiscalYearsHolder()
       .withCurrent(currentFiscalYears.stream()
-        .filter(Objects::nonNull)
         .sorted(nameComparator)
         .toList())
       .withPrevious(filteredAvailableFiscalYears.stream()
-        .filter(Objects::nonNull)
         .sorted(nameComparator)
         .toList());
   }

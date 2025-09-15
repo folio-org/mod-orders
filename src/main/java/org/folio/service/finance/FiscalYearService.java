@@ -6,6 +6,7 @@ import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.QueryUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.ResourcePathResolver.FISCAL_YEARS;
 import static org.folio.orders.utils.ResourcePathResolver.LEDGER_CURRENT_FISCAL_YEAR;
+import static org.folio.orders.utils.ResourcePathResolver.LEDGER_PLANNED_FISCAL_YEAR;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
@@ -22,7 +23,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletionException;
-import java.util.stream.Collectors;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
 import io.vertx.core.Vertx;
@@ -45,6 +45,7 @@ import org.springframework.beans.factory.annotation.Value;
 public class FiscalYearService {
 
   private static final String LEDGER_CURRENT_FISCAL_YEAR_ENDPOINT = resourcesPath(LEDGER_CURRENT_FISCAL_YEAR);
+  private static final String LEDGER_PLANNED_FISCAL_YEAR_ENDPOINT = resourcesPath(LEDGER_PLANNED_FISCAL_YEAR);
   private static final String FISCAL_YEARS_ENDPOINT = resourcesPath(FISCAL_YEARS);
   private static final String FISCAL_YEAR_BY_ID_ENDPOINT = resourceByIdPath(FISCAL_YEARS, "{id}");
   private static final String FISCAL_YEAR_BY_SERIES_QUERY = "series==\"%s\" AND periodEnd>=%s sortBy periodStart";
@@ -82,6 +83,18 @@ public class FiscalYearService {
             .withKey("ledgerId"));
           throw new HttpException(404, CURRENT_FISCAL_YEAR_NOT_FOUND.toError()
             .withParameters(parameters));
+        }
+        throw new CompletionException(cause);
+      });
+  }
+
+  public Future<FiscalYear> getPlannedFiscalYear(String ledgerId, RequestContext requestContext) {
+    var requestEntry = new RequestEntry(LEDGER_PLANNED_FISCAL_YEAR_ENDPOINT).withId(ledgerId);
+    return restClient.get(requestEntry, FiscalYear.class, requestContext)
+      .recover(t -> {
+        Throwable cause = Objects.nonNull(t.getCause()) ? t.getCause() : t;
+        if (isFiscalYearNotFound(cause)) {
+          return Future.succeededFuture(null);
         }
         throw new CompletionException(cause);
       });

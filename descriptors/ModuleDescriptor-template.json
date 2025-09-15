@@ -149,7 +149,8 @@
             "finance.transactions.collection.get",
             "finance.fiscal-years.collection.get",
             "finance.funds.collection.get",
-            "finance.ledgers.current-fiscal-year.item.get"
+            "finance.ledgers.current-fiscal-year.item.get",
+            "finance.ledgers.planned-fiscal-year.item.get"
           ]
         }
       ]
