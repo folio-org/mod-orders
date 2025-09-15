@@ -22,9 +22,12 @@ import static org.folio.service.pieces.PieceUtil.canDeletePieceForTitleRemoval;
 import static org.folio.service.pieces.PieceUtil.getPieceTenantId;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Queue;
+import java.util.Set;
 import java.util.function.Function;
 
 import com.google.common.collect.Sets;
@@ -38,6 +41,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.folio.models.TitleHolder;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.orders.utils.QueryUtils;
+import org.folio.rest.acq.model.SequenceNumbers;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
@@ -60,6 +64,9 @@ public class TitlesService {
 
   private static final String ENDPOINT = resourcesPath(TITLES);
   private static final String BY_ID_ENDPOINT = ENDPOINT + "/{id}";
+
+  private static final String SEQUENCE_NUMBERS_ENDPOINT = BY_ID_ENDPOINT + "/sequence-numbers";
+  private static final String SEQUENCE_NUMBER_PARAM = "sequenceNumbers";
 
   private final RestClient restClient;
   private final ProtectionService protectionService;
@@ -175,6 +182,29 @@ public class TitlesService {
       .map(title::withInstanceId)
       .compose(entity -> saveTitle(entity, requestContext)
         .map(v -> entity.getInstanceId()));
+  }
+
+  public Future<List<Piece>> generateNextSequenceNumbers(List<Piece> pieces, Title title, RequestContext requestContext) {
+    if (CollectionUtils.isEmpty(pieces)) {
+      return Future.succeededFuture(pieces);
+    }
+    var requestEntry = new RequestEntry(SEQUENCE_NUMBERS_ENDPOINT).withId(title.getId())
+      .withQueryParameter(SEQUENCE_NUMBER_PARAM, String.valueOf(pieces.size()));
+    return restClient.get(requestEntry, SequenceNumbers.class, requestContext)
+      .compose(titleSequenceNumbers -> {
+        Set<Integer> assignedNumbers = StreamEx.of(pieces)
+          .map(Piece::getSequenceNumber)
+          .nonNull()
+          .toSet();
+        Queue<Integer> pendingNumbers = StreamEx.of(titleSequenceNumbers.getSequenceNumbers())
+          .map(Integer::valueOf)
+          .filter(number -> !assignedNumbers.contains(number))
+          .toCollection(LinkedList::new);
+        pieces.stream()
+          .filter(piece -> piece.getSequenceNumber() == null)
+          .forEach(piece -> piece.setSequenceNumber(pendingNumbers.poll()));
+        return Future.succeededFuture(pieces);
+      });
   }
 
   /**
@@ -369,4 +399,5 @@ public class TitlesService {
     var deleteEndpoint = new RequestEntry(BY_ID_ENDPOINT).withId(id).buildEndpoint();
     return restClient.delete(deleteEndpoint, requestContext);
   }
+
 }
