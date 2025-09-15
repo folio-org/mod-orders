@@ -34,13 +34,17 @@ import io.vertx.core.json.JsonObject;
 public class DefaultPieceFlowsValidator {
 
   public void isPieceRequestValid(Piece pieceToCreate, CompositePurchaseOrder originalOrder, PoLine originPoLine, Title title, boolean isCreateItem) {
+    isPieceRequestValid(pieceToCreate, originalOrder, originPoLine, title, 1, isCreateItem);
+  }
+
+  public void isPieceRequestValid(Piece pieceToCreate, CompositePurchaseOrder originalOrder, PoLine originPoLine, Title title, int piecesInBatch, boolean isCreateItem) {
     List<Error> combinedErrors = Stream.of(
         PieceValidatorUtil.validatePieceLocation(pieceToCreate, originPoLine),
         PieceValidatorUtil.validatePieceFormat(pieceToCreate, originPoLine),
         PieceValidatorUtil.validatePieceRelatedOrder(originalOrder, originPoLine),
         validateItemCreateFlag(pieceToCreate, originPoLine, isCreateItem),
         validateDisplayOnHoldingsConsistency(pieceToCreate),
-        validatePieceSequenceNumber(pieceToCreate, title))
+        validatePieceSequenceNumber(pieceToCreate, title, piecesInBatch))
       .flatMap(Collection::stream)
       .toList();
     if (CollectionUtils.isNotEmpty(combinedErrors)) {
@@ -58,7 +62,7 @@ public class DefaultPieceFlowsValidator {
       log.error("isPieceBatchRequestValid:: Validation Error {}", error.getMessage());
       throw new HttpException(RestConstants.VALIDATION_ERROR, ALL_PIECES_MUST_HAVE_THE_SAME_POLINE_ID_AND_TITLE_ID);
     }
-    piecesToCreate.forEach(piece -> isPieceRequestValid(piece, originalOrder, originPoLine, title, isCreateItem));
+    piecesToCreate.forEach(piece -> isPieceRequestValid(piece, originalOrder, originPoLine, title, piecesToCreate.size(), isCreateItem));
   }
 
   public static List<Error> validateItemCreateFlag(Piece pieceToCreate, PoLine originPoLine, boolean createItem) {
@@ -74,8 +78,8 @@ public class DefaultPieceFlowsValidator {
       : List.of();
   }
 
-  public static List<Error> validatePieceSequenceNumber(Piece piece, Title title) {
-    return piece.getSequenceNumber() != null && (piece.getSequenceNumber() > title.getNextSequenceNumber() || piece.getSequenceNumber() <= 0)
+  public static List<Error> validatePieceSequenceNumber(Piece piece, Title title, int piecesInBatch) {
+    return piece.getSequenceNumber() != null && (piece.getSequenceNumber() >= title.getNextSequenceNumber() + piecesInBatch || piece.getSequenceNumber() <= 0)
       ? List.of(PIECE_SEQUENCE_NUMBER_IS_INVALID.toError())
       : List.of();
   }
