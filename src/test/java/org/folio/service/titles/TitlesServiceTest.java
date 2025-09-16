@@ -52,7 +52,7 @@ import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-@CopilotGenerated(model = "Claude Sonnet 4")
+@CopilotGenerated(partiallyGenerated = true, model = "Claude Sonnet 4")
 @ExtendWith(MockitoExtension.class)
 public class TitlesServiceTest {
   private static final String TITLE_ID = "test-title-id";
