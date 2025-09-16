@@ -291,6 +291,7 @@ public class OpenCompositeOrderPieceServiceTest {
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
     doReturn(succeededFuture(compOrder)).when(purchaseOrderStorageService).getCompositeOrderById(eq(orderId), eq(requestContext));
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(titleId, requestContext);
+    doAnswer(invocation -> succeededFuture(invocation.getArgument(0))).when(titlesService).generateNextSequenceNumbers(any(), eq(title), eq(requestContext));
 
     final ArgumentCaptor<List<Piece>> pieceArgumentCaptor = ArgumentCaptor.forClass(List.class);
     doAnswer((Answer<Future<PieceCollection>>) invocation -> {
@@ -358,6 +359,7 @@ public class OpenCompositeOrderPieceServiceTest {
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
     doReturn(succeededFuture(compOrder)).when(purchaseOrderStorageService).getCompositeOrderById(eq(orderId), eq(requestContext));
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(titleId, requestContext);
+    doAnswer(invocation -> succeededFuture(invocation.getArgument(0))).when(titlesService).generateNextSequenceNumbers(any(), eq(title), eq(requestContext));
 
     final ArgumentCaptor<List<Piece>> pieceArgumentCaptor = ArgumentCaptor.forClass(List.class);
     doAnswer((Answer<Future<PieceCollection>>) invocation -> {
@@ -428,6 +430,7 @@ public class OpenCompositeOrderPieceServiceTest {
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
     doReturn(succeededFuture(compOrder)).when(purchaseOrderStorageService).getCompositeOrderById(eq(orderId), eq(requestContext));
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(titleId, requestContext);
+    doAnswer(invocation -> succeededFuture(invocation.getArgument(0))).when(titlesService).generateNextSequenceNumbers(any(), eq(title), eq(requestContext));
 
     final ArgumentCaptor<List<Piece>> pieceArgumentCaptor = ArgumentCaptor.forClass(List.class);
     doAnswer((Answer<Future<PieceCollection>>) invocation -> {
@@ -497,6 +500,7 @@ public class OpenCompositeOrderPieceServiceTest {
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
     doReturn(succeededFuture(compOrder)).when(purchaseOrderStorageService).getCompositeOrderById(eq(orderId), eq(requestContext));
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(titleId, requestContext);
+    doAnswer(invocation -> succeededFuture(invocation.getArgument(0))).when(titlesService).generateNextSequenceNumbers(any(), eq(title), eq(requestContext));
 
     final ArgumentCaptor<List<Piece>> pieceArgumentCaptor = ArgumentCaptor.forClass(List.class);
     doAnswer((Answer<Future<PieceCollection>>) invocation -> {
@@ -582,6 +586,7 @@ public class OpenCompositeOrderPieceServiceTest {
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
     doReturn(succeededFuture(compOrder)).when(purchaseOrderStorageService).getCompositeOrderById(eq(orderId), eq(requestContext));
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(titleId, requestContext);
+    doAnswer(invocation -> succeededFuture(invocation.getArgument(0))).when(titlesService).generateNextSequenceNumbers(any(), eq(title), eq(requestContext));
 
     final ArgumentCaptor<List<Piece>> pieceArgumentCaptor = ArgumentCaptor.forClass(List.class);
     doAnswer((Answer<Future<PieceCollection>>) invocation -> {
