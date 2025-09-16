@@ -79,7 +79,7 @@ public class DefaultPieceFlowsValidator {
   }
 
   public static List<Error> validatePieceSequenceNumber(Piece piece, Title title, int piecesInBatch) {
-    return piece.getSequenceNumber() != null && (piece.getSequenceNumber() >= title.getNextSequenceNumber() + piecesInBatch || piece.getSequenceNumber() <= 0)
+    return piece.getSequenceNumber() != null && (piece.getSequenceNumber() <= 0 || piece.getSequenceNumber() >= title.getNextSequenceNumber() + piecesInBatch)
       ? List.of(PIECE_SEQUENCE_NUMBER_IS_INVALID.toError())
       : List.of();
   }
