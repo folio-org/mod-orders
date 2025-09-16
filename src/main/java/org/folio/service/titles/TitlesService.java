@@ -186,7 +186,7 @@ public class TitlesService {
 
   public Future<List<Piece>> generateNextSequenceNumbers(List<Piece> pieces, Title title, RequestContext requestContext) {
     if (CollectionUtils.isEmpty(pieces)) {
-      return Future.succeededFuture(pieces);
+      return Future.succeededFuture(Optional.ofNullable(pieces).orElse(List.of()));
     }
     var requestEntry = new RequestEntry(SEQUENCE_NUMBERS_ENDPOINT).withId(title.getId())
       .withQueryParameter(SEQUENCE_NUMBER_PARAM, String.valueOf(pieces.size()));

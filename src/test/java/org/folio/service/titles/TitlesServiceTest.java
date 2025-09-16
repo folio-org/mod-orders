@@ -6,6 +6,7 @@ import static org.folio.rest.core.exceptions.ErrorCodes.EXISTING_HOLDINGS_FOR_DE
 import static org.folio.rest.core.exceptions.ErrorCodes.EXISTING_RECEIVED_PIECES_TITLE_REMOVAL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -25,11 +26,14 @@ import java.util.List;
 import java.util.UUID;
 
 import io.vertx.core.Future;
+import org.folio.CopilotGenerated;
 import org.folio.models.ItemStatus;
 import org.folio.orders.utils.ProtectedOperationType;
+import org.folio.rest.acq.model.SequenceNumbers;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Title;
@@ -42,11 +46,13 @@ import org.folio.service.pieces.PieceStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+@CopilotGenerated(model = "Claude Sonnet 4")
 @ExtendWith(MockitoExtension.class)
 public class TitlesServiceTest {
   private static final String TITLE_ID = "test-title-id";
@@ -58,6 +64,7 @@ public class TitlesServiceTest {
   private static final String PIECE_ID_1 = "piece-1";
   private static final String PIECE_ID_2 = "piece-2";
   private static final String PIECE_ID_3 = "piece-3";
+  private static final String PIECE_ID_4 = "piece-4";
   private static final String ITEM_ID_1 = "item-1";
   private static final String ITEM_ID_2 = "item-2";
   private static final String TENANT_ID = "tenant-id";
@@ -427,6 +434,143 @@ public class TitlesServiceTest {
       assertEquals(EXISTING_RECEIVED_PIECES_TITLE_REMOVAL.getCode(), error.getCode());
 
       verify(restClient, never()).delete(eq(DELETE_TITLE_ENDPOINT), any(RequestContext.class));
+    });
+  }
+
+  // Tests for generateNextSequenceNumbers method
+
+  @Test
+  void testGenerateNextSequenceNumbers_emptyPiecesList() {
+    List<Piece> pieces = Collections.emptyList();
+
+    var result = titlesService.generateNextSequenceNumbers(pieces, title, requestContext);
+
+    result.onComplete(ar -> {
+      assertTrue(ar.succeeded());
+      assertNotNull(ar.result());
+      assertTrue(ar.result().isEmpty());
+      verify(restClient, never()).postBatch(any(RequestEntry.class), any(), eq(SequenceNumbers.class), any(RequestContext.class));
+    });
+  }
+
+  @Test
+  void testGenerateNextSequenceNumbers_nullPiecesList() {
+    List<Piece> pieces = null;
+
+    var result = titlesService.generateNextSequenceNumbers(pieces, title, requestContext);
+
+    result.onComplete(ar -> {
+      assertTrue(ar.succeeded());
+      assertNotNull(ar.result());
+      assertTrue(ar.result().isEmpty());
+      verify(restClient, never()).postBatch(any(RequestEntry.class), any(), eq(SequenceNumbers.class), any(RequestContext.class));
+    });
+  }
+
+  @Test
+  void testGenerateNextSequenceNumbers_piecesWithNoSequenceNumbers() {
+    var pieces = List.of(
+      new Piece().withId(PIECE_ID_1).withSequenceNumber(null),
+      new Piece().withId(PIECE_ID_2).withSequenceNumber(null),
+      new Piece().withId(PIECE_ID_3).withSequenceNumber(null)
+    );
+
+    var sequenceNumbers = new SequenceNumbers().withSequenceNumbers(List.of("1", "2", "3"));
+
+    when(restClient.postBatch(any(RequestEntry.class), any(), eq(SequenceNumbers.class), eq(requestContext)))
+      .thenReturn(Future.succeededFuture(sequenceNumbers));
+
+    var result = titlesService.generateNextSequenceNumbers(pieces, title, requestContext);
+
+    result.onComplete(ar -> {
+      assertTrue(ar.succeeded());
+      var resultPieces = ar.result();
+      assertEquals(3, resultPieces.size());
+      assertEquals(Integer.valueOf(1), resultPieces.get(0).getSequenceNumber());
+      assertEquals(Integer.valueOf(2), resultPieces.get(1).getSequenceNumber());
+      assertEquals(Integer.valueOf(3), resultPieces.get(2).getSequenceNumber());
+
+      ArgumentCaptor<RequestEntry> requestCaptor = ArgumentCaptor.forClass(RequestEntry.class);
+      verify(restClient).postBatch(requestCaptor.capture(), any(), eq(SequenceNumbers.class), eq(requestContext));
+
+      var capturedRequest = requestCaptor.getValue();
+      assertTrue(capturedRequest.buildEndpoint().contains(title.getId()));
+      assertTrue(capturedRequest.buildEndpoint().contains("sequenceNumbers=3"));
+    });
+  }
+
+  @Test
+  void testGenerateNextSequenceNumbers_piecesWithExistingSequenceNumbers() {
+    var pieces = List.of(
+      new Piece().withId(PIECE_ID_1).withSequenceNumber(1),
+      new Piece().withId(PIECE_ID_2).withSequenceNumber(2),
+      new Piece().withId(PIECE_ID_3).withSequenceNumber(3)
+    );
+
+    var sequenceNumbers = new SequenceNumbers().withSequenceNumbers(List.of("1", "2", "3"));
+
+    when(restClient.postBatch(any(RequestEntry.class), any(), eq(SequenceNumbers.class), eq(requestContext)))
+      .thenReturn(Future.succeededFuture(sequenceNumbers));
+
+    var result = titlesService.generateNextSequenceNumbers(pieces, title, requestContext);
+
+    result.onComplete(ar -> {
+      assertTrue(ar.succeeded());
+      var resultPieces = ar.result();
+      assertEquals(3, resultPieces.size());
+      // Existing sequence numbers should remain unchanged
+      assertEquals(Integer.valueOf(1), resultPieces.get(0).getSequenceNumber());
+      assertEquals(Integer.valueOf(2), resultPieces.get(1).getSequenceNumber());
+      assertEquals(Integer.valueOf(3), resultPieces.get(2).getSequenceNumber());
+    });
+  }
+
+  @Test
+  void testGenerateNextSequenceNumbers_mixedPiecesWithAndWithoutSequenceNumbers() {
+    var pieces = List.of(
+      new Piece().withId(PIECE_ID_1).withSequenceNumber(null),
+      new Piece().withId(PIECE_ID_2).withSequenceNumber(2),
+      new Piece().withId(PIECE_ID_3).withSequenceNumber(null),
+      new Piece().withId(PIECE_ID_4).withSequenceNumber(4)
+    );
+
+    var sequenceNumbers = new SequenceNumbers().withSequenceNumbers(List.of("1", "2", "3", "4"));
+
+    when(restClient.postBatch(any(RequestEntry.class), any(), eq(SequenceNumbers.class), eq(requestContext)))
+      .thenReturn(Future.succeededFuture(sequenceNumbers));
+
+    var result = titlesService.generateNextSequenceNumbers(pieces, title, requestContext);
+
+    result.onComplete(ar -> {
+      assertTrue(ar.succeeded());
+      var resultPieces = ar.result();
+      assertEquals(4, resultPieces.size());
+
+      // First piece (null) should get first available number (1)
+      assertEquals(Integer.valueOf(1), resultPieces.get(0).getSequenceNumber());
+      // Second piece already has number 2, should remain unchanged
+      assertEquals(Integer.valueOf(2), resultPieces.get(1).getSequenceNumber());
+      // Third piece (null) should get next available number (3)
+      assertEquals(Integer.valueOf(3), resultPieces.get(2).getSequenceNumber());
+      // Fourth piece already has number 4, should remain unchanged
+      assertEquals(Integer.valueOf(4), resultPieces.get(3).getSequenceNumber());
+    });
+  }
+
+  @Test
+  void testGenerateNextSequenceNumbers_restClientFailure() {
+    var pieces = List.of(
+      new Piece().withId(PIECE_ID_1).withSequenceNumber(null)
+    );
+
+    when(restClient.postBatch(any(RequestEntry.class), any(), eq(SequenceNumbers.class), eq(requestContext)))
+      .thenReturn(Future.failedFuture(new RuntimeException("REST call failed")));
+
+    var result = titlesService.generateNextSequenceNumbers(pieces, title, requestContext);
+
+    result.onComplete(ar -> {
+      assertTrue(ar.failed());
+      assertEquals("REST call failed", ar.cause().getMessage());
     });
   }
 
