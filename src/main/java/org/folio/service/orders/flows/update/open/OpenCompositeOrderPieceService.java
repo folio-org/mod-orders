@@ -97,7 +97,7 @@ public class OpenCompositeOrderPieceService {
     piecesToCreate.addAll(holder.getPiecesWithoutLocationId());
 
     piecesToCreate.stream()
-      .peek(piece -> piece.withTitleId(holder.getTitle().getId()))
+      .map(piece -> piece.withTitleId(holder.getTitle().getId()))
       .forEach(piece -> validatePieceSequenceNumber(piece, holder.getTitle(), piecesToCreate.size()));
 
     // Collect pieces after validation
