@@ -319,9 +319,11 @@ public class ApplicationConfig {
   EncumbranceWorkflowStrategy closedToOpenEncumbranceStrategy(EncumbranceService encumbranceService,
       FundsDistributionService fundsDistributionService,
       BudgetRestrictionService budgetRestrictionService,
-      EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder) {
+      EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder,
+      InvoiceLineService invoiceLineService,
+      TransactionService transactionService) {
     return new ClosedToOpenEncumbranceStrategy(encumbranceService, fundsDistributionService,
-      budgetRestrictionService, encumbranceRelationsHoldersBuilder);
+      budgetRestrictionService, encumbranceRelationsHoldersBuilder, invoiceLineService, transactionService);
   }
 
   @Bean

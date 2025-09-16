@@ -30,6 +30,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.service.FundsDistributionService;
 import org.folio.service.finance.budget.BudgetRestrictionService;
+import org.folio.service.invoice.InvoiceLineService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,20 +45,27 @@ import io.vertx.junit5.VertxTestContext;
 
 @ExtendWith(VertxExtension.class)
 public class ClosedToOpenEncumbranceStrategyTest {
+
   @InjectMocks
   private ClosedToOpenEncumbranceStrategy closedToOpenEncumbranceStrategy;
   @Mock
   private EncumbranceService encumbranceService;
   @Mock
-  EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder;
+  private InvoiceLineService invoiceLineService;
   @Mock
-  FundsDistributionService fundsDistributionService;
+  private TransactionService transactionService;
   @Mock
-  BudgetRestrictionService budgetRestrictionService;
+  private EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder;
+  @Mock
+  private FundsDistributionService fundsDistributionService;
+  @Mock
+  private BudgetRestrictionService budgetRestrictionService;
   @Mock
   private RequestContext requestContext;
+
   private AutoCloseable mockitoMocks;
 
+  // TODO Add new test methods
   @BeforeEach
   public void initMocks() {
     mockitoMocks = MockitoAnnotations.openMocks(this);
@@ -90,6 +98,8 @@ public class ClosedToOpenEncumbranceStrategyTest {
 
     doReturn(encumbranceRelationsHolders).when(fundsDistributionService).distributeFunds(any());
     doReturn(succeededFuture(null)).when(encumbranceService).createOrUpdateEncumbrances(any(), any());
+    doReturn(succeededFuture(List.of())).when(invoiceLineService).getInvoiceLinesByOrderLineIds(any(), any());
+    doReturn(succeededFuture(List.of())).when(transactionService).getTransactionsByEncumbranceIds(any(), any(), any());
 
     // When
     Future<Void> future = closedToOpenEncumbranceStrategy.processEncumbrances(order, orderFromStorage, requestContext);
@@ -127,6 +137,8 @@ public class ClosedToOpenEncumbranceStrategyTest {
     doReturn(succeededFuture(mapFiscalYearsWithPoLines)).when(encumbranceRelationsHoldersBuilder).retrieveMapFiscalYearsWithPoLines(eq(order), eq(orderFromStorage), eq(requestContext));
 
     doReturn(succeededFuture(emptyList())).when(encumbranceService).getOrderEncumbrancesToUnrelease(any(), any(), any());
+    doReturn(succeededFuture(List.of())).when(invoiceLineService).getInvoiceLinesByOrderLineIds(any(), any());
+    doReturn(succeededFuture(List.of())).when(transactionService).getTransactionsByEncumbranceIds(any(), any(), any());
 
     // When
     Future<Void> future = closedToOpenEncumbranceStrategy.processEncumbrances(order, orderFromStorage, requestContext);
@@ -138,7 +150,5 @@ public class ClosedToOpenEncumbranceStrategyTest {
         verify(encumbranceService, never()).createOrUpdateEncumbrances(any(), any());
         vertxTestContext.completeNow();
       });
-
   }
-
 }

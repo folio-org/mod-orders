@@ -291,7 +291,8 @@ public class PurchaseOrderLineHelper {
       return encumbranceService.getPoLineReleasedEncumbrances(compOrderLine, requestContext)
         .compose(transactionList -> {
           // only unrelease encumbrances with expended + credited + awaiting payment = 0
-          List<Transaction> encToUnrelease = EncumbranceUtils.collectAllowedTransactionsForUnrelease(transactionList);
+          // TODO Populate new params
+          List<Transaction> encToUnrelease = EncumbranceUtils.collectAllowedTransactionsForUnrelease(transactionList, List.of(), List.of());
           return encumbranceService.unreleaseEncumbrances(encToUnrelease, requestContext);
         });
     }

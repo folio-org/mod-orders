@@ -30,7 +30,6 @@ import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.Parameter;
 
 import io.vertx.core.Future;
-import one.util.streamex.StreamEx;
 
 public class TransactionService {
   private static final Logger log = LogManager.getLogger();
@@ -51,17 +50,15 @@ public class TransactionService {
   }
 
   public Future<List<Transaction>> getTransactionsByPoLinesIds(List<String> trIds, String searchCriteria, RequestContext requestContext) {
-    return collectResultsOnSuccess(
-        ofSubLists(new ArrayList<>(trIds), MAX_IDS_FOR_GET_RQ_15).map(ids -> getTransactionsChunksByPoLineIds(ids, searchCriteria, requestContext))
-          .toList()).map(
-              lists -> lists.stream()
-                .flatMap(Collection::stream)
-                .collect(Collectors.toList()));
+    return collectResultsOnSuccess(ofSubLists(new ArrayList<>(trIds), MAX_IDS_FOR_GET_RQ_15)
+        .map(ids -> getTransactionsChunksByPoLineIds(ids, searchCriteria, requestContext))
+      .toList())
+      .map(lists -> lists.stream().flatMap(Collection::stream).collect(Collectors.toList()));
   }
 
   public Future<List<Transaction>> getTransactionsByIds(List<String> trIds, RequestContext requestContext) {
     Set<String> uniqueTrIds = new LinkedHashSet<>(trIds);
-    return collectResultsOnSuccess(StreamEx.ofSubLists(new ArrayList<>(uniqueTrIds), MAX_IDS_FOR_GET_RQ_15)
+    return collectResultsOnSuccess(ofSubLists(new ArrayList<>(uniqueTrIds), MAX_IDS_FOR_GET_RQ_15)
         .map(ids -> getTransactionsChunksByIds(ids, requestContext))
       .toList())
       .map(lists -> lists.stream().flatMap(Collection::stream).collect(Collectors.toList()))
@@ -75,6 +72,12 @@ public class TransactionService {
       });
   }
 
+  public Future<List<Transaction>> getTransactionsByEncumbranceIds(List<String> trIds, String searchCriteria, RequestContext requestContext) {
+    return collectResultsOnSuccess(ofSubLists(new ArrayList<>(trIds), MAX_IDS_FOR_GET_RQ_15)
+      .map(ids -> getTransactionsChunksByEncumbranceIds(ids, searchCriteria, requestContext))
+      .toList())
+      .map(lists -> lists.stream().flatMap(Collection::stream).collect(Collectors.toList()));
+  }
 
   private Future<List<Transaction>> getTransactionsChunksByPoLineIds(Collection<String> ids, String criteria, RequestContext requestContext) {
     String query = convertIdsToCqlQuery(ids, "encumbrance.sourcePoLineId") + " AND " + criteria;
@@ -83,6 +86,11 @@ public class TransactionService {
 
   private Future<List<Transaction>> getTransactionsChunksByIds(Collection<String> ids, RequestContext requestContext) {
     String query = convertIdsToCqlQuery(ids) ;
+    return getTransactions(query, requestContext);
+  }
+
+  private Future<List<Transaction>> getTransactionsChunksByEncumbranceIds(Collection<String> ids, String criteria, RequestContext requestContext) {
+    String query = convertIdsToCqlQuery(ids, "paymentEncumbranceId") + " AND " + criteria;
     return getTransactions(query, requestContext);
   }
 
