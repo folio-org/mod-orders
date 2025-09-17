@@ -188,6 +188,7 @@ public class TitlesService {
     if (CollectionUtils.isEmpty(pieces)) {
       return Future.succeededFuture(Optional.ofNullable(pieces).orElse(List.of()));
     }
+    log.info("generateNextSequenceNumbers:: Generating {} sequence numbers starting from {} for title: '{}'", pieces.size(), title.getNextSequenceNumber(), title.getId());
     var requestEntry = new RequestEntry(SEQUENCE_NUMBERS_ENDPOINT).withId(title.getId())
       .withQueryParameter(SEQUENCE_NUMBER_PARAM, String.valueOf(pieces.size()));
     return restClient.postBatch(requestEntry, null, SequenceNumbers.class, requestContext)
@@ -200,6 +201,7 @@ public class TitlesService {
           .map(Integer::valueOf)
           .filter(number -> !assignedNumbers.contains(number))
           .toCollection(LinkedList::new);
+        log.info("generateNextSequenceNumbers:: Already assigned numbers: {}, numbers to assign: {}", assignedNumbers, pendingNumbers);
         pieces.stream()
           .filter(piece -> piece.getSequenceNumber() == null)
           .forEach(piece -> piece.setSequenceNumber(pendingNumbers.poll()));
