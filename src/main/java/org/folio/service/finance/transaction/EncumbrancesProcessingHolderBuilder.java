@@ -13,8 +13,7 @@ import org.folio.rest.acq.model.finance.Transaction;
 
 public class EncumbrancesProcessingHolderBuilder {
 
-  protected EncumbrancesProcessingHolder distributeHoldersByOperation(
-                List<EncumbranceRelationsHolder> encumbranceRelationsHolders) {
+  protected EncumbrancesProcessingHolder distributeHoldersByOperation(List<EncumbranceRelationsHolder> encumbranceRelationsHolders) {
     EncumbrancesProcessingHolder holder = new EncumbrancesProcessingHolder();
     holder.withEncumbrancesForCreate(getToBeCreatedHolders(encumbranceRelationsHolders));
     holder.withEncumbrancesForUpdate(getToBeUpdatedHolders(encumbranceRelationsHolders));

@@ -20,6 +20,7 @@ import static org.folio.rest.core.exceptions.ErrorCodes.PIECES_EXIST_FOR_POLINE;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.CLOSED;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
+import static org.folio.service.finance.EncumbranceUtils.collectAllowedTransactionsForUnrelease;
 import static org.folio.service.orders.utils.StatusUtils.areAllPoLinesCanceled;
 import static org.folio.service.orders.utils.StatusUtils.isStatusCanceledCompositePoLine;
 import static org.folio.service.orders.utils.StatusUtils.isStatusChanged;
@@ -42,6 +43,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.models.EncumbranceUnreleaseHolder;
 import org.folio.models.ItemStatus;
 import org.folio.models.PoLineInvoiceLineHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
@@ -52,7 +54,6 @@ import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.RestConstants;
 import org.folio.rest.acq.model.SequenceNumbers;
-import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
@@ -69,7 +70,6 @@ import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.service.ProtectionService;
-import org.folio.service.finance.EncumbranceUtils;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
@@ -289,11 +289,12 @@ public class PurchaseOrderLineHelper {
     } else if (isUnreleasedEncumbrances(compOrderLine, poLineFromStorage)) {
       logger.info("updateEncumbranceStatus:: Encumbrances unreleasing for poLineId={} where paymentStatus={}", compOrderLine.getId(), compOrderLine.getPaymentStatus());
       return encumbranceService.getPoLineReleasedEncumbrances(compOrderLine, requestContext)
-        .compose(transactionList -> {
+        .compose(encumbrances -> {
           // only unrelease encumbrances with expended + credited + awaiting payment = 0
           // TODO Populate new params
-          List<Transaction> encToUnrelease = EncumbranceUtils.collectAllowedTransactionsForUnrelease(transactionList, List.of(), List.of());
-          return encumbranceService.unreleaseEncumbrances(encToUnrelease, requestContext);
+          var encumbranceUnreleaseHolder = new EncumbranceUnreleaseHolder().withEncumbrances(encumbrances);
+          var encumbrancesToUnrelease = collectAllowedTransactionsForUnrelease(encumbranceUnreleaseHolder);
+          return encumbranceService.unreleaseEncumbrances(encumbrancesToUnrelease, requestContext);
         });
     }
     return Future.succeededFuture();

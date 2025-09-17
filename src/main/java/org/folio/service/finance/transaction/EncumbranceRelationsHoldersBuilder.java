@@ -25,6 +25,11 @@ import org.folio.service.finance.FundService;
 import org.folio.service.finance.LedgerService;
 import org.folio.service.finance.budget.BudgetService;
 
+import static java.util.stream.Collectors.collectingAndThen;
+import static java.util.stream.Collectors.mapping;
+import static java.util.stream.Collectors.toList;
+import static org.folio.service.finance.EncumbranceUtils.allowTransactionToReleaseOnReopen;
+
 public class EncumbranceRelationsHoldersBuilder extends FinanceHoldersBuilder {
 
   private final EncumbranceService encumbranceService;
@@ -45,7 +50,7 @@ public class EncumbranceRelationsHoldersBuilder extends FinanceHoldersBuilder {
           .withPoLine(poLine)
           .withPurchaseOrder(compPO)))
       .map(this::buildBaseHolder)
-      .collect(Collectors.toList());
+      .collect(toList());
   }
 
   private EncumbranceRelationsHolder buildBaseHolder(EncumbranceRelationsHolder holder) {
@@ -79,7 +84,7 @@ public class EncumbranceRelationsHoldersBuilder extends FinanceHoldersBuilder {
     List<String> transactionIds = poAndLinesFromStorage.getPoLines().stream()
       .flatMap(poLine -> poLine.getFundDistribution().stream().map(FundDistribution::getEncumbrance))
       .filter(Objects::nonNull)
-      .collect(Collectors.toList());
+      .collect(toList());
     if (transactionIds.isEmpty()) {
       return Future.succeededFuture(encumbranceHolders);
     }
@@ -152,38 +157,33 @@ public class EncumbranceRelationsHoldersBuilder extends FinanceHoldersBuilder {
         newTransaction.setId(existingTransaction.getId());
         newTransaction.setVersion(existingTransaction.getVersion());
         newTransaction.setMetadata(JsonObject.mapFrom(existingTransaction.getMetadata()).mapTo(Metadata.class));
+        Encumbrance existingEncumbrance = existingTransaction.getEncumbrance();
         newTransaction.getEncumbrance()
-          .withAmountExpended(existingTransaction.getEncumbrance().getAmountExpended())
-          .withAmountCredited(existingTransaction.getEncumbrance().getAmountCredited())
-          .withAmountAwaitingPayment(existingTransaction.getEncumbrance().getAmountAwaitingPayment());
-        if (existingTransaction.getEncumbrance().getStatus() == Encumbrance.Status.RELEASED)
+          .withAmountExpended(existingEncumbrance.getAmountExpended())
+          .withAmountCredited(existingEncumbrance.getAmountCredited())
+          .withAmountAwaitingPayment(existingEncumbrance.getAmountAwaitingPayment());
+        // release if encumbrance amountExpended + amountCredited + amountAwaitingPayment > 0 (if we have approved/paid invoices)
+        if (existingEncumbrance.getStatus() == Encumbrance.Status.RELEASED || allowTransactionToReleaseOnReopen(existingEncumbrance))
           newTransaction.getEncumbrance().setStatus(Encumbrance.Status.RELEASED);
       }));
   }
 
   public Future<List<EncumbranceRelationsHolder>> prepareEncumbranceRelationsHolder(CompositePurchaseOrder compPO,
-                                                                                    CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
+                                                                                    CompositePurchaseOrder poFromStorage,
+                                                                                    RequestContext requestContext) {
     List<EncumbranceRelationsHolder> holders = buildBaseHolders(compPO);
     return withFinances(holders, requestContext)
       .compose(v -> withExistingTransactions(holders, poFromStorage, requestContext));
   }
 
   public Future<Map<String, List<PoLine>>> retrieveMapFiscalYearsWithPoLines(CompositePurchaseOrder compPO,
-                                                                                          CompositePurchaseOrder poAndLinesFromStorage,
-                                                                                          RequestContext requestContext) {
+                                                                             CompositePurchaseOrder poAndLinesFromStorage,
+                                                                             RequestContext requestContext) {
     return prepareEncumbranceRelationsHolder(compPO, poAndLinesFromStorage, requestContext)
       .map(erhList -> erhList.stream()
         .filter(erh -> erh.getCurrentFiscalYearId() != null)
-        .collect(Collectors.groupingBy(
-          EncumbranceRelationsHolder::getCurrentFiscalYearId,
-          Collectors.mapping(
-            EncumbranceRelationsHolder::getPoLine,
-            Collectors.collectingAndThen(
-              Collectors.toList(),
-              list -> list.stream().distinct().toList()
-            )
-          )
-        ))
-      );
+        .collect(Collectors.groupingBy(EncumbranceRelationsHolder::getCurrentFiscalYearId,
+          mapping(EncumbranceRelationsHolder::getPoLine, collectingAndThen(toList(), list -> list.stream().distinct().toList()))
+        )));
   }
 }
