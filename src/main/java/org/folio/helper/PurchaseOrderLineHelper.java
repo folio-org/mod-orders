@@ -20,7 +20,7 @@ import static org.folio.rest.core.exceptions.ErrorCodes.PIECES_EXIST_FOR_POLINE;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.CLOSED;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
-import static org.folio.service.finance.EncumbranceUtils.collectAllowedTransactionsForUnrelease;
+import static org.folio.service.finance.EncumbranceUtils.collectAllowedEncumbrancesForUnrelease;
 import static org.folio.service.orders.utils.StatusUtils.areAllPoLinesCanceled;
 import static org.folio.service.orders.utils.StatusUtils.isStatusCanceledCompositePoLine;
 import static org.folio.service.orders.utils.StatusUtils.isStatusChanged;
@@ -293,7 +293,7 @@ public class PurchaseOrderLineHelper {
           // only unrelease encumbrances with expended + credited + awaiting payment = 0
           // TODO Populate new params
           var encumbranceUnreleaseHolder = new EncumbranceUnreleaseHolder().withEncumbrances(encumbrances);
-          var encumbrancesToUnrelease = collectAllowedTransactionsForUnrelease(encumbranceUnreleaseHolder);
+          var encumbrancesToUnrelease = collectAllowedEncumbrancesForUnrelease(encumbranceUnreleaseHolder);
           return encumbranceService.unreleaseEncumbrances(encumbrancesToUnrelease, requestContext);
         });
     }
@@ -558,7 +558,7 @@ public class PurchaseOrderLineHelper {
     return restClient.getAsJsonObject(rqEntry, requestContext)
       .map(sequenceNumbersJson -> {
         SequenceNumbers sequenceNumbers = JsonObject.mapFrom(sequenceNumbersJson).mapTo(SequenceNumbers.class);
-        return PoLineCommonUtil.buildPoLineNumber(compOrder.getPoNumber(), sequenceNumbers.getSequenceNumbers().get(0));
+        return PoLineCommonUtil.buildPoLineNumber(compOrder.getPoNumber(), sequenceNumbers.getSequenceNumbers().getFirst());
       });
   }
 
@@ -571,7 +571,7 @@ public class PurchaseOrderLineHelper {
       .map(titleCollection -> {
         var titles = titleCollection.getTitles();
         if (!titles.isEmpty()) {
-          line.setInstanceId(titles.get(0).getInstanceId());
+          line.setInstanceId(titles.getFirst().getInstanceId());
         }
         return line;
       });
@@ -668,7 +668,7 @@ public class PurchaseOrderLineHelper {
     return organizationService.validateAccessProviders(Collections.singletonList(compOrderLine), requestContext)
       .map(errors -> {
         if (isNotEmpty(errors.getErrors())) {
-          throw new HttpException(422, errors.getErrors().get(0));
+          throw new HttpException(422, errors.getErrors().getFirst());
         }
         return null;
       })

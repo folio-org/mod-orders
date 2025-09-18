@@ -28,7 +28,7 @@ import org.folio.service.finance.budget.BudgetService;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
-import static org.folio.service.finance.EncumbranceUtils.allowTransactionToReleaseOnReopen;
+import static org.folio.service.finance.EncumbranceUtils.allowEncumbranceToReleaseOnReopen;
 
 public class EncumbranceRelationsHoldersBuilder extends FinanceHoldersBuilder {
 
@@ -50,7 +50,7 @@ public class EncumbranceRelationsHoldersBuilder extends FinanceHoldersBuilder {
           .withPoLine(poLine)
           .withPurchaseOrder(compPO)))
       .map(this::buildBaseHolder)
-      .collect(toList());
+      .toList();
   }
 
   private EncumbranceRelationsHolder buildBaseHolder(EncumbranceRelationsHolder holder) {
@@ -84,7 +84,7 @@ public class EncumbranceRelationsHoldersBuilder extends FinanceHoldersBuilder {
     List<String> transactionIds = poAndLinesFromStorage.getPoLines().stream()
       .flatMap(poLine -> poLine.getFundDistribution().stream().map(FundDistribution::getEncumbrance))
       .filter(Objects::nonNull)
-      .collect(toList());
+      .toList();
     if (transactionIds.isEmpty()) {
       return Future.succeededFuture(encumbranceHolders);
     }
@@ -163,7 +163,7 @@ public class EncumbranceRelationsHoldersBuilder extends FinanceHoldersBuilder {
           .withAmountCredited(existingEncumbrance.getAmountCredited())
           .withAmountAwaitingPayment(existingEncumbrance.getAmountAwaitingPayment());
         // release if encumbrance amountExpended + amountCredited + amountAwaitingPayment > 0 (if we have approved/paid invoices)
-        if (existingEncumbrance.getStatus() == Encumbrance.Status.RELEASED || allowTransactionToReleaseOnReopen(existingEncumbrance))
+        if (existingEncumbrance.getStatus() == Encumbrance.Status.RELEASED || allowEncumbranceToReleaseOnReopen(existingEncumbrance))
           newTransaction.getEncumbrance().setStatus(Encumbrance.Status.RELEASED);
       }));
   }

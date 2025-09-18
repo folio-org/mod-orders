@@ -14,10 +14,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import lombok.extern.log4j.Log4j2;
 import org.folio.rest.acq.model.finance.Batch;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
@@ -31,9 +29,17 @@ import org.folio.rest.jaxrs.model.Parameter;
 
 import io.vertx.core.Future;
 
+@Log4j2
 public class TransactionService {
-  private static final Logger log = LogManager.getLogger();
+
   private static final String ENDPOINT = "/finance/transactions";
+
+  private static final String ENCUMBRANCE_SOURCE_PO_LINE_ID = "encumbrance.sourcePoLineId";
+  private static final String AWAITING_PAYMENT_ENCUMBRANCE_ID = "awaitingPayment.encumbranceId";
+  private static final String PAYMENT_ENCUMBRANCE_ID = "paymentEncumbranceId";
+
+  private static final String PENDING_PAYMENT_TYPE = "transactionType == \"Pending payment\"";
+  private static final String PAYMENT_TYPE = "transactionType == \"Payment\"";
 
   private final RestClient restClient;
 
@@ -49,19 +55,12 @@ public class TransactionService {
       .map(TransactionCollection::getTransactions);
   }
 
-  public Future<List<Transaction>> getTransactionsByPoLinesIds(List<String> trIds, String searchCriteria, RequestContext requestContext) {
-    return collectResultsOnSuccess(ofSubLists(new ArrayList<>(trIds), MAX_IDS_FOR_GET_RQ_15)
-        .map(ids -> getTransactionsChunksByPoLineIds(ids, searchCriteria, requestContext))
-      .toList())
-      .map(lists -> lists.stream().flatMap(Collection::stream).collect(Collectors.toList()));
-  }
-
   public Future<List<Transaction>> getTransactionsByIds(List<String> trIds, RequestContext requestContext) {
     Set<String> uniqueTrIds = new LinkedHashSet<>(trIds);
     return collectResultsOnSuccess(ofSubLists(new ArrayList<>(uniqueTrIds), MAX_IDS_FOR_GET_RQ_15)
-        .map(ids -> getTransactionsChunksByIds(ids, requestContext))
+      .map(ids -> getTransactionsChunksByIds(ids, requestContext))
       .toList())
-      .map(lists -> lists.stream().flatMap(Collection::stream).collect(Collectors.toList()))
+      .map(lists -> lists.stream().flatMap(Collection::stream).toList())
       .map(trList -> {
         if (trList.size() != uniqueTrIds.size()) {
           List<Parameter> parameters = new ArrayList<>();
@@ -72,30 +71,40 @@ public class TransactionService {
       });
   }
 
-  public Future<List<Transaction>> getTransactionsByEncumbranceIds(List<String> trIds, String searchCriteria, RequestContext requestContext) {
+  public Future<List<Transaction>> getTransactionsByPoLinesIds(List<String> trIds, String searchCriteria, RequestContext requestContext) {
     return collectResultsOnSuccess(ofSubLists(new ArrayList<>(trIds), MAX_IDS_FOR_GET_RQ_15)
-      .map(ids -> getTransactionsChunksByEncumbranceIds(ids, searchCriteria, requestContext))
+      .map(ids -> getTransactionsChunksByFieldNameAndCriteria(ids, ENCUMBRANCE_SOURCE_PO_LINE_ID, searchCriteria, requestContext))
       .toList())
-      .map(lists -> lists.stream().flatMap(Collection::stream).collect(Collectors.toList()));
+      .map(lists -> lists.stream().flatMap(Collection::stream).toList());
   }
 
-  private Future<List<Transaction>> getTransactionsChunksByPoLineIds(Collection<String> ids, String criteria, RequestContext requestContext) {
-    String query = convertIdsToCqlQuery(ids, "encumbrance.sourcePoLineId") + " AND " + criteria;
+  public Future<List<Transaction>> getPendingPaymentsByEncumbranceIds(List<String> trIds, RequestContext requestContext) {
+    return collectResultsOnSuccess(ofSubLists(new ArrayList<>(trIds), MAX_IDS_FOR_GET_RQ_15)
+      .map(ids -> getTransactionsChunksByFieldNameAndCriteria(ids, AWAITING_PAYMENT_ENCUMBRANCE_ID, PENDING_PAYMENT_TYPE, requestContext))
+      .toList())
+      .map(lists -> lists.stream().flatMap(Collection::stream).toList());
+  }
+
+  public Future<List<Transaction>> getPaymentsByEncumbranceIds(List<String> trIds, RequestContext requestContext) {
+    return collectResultsOnSuccess(ofSubLists(new ArrayList<>(trIds), MAX_IDS_FOR_GET_RQ_15)
+      .map(ids -> getTransactionsChunksByFieldNameAndCriteria(ids, PAYMENT_ENCUMBRANCE_ID, PAYMENT_TYPE, requestContext))
+      .toList())
+      .map(lists -> lists.stream().flatMap(Collection::stream).toList());
+  }
+
+  private Future<List<Transaction>> getTransactionsChunksByFieldNameAndCriteria(Collection<String> ids, String fieldName,
+                                                                                String criteria, RequestContext requestContext) {
+    String query = "%s AND %s".formatted(convertIdsToCqlQuery(ids, fieldName), criteria);
     return getTransactions(query, requestContext);
   }
 
   private Future<List<Transaction>> getTransactionsChunksByIds(Collection<String> ids, RequestContext requestContext) {
-    String query = convertIdsToCqlQuery(ids) ;
-    return getTransactions(query, requestContext);
-  }
-
-  private Future<List<Transaction>> getTransactionsChunksByEncumbranceIds(Collection<String> ids, String criteria, RequestContext requestContext) {
-    String query = convertIdsToCqlQuery(ids, "paymentEncumbranceId") + " AND " + criteria;
+    String query = convertIdsToCqlQuery(ids);
     return getTransactions(query, requestContext);
   }
 
   public Future<Void> batchAllOrNothing(List<Transaction> transactionsToCreate, List<Transaction> transactionsToUpdate,
-    List<String> idsOfTransactionsToDelete, List<TransactionPatch> transactionPatches, RequestContext requestContext) {
+                                        List<String> idsOfTransactionsToDelete, List<TransactionPatch> transactionPatches, RequestContext requestContext) {
     Batch batch = new Batch();
     if (transactionsToCreate != null) {
       transactionsToCreate.forEach(tr -> {
@@ -155,5 +164,4 @@ public class TransactionService {
     transactionsToRelease.forEach(tr -> tr.getEncumbrance().setStatus(Encumbrance.Status.RELEASED));
     return batchAllOrNothing(null, transactionsToRelease, allIds, null, requestContext);
   }
-
 }

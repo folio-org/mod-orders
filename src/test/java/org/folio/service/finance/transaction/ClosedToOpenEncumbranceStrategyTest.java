@@ -99,7 +99,8 @@ public class ClosedToOpenEncumbranceStrategyTest {
     doReturn(encumbranceRelationsHolders).when(fundsDistributionService).distributeFunds(any());
     doReturn(succeededFuture(null)).when(encumbranceService).createOrUpdateEncumbrances(any(), any());
     doReturn(succeededFuture(List.of())).when(invoiceLineService).getInvoiceLinesByOrderLineIds(any(), any());
-    doReturn(succeededFuture(List.of())).when(transactionService).getTransactionsByEncumbranceIds(any(), any(), any());
+    doReturn(succeededFuture(List.of())).when(transactionService).getPendingPaymentsByEncumbranceIds(any(), any());
+    doReturn(succeededFuture(List.of())).when(transactionService).getPaymentsByEncumbranceIds(any(), any());
 
     // When
     Future<Void> future = closedToOpenEncumbranceStrategy.processEncumbrances(order, orderFromStorage, requestContext);
@@ -138,7 +139,8 @@ public class ClosedToOpenEncumbranceStrategyTest {
 
     doReturn(succeededFuture(emptyList())).when(encumbranceService).getOrderEncumbrancesToUnrelease(any(), any(), any());
     doReturn(succeededFuture(List.of())).when(invoiceLineService).getInvoiceLinesByOrderLineIds(any(), any());
-    doReturn(succeededFuture(List.of())).when(transactionService).getTransactionsByEncumbranceIds(any(), any(), any());
+    doReturn(succeededFuture(List.of())).when(transactionService).getPendingPaymentsByEncumbranceIds(any(), any());
+    doReturn(succeededFuture(List.of())).when(transactionService).getPaymentsByEncumbranceIds(any(), any());
 
     // When
     Future<Void> future = closedToOpenEncumbranceStrategy.processEncumbrances(order, orderFromStorage, requestContext);

@@ -2,7 +2,7 @@ package org.folio.service.finance.transaction;
 
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.FundDistributionUtils.isFundDistributionsPresent;
-import static org.folio.service.finance.EncumbranceUtils.collectAllowedTransactionsForUnrelease;
+import static org.folio.service.finance.EncumbranceUtils.collectAllowedEncumbrancesForUnrelease;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -12,7 +12,6 @@ import org.folio.HttpStatus;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbranceUnreleaseHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
-import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -27,7 +26,6 @@ import io.vertx.core.Future;
 public class ClosedToOpenEncumbranceStrategy implements EncumbranceWorkflowStrategy {
 
   private static final String PROCESS_ENCUMBRANCES_ERROR = "Error when processing encumbrances to reopen an order";
-  private static final String TRANSACTION_TYPE_PAYMENT = "transactionType == \"Payment\"";
 
   private final EncumbranceService encumbranceService;
   private final FundsDistributionService fundsDistributionService;
@@ -58,27 +56,23 @@ public class ClosedToOpenEncumbranceStrategy implements EncumbranceWorkflowStrat
       return encumbranceRelationsHoldersBuilder.retrieveMapFiscalYearsWithPoLines(compPO, poAndLinesFromStorage, requestContext)
         .compose(mapFiscalYearIdsWithPoLines -> encumbranceService.getOrderEncumbrancesToUnrelease(compPO, mapFiscalYearIdsWithPoLines, requestContext))
         .compose(encumbrances -> {
-          var encumbranceUnreleaseHolder = new EncumbranceUnreleaseHolder().withEncumbrances(encumbrances);
-          var orderLineIds = encumbrances.stream()
-            .map(encumbrance -> encumbrance.getEncumbrance().getSourcePoLineId())
-            .toList();
-          return invoiceLineService.getInvoiceLinesByOrderLineIds(orderLineIds, requestContext)
-            .map(encumbranceUnreleaseHolder::withInvoiceLines);
+          var unreleaseHolder = new EncumbranceUnreleaseHolder().withEncumbrances(encumbrances);
+          return invoiceLineService.getInvoiceLinesByOrderLineIds(unreleaseHolder.getPoLineIds(), requestContext)
+            .map(unreleaseHolder::withInvoiceLines);
         })
-        .compose(encumbranceUnreleaseHolder -> {
-          var encumbranceIds = encumbranceUnreleaseHolder.getEncumbrances().stream().map(Transaction::getId).toList();
-          return transactionService.getTransactionsByEncumbranceIds(encumbranceIds, TRANSACTION_TYPE_PAYMENT, requestContext)
-            .map(encumbranceUnreleaseHolder::withPayments);
-        })
-        .compose(encumbranceUnreleaseHolder -> {
-          var encumbrances = encumbranceUnreleaseHolder.getEncumbrances();
-
+        .compose(unreleaseHolder ->
+          transactionService.getPendingPaymentsByEncumbranceIds(unreleaseHolder.getEncumbranceIds(), requestContext)
+            .map(unreleaseHolder::withPendingPayments))
+        .compose(unreleaseHolder ->
+          transactionService.getPaymentsByEncumbranceIds(unreleaseHolder.getEncumbranceIds(), requestContext)
+            .map(unreleaseHolder::withPayments))
+        .compose(unreleaseHolder -> {
+          var encumbrances = unreleaseHolder.getEncumbrances();
           // stop if nothing needs to be done
           if (encumbrances.isEmpty() && compPO.getPoLines().stream().noneMatch(
               pol -> pol.getFundDistribution().stream().anyMatch(f -> f.getEncumbrance() == null))) {
             return Future.succeededFuture();
           }
-
           // check encumbrance restrictions as in PendingToOpenEncumbranceStrategy
           // (except we use a different list of poLines/encumbrances)
           List<EncumbranceRelationsHolder> holders = encumbranceRelationsHoldersBuilder
@@ -107,7 +101,7 @@ public class ClosedToOpenEncumbranceStrategy implements EncumbranceWorkflowStrat
                 .collect(toList());
               holder.withEncumbrancesForCreate(toBeCreatedHolders);
               // only unrelease encumbrances with expended + credited + awaiting payment = 0
-              var encumbrancesToUnrelease = collectAllowedTransactionsForUnrelease(encumbranceUnreleaseHolder);
+              var encumbrancesToUnrelease = collectAllowedEncumbrancesForUnrelease(unreleaseHolder);
               holder.withEncumbrancesForUnrelease(encumbrancesToUnrelease);
               return encumbranceService.createOrUpdateEncumbrances(holder, requestContext);
             });
