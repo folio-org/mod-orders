@@ -612,7 +612,6 @@ public class MockServer {
     router.post(resourcesPath(ORDER_TEMPLATES)).handler(ctx -> handlePostGenericSubObj(ctx, ORDER_TEMPLATES));
     router.post(resourcesPath(FINANCE_BATCH_TRANSACTIONS)).handler(this::handleBatchTransactions);
     router.post(resourcesPath(TITLES)).handler(ctx -> handlePostGenericSubObj(ctx, TITLES));
-    router.post(resourcePath(TITLES) + "/sequence-numbers").handler(this::handleTitleSequenceNumbers);
     router.post(resourcesPath(ROUTING_LISTS)).handler(ctx -> handlePostGenericSubObj(ctx, ROUTING_LISTS));
     router.post(resourcesPath(ACQUISITIONS_UNITS)).handler(ctx -> handlePostGenericSubObj(ctx, ACQUISITIONS_UNITS));
     router.post(resourcesPath(ACQUISITION_METHODS)).handler(ctx -> handlePostGenericSubObj(ctx, ACQUISITION_METHODS));
@@ -665,6 +664,7 @@ public class MockServer {
     router.get(resourcesPath(LEDGERS)).handler(this::handleGetLedgers);
     router.get(resourcesPath(TITLES)).handler(this::handleGetTitles);
     router.get(resourcePath(TITLES)).handler(this::handleGetOrderTitleById);
+    router.get(resourcePath(TITLES) + "/sequence-numbers").handler(this::handleTitleSequenceNumbers);
     router.get(resourcesPath(ROUTING_LISTS)).handler(this::handleGetRoutingLists);
     router.get(resourcePath(ROUTING_LISTS)).handler(this::handleGetRoutingListById);
     router.get(resourcesPath(REASONS_FOR_CLOSURE)).handler(ctx -> handleGetGenericSubObjs(ctx, REASONS_FOR_CLOSURE));
