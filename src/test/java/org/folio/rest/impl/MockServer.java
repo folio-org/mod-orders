@@ -154,6 +154,7 @@ import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import javax.ws.rs.core.Response;
 
@@ -663,6 +664,7 @@ public class MockServer {
     router.get(resourcesPath(LEDGERS)).handler(this::handleGetLedgers);
     router.get(resourcesPath(TITLES)).handler(this::handleGetTitles);
     router.get(resourcePath(TITLES)).handler(this::handleGetOrderTitleById);
+    router.get(resourcePath(TITLES) + "/sequence-numbers").handler(this::handleTitleSequenceNumbers);
     router.get(resourcesPath(ROUTING_LISTS)).handler(this::handleGetRoutingLists);
     router.get(resourcePath(ROUTING_LISTS)).handler(this::handleGetRoutingListById);
     router.get(resourcesPath(REASONS_FOR_CLOSURE)).handler(ctx -> handleGetGenericSubObjs(ctx, REASONS_FOR_CLOSURE));
@@ -2571,6 +2573,15 @@ public class MockServer {
         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
         .end(JsonObject.mapFrom(seqNumber).encodePrettily());
     }
+  }
+
+  private void handleTitleSequenceNumbers(RoutingContext ctx) {
+    var sequence = IntStream.range(0, 10).mapToObj(String::valueOf).toList();
+    var seqNumbers = new SequenceNumbers().withSequenceNumbers(sequence);
+    ctx.response()
+      .setStatusCode(200)
+      .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+      .end(JsonObject.mapFrom(seqNumbers).encodePrettily());
   }
 
   private void handleGetContributorNameTypes(RoutingContext ctx) {

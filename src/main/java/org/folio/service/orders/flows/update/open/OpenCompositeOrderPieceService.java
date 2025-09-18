@@ -6,6 +6,7 @@ import static org.folio.orders.utils.HelperUtils.chainCall;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
 import static org.folio.service.pieces.PieceUtil.updatePieceStatus;
+import static org.folio.service.pieces.flows.DefaultPieceFlowsValidator.validatePieceSequenceNumber;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -69,7 +70,7 @@ public class OpenCompositeOrderPieceService {
   /**
    * Creates pieces that are not yet in storage
    *
-   * @param poLine PO line to create Pieces Records for
+   * @param poLine                 PO line to create Pieces Records for
    * @param expectedPiecesWithItem expected Pieces to create with created associated Items records
    * @return void future
    */
@@ -88,13 +89,6 @@ public class OpenCompositeOrderPieceService {
       .map(pieces -> validateItemsCreationForPieces(pieces, poLine, expectedPiecesWithItem.size()));
   }
 
-  private Future<List<Piece>> updatePieces(OpenOrderPieceHolder holder, RequestContext requestContext) {
-    logger.debug("updatePieces:: Trying to update pieces");
-    return collectResultsOnSuccess(holder.getPiecesWithChangedLocation().stream()
-      .map(piece -> updatePiece(piece, requestContext))
-      .toList());
-  }
-
   private Future<List<Piece>> createPieces(OpenOrderPieceHolder holder, CompositePurchaseOrder order, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     logger.debug("createPieces:: Trying to create pieces");
 
@@ -102,23 +96,22 @@ public class OpenCompositeOrderPieceService {
     piecesToCreate.addAll(holder.getPiecesWithHoldingToProcess());
     piecesToCreate.addAll(holder.getPiecesWithoutLocationId());
 
-    List<Piece> preparedPieces = piecesToCreate.stream()
-      .map(piece -> piece.withTitleId(holder.getTitleId()))
-      .toList();
+    piecesToCreate.stream()
+      .map(piece -> piece.withTitleId(holder.getTitle().getId()))
+      .forEach(piece -> validatePieceSequenceNumber(piece, holder.getTitle(), piecesToCreate.size()));
 
     // Collect pieces after validation
     List<Future<Piece>> piecesFutures = new ArrayList<>();
 
     // Use chainCallCollect to sequentially process each piece with openOrderUpdateInventory.
-    return chainCall(preparedPieces, piece ->
-      openOrderUpdateInventory(piece, order, isInstanceMatchingDisabled, requestContext)
-        .map(validatedPiece -> piecesFutures.add(Future.succeededFuture(validatedPiece)))
-      )
+    return chainCall(piecesToCreate, piece -> openOrderUpdateInventory(piece, holder.getTitle(), order, isInstanceMatchingDisabled, requestContext)
+      .map(validatedPiece -> piecesFutures.add(Future.succeededFuture(validatedPiece))))
       .compose(ignored -> collectResultsOnSuccess(piecesFutures))
       .compose(validatedPieces -> {
         logger.info("createPieces:: Passed acq unit validation and open order '{}' inventory update", order.getId());
         // Once all pieces have been updated, insert them in batch.
-        return pieceStorageService.insertPiecesBatch(validatedPieces, requestContext)
+        return titlesService.generateNextSequenceNumbers(validatedPieces, holder.getTitle(), requestContext)
+          .compose(updatedPieces -> pieceStorageService.insertPiecesBatch(updatedPieces, requestContext))
           .map(PieceCollection::getPieces);
       })
       .recover(th -> {
@@ -128,37 +121,11 @@ public class OpenCompositeOrderPieceService {
   }
 
 
-  private Future<Piece> openOrderUpdateInventory(Piece piece, CompositePurchaseOrder order, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+  private Future<Piece> openOrderUpdateInventory(Piece piece, Title title, CompositePurchaseOrder order,
+                                                 boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     logger.debug("openOrderUpdateInventory:: Validating acq unit and updating order '{}' inventory - {}", order.getId(), piece.getId());
-    return titlesService.getTitleById(piece.getTitleId(), requestContext)
-      .compose(title ->
-        protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
-      )
-      .compose(v ->
-        openOrderUpdateInventory(order, order.getPoLines().getFirst(), piece, isInstanceMatchingDisabled, requestContext)
-      )
-      .map(v -> piece);
-  }
-
-  public Future<Piece> updatePiece(Piece piece, RequestContext requestContext) {
-    logger.debug("updatePiece:: Updating piece - {}", piece.getId());
-    return titlesService.getTitleById(piece.getTitleId(), requestContext)
-      .compose(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext))
-      .compose(vVoid -> pieceStorageService.getPieceById(piece.getId(), requestContext))
-      .compose(pieceStorage -> inventoryItemManager.updateItemWithPieceFields(pieceStorage, piece, requestContext)
-        .compose(aVoid -> {
-          var isReceivingStatusChanged = updatePieceStatus(piece, pieceStorage.getReceivingStatus(), piece.getReceivingStatus());
-          return pieceStorageService.updatePiece(piece, requestContext)
-            .compose(v -> {
-              logger.debug("updatePiece:: Status updated from: {} to {}", pieceStorage.getReceivingStatus(), piece.getReceivingStatus());
-              if (isReceivingStatusChanged) {
-                receiptStatusPublisher.sendEvent(MessageAddress.RECEIPT_STATUS, createPoLineUpdateEvent(piece.getPoLineId()), requestContext);
-              }
-              return Future.succeededFuture();
-            })
-            .onFailure(e -> logger.error("Error updating piece by id to storage {}", piece.getId(), e));
-        })
-      ).onFailure(e -> logger.error("Error getting piece by id from storage {}", piece.getId(), e))
+    return protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
+      .compose(v -> openOrderUpdateInventory(order, order.getPoLines().getFirst(), piece, title, isInstanceMatchingDisabled, requestContext))
       .map(v -> piece);
   }
 
@@ -168,17 +135,17 @@ public class OpenCompositeOrderPieceService {
    * @param poLine PO line to update Inventory for
    * @return CompletableFuture with void.
    */
-  public Future<Void> openOrderUpdateInventory(CompositePurchaseOrder compPO, PoLine poLine,
-                                               Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+  public Future<Void> openOrderUpdateInventory(CompositePurchaseOrder compPO, PoLine poLine, Piece piece, Title title,
+                                               boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     logger.debug("OpenCompositeOrderPieceService.openOrderUpdateInventory poLine.id={}", poLine.getId());
     if (!Boolean.TRUE.equals(poLine.getIsPackage())) {
       return inventoryItemManager.updateItemWithPieceFields(null, piece, requestContext);
     }
     var locationContext = createContextWithNewTenantId(requestContext, piece.getReceivingTenantId());
     var suppressDiscovery = Optional.ofNullable(poLine.getSuppressInstanceFromDiscovery()).orElse(false);
-    return titlesService.getTitleById(piece.getTitleId(), requestContext)
-      .compose(title -> titlesService.updateTitleWithInstance(title, isInstanceMatchingDisabled, suppressDiscovery, locationContext, requestContext).map(title::withInstanceId))
-      .compose(title -> getOrCreateHolding(poLine, piece, title, locationContext))
+    return titlesService.updateTitleWithInstance(title, isInstanceMatchingDisabled, suppressDiscovery, locationContext, requestContext)
+      .map(title::withInstanceId)
+      .compose(updatedTitle -> getOrCreateHolding(poLine, piece, updatedTitle, locationContext))
       .compose(holdingId -> updateItemsIfNeeded(compPO, poLine, holdingId, locationContext))
       .map(itemId -> Optional.ofNullable(itemId).map(piece::withItemId))
       .mapEmpty();
@@ -208,4 +175,34 @@ public class OpenCompositeOrderPieceService {
     throw new InventoryException(String.format("Error creating items for PO Line with '%s' id. Expected %d but %d created",
       poLine.getId(), expectedItemsQuantity, itemsSize));
   }
+
+  private Future<List<Piece>> updatePieces(OpenOrderPieceHolder holder, RequestContext requestContext) {
+    logger.debug("updatePieces:: Trying to update pieces");
+    return collectResultsOnSuccess(holder.getPiecesWithChangedLocation().stream()
+      .map(piece -> updatePiece(piece, requestContext))
+      .toList());
+  }
+
+  public Future<Piece> updatePiece(Piece piece, RequestContext requestContext) {
+    logger.debug("updatePiece:: Updating piece - {}", piece.getId());
+    return titlesService.getTitleById(piece.getTitleId(), requestContext)
+      .compose(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext))
+      .compose(vVoid -> pieceStorageService.getPieceById(piece.getId(), requestContext))
+      .compose(pieceStorage -> inventoryItemManager.updateItemWithPieceFields(pieceStorage, piece, requestContext)
+        .compose(aVoid -> {
+          var isReceivingStatusChanged = updatePieceStatus(piece, pieceStorage.getReceivingStatus(), piece.getReceivingStatus());
+          return pieceStorageService.updatePiece(piece, requestContext)
+            .compose(v -> {
+              logger.debug("updatePiece:: Status updated from: {} to {}", pieceStorage.getReceivingStatus(), piece.getReceivingStatus());
+              if (isReceivingStatusChanged) {
+                receiptStatusPublisher.sendEvent(MessageAddress.RECEIPT_STATUS, createPoLineUpdateEvent(piece.getPoLineId()), requestContext);
+              }
+              return Future.succeededFuture();
+            })
+            .onFailure(e -> logger.error("Error updating piece by id to storage {}", piece.getId(), e));
+        })
+      ).onFailure(e -> logger.error("Error getting piece by id from storage {}", piece.getId(), e))
+      .map(v -> piece);
+  }
+
 }

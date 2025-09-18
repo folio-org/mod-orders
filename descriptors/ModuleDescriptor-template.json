@@ -39,7 +39,8 @@
             "orders-storage.configuration.suffixes.collection.get",
             "finance.funds.item.get",
             "finance.transactions.collection.get",
-            "finance.transactions.batch.execute"
+            "finance.transactions.batch.execute",
+            "orders-storage.titles.sequence-number.get"
           ]
         },
         {
@@ -108,7 +109,8 @@
             "orders-storage.po-lines.item.delete",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
-            "orders-storage.order-invoice-relationships.collection.get"
+            "orders-storage.order-invoice-relationships.collection.get",
+            "orders-storage.titles.sequence-number.get"
           ]
         },
         {
@@ -538,6 +540,7 @@
             "orders-storage.purchase-orders.item.get",
             "orders-storage.titles.item.get",
             "orders-storage.titles.item.put",
+            "orders-storage.titles.sequence-number.get",
             "user-tenants.collection.get",
             "consortia.sharing-instances.item.post"
           ]
@@ -659,6 +662,7 @@
             "orders-storage.purchase-orders.item.get",
             "orders-storage.titles.item.get",
             "orders-storage.titles.item.put",
+            "orders-storage.titles.sequence-number.get",
             "user-tenants.collection.get",
             "consortia.sharing-instances.item.post",
             "orders-storage.pieces-batch.collection.post"

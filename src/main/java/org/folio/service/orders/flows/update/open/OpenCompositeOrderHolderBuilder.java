@@ -26,6 +26,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import lombok.RequiredArgsConstructor;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.models.pieces.OpenOrderPieceHolder;
@@ -38,19 +39,18 @@ import org.folio.service.pieces.PieceUtil;
 
 import io.vertx.core.Future;
 import one.util.streamex.StreamEx;
+import org.folio.service.titles.TitlesService;
 
+@RequiredArgsConstructor
 public class OpenCompositeOrderHolderBuilder {
 
   private final PieceStorageService pieceStorageService;
+  private final TitlesService titlesService;
 
-  public OpenCompositeOrderHolderBuilder(PieceStorageService pieceStorageService) {
-    this.pieceStorageService = pieceStorageService;
-  }
-
-  public Future<OpenOrderPieceHolder> buildHolder(PoLine poLine, String titleId, List<Piece> expectedPiecesWithItem,
-                                                  RequestContext requestContext) {
-    return pieceStorageService.getPiecesByPoLineId(poLine, requestContext)
-      .map(pieces -> new OpenOrderPieceHolder(titleId).withExistingPieces(pieces))
+  public Future<OpenOrderPieceHolder> buildHolder(PoLine poLine, String titleId, List<Piece> expectedPiecesWithItem, RequestContext requestContext) {
+    return titlesService.getTitleById(titleId, requestContext)
+      .compose(title -> pieceStorageService.getPiecesByPoLineId(poLine, requestContext)
+        .map(pieces -> new OpenOrderPieceHolder(title).withExistingPieces(pieces)))
       .map(holder -> holder
         .withPiecesWithLocationToProcess(buildPiecesByLocationId(poLine, expectedPiecesWithItem, holder.getExistingPieces()))
         .withPiecesWithHoldingToProcess(buildPiecesByHoldingId(poLine, expectedPiecesWithItem, holder.getExistingPieces()))
@@ -216,7 +216,7 @@ public class OpenCompositeOrderHolderBuilder {
   /**
    * Calculates pieces quantity for list of locations and return map where piece format is a key and corresponding quantity of pieces as value.
    *
-   * @param poLine   PO Line
+   * @param poLine    PO Line
    * @param locations list of locations to calculate quantity for
    * @return quantity of pieces per piece format either not required Inventory item for PO Line
    */

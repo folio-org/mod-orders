@@ -6,8 +6,8 @@ import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import java.util.List;
 
 import io.vertx.core.Future;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.folio.models.pieces.PieceBatchCreationHolder;
 import org.folio.models.pieces.PieceCreationHolder;
 import org.folio.orders.utils.ProtectedOperationType;
@@ -18,55 +18,49 @@ import org.folio.service.ProtectionService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
+import org.folio.service.titles.TitlesService;
 
+@Log4j2
+@RequiredArgsConstructor
 public class PieceCreateFlowManager {
-  private static final Logger logger = LogManager.getLogger(PieceCreateFlowManager.class);
 
   private final PieceStorageService pieceStorageService;
+  private final TitlesService titlesService;
   private final ProtectionService protectionService;
   private final PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager;
   private final DefaultPieceFlowsValidator defaultPieceFlowsValidator;
   private final PieceCreateFlowPoLineService pieceCreateFlowPoLineService;
   private final BasePieceFlowHolderBuilder basePieceFlowHolderBuilder;
 
-  public PieceCreateFlowManager(PieceStorageService pieceStorageService, ProtectionService protectionService,
-                                PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager, DefaultPieceFlowsValidator defaultPieceFlowsValidator,
-                                PieceCreateFlowPoLineService pieceCreateFlowPoLineService, BasePieceFlowHolderBuilder basePieceFlowHolderBuilder) {
-    this.pieceStorageService = pieceStorageService;
-    this.protectionService = protectionService;
-    this.pieceCreateFlowInventoryManager = pieceCreateFlowInventoryManager;
-    this.pieceCreateFlowPoLineService = pieceCreateFlowPoLineService;
-    this.defaultPieceFlowsValidator = defaultPieceFlowsValidator;
-    this.basePieceFlowHolderBuilder = basePieceFlowHolderBuilder;
-  }
-
   public Future<Piece> createPiece(Piece pieceToCreate, boolean createItem, RequestContext requestContext) {
-    logger.info("createPiece:: manual createPiece start, poLineId: {}, receivingTenantId: {}",
+    log.info("createPiece:: manual createPiece start, poLineId: {}, receivingTenantId: {}",
       pieceToCreate.getPoLineId(), pieceToCreate.getReceivingTenantId());
     PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(pieceToCreate).withCreateItem(createItem);
     return basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext)
       .compose(v -> basePieceFlowHolderBuilder.updateHolderWithTitleInformation(holder, requestContext))
-      .compose(v -> asFuture(() -> defaultPieceFlowsValidator.isPieceRequestValid(pieceToCreate, holder.getOriginPurchaseOrder(), holder.getOriginPoLine(), createItem)))
+      .compose(v -> asFuture(() -> defaultPieceFlowsValidator.isPieceRequestValid(pieceToCreate, holder.getOriginPurchaseOrder(), holder.getOriginPoLine(), holder.getTitle(), createItem)))
       .compose(v -> protectionService.isOperationRestricted(holder.getTitle().getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext))
       .compose(v -> processInventory(holder, requestContext))
       .compose(v -> updatePoLine(holder, requestContext))
-      .compose(v -> pieceStorageService.insertPiece(pieceToCreate, requestContext));
+      .compose(v -> titlesService.generateNextSequenceNumbers(List.of(holder.getPieceToCreate()), holder.getTitle(), requestContext))
+      .compose(pieces -> pieceStorageService.insertPiece(pieces.getFirst(), requestContext));
   }
 
   public Future<PieceCollection> createPieces(PieceCollection pieceCollection, boolean createItem, RequestContext requestContext) {
-    logger.info("createPieces:: Trying to create '{}' pieces", pieceCollection.getPieces().size());
+    log.info("createPieces:: Trying to create '{}' pieces", pieceCollection.getPieces().size());
     if (pieceCollection.getPieces().isEmpty()) {
-      logger.info("createPieces:: No pieces to create");
+      log.info("createPieces:: No pieces to create");
       return Future.succeededFuture();
     }
     var holder = new PieceBatchCreationHolder().withPieceToCreate(pieceCollection).withCreateItem(createItem);
     return basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext)
       .compose(v -> basePieceFlowHolderBuilder.updateHolderWithTitleInformation(holder, requestContext))
-      .compose(v -> asFuture(() -> defaultPieceFlowsValidator.isPieceBatchRequestValid(holder.getPiecesToCreate(), holder.getOriginPurchaseOrder(), holder.getOriginPoLine(), createItem)))
+      .compose(v -> asFuture(() -> defaultPieceFlowsValidator.isPieceBatchRequestValid(holder.getPiecesToCreate(), holder.getOriginPurchaseOrder(), holder.getOriginPoLine(), holder.getTitle(), createItem)))
       .compose(v -> protectionService.isOperationRestricted(holder.getTitle().getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext))
       .compose(v -> processInventory(holder, requestContext))
       .compose(v -> updatePoLine(holder, requestContext))
-      .compose(v -> pieceStorageService.insertPiecesBatch(holder.getPiecesToCreate(), requestContext));
+      .compose(v -> titlesService.generateNextSequenceNumbers(holder.getPiecesToCreate(), holder.getTitle(), requestContext))
+      .compose(pieces -> pieceStorageService.insertPiecesBatch(pieces, requestContext));
   }
 
   private Future<Void> processInventory(PieceCreationHolder holder, RequestContext requestContext) {
@@ -113,4 +107,5 @@ public class PieceCreateFlowManager {
     }
     return Future.succeededFuture();
   }
+
 }
