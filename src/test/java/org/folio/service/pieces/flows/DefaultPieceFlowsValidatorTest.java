@@ -1,5 +1,6 @@
 package org.folio.service.pieces.flows;
 
+import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_SEQUENCE_NUMBER_IS_INVALID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -16,6 +17,7 @@ import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.Title;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -27,11 +29,12 @@ public class DefaultPieceFlowsValidatorTest {
   private static final String LOCATION_ID = UUID.randomUUID().toString();
   private static final String PO_LINE_ID = UUID.randomUUID().toString();
 
-  private DefaultPieceFlowsValidator defaultPieceFlowsValidator = new DefaultPieceFlowsValidator();
+  private final DefaultPieceFlowsValidator defaultPieceFlowsValidator = new DefaultPieceFlowsValidator();
 
   @Test
-  void createPieceIsForbiddenIfPieceAndLIneFormatIsNotCompatible() {
+  void createPieceIsForbiddenIfPieceAndLineFormatIsNotCompatible() {
     Piece piece = new Piece().withPoLineId(PO_LINE_ID).withLocationId(LOCATION_ID).withFormat(Piece.Format.ELECTRONIC);
+    Title title = new Title();
     Location loc = new Location().withLocationId(LOCATION_ID).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
     CompositePurchaseOrder originOrder = new CompositePurchaseOrder().withId(ORDER_IRD).withWorkflowStatus(WorkflowStatus.OPEN);
@@ -40,7 +43,7 @@ public class DefaultPieceFlowsValidatorTest {
                                     .withLocations(List.of(loc)).withCost(cost);
 
     HttpException exception = Assertions.assertThrows(HttpException.class, () -> {
-      defaultPieceFlowsValidator.isPieceRequestValid(piece, originOrder, originPoLine, true);
+      defaultPieceFlowsValidator.isPieceRequestValid(piece, originOrder, originPoLine, title, true);
     });
 
     boolean isErrorPresent = exception.getErrors().getErrors().stream()
@@ -51,6 +54,7 @@ public class DefaultPieceFlowsValidatorTest {
   @Test
   void createPieceIsForbiddenIfCreateInventoryInTheLineDonNotAllowThat() {
     Piece piece = new Piece().withPoLineId(PO_LINE_ID).withLocationId(LOCATION_ID).withFormat(Piece.Format.ELECTRONIC);
+    Title title = new Title();
     Location loc = new Location().withLocationId(LOCATION_ID).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
     Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
@@ -61,7 +65,7 @@ public class DefaultPieceFlowsValidatorTest {
       .withLocations(List.of(loc)).withCost(cost);
 
     HttpException exception = Assertions.assertThrows(HttpException.class, () -> {
-      defaultPieceFlowsValidator.isPieceRequestValid(piece, originOrder, originPoLine, true);
+      defaultPieceFlowsValidator.isPieceRequestValid(piece, originOrder, originPoLine, title, true);
     });
 
     boolean isErrorPresent = exception.getErrors().getErrors().stream()
@@ -72,6 +76,7 @@ public class DefaultPieceFlowsValidatorTest {
   @Test
   void createPieceAllowableIfCreateInventoryInTheLineAllowThatButCreateItemFlagIsFalse() {
     Piece piece = new Piece().withPoLineId(PO_LINE_ID).withLocationId(LOCATION_ID).withFormat(Piece.Format.ELECTRONIC);
+    Title title = new Title();
     Location loc = new Location().withLocationId(LOCATION_ID).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
     Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
@@ -81,12 +86,13 @@ public class DefaultPieceFlowsValidatorTest {
       .withEresource(eresource)
       .withLocations(List.of(loc)).withCost(cost);
 
-    defaultPieceFlowsValidator.isPieceRequestValid(piece, originOrder, originPoLine, true);
+    defaultPieceFlowsValidator.isPieceRequestValid(piece, originOrder, originPoLine, title, true);
   }
 
   @Test
   void createPieceIsValid() {
-    Piece piece = new Piece().withPoLineId(PO_LINE_ID).withLocationId(LOCATION_ID).withFormat(Piece.Format.ELECTRONIC);
+    Piece piece = new Piece().withPoLineId(PO_LINE_ID).withLocationId(LOCATION_ID).withFormat(Piece.Format.ELECTRONIC).withSequenceNumber(1);
+    Title title = new Title();
     Location loc = new Location().withLocationId(LOCATION_ID).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
     Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
@@ -96,7 +102,7 @@ public class DefaultPieceFlowsValidatorTest {
                 .withEresource(eresource)
                 .withLocations(List.of(loc)).withCost(cost);
 
-    defaultPieceFlowsValidator.isPieceRequestValid(piece, originOrder, originPoLine, true);
+    defaultPieceFlowsValidator.isPieceRequestValid(piece, originOrder, originPoLine, title, true);
   }
 
   @ParameterizedTest
@@ -107,6 +113,7 @@ public class DefaultPieceFlowsValidatorTest {
     Piece piece = new Piece().withPoLineId(PO_LINE_ID).withLocationId(LOCATION_ID).withFormat(Piece.Format.ELECTRONIC)
       .withDisplayOnHolding(displayOnHoldings)
       .withDisplayToPublic(displayToPublic);
+    Title title = new Title();
     Location loc = new Location().withLocationId(LOCATION_ID).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
     Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
@@ -116,7 +123,7 @@ public class DefaultPieceFlowsValidatorTest {
       .withEresource(eresource)
       .withLocations(List.of(loc)).withCost(cost);
 
-    defaultPieceFlowsValidator.isPieceRequestValid(piece, originOrder, originPoLine, true);
+    defaultPieceFlowsValidator.isPieceRequestValid(piece, originOrder, originPoLine, title, true);
   }
 
   @Test
@@ -124,6 +131,7 @@ public class DefaultPieceFlowsValidatorTest {
     Piece piece = new Piece().withPoLineId(PO_LINE_ID).withLocationId(LOCATION_ID).withFormat(Piece.Format.ELECTRONIC)
       .withDisplayOnHolding(false)
       .withDisplayToPublic(true);
+    Title title = new Title();
     Location loc = new Location().withLocationId(LOCATION_ID).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
     Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
@@ -134,7 +142,7 @@ public class DefaultPieceFlowsValidatorTest {
       .withLocations(List.of(loc)).withCost(cost);
 
     HttpException exception = Assertions.assertThrows(HttpException.class, () -> {
-      defaultPieceFlowsValidator.isPieceRequestValid(piece, originOrder, originPoLine, true);
+      defaultPieceFlowsValidator.isPieceRequestValid(piece, originOrder, originPoLine, title, true);
     });
     boolean isErrorPresent = exception.getErrors().getErrors().stream()
       .anyMatch(error -> error.getCode().equals(ErrorCodes.PIECE_DISPLAY_ON_HOLDINGS_IS_NOT_CONSISTENT.getCode()));
@@ -144,6 +152,7 @@ public class DefaultPieceFlowsValidatorTest {
   @Test
   void createPieceWithPendingOrderThatHasSynchronizedStatus() {
     Piece piece = new Piece().withPoLineId(PO_LINE_ID).withLocationId(LOCATION_ID).withFormat(Piece.Format.ELECTRONIC);
+    Title title = new Title();
     Location loc = new Location().withLocationId(LOCATION_ID).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
     Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
@@ -156,7 +165,7 @@ public class DefaultPieceFlowsValidatorTest {
       .withLocations(List.of(loc)).withCost(cost);
 
     HttpException exception = Assertions.assertThrows(HttpException.class, () -> {
-      defaultPieceFlowsValidator.isPieceRequestValid(piece, originOrder, originPoLine, true);
+      defaultPieceFlowsValidator.isPieceRequestValid(piece, originOrder, originPoLine, title, true);
     });
     boolean isErrorPresent = exception.getErrors().getErrors().stream()
       .anyMatch(error -> error.getCode().equals(ErrorCodes.PIECE_RELATED_ORDER_DATA_IS_NOT_VALID.getCode()));
@@ -167,6 +176,7 @@ public class DefaultPieceFlowsValidatorTest {
   void testIsPieceBatchRequestValidWithSameTitleIdAndPoLineId() {
     var piece1 = new Piece().withPoLineId(PO_LINE_ID).withLocationId(LOCATION_ID).withFormat(Piece.Format.ELECTRONIC);
     var piece2 = new Piece().withPoLineId(PO_LINE_ID).withLocationId(LOCATION_ID).withFormat(Piece.Format.ELECTRONIC);
+    var title = new Title();
     var loc = new Location().withLocationId(LOCATION_ID).withQuantityElectronic(1).withQuantity(1);
     var cost = new Cost().withQuantityElectronic(1);
     var eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
@@ -176,19 +186,20 @@ public class DefaultPieceFlowsValidatorTest {
       .withEresource(eresource)
       .withLocations(List.of(loc)).withCost(cost);
 
-    defaultPieceFlowsValidator.isPieceBatchRequestValid(List.of(piece1, piece2), originOrder, originPoLine, true);
+    defaultPieceFlowsValidator.isPieceBatchRequestValid(List.of(piece1, piece2), originOrder, originPoLine, title, true);
   }
 
   @Test
   void testIsPieceBatchRequestCheckEachPieceValidation() {
     var piece1 = new Piece().withPoLineId(PO_LINE_ID).withTitleId(ORDER_IRD).withLocationId(LOCATION_ID).withFormat(Piece.Format.ELECTRONIC);
     var piece2 = new Piece().withPoLineId(PO_LINE_ID).withTitleId(ORDER_IRD).withLocationId(LOCATION_ID).withFormat(Piece.Format.PHYSICAL);
+    var title = new Title();
     var originOrder = new CompositePurchaseOrder().withId(ORDER_IRD).withWorkflowStatus(WorkflowStatus.OPEN);
     var originPoLine = new PoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
       .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(PO_LINE_ID);
 
     var exception = Assertions.assertThrows(HttpException.class, () ->
-      defaultPieceFlowsValidator.isPieceBatchRequestValid(List.of(piece1, piece2), originOrder, originPoLine, true));
+      defaultPieceFlowsValidator.isPieceBatchRequestValid(List.of(piece1, piece2), originOrder, originPoLine, title, true));
     boolean isErrorPresent = exception.getErrors().getErrors().stream()
       .anyMatch(error -> error.getCode().equals(ErrorCodes.CREATE_ITEM_FOR_PIECE_IS_NOT_ALLOWED_ERROR.getCode()));
     assertTrue(isErrorPresent);
@@ -198,12 +209,13 @@ public class DefaultPieceFlowsValidatorTest {
   void testIsPieceBatchRequestValidWithDifferentTitleIds() {
     var piece1 = new Piece().withPoLineId(PO_LINE_ID).withTitleId(UUID.randomUUID().toString()).withLocationId(LOCATION_ID).withFormat(Piece.Format.PHYSICAL);
     var piece2 = new Piece().withPoLineId(PO_LINE_ID).withTitleId(UUID.randomUUID().toString()).withLocationId(LOCATION_ID).withFormat(Piece.Format.PHYSICAL);
+    var title = new Title();
     var originOrder = new CompositePurchaseOrder().withId(ORDER_IRD).withWorkflowStatus(WorkflowStatus.OPEN);
     var originPoLine = new PoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
       .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(PO_LINE_ID);
 
     var exception = Assertions.assertThrows(HttpException.class, () ->
-      defaultPieceFlowsValidator.isPieceBatchRequestValid(List.of(piece1, piece2), originOrder, originPoLine, true));
+      defaultPieceFlowsValidator.isPieceBatchRequestValid(List.of(piece1, piece2), originOrder, originPoLine, title, true));
 
     boolean isErrorPresent = exception.getErrors().getErrors().stream()
       .anyMatch(error -> error.getMessage().equals("All pieces in the batch should have the same titleId and poLineId"));
@@ -216,16 +228,39 @@ public class DefaultPieceFlowsValidatorTest {
       .withLocationId(LOCATION_ID).withFormat(Piece.Format.ELECTRONIC);
     var piece2 = new Piece().withPoLineId(UUID.randomUUID().toString()).withTitleId(ORDER_IRD)
       .withLocationId(LOCATION_ID).withFormat(Piece.Format.ELECTRONIC);
+    var title = new Title();
     var originOrder = new CompositePurchaseOrder().withId(ORDER_IRD).withWorkflowStatus(WorkflowStatus.OPEN);
     var originPoLine = new PoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
       .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(PO_LINE_ID);
 
     var exception = Assertions.assertThrows(HttpException.class, () ->
-      defaultPieceFlowsValidator.isPieceBatchRequestValid(List.of(piece1, piece2), originOrder, originPoLine, true));
+      defaultPieceFlowsValidator.isPieceBatchRequestValid(List.of(piece1, piece2), originOrder, originPoLine, title, true));
 
     boolean isErrorPresent = exception.getErrors().getErrors().stream()
       .anyMatch(error -> error.getMessage().equals("All pieces in the batch should have the same titleId and poLineId"));
     assertTrue(isErrorPresent);
+  }
+
+  @Test
+  void testIsPieceBatchRequestValidWithIncorrectSequenceNumbers() {
+    var piece1 = new Piece().withPoLineId(PO_LINE_ID).withLocationId(LOCATION_ID).withFormat(Piece.Format.ELECTRONIC).withSequenceNumber(0);
+    var piece2 = new Piece().withPoLineId(PO_LINE_ID).withLocationId(LOCATION_ID).withFormat(Piece.Format.ELECTRONIC).withSequenceNumber(10);
+    var title = new Title();
+    var loc = new Location().withLocationId(LOCATION_ID).withQuantityElectronic(1).withQuantity(1);
+    var cost = new Cost().withQuantityElectronic(1);
+    var eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
+    var originOrder = new CompositePurchaseOrder().withId(ORDER_IRD).withWorkflowStatus(WorkflowStatus.OPEN);
+    var originPoLine = new PoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
+      .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(PO_LINE_ID)
+      .withEresource(eresource)
+      .withLocations(List.of(loc)).withCost(cost);
+
+    var exception = Assertions.assertThrows(HttpException.class, () ->
+      defaultPieceFlowsValidator.isPieceBatchRequestValid(List.of(piece1, piece2), originOrder, originPoLine, title, true));
+
+    boolean areErrorsPresent = exception.getErrors().getErrors().stream()
+      .allMatch(error -> error.getCode().equals(PIECE_SEQUENCE_NUMBER_IS_INVALID.getCode()));
+    assertTrue(areErrorsPresent);
   }
 
 }

@@ -548,12 +548,13 @@ public class ApplicationConfig {
   }
 
   @Bean
-  PieceCreateFlowManager pieceCreationService(PieceStorageService pieceStorageService, ProtectionService protectionService,
+  PieceCreateFlowManager pieceCreationService(PieceStorageService pieceStorageService, TitlesService titlesService,
+                                              ProtectionService protectionService,
                                               PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager,
                                               DefaultPieceFlowsValidator defaultPieceFlowsValidator,
                                               PieceCreateFlowPoLineService pieceCreateFlowPoLineService,
                                               BasePieceFlowHolderBuilder basePieceFlowHolderBuilder) {
-    return new PieceCreateFlowManager(pieceStorageService, protectionService, pieceCreateFlowInventoryManager,
+    return new PieceCreateFlowManager(pieceStorageService, titlesService, protectionService, pieceCreateFlowInventoryManager,
       defaultPieceFlowsValidator, pieceCreateFlowPoLineService, basePieceFlowHolderBuilder);
   }
 
@@ -780,8 +781,8 @@ public class ApplicationConfig {
       titlesService, openCompositeOrderInventoryService, openCompositeOrderFlowValidator, unOpenCompositeOrderManager);
   }
 
-  @Bean OpenCompositeOrderHolderBuilder openCompositeOrderHolderBuilder(PieceStorageService pieceStorageService) {
-    return new OpenCompositeOrderHolderBuilder(pieceStorageService);
+  @Bean OpenCompositeOrderHolderBuilder openCompositeOrderHolderBuilder(PieceStorageService pieceStorageService, TitlesService titlesService) {
+    return new OpenCompositeOrderHolderBuilder(pieceStorageService, titlesService);
   }
 
   @Bean ProcessInventoryStrategyResolver resolver(ConsortiumConfigurationService consortiumConfigurationService) {
