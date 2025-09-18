@@ -437,8 +437,6 @@ public class TitlesServiceTest {
     });
   }
 
-  // Tests for generateNextSequenceNumbers method
-
   @Test
   void testGenerateNextSequenceNumbers_emptyPiecesList() {
     List<Piece> pieces = Collections.emptyList();
@@ -449,7 +447,7 @@ public class TitlesServiceTest {
       assertTrue(ar.succeeded());
       assertNotNull(ar.result());
       assertTrue(ar.result().isEmpty());
-      verify(restClient, never()).postBatch(any(RequestEntry.class), any(), eq(SequenceNumbers.class), any(RequestContext.class));
+      verify(restClient, never()).get(any(RequestEntry.class), eq(SequenceNumbers.class), any(RequestContext.class));
     });
   }
 
@@ -463,7 +461,7 @@ public class TitlesServiceTest {
       assertTrue(ar.succeeded());
       assertNotNull(ar.result());
       assertTrue(ar.result().isEmpty());
-      verify(restClient, never()).postBatch(any(RequestEntry.class), any(), eq(SequenceNumbers.class), any(RequestContext.class));
+      verify(restClient, never()).get(any(RequestEntry.class), eq(SequenceNumbers.class), any(RequestContext.class));
     });
   }
 
@@ -477,7 +475,7 @@ public class TitlesServiceTest {
 
     var sequenceNumbers = new SequenceNumbers().withSequenceNumbers(List.of("1", "2", "3"));
 
-    when(restClient.postBatch(any(RequestEntry.class), any(), eq(SequenceNumbers.class), eq(requestContext)))
+    when(restClient.get(any(RequestEntry.class), eq(SequenceNumbers.class), eq(requestContext)))
       .thenReturn(Future.succeededFuture(sequenceNumbers));
 
     var result = titlesService.generateNextSequenceNumbers(pieces, title, requestContext);
@@ -491,7 +489,7 @@ public class TitlesServiceTest {
       assertEquals(Integer.valueOf(3), resultPieces.get(2).getSequenceNumber());
 
       ArgumentCaptor<RequestEntry> requestCaptor = ArgumentCaptor.forClass(RequestEntry.class);
-      verify(restClient).postBatch(requestCaptor.capture(), any(), eq(SequenceNumbers.class), eq(requestContext));
+      verify(restClient).get(requestCaptor.capture(), eq(SequenceNumbers.class), eq(requestContext));
 
       var capturedRequest = requestCaptor.getValue();
       assertTrue(capturedRequest.buildEndpoint().contains(title.getId()));
@@ -509,7 +507,7 @@ public class TitlesServiceTest {
 
     var sequenceNumbers = new SequenceNumbers().withSequenceNumbers(List.of("1", "2", "3"));
 
-    when(restClient.postBatch(any(RequestEntry.class), any(), eq(SequenceNumbers.class), eq(requestContext)))
+    when(restClient.get(any(RequestEntry.class), eq(SequenceNumbers.class), eq(requestContext)))
       .thenReturn(Future.succeededFuture(sequenceNumbers));
 
     var result = titlesService.generateNextSequenceNumbers(pieces, title, requestContext);
@@ -536,7 +534,7 @@ public class TitlesServiceTest {
 
     var sequenceNumbers = new SequenceNumbers().withSequenceNumbers(List.of("1", "2", "3", "4"));
 
-    when(restClient.postBatch(any(RequestEntry.class), any(), eq(SequenceNumbers.class), eq(requestContext)))
+    when(restClient.get(any(RequestEntry.class), eq(SequenceNumbers.class), eq(requestContext)))
       .thenReturn(Future.succeededFuture(sequenceNumbers));
 
     var result = titlesService.generateNextSequenceNumbers(pieces, title, requestContext);
@@ -563,7 +561,7 @@ public class TitlesServiceTest {
       new Piece().withId(PIECE_ID_1).withSequenceNumber(null)
     );
 
-    when(restClient.postBatch(any(RequestEntry.class), any(), eq(SequenceNumbers.class), eq(requestContext)))
+    when(restClient.get(any(RequestEntry.class), eq(SequenceNumbers.class), eq(requestContext)))
       .thenReturn(Future.failedFuture(new RuntimeException("REST call failed")));
 
     var result = titlesService.generateNextSequenceNumbers(pieces, title, requestContext);
