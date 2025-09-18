@@ -85,9 +85,8 @@ public class DefaultPieceFlowsValidator {
   }
 
   public static boolean isCreateHoldingForPiecePossible(Piece pieceToCreate, PoLine originPoLine) {
-    Piece.Format pieceFormat = pieceToCreate.getFormat();
-    return pieceFormat == Piece.Format.ELECTRONIC && PoLineCommonUtil.isHoldingUpdateRequiredForEresource(originPoLine) ||
-      (pieceFormat == Piece.Format.PHYSICAL || pieceFormat == Piece.Format.OTHER) && PoLineCommonUtil.isHoldingUpdateRequiredForPhysical(originPoLine);
+    return isPieceFormatElectronic(pieceToCreate) && PoLineCommonUtil.isHoldingUpdateRequiredForEresource(originPoLine)
+        || isPieceFormatNonElectronic(pieceToCreate) && PoLineCommonUtil.isHoldingUpdateRequiredForPhysical(originPoLine);
   }
 
   public static boolean isCreateItemForPiecePossible(Piece pieceToCreate, PoLine originPoLine) {
@@ -96,14 +95,11 @@ public class DefaultPieceFlowsValidator {
   }
 
   public static boolean isCreateItemForElectronicPiecePossible(Piece pieceToCreate, PoLine originPoLine) {
-    Piece.Format pieceFormat = pieceToCreate.getFormat();
-    return pieceFormat == Piece.Format.ELECTRONIC && isItemsUpdateRequiredForEresource(originPoLine);
+    return isPieceFormatElectronic(pieceToCreate) && isItemsUpdateRequiredForEresource(originPoLine);
   }
 
-
   public static boolean isCreateItemForNonElectronicPiecePossible(Piece pieceToCreate, PoLine originPoLine) {
-    Piece.Format pieceFormat = pieceToCreate.getFormat();
-    return (pieceFormat == Piece.Format.PHYSICAL || pieceFormat == Piece.Format.OTHER) && isItemsUpdateRequiredForPhysical(originPoLine);
+    return isPieceFormatNonElectronic(pieceToCreate) && isItemsUpdateRequiredForPhysical(originPoLine);
   }
 
   public static boolean isItemsUpdateRequiredForEresource(PoLine poLine) {
@@ -117,4 +113,13 @@ public class DefaultPieceFlowsValidator {
       .map(physical -> physical.getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING_ITEM)
       .orElse(false);
   }
+
+  private static boolean isPieceFormatElectronic(Piece piece) {
+    return piece.getFormat() == Piece.Format.ELECTRONIC;
+  }
+
+  private static boolean isPieceFormatNonElectronic(Piece piece) {
+    return piece.getFormat() == Piece.Format.PHYSICAL || piece.getFormat() == Piece.Format.OTHER;
+  }
+
 }
