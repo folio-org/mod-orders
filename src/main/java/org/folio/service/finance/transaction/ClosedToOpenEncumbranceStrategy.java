@@ -12,6 +12,7 @@ import org.folio.HttpStatus;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbranceUnreleaseHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
+import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -69,19 +70,12 @@ public class ClosedToOpenEncumbranceStrategy implements EncumbranceWorkflowStrat
         .compose(unreleaseHolder -> {
           var encumbrances = unreleaseHolder.getEncumbrances();
           // stop if nothing needs to be done
-          if (encumbrances.isEmpty() && compPO.getPoLines().stream().noneMatch(
-              pol -> pol.getFundDistribution().stream().anyMatch(f -> f.getEncumbrance() == null))) {
+          if (checkIfMatchingEncumbrances(compPO, encumbrances)) {
             return Future.succeededFuture();
           }
           // check encumbrance restrictions as in PendingToOpenEncumbranceStrategy
           // (except we use a different list of poLines/encumbrances)
-          List<EncumbranceRelationsHolder> holders = encumbranceRelationsHoldersBuilder
-            .buildBaseHolders(compPO)
-            // only keep holders with a missing encumbrance or a matching selected transaction
-            .stream()
-            .filter(h -> h.getFundDistribution().getEncumbrance() == null || encumbrances.stream()
-              .anyMatch(t -> t.getEncumbrance().getSourcePoLineId().equals(h.getPoLineId())))
-            .collect(Collectors.toList());
+          var holders = createEncumbranceRelationHolders(compPO, encumbrances);
           return encumbranceRelationsHoldersBuilder.withFinances(holders, requestContext)
             // use given encumbrances (withKnownTransactions) instead of retrieving them (withExistingTransactions)
             .map(v -> {
@@ -95,10 +89,8 @@ public class ClosedToOpenEncumbranceStrategy implements EncumbranceWorkflowStrat
             })
             .compose(v -> {
               // create missing encumbrances and unrelease existing ones
-              EncumbrancesProcessingHolder holder = new EncumbrancesProcessingHolder();
-              List<EncumbranceRelationsHolder> toBeCreatedHolders = holders.stream()
-                .filter(h -> h.getOldEncumbrance() == null)
-                .collect(toList());
+              var holder = new EncumbrancesProcessingHolder();
+              var toBeCreatedHolders = createToBeCreatedHolders(holders);
               holder.withEncumbrancesForCreate(toBeCreatedHolders);
               // only unrelease encumbrances with expended + credited + awaiting payment = 0
               var encumbrancesToUnrelease = collectAllowedEncumbrancesForUnrelease(unreleaseHolder);
@@ -113,6 +105,28 @@ public class ClosedToOpenEncumbranceStrategy implements EncumbranceWorkflowStrat
         });
     }
     return Future.succeededFuture();
+  }
+
+  private static boolean checkIfMatchingEncumbrances(CompositePurchaseOrder compPO, List<Transaction> encumbrances) {
+    return encumbrances.isEmpty() && compPO.getPoLines()
+      .stream()
+      .noneMatch(pol -> pol.getFundDistribution().stream().anyMatch(f -> f.getEncumbrance() == null));
+  }
+
+  private static List<EncumbranceRelationsHolder> createToBeCreatedHolders(List<EncumbranceRelationsHolder> holders) {
+    return holders.stream()
+      .filter(h -> h.getOldEncumbrance() == null)
+      .collect(toList());
+  }
+
+  private List<EncumbranceRelationsHolder> createEncumbranceRelationHolders(CompositePurchaseOrder compPO, List<Transaction> encumbrances) {
+    return encumbranceRelationsHoldersBuilder
+      .buildBaseHolders(compPO)
+      // only keep holders with a missing encumbrance or a matching selected transaction
+      .stream()
+      .filter(h -> h.getFundDistribution().getEncumbrance() == null || encumbrances.stream()
+        .anyMatch(t -> t.getEncumbrance().getSourcePoLineId().equals(h.getPoLineId())))
+      .collect(Collectors.toList());
   }
 
   @Override
