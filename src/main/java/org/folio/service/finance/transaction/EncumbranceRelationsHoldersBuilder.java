@@ -1,5 +1,6 @@
 package org.folio.service.finance.transaction;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -51,7 +52,7 @@ public class EncumbranceRelationsHoldersBuilder extends FinanceHoldersBuilder {
           .withPurchaseOrder(compPO)))
       .map(this::buildBaseHolder)
       // Do not change to toList() because it creates an immutable list
-      .collect(toList());
+      .collect(Collectors.toCollection(ArrayList::new));
   }
 
   private EncumbranceRelationsHolder buildBaseHolder(EncumbranceRelationsHolder holder) {
@@ -86,7 +87,7 @@ public class EncumbranceRelationsHoldersBuilder extends FinanceHoldersBuilder {
       .flatMap(poLine -> poLine.getFundDistribution().stream().map(FundDistribution::getEncumbrance))
       .filter(Objects::nonNull)
       // Do not change to toList() because it creates an immutable list
-      .collect(toList());
+      .collect(Collectors.toCollection(ArrayList::new));
     if (transactionIds.isEmpty()) {
       return Future.succeededFuture(encumbranceHolders);
     }

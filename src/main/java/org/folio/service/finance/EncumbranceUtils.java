@@ -61,8 +61,6 @@ public class EncumbranceUtils {
   private static Boolean hasReleaseEncumbranceFalseAndIsApprovedOrPaid(Transaction payment, List<InvoiceLine> invoiceLines) {
     var optional = invoiceLines.stream()
       .filter(invoiceLine -> invoiceLine.getId().equals(payment.getSourceInvoiceLineId()))
-      .peek(invoiceLine -> log.info("hasReleaseEncumbranceFalseAndIsApprovedOrPaid, release encumbrance: {}, invoice status: {}",
-        invoiceLine.getReleaseEncumbrance(), invoiceLine.getInvoiceLineStatus()))
       .findFirst();
     return optional.isEmpty() ||
       (!optional.get().getReleaseEncumbrance() && EnumSet.of(APPROVED, PAID).contains(optional.get().getInvoiceLineStatus()));
