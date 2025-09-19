@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @CopilotGenerated(partiallyGenerated = true, model = "GPT-4.1")
-class EncumbranceUtilsTest {
+public class EncumbranceUtilsTest {
 
   // 1. collectAllowedEncumbrancesForUnrelease (public)
   @Test
