@@ -755,5 +755,4 @@ public class PurchaseOrderLineHelper {
     return inventoryInstanceManager.createShadowInstanceIfNeeded(instanceId, requestContext)
       .mapEmpty();
   }
-
 }

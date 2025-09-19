@@ -50,7 +50,8 @@ public class EncumbranceRelationsHoldersBuilder extends FinanceHoldersBuilder {
           .withPoLine(poLine)
           .withPurchaseOrder(compPO)))
       .map(this::buildBaseHolder)
-      .toList();
+      // Do not change to toList() because it creates an immutable list
+      .collect(toList());
   }
 
   private EncumbranceRelationsHolder buildBaseHolder(EncumbranceRelationsHolder holder) {
@@ -84,7 +85,8 @@ public class EncumbranceRelationsHoldersBuilder extends FinanceHoldersBuilder {
     List<String> transactionIds = poAndLinesFromStorage.getPoLines().stream()
       .flatMap(poLine -> poLine.getFundDistribution().stream().map(FundDistribution::getEncumbrance))
       .filter(Objects::nonNull)
-      .toList();
+      // Do not change to toList() because it creates an immutable list
+      .collect(toList());
     if (transactionIds.isEmpty()) {
       return Future.succeededFuture(encumbranceHolders);
     }
