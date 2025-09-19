@@ -319,9 +319,11 @@ public class ApplicationConfig {
   EncumbranceWorkflowStrategy closedToOpenEncumbranceStrategy(EncumbranceService encumbranceService,
       FundsDistributionService fundsDistributionService,
       BudgetRestrictionService budgetRestrictionService,
-      EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder) {
+      EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder,
+      InvoiceLineService invoiceLineService,
+      TransactionService transactionService) {
     return new ClosedToOpenEncumbranceStrategy(encumbranceService, fundsDistributionService,
-      budgetRestrictionService, encumbranceRelationsHoldersBuilder);
+      budgetRestrictionService, encumbranceRelationsHoldersBuilder, invoiceLineService, transactionService);
   }
 
   @Bean
@@ -747,11 +749,13 @@ public class ApplicationConfig {
                                                   RestClient restClient,
                                                   PoLineValidationService poLineValidationService,
                                                   OrganizationService organizationService,
-                                                  PieceStorageService pieceStorageService) {
+                                                  PieceStorageService pieceStorageService,
+                                                  InvoiceLineService invoiceLineService,
+                                                  TransactionService transactionService) {
     return new PurchaseOrderLineHelper(itemStatusSyncService, inventoryInstanceManager, encumbranceService, expenseClassValidationService,
       encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, titlesService, protectionService,
       purchaseOrderLineService, purchaseOrderStorageService, restClient, poLineValidationService,
-      organizationService, pieceStorageService);
+      organizationService, pieceStorageService, invoiceLineService, transactionService);
   }
 
   @Bean

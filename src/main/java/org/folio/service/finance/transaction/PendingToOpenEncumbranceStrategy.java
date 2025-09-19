@@ -5,6 +5,7 @@ import static org.folio.orders.utils.FundDistributionUtils.validateFundDistribut
 import java.util.List;
 import java.util.Objects;
 
+import lombok.extern.log4j.Log4j2;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -15,6 +16,7 @@ import org.folio.service.orders.OrderWorkflowType;
 
 import io.vertx.core.Future;
 
+@Log4j2
 public class PendingToOpenEncumbranceStrategy implements EncumbranceWorkflowStrategy {
 
   private final EncumbranceService encumbranceService;
@@ -47,6 +49,7 @@ public class PendingToOpenEncumbranceStrategy implements EncumbranceWorkflowStra
   @Override
   public Future<List<EncumbranceRelationsHolder>> prepareProcessEncumbrancesAndValidate(CompositePurchaseOrder compPO,
                                                                                         CompositePurchaseOrder poAndLinesFromStorage, RequestContext requestContext) {
+
     validateFundDistributionTotal(compPO.getPoLines());
 
     List<EncumbranceRelationsHolder> holders = encumbranceRelationsHoldersBuilder.buildBaseHolders(compPO);
