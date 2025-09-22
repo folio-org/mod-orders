@@ -21,11 +21,16 @@ public class EncumbranceUnreleaseHolder {
   }
 
   public List<String> getEncumbranceIds() {
-    return this.encumbrances.stream().map(Transaction::getId).toList();
+    return this.encumbrances.stream()
+      .map(Transaction::getId)
+      .distinct().toList();
   }
 
   public List<String> getPoLineIds() {
-    return this.encumbrances.stream().map(Transaction::getEncumbrance).map(Encumbrance::getSourcePoLineId).toList();
+    return this.encumbrances.stream().map(Transaction::getEncumbrance)
+      .map(Encumbrance::getSourcePoLineId)
+      .distinct()
+      .toList();
   }
 
   public List<Transaction> getPendingPayments() {
