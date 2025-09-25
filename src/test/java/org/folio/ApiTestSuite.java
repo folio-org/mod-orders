@@ -57,6 +57,7 @@ import org.folio.service.exchange.CacheableExchangeRateServiceTest;
 import org.folio.service.exchange.ManualCurrencyConversionTest;
 import org.folio.service.exchange.CustomExchangeRateProviderTest;
 import org.folio.service.expenceclass.ExpenseClassValidationServiceTest;
+import org.folio.service.finance.EncumbranceUtilsTest;
 import org.folio.service.finance.FinanceHoldersBuilderTest;
 import org.folio.service.finance.FiscalYearServiceTest;
 import org.folio.service.finance.FundServiceTest;
@@ -579,5 +580,9 @@ public class ApiTestSuite {
 
   @Nested
   class CacheableExchangeRateServiceTestNested extends CacheableExchangeRateServiceTest {
+  }
+
+  @Nested
+  class EncumbranceUtilsNestest extends EncumbranceUtilsTest {
   }
 }
