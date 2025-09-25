@@ -3,7 +3,9 @@ package org.folio.models;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
+import org.springframework.util.CollectionUtils;
 
+import java.util.Collections;
 import java.util.List;
 
 public class EncumbranceUnreleaseHolder {
@@ -21,6 +23,9 @@ public class EncumbranceUnreleaseHolder {
   }
 
   public List<String> getEncumbranceIds() {
+    if (CollectionUtils.isEmpty(this.encumbrances)) {
+      return Collections.emptyList();
+    }
     return this.encumbrances.stream()
       .map(Transaction::getId)
       .distinct()
@@ -28,6 +33,9 @@ public class EncumbranceUnreleaseHolder {
   }
 
   public List<String> getPoLineIds() {
+    if (CollectionUtils.isEmpty(this.encumbrances)) {
+      return Collections.emptyList();
+    }
     return this.encumbrances.stream().map(Transaction::getEncumbrance)
       .map(Encumbrance::getSourcePoLineId)
       .distinct()

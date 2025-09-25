@@ -10,6 +10,7 @@ import org.springframework.util.CollectionUtils;
 
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Objects;
 
 import static java.util.Objects.nonNull;
 import static org.folio.rest.acq.model.invoice.InvoiceLine.InvoiceLineStatus.APPROVED;
@@ -19,6 +20,11 @@ import static org.folio.rest.acq.model.invoice.InvoiceLine.InvoiceLineStatus.PAI
 @UtilityClass
 public class EncumbranceUtils {
 
+  /**
+   * Collects encumbrances that are allowed to be unreleased based on invoice lines and secondary encumbrance amounts.
+   * @param holder The holder containing encumbrances and related data
+   * @return List of transactions that can be unreleased
+   */
   public static List<Transaction> collectAllowedEncumbrancesForUnrelease(EncumbranceUnreleaseHolder holder) {
     // Unreleased if invoiceLine has releaseEncumbrance=false and status=Approved OR Paid
     // OR unrelease if encumbrance amountExpended + amountCredited + amountAwaitingPayment = 0
@@ -39,9 +45,10 @@ public class EncumbranceUtils {
       return false;
     }
     return holder.getPendingPayments().stream()
-      .filter(pendingPayment -> nonNull(pendingPayment.getAwaitingPayment()) && nonNull(pendingPayment.getAwaitingPayment().getEncumbranceId()))
-      .filter(pendingPayment -> pendingPayment.getAwaitingPayment().getEncumbranceId().equals(encumbrance.getId()))
-      .filter(pendingPayment -> nonNull(pendingPayment.getSourceInvoiceLineId()))
+      .filter(pendingPayment -> nonNull(pendingPayment.getAwaitingPayment())
+        && nonNull(pendingPayment.getAwaitingPayment().getEncumbranceId())
+        && pendingPayment.getAwaitingPayment().getEncumbranceId().equals(encumbrance.getId())
+        && nonNull(pendingPayment.getSourceInvoiceLineId()))
       .map(pendingPayment -> hasReleaseEncumbranceFalseAndIsApprovedOrPaid(pendingPayment, holder.getInvoiceLines()))
       .findFirst().orElse(false);
   }
@@ -51,9 +58,9 @@ public class EncumbranceUtils {
       return false;
     }
     return holder.getPayments().stream()
-      .filter(payment -> nonNull(payment.getPaymentEncumbranceId()))
-      .filter(payment -> payment.getPaymentEncumbranceId().equals(encumbrance.getId()))
-      .filter(payment -> nonNull(payment.getSourceInvoiceLineId()))
+      .filter(payment -> nonNull(payment.getPaymentEncumbranceId())
+        && payment.getPaymentEncumbranceId().equals(encumbrance.getId())
+        && nonNull(payment.getSourceInvoiceLineId()))
       .map(payment -> hasReleaseEncumbranceFalseAndIsApprovedOrPaid(payment, holder.getInvoiceLines()))
       .findFirst().orElse(false);
   }
@@ -63,10 +70,14 @@ public class EncumbranceUtils {
       .filter(invoiceLine -> invoiceLine.getId().equals(payment.getSourceInvoiceLineId()))
       .findFirst();
     return optional.isEmpty() ||
-      (!optional.get().getReleaseEncumbrance() && EnumSet.of(APPROVED, PAID).contains(optional.get().getInvoiceLineStatus()));
+      (Boolean.FALSE.equals(optional.get().getReleaseEncumbrance()) && EnumSet.of(APPROVED, PAID).contains(optional.get().getInvoiceLineStatus()));
   }
 
   public static boolean allowEncumbranceToUnrelease(Transaction encumbranceTransaction) {
+    if (Objects.isNull(encumbranceTransaction) || Objects.isNull(encumbranceTransaction.getEncumbrance())) {
+      log.warn("allowEncumbranceToUnrelease:: Invalid transaction or encumbrance");
+      return false;
+    }
     var encumbrance = encumbranceTransaction.getEncumbrance();
     return encumbrance.getStatus() == Encumbrance.Status.RELEASED &&
       (encumbrance.getAmountExpended() == 0
@@ -75,6 +86,10 @@ public class EncumbranceUtils {
   }
 
   public static boolean allowEncumbranceToReleaseOnReopen(Encumbrance encumbrance) {
+    if (Objects.isNull(encumbrance)) {
+      log.warn("allowEncumbranceToReleaseOnReopen:: Invalid transaction or encumbrance");
+      return false;
+    }
     return encumbrance.getStatus() == Encumbrance.Status.PENDING
       && (encumbrance.getAmountExpended() > 0
       || encumbrance.getAmountCredited() > 0
