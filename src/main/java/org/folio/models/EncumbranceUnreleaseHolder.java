@@ -23,7 +23,8 @@ public class EncumbranceUnreleaseHolder {
   public List<String> getEncumbranceIds() {
     return this.encumbrances.stream()
       .map(Transaction::getId)
-      .distinct().toList();
+      .distinct()
+      .toList();
   }
 
   public List<String> getPoLineIds() {
