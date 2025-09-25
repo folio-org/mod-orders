@@ -20,7 +20,7 @@ import static org.folio.rest.acq.model.invoice.InvoiceLine.InvoiceLineStatus.PAI
 public class EncumbranceUtils {
 
   public static List<Transaction> collectAllowedEncumbrancesForUnrelease(EncumbranceUnreleaseHolder holder) {
-    // Unreleased if invoiceLine has releaseEncumbrance=false and status=Paid
+    // Unreleased if invoiceLine has releaseEncumbrance=false and status=Approved OR Paid
     // OR unrelease if encumbrance amountExpended + amountCredited + amountAwaitingPayment = 0
     return holder.getEncumbrances().stream()
       .filter(encumbrance -> {
