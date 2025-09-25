@@ -82,7 +82,7 @@ public class PieceUpdateFlowManager {
       .map(holder::withPieceFromStorage)
       .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext))
       .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithTitleInformation(holder, requestContext))
-      .compose(v -> asFuture(() -> defaultPieceFlowsValidator.isPieceRequestValid(pieceToUpdate, holder.getOriginPurchaseOrder(), holder.getOriginPoLine(), holder.getTitle(), createItem)))
+      .compose(v -> asFuture(() -> defaultPieceFlowsValidator.isPieceRequestValid(pieceToUpdate, holder.getOriginPurchaseOrder(), holder.getOriginPoLine(), holder.getTitle(), 0, createItem)))
       .compose(title -> protectionService.isOperationRestricted(holder.getTitle().getAcqUnitIds(), UPDATE, requestContext))
       .compose(v -> pieceUpdateFlowInventoryManager.processInventory(holder, requestContext))
       .compose(v -> updatePoLine(holder, requestContext))

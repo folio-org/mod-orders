@@ -37,14 +37,14 @@ public class DefaultPieceFlowsValidator {
     isPieceRequestValid(pieceToCreate, originalOrder, originPoLine, title, 1, isCreateItem);
   }
 
-  public void isPieceRequestValid(Piece pieceToCreate, CompositePurchaseOrder originalOrder, PoLine originPoLine, Title title, int piecesInBatch, boolean isCreateItem) {
+  public void isPieceRequestValid(Piece pieceToCreate, CompositePurchaseOrder originalOrder, PoLine originPoLine, Title title, int piecesToCreate, boolean isCreateItem) {
     List<Error> combinedErrors = Stream.of(
         PieceValidatorUtil.validatePieceLocation(pieceToCreate, originPoLine),
         PieceValidatorUtil.validatePieceFormat(pieceToCreate, originPoLine),
         PieceValidatorUtil.validatePieceRelatedOrder(originalOrder, originPoLine),
         validateItemCreateFlag(pieceToCreate, originPoLine, isCreateItem),
         validateDisplayOnHoldingsConsistency(pieceToCreate),
-        validatePieceSequenceNumber(pieceToCreate, title, piecesInBatch))
+        validatePieceSequenceNumber(pieceToCreate, title, piecesToCreate))
       .flatMap(Collection::stream)
       .toList();
     if (CollectionUtils.isNotEmpty(combinedErrors)) {
@@ -78,8 +78,8 @@ public class DefaultPieceFlowsValidator {
       : List.of();
   }
 
-  public static List<Error> validatePieceSequenceNumber(Piece piece, Title title, int piecesInBatch) {
-    return piece.getSequenceNumber() != null && (piece.getSequenceNumber() <= 0 || piece.getSequenceNumber() >= title.getNextSequenceNumber() + piecesInBatch)
+  public static List<Error> validatePieceSequenceNumber(Piece piece, Title title, int piecesToCreate) {
+    return piece.getSequenceNumber() != null && (piece.getSequenceNumber() <= 0 || piece.getSequenceNumber() >= title.getNextSequenceNumber() + piecesToCreate)
       ? List.of(PIECE_SEQUENCE_NUMBER_IS_INVALID.toError())
       : List.of();
   }
