@@ -18,7 +18,6 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.inventory.InventoryHoldingManager;
-import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderPieceService;
 
@@ -64,7 +63,6 @@ public abstract class ProcessInventoryStrategy {
                                        boolean isInstanceMatchingDisabled,
                                        InventoryItemManager inventoryItemManager,
                                        InventoryHoldingManager inventoryHoldingManager,
-                                       InventoryInstanceManager inventoryInstanceManager,
                                        OpenCompositeOrderPieceService openCompositeOrderPieceService,
                                        RestClient restClient,
                                        RequestContext requestContext) {
@@ -79,11 +77,8 @@ public abstract class ProcessInventoryStrategy {
         openCompositeOrderPieceService);
     }
 
-    return inventoryInstanceManager.openOrderHandleInstance(poLine, isInstanceMatchingDisabled, requestContext)
-      .compose(polWithInstanceId -> handleHoldingsAndItemsRecords(compPO, polWithInstanceId,
-        inventoryItemManager, inventoryHoldingManager, restClient, requestContext))
-      .compose(piecesWithItemId -> handlePieces(poLine, titleId, piecesWithItemId, isInstanceMatchingDisabled,
-        requestContext, openCompositeOrderPieceService));
+    return handleHoldingsAndItemsRecords(compPO, poLine, inventoryItemManager, inventoryHoldingManager, restClient, requestContext)
+      .compose(piecesWithItemId -> handlePieces(poLine, titleId, piecesWithItemId, isInstanceMatchingDisabled, requestContext, openCompositeOrderPieceService));
   }
 
   protected List<Future<List<Piece>>> updateHolding(CompositePurchaseOrder compPO,
