@@ -17,5 +17,6 @@
   "claimingActive": false,
   "isAcknowledged": false,
   "claimingInterval": 45,
-  "subscriptionInterval": 0
+  "subscriptionInterval": 0,
+  "nextSequenceNumber": 2
 }

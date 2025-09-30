@@ -151,9 +151,9 @@ public class PieceUpdateFlowManagerTest {
     JsonObject holding = new JsonObject().put(ID, holdingId);
     holding.put(HOLDING_PERMANENT_LOCATION_ID, locationId);
     Piece pieceFromStorage = new Piece().withId(pieceId).withPoLineId(lineId).withItemId(itemId).withTitleId(titleId)
-      .withHoldingId(holdingId).withFormat(Piece.Format.ELECTRONIC);
+      .withHoldingId(holdingId).withFormat(Piece.Format.ELECTRONIC).withSequenceNumber(1);
     Piece pieceToUpdate = new Piece().withId(pieceId).withPoLineId(lineId).withItemId(itemId).withTitleId(titleId)
-      .withHoldingId(holdingIdTpUpdate).withFormat(Piece.Format.ELECTRONIC);
+      .withHoldingId(holdingIdTpUpdate).withFormat(Piece.Format.ELECTRONIC).withSequenceNumber(1);
     Cost cost = new Cost().withQuantityElectronic(1);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
     Eresource eresource = new Eresource().withCreateInventory(INSTANCE_HOLDING_ITEM);
@@ -163,7 +163,7 @@ public class PieceUpdateFlowManagerTest {
       .withLocations(List.of(loc)).withCost(cost);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId)
       .withOrderType(PurchaseOrder.OrderType.ONE_TIME).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
-    Title title = new Title().withId(titleId);
+    Title title = new Title().withId(titleId).withNextSequenceNumber(2);
 
     doReturn(succeededFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(pieceToUpdate.getId(), requestContext);
     doReturn(succeededFuture(null)).when(pieceStorageService).updatePiece(pieceToUpdate, requestContext);
@@ -218,9 +218,9 @@ public class PieceUpdateFlowManagerTest {
     JsonObject holding = new JsonObject().put(ID, holdingId);
     holding.put(HOLDING_PERMANENT_LOCATION_ID, locationId);
     Piece pieceFromStorage = new Piece().withId(pieceId).withPoLineId(lineId).withItemId(itemId).withTitleId(titleId)
-      .withHoldingId(holdingId).withFormat(Piece.Format.ELECTRONIC);
+      .withHoldingId(holdingId).withFormat(Piece.Format.ELECTRONIC).withSequenceNumber(1);
     Piece pieceToUpdate = new Piece().withId(pieceId).withPoLineId(lineId).withItemId(itemId).withTitleId(titleId)
-      .withHoldingId(holdingIdTpUpdate).withFormat(Piece.Format.ELECTRONIC);
+      .withHoldingId(holdingIdTpUpdate).withFormat(Piece.Format.ELECTRONIC).withSequenceNumber(1);
     Cost cost = new Cost().withQuantityElectronic(1);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
     Eresource eresource = new Eresource().withCreateInventory(INSTANCE_HOLDING_ITEM);
@@ -229,7 +229,7 @@ public class PieceUpdateFlowManagerTest {
       .withEresource(eresource)
       .withLocations(List.of(loc)).withCost(cost);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
-    Title title = new Title().withId(titleId);
+    Title title = new Title().withId(titleId).withNextSequenceNumber(2);
 
     doReturn(succeededFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(pieceToUpdate.getId(), requestContext);
     doReturn(succeededFuture(null)).when(pieceStorageService).updatePiece(pieceToUpdate, requestContext);
@@ -279,10 +279,10 @@ public class PieceUpdateFlowManagerTest {
     JsonObject holding = new JsonObject().put(ID, oldHoldingId);
     holding.put(HOLDING_PERMANENT_LOCATION_ID, locationId);
     Piece pieceFromStorage = new Piece().withId(pieceId).withPoLineId(lineId).withItemId(itemId).withTitleId(titleId)
-      .withHoldingId(oldHoldingId)
+      .withHoldingId(oldHoldingId).withSequenceNumber(1)
       .withFormat(Piece.Format.ELECTRONIC);
     Piece incomingPieceToUpdate = new Piece().withId(pieceId).withPoLineId(lineId).withItemId(itemId).withTitleId(titleId)
-      .withHoldingId(holdingIdToUpdate)
+      .withHoldingId(holdingIdToUpdate).withSequenceNumber(1)
       .withFormat(Piece.Format.ELECTRONIC).withReceivingStatus(Piece.ReceivingStatus.RECEIVED);
     Cost cost = new Cost().withQuantityElectronic(1);
     Location loc = new Location().withHoldingId(oldHoldingId).withQuantityElectronic(1).withQuantity(1);
@@ -290,7 +290,7 @@ public class PieceUpdateFlowManagerTest {
       .withEresource(new Eresource().withCreateInventory(INSTANCE_HOLDING_ITEM))
       .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withLocations(List.of(loc)).withCost(cost);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
-    Title title = new Title().withId(titleId);
+    Title title = new Title().withId(titleId).withNextSequenceNumber(2);
 
     doReturn(succeededFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(incomingPieceToUpdate.getId(), requestContext);
     final ArgumentCaptor<Piece> pieceToUpdateCapture = ArgumentCaptor.forClass(Piece.class);

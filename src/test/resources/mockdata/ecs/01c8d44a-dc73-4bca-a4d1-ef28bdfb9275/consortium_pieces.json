@@ -16,5 +16,6 @@
   "receivingStatus": "Expected",
   "displayOnHolding": false,
   "receivingTenantId": "university",
-  "statusUpdatedDate": "2024-07-22T10:34:49.975+00:00"
+  "statusUpdatedDate": "2024-07-22T10:34:49.975+00:00",
+  "sequenceNumber": 1
 }
