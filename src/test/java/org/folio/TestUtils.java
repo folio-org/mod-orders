@@ -116,7 +116,8 @@ public final class TestUtils {
       .withTitleId(SAMPLE_TITLE_ID)
       .withReceiptDate(new Date())
       .withPoLineId(poLineId)
-      .withLocationId(UUID.randomUUID().toString());
+      .withLocationId(UUID.randomUUID().toString())
+      .withSequenceNumber(1);
   }
 
   public static String getInstanceId(PoLine poline) {
@@ -191,7 +192,7 @@ public final class TestUtils {
   }
 
   public static Title getMinimalContentTitle() {
-    return new Title().withTitle("Test title").withId(SAMPLE_TITLE_ID);
+    return new Title().withTitle("Test title").withId(SAMPLE_TITLE_ID).withNextSequenceNumber(2);
   }
 
   public static CompositePurchaseOrder getMinimalContentCompositePurchaseOrder() {

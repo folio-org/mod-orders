@@ -252,11 +252,30 @@ public class DefaultPieceFlowsValidatorTest {
     var originOrder = new CompositePurchaseOrder().withId(ORDER_IRD).withWorkflowStatus(WorkflowStatus.OPEN);
     var originPoLine = new PoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
       .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(PO_LINE_ID)
-      .withEresource(eresource)
-      .withLocations(List.of(loc)).withCost(cost);
+      .withEresource(eresource).withLocations(List.of(loc)).withCost(cost);
 
     var exception = Assertions.assertThrows(HttpException.class, () ->
       defaultPieceFlowsValidator.isPieceBatchRequestValid(List.of(piece1, piece2), originOrder, originPoLine, title, true));
+
+    boolean areErrorsPresent = exception.getErrors().getErrors().stream()
+      .allMatch(error -> error.getCode().equals(PIECE_SEQUENCE_NUMBER_IS_INVALID.getCode()));
+    assertTrue(areErrorsPresent);
+  }
+
+  @Test
+  void testIsPieceRequestValidWithMissingSequenceNumberForUpdate() {
+    var piece = new Piece().withPoLineId(PO_LINE_ID).withLocationId(LOCATION_ID).withFormat(Piece.Format.ELECTRONIC);
+    var title = new Title();
+    var loc = new Location().withLocationId(LOCATION_ID).withQuantityElectronic(1).withQuantity(1);
+    var cost = new Cost().withQuantityElectronic(1);
+    var eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
+    var originOrder = new CompositePurchaseOrder().withId(ORDER_IRD).withWorkflowStatus(WorkflowStatus.OPEN);
+    var originPoLine = new PoLine().withIsPackage(true).withPurchaseOrderId(ORDER_IRD)
+      .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(PO_LINE_ID)
+      .withEresource(eresource).withLocations(List.of(loc)).withCost(cost);
+
+    var exception = Assertions.assertThrows(HttpException.class, () ->
+      defaultPieceFlowsValidator.isPieceRequestValid(piece, originOrder, originPoLine, title, 0, true));
 
     boolean areErrorsPresent = exception.getErrors().getErrors().stream()
       .allMatch(error -> error.getCode().equals(PIECE_SEQUENCE_NUMBER_IS_INVALID.getCode()));

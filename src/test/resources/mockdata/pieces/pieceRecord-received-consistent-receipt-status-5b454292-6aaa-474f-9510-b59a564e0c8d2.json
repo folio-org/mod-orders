@@ -9,6 +9,7 @@
   "poLineId": "fe47e95d-24e9-4a9a-9dc0-bcba64b51f56",
   "receivingStatus": "Received",
   "supplement": true,
+  "sequenceNumber": 1,
   "receiptDate": "2018-10-10T00:00:00.000Z",
   "receivedDate": "2018-10-10T00:00:00.000Z"
 }
