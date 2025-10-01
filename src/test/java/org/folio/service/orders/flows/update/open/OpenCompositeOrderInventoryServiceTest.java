@@ -12,6 +12,8 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Location;
+import org.folio.service.caches.CommonSettingsCache;
+import org.folio.service.caches.InventoryCache;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryInstanceManager;
@@ -80,7 +82,7 @@ public class OpenCompositeOrderInventoryServiceTest {
   @Autowired
   private TitlesService titlesService;
   @Autowired
-  private  PieceStorageService pieceStorageService;
+  private PieceStorageService pieceStorageService;
   @Autowired
   private ConsortiumConfigurationService consortiumConfigurationService;
   @Autowired
@@ -120,7 +122,7 @@ public class OpenCompositeOrderInventoryServiceTest {
   }
 
   @Test
-  void shouldFoundHoldingIdByLocationId() throws IOException {
+  void shouldFindHoldingIdByLocationId() throws IOException {
     String titleId = UUID.randomUUID().toString();
     CompositePurchaseOrder purchaseOrder = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     PoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(PoLine.class);
@@ -130,10 +132,9 @@ public class OpenCompositeOrderInventoryServiceTest {
     doReturn(succeededFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(), eq(requestContext));
     doReturn(succeededFuture(requestContext)).when(consortiumConfigurationService).cloneRequestContextIfNeeded(any(), any());
 
-    openCompositeOrderInventoryService.processInventory(purchaseOrder, line, titleId, false, requestContext)
-      .result();
+    openCompositeOrderInventoryService.processInventory(purchaseOrder, line, titleId, false, requestContext).result();
 
-    assertEquals(line.getLocations().get(0).getHoldingId(), "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d63");
+    assertEquals(line.getLocations().getFirst().getHoldingId(), "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d63");
     verify(processInventoryStrategyResolver, times(1)).getHoldingAndItemStrategy(any());
   }
 
@@ -197,8 +198,8 @@ public class OpenCompositeOrderInventoryServiceTest {
       return mock(InventoryItemManager.class);
     }
 
-    @Bean InventoryHoldingManager inventoryHoldingManager() {
-      return mock(InventoryHoldingManager.class);
+    @Bean InventoryHoldingManager inventoryHoldingManager(RestClient restClient) {
+      return spy(new InventoryHoldingManager(restClient, mock(CommonSettingsCache.class), mock(InventoryCache.class)));
     }
 
     @Bean InventoryInstanceManager inventoryInstanceManager() {
@@ -229,7 +230,7 @@ public class OpenCompositeOrderInventoryServiceTest {
     }
 
     @Bean ProcessInventoryStrategyResolver processInventoryStrategyResolver(ProcessInventoryPhysicalStrategy processInventoryPhysicalStrategy,
-                                                    ProcessInventoryElectronicStrategy processInventoryElectronicStrategy) {
+                                                                            ProcessInventoryElectronicStrategy processInventoryElectronicStrategy) {
       Map<String, ProcessInventoryStrategy> strategy = new HashMap<>();
       strategy.put(PoLine.OrderFormat.ELECTRONIC_RESOURCE.value(), processInventoryElectronicStrategy);
       strategy.put(PoLine.OrderFormat.PHYSICAL_RESOURCE.value(), processInventoryPhysicalStrategy);
