@@ -56,8 +56,7 @@ public class OpenCompositeOrderInventoryService {
     if (CollectionUtils.isEmpty(compPO.getPoLines())) {
       return Future.succeededFuture();
     }
-    return chainCall(compPO.getPoLines(), poLine -> inventoryInstanceManager.openOrderHandleInstance(poLine, isInstanceMatchingDisabled, requestContext).mapEmpty())
-      .compose(v -> requestContext.getContext().owner().<List<Future<Void>>>executeBlocking(event -> {
+    return requestContext.getContext().owner().<List<Future<Void>>>executeBlocking(event -> {
         List<Future<Void>> futures = new ArrayList<>();
         for (PoLine poLine : compPO.getPoLines()) {
           semaphore.acquire(() -> {
@@ -69,14 +68,14 @@ public class OpenCompositeOrderInventoryService {
             }
           });
         }
-      })).compose(futures -> GenericCompositeFuture.all(new ArrayList<>(futures)).mapEmpty());
+      }).compose(futures -> GenericCompositeFuture.all(new ArrayList<>(futures)).mapEmpty());
   }
 
   public Future<Void> processInventory(CompositePurchaseOrder compPO, PoLine poLine, String titleId,
                                        boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     logger.debug("processInventory:: Executing a strategy for: {}", poLine.getOrderFormat().value());
     return processInventoryStrategyResolver.getHoldingAndItemStrategy(poLine.getOrderFormat().value())
-      .processInventory(compPO, poLine, titleId, isInstanceMatchingDisabled, inventoryItemManager, inventoryHoldingManager, openCompositeOrderPieceService, restClient, requestContext);
+      .processInventory(compPO, poLine, titleId, isInstanceMatchingDisabled, inventoryItemManager, inventoryHoldingManager, inventoryInstanceManager, openCompositeOrderPieceService, restClient, requestContext);
   }
 
   private String getFirstTitleIdIfExist(Map<String, List<Title>> lineIdsTitles, PoLine poLine) {
