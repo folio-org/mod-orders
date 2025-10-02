@@ -102,7 +102,7 @@ public abstract class ProcessInventoryStrategy {
       .toList();
   }
 
-  protected Future<List<Piece>> updateHolding(CompositePurchaseOrder compPO, PoLine poLine, Location location,
+  private Future<List<Piece>> updateHolding(CompositePurchaseOrder compPO, PoLine poLine, Location location,
                                               InventoryItemManager inventoryItemManager, InventoryHoldingManager inventoryHoldingManager,
                                               RestClient restClient, RequestContext requestContext) {
     return findHoldingsId(poLine, location, restClient, requestContext)
