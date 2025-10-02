@@ -19,6 +19,8 @@ import org.folio.service.pieces.flows.strategies.ProcessInventoryStrategyResolve
 
 import io.vertx.core.Future;
 
+import static org.folio.orders.utils.HelperUtils.chainCall;
+
 public class OpenCompositeOrderInventoryService {
   private static final Logger logger = LogManager.getLogger(OpenCompositeOrderInventoryService.class);
 
@@ -46,10 +48,8 @@ public class OpenCompositeOrderInventoryService {
   public Future<Void> processInventory(Map<String, List<Title>> lineIdsTitles, CompositePurchaseOrder compPO,
                                        boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     logger.debug("OpenCompositeOrderInventoryService.processInventory compPO.id={}", compPO.getId());
-    return GenericCompositeFuture.all(compPO.getPoLines().stream()
-        .map(poLine -> processInventory(compPO, poLine, getFirstTitleIdIfExist(lineIdsTitles, poLine), isInstanceMatchingDisabled, requestContext))
-        .toList())
-      .mapEmpty();
+    return chainCall(compPO.getPoLines(), poLine ->
+        processInventory(compPO, poLine, getFirstTitleIdIfExist(lineIdsTitles, poLine), isInstanceMatchingDisabled, requestContext));
   }
 
   public Future<Void> processInventory(CompositePurchaseOrder compPO, PoLine poLine, String titleId,
