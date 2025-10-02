@@ -35,6 +35,10 @@ public class StreamUtils {
     return collection.stream().map(mapper).toList();
   }
 
+  public static <K> List<K> flatMap(Collection<? extends Collection<K>> collection) {
+    return collection.stream().flatMap(Collection::stream).toList();
+  }
+
   public static <K, V> Set<V> mapToSet(Collection<K> collection, Function<K, V> mapper) {
     return collection.stream().map(mapper).collect(Collectors.toSet());
   }

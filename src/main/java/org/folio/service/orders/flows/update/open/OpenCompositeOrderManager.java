@@ -1,5 +1,6 @@
 package org.folio.service.orders.flows.update.open;
 
+import static org.folio.orders.utils.FutureUtils.asFuture;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.service.UserService.getCurrentUserId;
 
@@ -64,16 +65,11 @@ public class OpenCompositeOrderManager {
     updateIncomingOrder(compPO, poFromStorage, requestContext);
     return openCompositeOrderFlowValidator.validate(compPO, poFromStorage, requestContext)
       .compose(aCompPO -> titlesService.fetchNonPackageTitles(compPO, requestContext))
-      .compose(linesIdTitles -> {
-        populateInstanceId(linesIdTitles, compPO.getPoLines());
-        return openCompositeOrderInventoryService.processInventory(linesIdTitles, compPO, isInstanceMatchingDisabled(config), requestContext);
-      })
+      .map(lineIdTitles -> populateInstanceId(lineIdTitles, compPO.getPoLines()))
+      .compose(linesIdTitles -> openCompositeOrderInventoryService.processInventory(linesIdTitles, compPO, isInstanceMatchingDisabled(config), requestContext))
       .compose(v -> finishProcessingEncumbrancesForOpenOrder(compPO, poFromStorage, requestContext))
-      .map(ok -> {
-        changePoLineStatuses(compPO);
-        return null;
-      })
-      .compose(ok -> openOrderUpdatePoLinesSummary(compPO.getPoLines(), requestContext));
+      .map(v -> asFuture(() -> changePoLineStatuses(compPO)))
+      .compose(v -> openOrderUpdatePoLinesSummary(compPO.getPoLines(), requestContext));
   }
 
   private boolean isInstanceMatchingDisabled(JsonObject config) {
@@ -102,12 +98,13 @@ public class OpenCompositeOrderManager {
   }
 
 
-  private void populateInstanceId(Map<String, List<Title>> lineIdsTitles, List<PoLine> lines) {
+  private Map<String, List<Title>> populateInstanceId(Map<String, List<Title>> lineIdsTitles, List<PoLine> lines) {
     getNonPackageLines(lines).forEach(line -> {
       if (lineIdsTitles.containsKey(line.getId())) {
         line.setInstanceId(lineIdsTitles.get(line.getId()).getFirst().getInstanceId());
       }
     });
+    return lineIdsTitles;
   }
 
   private void changePoLineStatuses(CompositePurchaseOrder compPO) {
@@ -171,4 +168,5 @@ public class OpenCompositeOrderManager {
     }
     compPO.getPoLines().forEach(poLine -> PoLineCommonUtil.updateLocationsQuantity(poLine.getLocations()));
   }
+
 }

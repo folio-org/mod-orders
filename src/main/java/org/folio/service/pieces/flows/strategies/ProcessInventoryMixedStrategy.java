@@ -1,6 +1,8 @@
 package org.folio.service.pieces.flows.strategies;
 
 import static java.util.stream.Collectors.toList;
+import static org.folio.orders.utils.FutureUtils.asFuture;
+import static org.folio.orders.utils.HelperUtils.chainCall;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.PoLineCommonUtil.isHoldingUpdateRequiredForEresource;
 import static org.folio.orders.utils.PoLineCommonUtil.isHoldingUpdateRequiredForPhysical;
@@ -10,7 +12,9 @@ import static org.folio.service.inventory.InventoryHoldingManager.HOLDING_PERMAN
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
+import one.util.streamex.StreamEx;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.PoLineCommonUtil;
@@ -41,7 +45,7 @@ public class ProcessInventoryMixedStrategy extends ProcessInventoryStrategy {
                                                            RestClient restClient,
                                                            RequestContext requestContext) {
     logger.debug("ProcessInventoryMixedStrategy.handleHoldingsAndItemsRecords poLine.id={}", poLine.getId());
-    List<Future<JsonObject>> itemsPerHolding = updateMixedHolding(poLine, inventoryHoldingManager, restClient, requestContext);
+    var itemsPerHolding = updateMixedHolding(poLine, inventoryHoldingManager, restClient, requestContext);
     return collectResultsOnSuccess(itemsPerHolding)
       .map(aVoid -> {
         updateLocations(poLine);
@@ -65,20 +69,23 @@ public class ProcessInventoryMixedStrategy extends ProcessInventoryStrategy {
       );
   }
 
-  private List<Future<JsonObject>> updateMixedHolding(PoLine poLine, InventoryHoldingManager inventoryHoldingManager,
-                                                      RestClient restClient, RequestContext requestContext) {
-    logger.debug("ProcessInventoryMixedStrategy.updateMixedHolding poLine.id={}", poLine.getId());
-    List<Future<JsonObject>> itemsPerHolding = new ArrayList<>();
-    poLine.getLocations().forEach(location -> itemsPerHolding.add(
-      findHoldingsId(poLine, location, restClient, requestContext)
-        .compose(aVoid -> consortiumConfigurationService.cloneRequestContextIfNeeded(requestContext, location))
-        .compose(updatedRequestContext -> inventoryHoldingManager.getOrCreateHoldingsJsonRecord(poLine.getEresource(), poLine.getInstanceId(), location, updatedRequestContext)
-          .map(holding -> {
-            updateLocationWithHoldingInfo(holding, location);
-            return null;
-          }))
-    ));
-    return itemsPerHolding;
+  private List<Future<Void>> updateMixedHolding(PoLine poLine, InventoryHoldingManager inventoryHoldingManager,
+                                                RestClient restClient, RequestContext requestContext) {
+    logger.debug("ProcessInventoryStrategy.updateHolding");
+    return StreamEx.of(poLine.getLocations())
+      .groupingBy(location -> Optional.ofNullable(location.getTenantId()))
+      .values().stream()
+      .map(locations -> chainCall(locations, location ->
+        updateMixedHolding(poLine, location, inventoryHoldingManager, restClient, requestContext)))
+      .toList();
+  }
+
+  private Future<Void> updateMixedHolding(PoLine poLine, Location location, InventoryHoldingManager inventoryHoldingManager,
+                                          RestClient restClient, RequestContext requestContext) {
+    return findHoldingsId(poLine, location, restClient, requestContext)
+      .compose(aVoid -> consortiumConfigurationService.cloneRequestContextIfNeeded(requestContext, location))
+      .compose(updatedRequestContext -> inventoryHoldingManager.getOrCreateHoldingsJsonRecord(poLine.getEresource(), poLine.getInstanceId(), location, updatedRequestContext))
+      .compose(holding -> asFuture(() -> updateLocationWithHoldingInfo(holding, location)));
   }
 
   private void updateLocationWithHoldingInfo(JsonObject holding, Location location) {
