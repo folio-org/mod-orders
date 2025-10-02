@@ -1,6 +1,5 @@
 package org.folio.service.orders.flows.update.open;
 
-import static org.folio.orders.utils.HelperUtils.chainCall;
 import static org.folio.rest.RestConstants.SEMAPHORE_MAX_ACTIVE_THREADS;
 
 import java.util.ArrayList;
