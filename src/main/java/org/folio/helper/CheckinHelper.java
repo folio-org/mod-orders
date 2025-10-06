@@ -218,7 +218,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       piece.setLocationId(checkinPiece.getLocationId());
     }
     if (StringUtils.isNotEmpty(checkinPiece.getHoldingId())) {
-      piece.setHoldingId(checkinPiece.getHoldingId());
+      piece.withLocationId(null).setHoldingId(checkinPiece.getHoldingId());
     }
     piece.setEnumeration(checkinPiece.getEnumeration());
     piece.setChronology(checkinPiece.getChronology());

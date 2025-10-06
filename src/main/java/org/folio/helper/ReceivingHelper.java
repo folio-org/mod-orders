@@ -221,7 +221,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       piece.setLocationId(receivedItem.getLocationId());
     }
     if (StringUtils.isNotEmpty(receivedItem.getHoldingId())) {
-      piece.setHoldingId(receivedItem.getHoldingId());
+      piece.withLocationId(null).setHoldingId(receivedItem.getHoldingId());
     }
     piece.setEnumeration(receivedItem.getEnumeration());
     piece.setChronology(receivedItem.getChronology());
