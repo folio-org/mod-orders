@@ -214,7 +214,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     if (StringUtils.isNotEmpty(checkinPiece.getReceivingTenantId())) {
       piece.setReceivingTenantId(checkinPiece.getReceivingTenantId());
     }
-    if (StringUtils.isNotEmpty(checkinPiece.getLocationId())) {
+    if (StringUtils.isEmpty(piece.getHoldingId()) && StringUtils.isNotEmpty(checkinPiece.getLocationId())) {
       piece.setLocationId(checkinPiece.getLocationId());
     }
     if (StringUtils.isNotEmpty(checkinPiece.getHoldingId())) {
