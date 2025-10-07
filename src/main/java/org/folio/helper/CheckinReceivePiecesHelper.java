@@ -675,9 +675,9 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       .compose(createdHoldingId -> {
         if (Objects.nonNull(createdHoldingId)) {
           processedHoldings.put(piece.getId(), createdHoldingId);
-          piece.setHoldingId(createdHoldingId);
           logger.info("createHoldingsForChangedLocations:: Saving newly created or found holding, pieceId: {}, itemId: {}, locationId: {}, old holdingId: {}, new holdingId: {}",
             piece.getId(), piece.getItemId(), piece.getLocationId(), piece.getHoldingId(), createdHoldingId);
+          piece.withLocationId(null).setHoldingId(createdHoldingId);
         }
         return Future.succeededFuture(true);
       })

@@ -2,6 +2,7 @@ package org.folio.service.orders;
 
 import static one.util.streamex.StreamEx.ofSubLists;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.QueryUtils.convertFieldListToCqlQuery;
 import static org.folio.orders.utils.QueryUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
@@ -14,12 +15,11 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.CompletionException;
 
+import lombok.extern.log4j.Log4j2;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.models.PoLineLocationsPair;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.PoLineCommonUtil;
@@ -41,12 +41,16 @@ import io.vertx.core.json.JsonObject;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.orders.utils.PoLineFields;
 
+@Log4j2
 public class PurchaseOrderLineService {
-  private static final Logger logger = LogManager.getLogger(PurchaseOrderLineService.class);
+
   private static final String ENDPOINT = "/orders-storage/po-lines";
   private static final String BATCH_ENDPOINT = "/orders-storage/po-lines-batch";
   private static final String BY_ID_ENDPOINT = ENDPOINT + "/{id}";
+
   private static final String ORDER_LINES_BY_ORDER_ID_QUERY = "purchaseOrderId == %s";
+  private static final String ORDER_LINES_BY_HOLDING_ID_QUERY = "locations = /@holdingId \"%s\"";
+
   private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling %s %s - %s";
   private static final int PO_LINE_BATCH_PARTITION_SIZE = 100;
 
@@ -136,7 +140,7 @@ public class PurchaseOrderLineService {
     return GenericCompositeFuture.join(poLineCollections
       .stream()
       .map(poLineCollection -> {
-        logger.info("saveOrderLines:: start saving {} po lines in batch", poLineCollection.getTotalRecords());
+        log.info("saveOrderLines:: start saving {} po lines in batch", poLineCollection.getTotalRecords());
         RequestEntry requestEntry = new RequestEntry(BATCH_ENDPOINT);
         return restClient.put(requestEntry, poLineCollection, requestContext);
       }).toList())
@@ -148,7 +152,7 @@ public class PurchaseOrderLineService {
     getOrderLines("purchaseOrderId==" + orderId, 0, Integer.MAX_VALUE, requestContext)
       .onSuccess(promise::complete)
       .onFailure(t -> {
-        logger.error("Exception gathering poLine data:", t);
+        log.error("Exception gathering poLine data:", t);
         promise.fail(t);
       });
     return promise.future();
@@ -161,7 +165,7 @@ public class PurchaseOrderLineService {
   public Future<JsonObject> operateOnObject(HttpMethod operation, String url, JsonObject jsonObject, RequestContext requestContext) {
     Promise<JsonObject> promise = Promise.promise();
     Future<JsonObject> future = Future.succeededFuture();
-    logger.info("Calling {} {}", operation, url);
+    log.info("Calling {} {}", operation, url);
     if (operation.equals(HttpMethod.GET)) {
       future = restClient.getAsJsonObject(url, true, requestContext);
     }
@@ -180,14 +184,14 @@ public class PurchaseOrderLineService {
 
     future
       .onSuccess(jsonResponse -> {
-        logger.info("The {} {} operation completed", operation, url);
+        log.info("The {} {} operation completed", operation, url);
         promise.complete(jsonResponse);
       })
       .onFailure(t -> {
         Throwable cause = t instanceof CompletionException ? t.getCause() : t;
         int code = cause instanceof HttpException httpException? httpException.getCode() : 500;
         String message = String.format(EXCEPTION_CALLING_ENDPOINT_MSG, operation, url, cause.getMessage());
-        logger.error(message, t);
+        log.error(message, t);
         promise.fail(new HttpException(code, message));
       });
 
@@ -210,7 +214,7 @@ public class PurchaseOrderLineService {
           Parameter causeParam = new Parameter().withKey("cause").withValue(t.getCause().getMessage());
           HttpException ex = new HttpException(500, ErrorCodes.ERROR_RETRIEVING_PO_LINES.toError()
             .withParameters(List.of(idParam, causeParam)));
-          logger.error(ex.getMessage(), t);
+          log.error(ex.getMessage(), t);
           // TODO: replace CompletionException with more meaningful exception type everywhere it possible. No need after MODORDERS-780
           throw new CompletionException(ex);
         });
@@ -220,9 +224,9 @@ public class PurchaseOrderLineService {
   }
 
   public Future<List<PoLine>> getPoLinesByHoldingIds(List<String> holdingIds, RequestContext requestContext) {
-    holdingIds = StreamEx.of(holdingIds).map("*\"%s\"*"::formatted).distinct().toList();
+    holdingIds = StreamEx.of(holdingIds).map(ORDER_LINES_BY_HOLDING_ID_QUERY::formatted).distinct().toList();
     var futures = ofSubLists(holdingIds, MAX_IDS_FOR_GET_RQ_15)
-      .map(holdingIdsChunk -> convertIdsToCqlQuery(holdingIdsChunk, PoLineFields.LOCATIONS.getValue()))
+      .map(holdingIdsChunk -> convertFieldListToCqlQuery(holdingIdsChunk, PoLineFields.LOCATIONS.getValue(), false))
       .map(query -> getOrderLines(query, 0, Integer.MAX_VALUE, requestContext))
       .toList();
     return collectResultsOnSuccess(futures)
@@ -254,7 +258,7 @@ public class PurchaseOrderLineService {
       .compose(jsonObjects -> GenericCompositeFuture.join(jsonObjects.stream()
         .map(line -> deleteLineById(line.getId(), requestContext)).toList()))
        .recover(t -> {
-        logger.error("Exception deleting poLine data for order id={}", orderId, t);
+        log.error("Exception deleting poLine data for order id={}", orderId, t);
         throw new CompletionException(t.getCause());
       })
       .mapEmpty();

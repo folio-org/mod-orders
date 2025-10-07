@@ -214,11 +214,11 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     if (StringUtils.isNotEmpty(checkinPiece.getReceivingTenantId())) {
       piece.setReceivingTenantId(checkinPiece.getReceivingTenantId());
     }
-    if (StringUtils.isNotEmpty(checkinPiece.getLocationId())) {
+    if (StringUtils.isEmpty(piece.getHoldingId()) && StringUtils.isNotEmpty(checkinPiece.getLocationId())) {
       piece.setLocationId(checkinPiece.getLocationId());
     }
     if (StringUtils.isNotEmpty(checkinPiece.getHoldingId())) {
-      piece.setHoldingId(checkinPiece.getHoldingId());
+      piece.withLocationId(null).setHoldingId(checkinPiece.getHoldingId());
     }
     piece.setEnumeration(checkinPiece.getEnumeration());
     piece.setChronology(checkinPiece.getChronology());
