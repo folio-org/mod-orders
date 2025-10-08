@@ -2,6 +2,7 @@ package org.folio.helper;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.EntryStream;
 import one.util.streamex.StreamEx;
@@ -271,7 +272,17 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   protected Future<Map<String, List<Piece>>> storeUpdatedPieceRecords(Map<String, List<Piece>> piecesGroupedByPoLine, RequestContext requestContext) {
     return GenericCompositeFuture.join(
         extractAllPieces(piecesGroupedByPoLine)
-          .filter(this::isSuccessfullyProcessedPiece)
+          .filter(piece -> {
+            boolean isSuccessful = isSuccessfullyProcessedPiece(piece);
+            if (!isSuccessful) {
+              logger.warn("storeUpdatedPieceRecords:: Piece {} filtered out due to processing error: {}",
+                piece.getId(), Json.encodePrettily(getError(piece.getPoLineId(), piece.getId())));
+            } else {
+              logger.info("storeUpdatedPieceRecords:: Storing piece {} with status {}",
+                piece.getId(), piece.getReceivingStatus());
+            }
+            return isSuccessful;
+          })
           .map(piece -> piece.withStatusUpdatedDate(new Date()))
           .map(piece -> storeUpdatedPieceRecord(piece, requestContext))
           .toList())
@@ -288,7 +299,9 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   private Future<Void> storeUpdatedPieceRecord(Piece piece, RequestContext requestContext) {
     String pieceId = piece.getId();
     return restClient.put(resourceByIdPath(PIECES_STORAGE, pieceId), JsonObject.mapFrom(piece), requestContext)
+      .onSuccess(v -> logger.info("storeUpdatedPieceRecord:: Successfully updated piece {} in storage", pieceId))
       .otherwise(e -> {
+        logger.error("storeUpdatedPieceRecord:: Failed to update piece {} in storage", pieceId, e);
         addError(getPoLineIdByPieceId(pieceId), pieceId, PIECE_UPDATE_FAILED.toError());
         return null;
       });
