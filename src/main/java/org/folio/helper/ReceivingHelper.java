@@ -227,6 +227,8 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
     piece.setChronology(receivedItem.getChronology());
     piece.setCopyNumber(receivedItem.getCopyNumber());
     piece.setDisplayOnHolding(receivedItem.getDisplayOnHolding());
+    piece.setDisplayToPublic(receivedItem.getDisplayToPublic());
+    piece.setSequenceNumber(receivedItem.getSequenceNumber());
     // Piece record might be received or rolled-back to Expected if item status is "On-order" or "Order Closed"
     if (isOnOrderItemStatus(receivedItem)) {
       piece.setReceivedDate(null);
