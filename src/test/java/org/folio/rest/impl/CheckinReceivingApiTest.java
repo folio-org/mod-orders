@@ -394,6 +394,21 @@ public class CheckinReceivingApiTest {
     assertThat(pieceUpdates, hasSize(receivingRq.getTotalRecords()));
     assertThat(polSearches, hasSize(pieceIdsByPol.size() + 1));
 
+    // Verify piece updates contain all expected fields from the mock data
+    pieceUpdates.forEach(pieceJson -> {
+      Piece piece = pieceJson.mapTo(Piece.class);
+      assertThat(piece.getReceivingStatus(), is(Piece.ReceivingStatus.RECEIVED));
+      assertThat(piece.getReceivedDate(), is(notNullValue()));
+      assertThat(piece.getDisplaySummary(), equalTo("Vol. 1"));
+      assertThat(piece.getComment(), equalTo("Very important note about ongoing order"));
+      assertThat(piece.getEnumeration(), equalTo("v.1"));
+      assertThat(piece.getChronology(), equalTo("2023"));
+      assertThat(piece.getCopyNumber(), equalTo("c.1"));
+      assertThat(piece.getDisplayOnHolding(), is(true));
+      assertThat(piece.getDisplayToPublic(), is(true));
+      assertThat(piece.getSequenceNumber(), equalTo(15));
+    });
+
     // check no status updates were performed, but location was updated
     assertThat(polBatchUpdates, hasSize(1));
     polBatchUpdates.forEach(pol -> {

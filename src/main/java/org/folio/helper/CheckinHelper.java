@@ -225,6 +225,8 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     piece.setCopyNumber(checkinPiece.getCopyNumber());
     piece.setAccessionNumber(checkinPiece.getAccessionNumber());
     piece.setDisplayOnHolding(checkinPiece.getDisplayOnHolding());
+    piece.setDisplayToPublic(checkinPiece.getDisplayToPublic());
+    piece.setSequenceNumber(checkinPiece.getSequenceNumber());
     piece.setDiscoverySuppress(checkinPiece.getDiscoverySuppress());
     piece.setSupplement(checkinPiece.getSupplement());
     piece.setBarcode(checkinPiece.getBarcode());

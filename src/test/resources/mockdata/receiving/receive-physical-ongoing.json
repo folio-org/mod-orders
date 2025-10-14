@@ -5,13 +5,19 @@
       "received": 1,
       "receivedItems": [
         {
-          "barcode": 21111111122,
+          "barcode": "21111111122",
           "callNumber": "PR 8923 W6 L36 1990 c.3",
-          "comment": "Very important note",
+          "comment": "Very important note about ongoing order",
           "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
-          "pieceId": "05a95f03-eb00-4248-9f2e-2bd05957ff04"
+          "pieceId": "05a95f03-eb00-4248-9f2e-2bd05957ff04",
+          "enumeration": "v.1",
+          "chronology": "2023",
+          "copyNumber": "c.1",
+          "displayOnHolding": true,
+          "displayToPublic": true,
+          "sequenceNumber": 15
         }
       ]
     }
