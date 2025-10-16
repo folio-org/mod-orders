@@ -33,8 +33,8 @@ public class EncumbranceUtils {
         var hasPendingPayments = hasPendingPayments(holder, encumbrance);
         var hasPayments = hasPayments(holder, encumbrance);
         var hasZeroAmounts = allowEncumbranceToUnrelease(encumbrance);
-        log.info("collectAllowedEncumbrancesForUnrelease:: Current encumbrance status: {}, has pending payments: {} (count: {}), has payments: {} (count: {}), has zero amounts: {}",
-          encumbrance.getEncumbrance().getStatus(), hasPendingPayments, holder.getPendingPayments().size(), hasPayments, holder.getPayments().size(), hasZeroAmounts);
+        log.info("collectAllowedEncumbrancesForUnrelease:: Current encumbrance status: {}, has pending payments: {}, has payments: {}, has zero amounts: {}",
+          encumbrance.getEncumbrance().getStatus(), hasPendingPayments, hasPayments, hasZeroAmounts);
         return hasPendingPayments || hasPayments || hasZeroAmounts;
       })
       .toList();
