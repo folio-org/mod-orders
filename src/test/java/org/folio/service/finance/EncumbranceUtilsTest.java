@@ -33,6 +33,7 @@ public class EncumbranceUtilsTest {
     when(pendingPayment.getAwaitingPayment()).thenReturn(awaitingPayment);
     when(pendingPayment.getAwaitingPayment().getEncumbranceId()).thenReturn("enc1");
     when(pendingPayment.getSourceInvoiceLineId()).thenReturn("inv1");
+    when(pendingPayment.getTransactionType()).thenReturn(Transaction.TransactionType.PENDING_PAYMENT);
 
     var invoiceLine = mock(InvoiceLine.class);
     when(invoiceLine.getId()).thenReturn("inv1");
@@ -62,6 +63,7 @@ public class EncumbranceUtilsTest {
     var payment = mock(Transaction.class);
     when(payment.getPaymentEncumbranceId()).thenReturn("enc2");
     when(payment.getSourceInvoiceLineId()).thenReturn("inv2");
+    when(payment.getTransactionType()).thenReturn(Transaction.TransactionType.PAYMENT);
 
     var invoiceLine = mock(InvoiceLine.class);
     when(invoiceLine.getId()).thenReturn("inv2");
@@ -234,15 +236,16 @@ public class EncumbranceUtilsTest {
   // 4. hasReleaseEncumbranceFalseAndIsApprovedOrPaid (private)
   @ParameterizedTest
   @CsvSource({
-    "true,APPROVED,false,true",
-    "true,PAID,false,true",
-    "true,CANCELLED,false,false",
-    "true,APPROVED,true,false",
-    "false,APPROVED,false,true"
+    "true,PENDING_PAYMENT,APPROVED,false,true",
+    "true,PAYMENT,PAID,false,true",
+    "true,PAYMENT,CANCELLED,false,false",
+    "true,PENDING_PAYMENT,APPROVED,true,false",
+    "false,PENDING_PAYMENT,APPROVED,false,false"
   })
-  void testHasReleaseEncumbranceFalseAndIsApprovedOrPaid(boolean match, String status, boolean release, boolean expected) {
+  void testHasReleaseEncumbranceFalseAndIsApprovedOrPaid(boolean match, String transactionType, String status, boolean release, boolean expected) {
     var payment = mock(Transaction.class);
     when(payment.getSourceInvoiceLineId()).thenReturn("inv1");
+    when(payment.getTransactionType()).thenReturn(Transaction.TransactionType.valueOf(transactionType));
 
     var invoiceLine = mock(InvoiceLine.class);
     when(invoiceLine.getId()).thenReturn(match ? "inv1" : "other");
