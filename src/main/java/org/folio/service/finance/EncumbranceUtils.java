@@ -33,8 +33,8 @@ public class EncumbranceUtils {
         var hasPendingPayments = hasPendingPayments(holder, encumbrance);
         var hasPayments = hasPayments(holder, encumbrance);
         var hasZeroAmounts = allowEncumbranceToUnrelease(encumbrance);
-        log.info("collectAllowedEncumbrancesForUnrelease:: Encumbrance status: {}, has pending payments: {}, has payments: {}, has zero amounts: {}",
-          encumbrance.getEncumbrance().getStatus(), hasPendingPayments, hasPayments, hasZeroAmounts);
+        log.info("collectAllowedEncumbrancesForUnrelease:: Current encumbrance status: {}, has pending payments: {} (count: {}), has payments: {} (count: {}), has zero amounts: {}",
+          encumbrance.getEncumbrance().getStatus(), hasPendingPayments, holder.getPendingPayments().size(), hasPayments, holder.getPayments().size(), hasZeroAmounts);
         return hasPendingPayments || hasPayments || hasZeroAmounts;
       })
       .toList();
@@ -45,12 +45,13 @@ public class EncumbranceUtils {
       return false;
     }
     return holder.getPendingPayments().stream()
+      .peek(pendingPayment -> log.info("hasPendingPayments:: Encumbrance id={}, pending payment encumbranceId={} amount={}",
+        encumbrance.getId(), nonNull(pendingPayment.getAwaitingPayment()) ? pendingPayment.getAwaitingPayment().getEncumbranceId() : null, pendingPayment.getAmount()))
       .filter(pendingPayment -> nonNull(pendingPayment.getAwaitingPayment())
         && nonNull(pendingPayment.getAwaitingPayment().getEncumbranceId())
         && pendingPayment.getAwaitingPayment().getEncumbranceId().equals(encumbrance.getId())
         && nonNull(pendingPayment.getSourceInvoiceLineId()))
-      .map(pendingPayment -> hasReleaseEncumbranceFalseAndIsApprovedOrPaid(pendingPayment, holder.getInvoiceLines()))
-      .findFirst().orElse(false);
+      .anyMatch(pendingPayment -> hasReleaseEncumbranceFalseAndIsApprovedOrPaid(pendingPayment, holder.getInvoiceLines()));
   }
 
   private static Boolean hasPayments(EncumbranceUnreleaseHolder holder, Transaction encumbrance) {
@@ -58,19 +59,21 @@ public class EncumbranceUtils {
       return false;
     }
     return holder.getPayments().stream()
+      .peek(payment -> log.info("hasPayments:: Encumbrance id={}, payment encumbranceId={} amount={}",
+        encumbrance.getId(), payment.getPaymentEncumbranceId(), payment.getAmount()))
       .filter(payment -> nonNull(payment.getPaymentEncumbranceId())
         && payment.getPaymentEncumbranceId().equals(encumbrance.getId())
         && nonNull(payment.getSourceInvoiceLineId()))
-      .map(payment -> hasReleaseEncumbranceFalseAndIsApprovedOrPaid(payment, holder.getInvoiceLines()))
-      .findFirst().orElse(false);
+      .anyMatch(payment -> hasReleaseEncumbranceFalseAndIsApprovedOrPaid(payment, holder.getInvoiceLines()));
   }
 
-  private static Boolean hasReleaseEncumbranceFalseAndIsApprovedOrPaid(Transaction payment, List<InvoiceLine> invoiceLines) {
-    var optional = invoiceLines.stream()
-      .filter(invoiceLine -> invoiceLine.getId().equals(payment.getSourceInvoiceLineId()))
-      .findFirst();
-    return optional.isEmpty() ||
-      (Boolean.FALSE.equals(optional.get().getReleaseEncumbrance()) && EnumSet.of(APPROVED, PAID).contains(optional.get().getInvoiceLineStatus()));
+  private static Boolean hasReleaseEncumbranceFalseAndIsApprovedOrPaid(Transaction transaction,  List<InvoiceLine> invoiceLines) {
+    return invoiceLines.stream()
+      .peek(invoiceLine -> log.info("hasReleaseEncumbranceFalseAndIsApprovedOrPaid:: transactionType={} sourceInvoiceLineId={} amount={}, invoice line id={} releaseEncumbrance={} total={} status={}",
+        transaction.getTransactionType().name(), transaction.getSourceInvoiceLineId(), transaction.getAmount(),
+        invoiceLine.getId(), invoiceLine.getReleaseEncumbrance(), invoiceLine.getTotal(), invoiceLine.getInvoiceLineStatus()))
+      .filter(invoiceLine -> invoiceLine.getId().equals(transaction.getSourceInvoiceLineId()))
+      .anyMatch(invoiceLine -> Boolean.FALSE.equals(invoiceLine.getReleaseEncumbrance()) && EnumSet.of(APPROVED, PAID).contains(invoiceLine.getInvoiceLineStatus()));
   }
 
   public static boolean allowEncumbranceToUnrelease(Transaction encumbranceTransaction) {
