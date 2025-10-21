@@ -7,6 +7,7 @@ import org.apache.commons.lang3.StringUtils;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -26,6 +27,10 @@ public class QueryUtils {
 
   public static String buildQuery(String query) {
     return StringUtils.isEmpty(query) ? StringUtils.EMPTY : "&query=" + encodeQuery(query);
+  }
+
+  public static String combineCqlExpressions(String operator, List<String> expressions) {
+    return combineCqlExpressions(operator, expressions.toArray(new String[0]));
   }
 
   /**

@@ -36,14 +36,15 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
-import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.QueryUtils.combineCqlExpressions;
 import static org.folio.orders.utils.QueryUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.extractId;
 import static org.folio.orders.utils.HelperUtils.getFirstObjectFromResponse;
 import static org.folio.orders.utils.HelperUtils.isProductIdsExist;
+import static org.folio.orders.utils.QueryUtils.getCqlExpressionForFieldNullValue;
 import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_CONTRIBUTOR_NAME_TYPE;
@@ -77,6 +78,8 @@ public class InventoryInstanceManager {
   public static final String INSTANCE_TYPES = "instanceTypes";
   public static final String INSTANCE_DISCOVERY_SUPPRESS = "discoverySuppress";
 
+  private static final String PRODUCT_ID_CQL = "(identifiers =/@identifierTypeId=\"%s\"/@value \"%s\")";
+
   private final RestClient restClient;
   private final ConfigurationEntriesCache configurationEntriesCache;
   private final InventoryCache inventoryCache;
@@ -105,15 +108,10 @@ public class InventoryInstanceManager {
     if (CollectionUtils.isEmpty(title.getProductIds()) || isInstanceMatchingDisabled) {
       return createInstanceRecord(title, requestContext);
     }
-
-    return searchInstancesByProducts(title.getProductIds(), requestContext)
-      .compose(instances -> {
-        if (!instances.getJsonArray(INSTANCES).isEmpty()) {
-          String instanceId = getFirstObjectFromResponse(instances, INSTANCES).getString(ID);
-          return Future.succeededFuture(instanceId);
-        }
-        return createInstanceRecord(title, requestContext);
-      });
+    return getAnyInstanceIdByProductIds(title.getProductIds(), requestContext)
+      .compose(instanceId -> instanceId != null
+        ? Future.succeededFuture(instanceId)
+        : createInstanceRecord(title, requestContext));
   }
 
   public Future<CompositePoLine> openOrderHandleInstance(CompositePoLine poLine, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
@@ -140,16 +138,6 @@ public class InventoryInstanceManager {
     return GenericCompositeFuture.join(List.of(instanceTypeFuture, statusFuture, contributorNameTypeIdFuture))
       .map(cf -> buildInstanceRecordJsonObject(title, lookupObj))
       .compose(instanceJson -> createInstance(instanceJson, requestContext));
-  }
-
-  Future<JsonObject> searchInstancesByProducts(List<ProductId> productIds, RequestContext requestContext) {
-    String query = productIds.stream()
-      .map(this::buildProductIdQuery)
-      .collect(joining(" or "));
-
-    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCES))
-      .withQuery(query).withOffset(0).withLimit(1);
-    return restClient.getAsJsonObject(requestEntry, requestContext);
   }
 
   JsonObject buildInstanceRecordJsonObject(Title title, JsonObject lookupObj) {
@@ -222,10 +210,7 @@ public class InventoryInstanceManager {
       logger.debug("getOrCreateInstanceRecordForPoLine:: no productId is provided - create instance record");
       return createInstanceRecord(compPOL, requestContext);
     }
-    String query = compPOL.getDetails().getProductIds().stream()
-      .map(this::buildProductIdQuery)
-      .collect(joining(" or "));
-    return getInstanceRecordAndShareIfNeeded(query, compPOL, configuration, requestContext)
+    return getInstanceRecordAndShareIfNeeded(compPOL, configuration, requestContext)
       .compose(id -> {
         if (id != null) {
           return Future.succeededFuture(id);
@@ -235,9 +220,9 @@ public class InventoryInstanceManager {
       });
   }
 
-  private Future<String> getInstanceRecordAndShareIfNeeded(String query, CompositePoLine poLine,
-      ConsortiumConfiguration configuration, RequestContext requestContext) {
-    return getInstanceIdByQuery(query, requestContext)
+  private Future<String> getInstanceRecordAndShareIfNeeded(CompositePoLine poLine,
+    ConsortiumConfiguration configuration, RequestContext requestContext) {
+    return getAnyInstanceIdByProductIds(poLine.getDetails().getProductIds(), requestContext)
       .compose(instanceId1 -> {
         if (instanceId1 != null) {
           logger.debug("getInstanceRecordAndShareIfNeeded:: instance found in local tenant: {}", instanceId1);
@@ -247,7 +232,7 @@ public class InventoryInstanceManager {
           return Future.succeededFuture(null);
         }
         logger.debug("getInstanceRecordAndShareIfNeeded:: instance not found - look for it in central tenant");
-        return getInstanceIdByQuery(query, createContextWithNewTenantId(requestContext, configuration.centralTenantId()))
+        return getAnyInstanceIdByProductIds(poLine.getDetails().getProductIds(), createContextWithNewTenantId(requestContext, configuration.centralTenantId()))
           .compose(instanceId2 -> {
             if (instanceId2 == null) {
               return Future.succeededFuture(null);
@@ -258,16 +243,19 @@ public class InventoryInstanceManager {
       });
   }
 
-  private Future<String> getInstanceIdByQuery(String query, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCES))
-      .withQuery(query).withOffset(0).withLimit(Integer.MAX_VALUE);
+  Future<String> getAnyInstanceIdByProductIds(List<ProductId> productIds, RequestContext requestContext) {
+    var productIdQueries = productIds.stream()
+      .map(productId -> PRODUCT_ID_CQL.formatted(productId.getProductIdType(), productId.getProductId()))
+      .toList();
+    var deletedQueries = List.of(getCqlExpressionForFieldNullValue("deleted"), "deleted==false");
+    var query = combineCqlExpressions("and", combineCqlExpressions("or", productIdQueries), combineCqlExpressions("or", deletedQueries));
+
+    var requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCES))
+      .withQuery(query).withOffset(0).withLimit(1);
     return restClient.getAsJsonObject(requestEntry, requestContext)
-      .map(instances -> {
-        if (instances.getJsonArray(INSTANCES).isEmpty()) {
-          return null;
-        }
-        return extractId(getFirstObjectFromResponse(instances, INSTANCES));
-      });
+      .map(instances -> instances.getJsonArray(INSTANCES).isEmpty()
+        ? null
+        : extractId(getFirstObjectFromResponse(instances, INSTANCES)));
   }
 
   /**
@@ -343,11 +331,6 @@ public class InventoryInstanceManager {
       instance.put(INSTANCE_IDENTIFIERS, new JsonArray(identifiers));
     }
     return instance;
-  }
-
-  private String buildProductIdQuery(ProductId productId) {
-    return String.format("(identifiers =/@identifierTypeId=\"%s\"/@value \"%s\")",
-      productId.getProductIdType(), productId.getProductId());
   }
 
   private Future<Void> verifyContributorNameTypesExist(List<Contributor> contributors, RequestContext requestContext) {
