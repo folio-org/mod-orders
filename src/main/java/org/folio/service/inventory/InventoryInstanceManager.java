@@ -45,6 +45,7 @@ import static org.folio.orders.utils.QueryUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.extractId;
 import static org.folio.orders.utils.HelperUtils.getFirstObjectFromResponse;
 import static org.folio.orders.utils.HelperUtils.isProductIdsExist;
+import static org.folio.orders.utils.QueryUtils.getCqlExpressionForFieldNullValue;
 import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_CONTRIBUTOR_NAME_TYPE;
@@ -244,11 +245,11 @@ public class InventoryInstanceManager {
   }
 
   Future<String> getAnyInstanceIdByProductIds(List<ProductId> productIds, RequestContext requestContext) {
-    var productIdsQuery = productIds.stream()
+    var productIdQueries = productIds.stream()
       .map(productId -> PRODUCT_ID_CQL.formatted(productId.getProductIdType(), productId.getProductId()))
-      .collect(joining(" or "));
-    var deletedQuery = "deleted==true";
-    var query = combineCqlExpressions("and", productIdsQuery, deletedQuery);
+      .toList();
+    var deletedQueries = List.of(getCqlExpressionForFieldNullValue("deleted"), "deleted==false");
+    var query = combineCqlExpressions("and", combineCqlExpressions("or", productIdQueries), combineCqlExpressions("or", deletedQueries));
 
     var requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCES))
       .withQuery(query).withOffset(0).withLimit(1);
