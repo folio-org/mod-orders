@@ -36,7 +36,6 @@ import java.util.concurrent.CompletionException;
 import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
-import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
