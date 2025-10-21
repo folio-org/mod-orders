@@ -69,7 +69,7 @@ public class EncumbranceUtils {
 
   private static Boolean hasReleaseEncumbranceFalseAndIsApprovedOrPaid(Transaction transaction, List<InvoiceLine> invoiceLines) {
     return invoiceLines.stream()
-      .peek(invoiceLine -> log.info("hasReleaseEncumbranceFalseAndIsApprovedOrPaid:: transactionType={} sourceInvoiceLineId={} amount={}, invoice line id={} releaseEncumbrance={} total={} status={}",
+      .peek(invoiceLine -> log.info("hasReleaseEncumbranceFalseAndIsApprovedOrPaid:: Transaction type={} sourceInvoiceLineId={} amount={}, invoice line id={} releaseEncumbrance={} total={} status={}",
         transaction.getTransactionType().name(), transaction.getSourceInvoiceLineId(), transaction.getAmount(),
         invoiceLine.getId(), invoiceLine.getReleaseEncumbrance(), invoiceLine.getTotal(), invoiceLine.getInvoiceLineStatus()))
       .filter(invoiceLine -> invoiceLine.getId().equals(transaction.getSourceInvoiceLineId()))
