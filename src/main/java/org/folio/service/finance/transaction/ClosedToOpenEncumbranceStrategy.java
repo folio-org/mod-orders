@@ -92,7 +92,7 @@ public class ClosedToOpenEncumbranceStrategy implements EncumbranceWorkflowStrat
               var holder = new EncumbrancesProcessingHolder();
               var toBeCreatedHolders = createToBeCreatedHolders(holders);
               holder.withEncumbrancesForCreate(toBeCreatedHolders);
-              // only unrelease encumbrances with expended + credited + awaiting payment = 0
+              // unrelease encumbrances conditionally
               var encumbrancesToUnrelease = collectAllowedEncumbrancesForUnrelease(unreleaseHolder);
               holder.withEncumbrancesForUnrelease(encumbrancesToUnrelease);
               return encumbranceService.createOrUpdateEncumbrances(holder, requestContext);

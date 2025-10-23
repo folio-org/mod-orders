@@ -306,7 +306,7 @@ public class PurchaseOrderLineHelper {
           transactionService.getPaymentsByEncumbranceIds(unreleaseHolder.getEncumbranceIds(), requestContext)
             .map(unreleaseHolder::withPayments))
         .compose(unreleaseHolder -> {
-          // only unrelease encumbrances with expended + credited + awaiting payment = 0
+          // unrelease encumbrances conditionally
           var encumbrancesToUnrelease = collectAllowedEncumbrancesForUnrelease(unreleaseHolder);
           return encumbranceService.unreleaseEncumbrances(encumbrancesToUnrelease, requestContext);
         });
