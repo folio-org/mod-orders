@@ -24,7 +24,8 @@ public class FinanceUtils {
     return list.stream()
       .map(encumbrance -> getAmount.apply(encumbrance.getEncumbrance()))
       .map(BigDecimal::valueOf)
-      .reduce(BigDecimal.ZERO, BigDecimal::add).doubleValue();
+      .reduce(BigDecimal.ZERO, BigDecimal::add)
+      .doubleValue();
   }
 
   public static double calculateEncumbranceEffectiveAmount(double initialAmount,
@@ -32,13 +33,13 @@ public class FinanceUtils {
                                                            double credited,
                                                            double awaitingPayment,
                                                            CurrencyUnit fiscalYearCurrency) {
-    return calculateEncumbranceEffectiveAmount(
-      Money.of(initialAmount, fiscalYearCurrency),
-      Money.of(expended, fiscalYearCurrency),
-      Money.of(credited, fiscalYearCurrency),
-      Money.of(awaitingPayment, fiscalYearCurrency),
-      fiscalYearCurrency
-    ).getNumber().doubleValue();
+    Money initialAmountMoney = Money.of(initialAmount, fiscalYearCurrency);
+    Money expendedMoney = Money.of(expended, fiscalYearCurrency);
+    Money creditedMoney = Money.of(credited, fiscalYearCurrency);
+    Money awaitingPaymentMoney = Money.of(awaitingPayment, fiscalYearCurrency);
+    return calculateEncumbranceEffectiveAmount(initialAmountMoney,  expendedMoney, creditedMoney, awaitingPaymentMoney, fiscalYearCurrency)
+      .getNumber()
+      .doubleValue();
   }
 
   public static MonetaryAmount calculateEncumbranceEffectiveAmount(MonetaryAmount initialAmount,
@@ -46,10 +47,7 @@ public class FinanceUtils {
                                                                    MonetaryAmount credited,
                                                                    MonetaryAmount awaitingPayment,
                                                                    CurrencyUnit fiscalYearCurrency) {
-    return MonetaryFunctions.max().apply(
-      initialAmount.subtract(expended).add(credited).subtract(awaitingPayment),
-      Money.zero(fiscalYearCurrency)
-    );
+    MonetaryAmount effectiveAmount = initialAmount.subtract(expended).add(credited).subtract(awaitingPayment);
+    return MonetaryFunctions.max().apply(effectiveAmount, Money.zero(fiscalYearCurrency));
   }
-
 }
