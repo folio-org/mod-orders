@@ -66,6 +66,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
   @Validate
   public void postOrdersCompositeOrders(CompositePurchaseOrder compPO, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    logger.info("postOrdersCompositeOrders:: headers: {} ", okapiHeaders);
     RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
     purchaseOrderHelper.postCompositeOrder(compPO, requestContext)
       .onSuccess(createdOrder -> {

@@ -24,7 +24,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 
 public class BaseApi {
-  private final Logger logger = LogManager.getLogger();
+  final Logger logger = LogManager.getLogger();
   private final Errors processingErrors = new Errors();
 
   public Response buildOkResponse(Object body) {
