@@ -103,8 +103,15 @@ public class POLInvoiceLineRelationService {
       .ifPresent(transaction -> {
         Encumbrance oldEncumbrance = transaction.getEncumbrance();
         double initialAmount = oldEncumbrance.getInitialAmountEncumbered();
-        double newAmount = isReleaseEncumbranceEnabled ? 0d : calculateEncumbranceEffectiveAmount(initialAmount, expended, credited, awaitingPayment, currency);
-        Encumbrance.Status newStatus = isReleaseEncumbranceEnabled  ? Encumbrance.Status.RELEASED : Encumbrance.Status.UNRELEASED;
+        double newAmount;
+        Encumbrance.Status newStatus;
+        if (isReleaseEncumbranceEnabled) {
+          newAmount = 0d;
+          newStatus = Encumbrance.Status.RELEASED;
+        } else {
+          newAmount = calculateEncumbranceEffectiveAmount(initialAmount, expended, credited, awaitingPayment, currency);
+          newStatus = Encumbrance.Status.UNRELEASED;
+        }
         Encumbrance newEncumbrance = oldEncumbrance
           .withAmountExpended(expended)
           .withAmountCredited(credited)
