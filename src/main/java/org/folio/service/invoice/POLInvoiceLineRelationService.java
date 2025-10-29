@@ -39,14 +39,14 @@ public class POLInvoiceLineRelationService {
                                                                     RequestContext requestContext) {
     List<Transaction> forDelete = processingHolder.getEncumbrancesForDelete().stream()
       .map(EncumbranceRelationsHolder::getOldEncumbrance)
-      .collect(Collectors.toList());
+      .toList();
     List<Transaction> forCreate = processingHolder.getEncumbrancesForCreate().stream()
       .map(EncumbranceRelationsHolder::getNewEncumbrance)
-      .collect(Collectors.toList());
+      .toList();
     List<String> poLineIds = forDelete.stream()
       .map(transaction -> transaction.getEncumbrance().getSourcePoLineId())
       .distinct()
-      .collect(Collectors.toList());
+      .toList();
     return invoiceLineService.getInvoiceLinesByOrderLineIds(poLineIds, requestContext)
       .compose(invoiceLines -> {
         validateInvoiceLineStatuses(invoiceLines);
