@@ -129,6 +129,14 @@ public class POLInvoiceLineRelationService {
       .anyMatch(InvoiceLine::getReleaseEncumbrance);
   }
 
+  private Transaction getOldTransaction(List<Transaction> forDelete, Transaction transaction) {
+    return forDelete.stream()
+      .filter(oldTransaction -> StringUtils.equals(oldTransaction.getEncumbrance().getSourcePoLineId(), transaction.getEncumbrance().getSourcePoLineId()))
+      .peek(oldTransaction -> log.info("getOldTransaction:: Old transaction amount={} status={}",
+        oldTransaction.getAmount(), oldTransaction.getEncumbrance().getStatus()))
+      .findFirst().orElse(null);
+  }
+
   private NewEncumbranceData getNewEncumbranceData(boolean isReleaseEncumbrance, Transaction oldTransaction, Transaction transaction,
                                                    double expended, double credited, double awaitingPayment, CurrencyUnit currency) {
     if (isReleaseEncumbrance || (nonNull(oldTransaction) && oldTransaction.getEncumbrance().getStatus() == RELEASED)) {
@@ -140,14 +148,6 @@ public class POLInvoiceLineRelationService {
   }
 
   private record NewEncumbranceData(double amount, Encumbrance.Status status) {
-  }
-
-  private Transaction getOldTransaction(List<Transaction> forDelete, Transaction transaction) {
-    return forDelete.stream()
-      .filter(oldTransaction -> StringUtils.equals(oldTransaction.getEncumbrance().getSourcePoLineId(), transaction.getEncumbrance().getSourcePoLineId()))
-      .peek(oldTransaction -> log.info("getOldTransaction:: Old transaction amount={} status={}",
-        oldTransaction.getAmount(), oldTransaction.getEncumbrance().getStatus()))
-      .findFirst().orElse(null);
   }
 
   private Future<EncumbrancesProcessingHolder> removeEncumbranceReferenceFromTransactions(List<String> encumbranceIds,
