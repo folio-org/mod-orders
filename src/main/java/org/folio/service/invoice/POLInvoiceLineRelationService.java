@@ -1,6 +1,8 @@
 package org.folio.service.invoice;
 
+import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpStatus;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
@@ -19,12 +21,17 @@ import org.folio.service.finance.transaction.PendingPaymentService;
 import javax.money.CurrencyUnit;
 import javax.money.Monetary;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
+import static java.util.Objects.nonNull;
 import static org.folio.orders.utils.InvoiceUtil.filterInvoiceLinesByStatuses;
+import static org.folio.rest.acq.model.finance.Encumbrance.Status.RELEASED;
+import static org.folio.rest.acq.model.finance.Encumbrance.Status.UNRELEASED;
 import static org.folio.service.finance.transaction.FinanceUtils.calculateEncumbranceEffectiveAmount;
 import static org.folio.service.finance.transaction.FinanceUtils.sumAmounts;
 
+@Log4j2
 public class POLInvoiceLineRelationService {
 
   private final InvoiceLineService invoiceLineService;
@@ -54,10 +61,7 @@ public class POLInvoiceLineRelationService {
           return Future.succeededFuture(processingHolder);
         }
         if (!forCreate.isEmpty() && !forDelete.isEmpty()) {
-          String currency = processingHolder.getEncumbrancesForCreate().stream()
-            .map(EncumbranceRelationsHolder::getCurrency)
-            .findFirst()
-            .orElseThrow();
+          CurrencyUnit currency = getCurrency(processingHolder);
           copyAmountsAndRecalculateNewEncumbrance(forCreate, forDelete, invoiceLines, currency);
         }
         if (forDelete.isEmpty()) {
@@ -74,6 +78,78 @@ public class POLInvoiceLineRelationService {
       });
   }
 
+  private void validateInvoiceLineStatuses(List<InvoiceLine> invoiceLines) {
+    List<InvoiceLine> approvedInvoices = filterInvoiceLinesByStatuses(invoiceLines, List.of(InvoiceLine.InvoiceLineStatus.APPROVED));
+    if (CollectionUtils.isNotEmpty(approvedInvoices)) {
+      String invoiceLineIds = approvedInvoices.stream()
+        .map(InvoiceLine::getId)
+        .collect(Collectors.joining(", "));
+      Error error = new Error()
+        .withCode(ErrorCodes.PO_LINE_HAS_RELATED_APPROVED_INVOICE_ERROR.getCode())
+        .withMessage(String.format(ErrorCodes.PO_LINE_HAS_RELATED_APPROVED_INVOICE_ERROR.getDescription(), invoiceLineIds));
+      throw new HttpException(HttpStatus.SC_FORBIDDEN, error);
+    }
+  }
+
+  private CurrencyUnit getCurrency(EncumbrancesProcessingHolder processingHolder) {
+    return processingHolder.getEncumbrancesForCreate().stream()
+      .map(EncumbranceRelationsHolder::getCurrency)
+      .filter(Objects::nonNull)
+      .map(Monetary::getCurrency)
+      .findFirst()
+      .orElseThrow();
+  }
+
+  private void copyAmountsAndRecalculateNewEncumbrance(List<Transaction> forCreate, List<Transaction> forDelete,
+                                                       List<InvoiceLine> invoiceLines, CurrencyUnit currency) {
+    // Update encumbrances when an order line is linked to a paid invoice
+    var awaitingPayment = sumAmounts(forDelete, Encumbrance::getAmountAwaitingPayment);
+    var expended = sumAmounts(forDelete, Encumbrance::getAmountExpended);
+    var credited = sumAmounts(forDelete, Encumbrance::getAmountCredited);
+    var isReleaseEncumbrance = extractReleaseEncumbrance(invoiceLines);
+    forCreate.stream().findFirst()
+      .ifPresent(transaction -> {
+        var oldTransaction = getOldTransaction(forDelete, transaction);
+        var data = getNewEncumbranceData(isReleaseEncumbrance, oldTransaction, transaction, expended, credited, awaitingPayment, currency);
+        log.info("copyAmountsAndRecalculateNewEncumbrance:: New transaction amount={} status={}, invoice release encumbrance={}",
+          data.amount(), data.status(), isReleaseEncumbrance);
+        var newEncumbrance = transaction.getEncumbrance()
+          .withAmountAwaitingPayment(awaitingPayment)
+          .withAmountExpended(expended)
+          .withAmountCredited(credited)
+          .withStatus(data.status());
+        transaction.withAmount(data.amount())
+          .withEncumbrance(newEncumbrance);
+    });
+  }
+
+  private boolean extractReleaseEncumbrance(List<InvoiceLine> invoiceLines) {
+    return filterInvoiceLinesByStatuses(invoiceLines, List.of(InvoiceLine.InvoiceLineStatus.PAID))
+      .stream()
+      .anyMatch(InvoiceLine::getReleaseEncumbrance);
+  }
+
+  private Transaction getOldTransaction(List<Transaction> forDelete, Transaction transaction) {
+    return forDelete.stream()
+      .filter(oldTransaction -> StringUtils.equals(oldTransaction.getEncumbrance().getSourcePoLineId(), transaction.getEncumbrance().getSourcePoLineId()))
+      .peek(oldTransaction -> log.info("getOldTransaction:: Old transaction amount={} status={}",
+        oldTransaction.getAmount(), oldTransaction.getEncumbrance().getStatus()))
+      .findFirst().orElse(null);
+  }
+
+  private NewEncumbranceData getNewEncumbranceData(boolean isReleaseEncumbrance, Transaction oldTransaction, Transaction transaction,
+                                                   double expended, double credited, double awaitingPayment, CurrencyUnit currency) {
+    if (isReleaseEncumbrance || (nonNull(oldTransaction) && oldTransaction.getEncumbrance().getStatus() == RELEASED)) {
+      return new NewEncumbranceData(0d, RELEASED);
+    }
+    var initialAmount = transaction.getEncumbrance().getInitialAmountEncumbered();
+    var newAmount = calculateEncumbranceEffectiveAmount(initialAmount, expended, credited, awaitingPayment, currency);
+    return new NewEncumbranceData(newAmount, UNRELEASED);
+  }
+
+  private record NewEncumbranceData(double amount, Encumbrance.Status status) {
+  }
+
   private Future<EncumbrancesProcessingHolder> removeEncumbranceReferenceFromTransactions(List<String> encumbranceIds,
                                                                                           EncumbrancesProcessingHolder processingHolder,
                                                                                           RequestContext requestContext) {
@@ -87,49 +163,5 @@ public class POLInvoiceLineRelationService {
         processingHolder.withPendingPaymentsToUpdate(pendingPayments);
         return processingHolder;
       });
-  }
-
-  private void copyAmountsAndRecalculateNewEncumbrance(List<Transaction> forCreate, List<Transaction> forDelete,
-                                                       List<InvoiceLine> invoiceLines, String currencyValue) {
-    // Update encumbrances when an order line is linked to a paid invoice
-    double expended = sumAmounts(forDelete, Encumbrance::getAmountExpended);
-    double credited = sumAmounts(forDelete, Encumbrance::getAmountCredited);
-    double awaitingPayment = sumAmounts(forDelete, Encumbrance::getAmountAwaitingPayment);
-    CurrencyUnit currency = Monetary.getCurrency(currencyValue);
-    boolean isReleaseEncumbranceEnabled = filterInvoiceLinesByStatuses(invoiceLines, List.of(InvoiceLine.InvoiceLineStatus.PAID))
-      .stream()
-      .anyMatch(InvoiceLine::getReleaseEncumbrance);
-    forCreate.stream().findFirst()
-      .ifPresent(transaction -> {
-        Encumbrance oldEncumbrance = transaction.getEncumbrance();
-        double initialAmount = oldEncumbrance.getInitialAmountEncumbered();
-        double newAmount;
-        Encumbrance.Status newStatus;
-        if (isReleaseEncumbranceEnabled) {
-          newAmount = 0d;
-          newStatus = Encumbrance.Status.RELEASED;
-        } else {
-          newAmount = calculateEncumbranceEffectiveAmount(initialAmount, expended, credited, awaitingPayment, currency);
-          newStatus = Encumbrance.Status.UNRELEASED;
-        }
-        Encumbrance newEncumbrance = oldEncumbrance
-          .withAmountExpended(expended)
-          .withAmountCredited(credited)
-          .withAmountAwaitingPayment(awaitingPayment)
-          .withStatus(newStatus);
-        transaction
-          .withAmount(newAmount)
-          .withEncumbrance(newEncumbrance);
-    });
-  }
-
-  private void validateInvoiceLineStatuses(List<InvoiceLine> invoiceLines) {
-    List<InvoiceLine> approvedInvoices = filterInvoiceLinesByStatuses(invoiceLines, List.of(InvoiceLine.InvoiceLineStatus.APPROVED));
-    if (CollectionUtils.isNotEmpty(approvedInvoices)) {
-      String invoiceLineIds = approvedInvoices.stream().map(InvoiceLine::getId).collect(Collectors.joining(", "));
-      String message = String.format(ErrorCodes.PO_LINE_HAS_RELATED_APPROVED_INVOICE_ERROR.getDescription(), invoiceLineIds);
-      Error error = new Error().withCode(ErrorCodes.PO_LINE_HAS_RELATED_APPROVED_INVOICE_ERROR.getCode()).withMessage(message);
-      throw new HttpException(HttpStatus.SC_FORBIDDEN, error);
-    }
   }
 }
