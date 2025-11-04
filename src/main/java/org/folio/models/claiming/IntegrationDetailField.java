@@ -8,6 +8,8 @@ import lombok.Getter;
 public enum IntegrationDetailField {
   JOB_ID("id"),
   TENANT("tenant"),
+  CONFIGS("configs"),
+  CONFIG_NAME("configName"),
   EXPORT_TYPE_SPECIFIC_PARAMETERS("exportTypeSpecificParameters"),
   VENDOR_EDI_ORDERS_EXPORT_CONFIG("vendorEdiOrdersExportConfig"),
   CLAIM_PIECE_IDS("claimPieceIds");
