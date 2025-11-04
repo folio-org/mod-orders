@@ -7,7 +7,6 @@ import lombok.extern.log4j.Log4j2;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.tools.utils.TenantTool;
-import org.folio.service.UserService;
 import org.springframework.stereotype.Component;
 
 import java.util.function.BiFunction;
@@ -17,7 +16,7 @@ import java.util.function.BiFunction;
 @RequiredArgsConstructor
 public class AbstractConfigCache {
 
-  private static final String UNIQUE_CACHE_KEY_PATTERN = "%s_%s_%s";
+  private static final String UNIQUE_CACHE_KEY_PATTERN = "%s_%s";
 
   protected <T> Future<T> cacheData(String url, String query, AsyncCache<String, T> cache,
                                     BiFunction<RequestEntry, RequestContext, Future<T>> configExtractor,
@@ -42,7 +41,6 @@ public class AbstractConfigCache {
   private String buildUniqueKey(RequestEntry requestEntry, RequestContext requestContext) {
     var endpoint = requestEntry.buildEndpoint();
     var tenantId = TenantTool.tenantId(requestContext.getHeaders());
-    var userId = UserService.getCurrentUserId(requestContext.getHeaders());
-    return String.format(UNIQUE_CACHE_KEY_PATTERN, tenantId, userId, endpoint);
+    return String.format(UNIQUE_CACHE_KEY_PATTERN, tenantId, endpoint);
   }
 }
