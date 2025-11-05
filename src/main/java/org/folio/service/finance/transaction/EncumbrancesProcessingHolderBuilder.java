@@ -6,6 +6,7 @@ import static org.folio.rest.acq.model.finance.Encumbrance.Status.RELEASED;
 import java.util.List;
 import java.util.Objects;
 
+import org.apache.commons.lang3.ObjectUtils;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
 import org.folio.rest.acq.model.finance.Encumbrance;
@@ -17,11 +18,10 @@ public class EncumbrancesProcessingHolderBuilder {
     EncumbrancesProcessingHolder processingHolder = new EncumbrancesProcessingHolder();
     encumbranceRelationsHolders.stream()
       .filter(Objects::nonNull)
-      .filter(relationsHolder -> Objects.nonNull(relationsHolder.getPurchaseOrder())
-        && Objects.nonNull(relationsHolder.getCurrentFiscalYearId()))
-      .findFirst().ifPresent(relationsHolder -> {
-        processingHolder.withPurchaseOrderId(relationsHolder.getOrderId());
-        processingHolder.withCurrentFiscalYearId(relationsHolder.getCurrentFiscalYearId());
+      .filter(h -> ObjectUtils.allNotNull(h.getPurchaseOrder(), h.getCurrentFiscalYearId()))
+      .findFirst().ifPresent(h -> {
+        processingHolder.withPurchaseOrderId(h.getOrderId());
+        processingHolder.withCurrentFiscalYearId(h.getCurrentFiscalYearId());
       });
     processingHolder.withEncumbrancesForCreate(getToBeCreatedHolders(encumbranceRelationsHolders));
     processingHolder.withEncumbrancesForUpdate(getToBeUpdatedHolders(encumbranceRelationsHolders));
