@@ -2,6 +2,7 @@
   "id": "245bc212-4e56-4875-8c84-4401018d4242",
   "type": "CLAIMS",
   "tenant": "test_diku_limit_10_claims",
+  "configName": "CLAIMS_e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1_245bc212-4e56-4875-8c84-4401018d4242",
   "exportTypeSpecificParameters": {
     "vendorEdiOrdersExportConfig": {
       "exportConfigId": "245bc212-4e56-4875-8c84-4401018d4242",

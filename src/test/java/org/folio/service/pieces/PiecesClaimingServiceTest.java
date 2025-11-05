@@ -433,8 +433,9 @@ public class PiecesClaimingServiceTest {
       CONFIG_NAME.getValue(), configName);
     var exportTypeSpecificParameters = JsonObject.of(VENDOR_EDI_ORDERS_EXPORT_CONFIG.getValue(), vendorEditOrdersExportConfig);
     return JsonObject.of(
-      EXPORT_TYPE_SPECIFIC_PARAMETERS.getValue(), exportTypeSpecificParameters,
-      TENANT.getValue(), "folio_shared");
+      TENANT.getValue(), "folio_shared",
+      CONFIG_NAME.getValue(), configName,
+      EXPORT_TYPE_SPECIFIC_PARAMETERS.getValue(), exportTypeSpecificParameters);
   }
 
 }
