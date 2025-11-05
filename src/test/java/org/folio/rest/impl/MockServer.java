@@ -51,8 +51,7 @@ import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
 import static org.folio.TestUtils.getTitle;
 import static org.folio.models.claiming.IntegrationDetailField.CONFIGS;
-import static org.folio.models.claiming.IntegrationDetailField.EXPORT_TYPE_SPECIFIC_PARAMETERS;
-import static org.folio.models.claiming.IntegrationDetailField.VENDOR_EDI_ORDERS_EXPORT_CONFIG;
+import static org.folio.models.claiming.IntegrationDetailField.CONFIG_NAME;
 import static org.folio.orders.utils.HelperUtils.PO_LINES;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.FUND_ID;
@@ -1682,9 +1681,7 @@ public class MockServer {
       var config = new JsonObject(getMockData(EXPORT_CONFIG_MOCK_PATH));
       var tenant = ctx.request().getHeader(OKAPI_HEADER_TENANT);
       if (EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10.getValue().equals(tenant)) {
-        config.getJsonObject(EXPORT_TYPE_SPECIFIC_PARAMETERS.getValue())
-          .getJsonObject(VENDOR_EDI_ORDERS_EXPORT_CONFIG.getValue())
-          .put("configName", "CLAIMS_" + UUID.randomUUID());
+        config.put(CONFIG_NAME.getValue(), "CLAIMS_%s_%s".formatted(UUID.randomUUID(), UUID.randomUUID()));
       }
       serverResponse(ctx, 200, APPLICATION_JSON, JsonObject.of(CONFIGS.getValue(), JsonArray.of(config)).encode());
     } catch (IOException e) {
