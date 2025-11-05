@@ -1,7 +1,6 @@
 package org.folio.service.settings;
 
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
 import org.folio.CopilotGenerated;
 import org.folio.orders.utils.ResourcePathResolver;
 import org.folio.rest.acq.model.settings.CommonSetting;
@@ -10,8 +9,6 @@ import org.folio.rest.acq.model.settings.Value;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
-import org.folio.rest.jaxrs.model.Config;
-import org.folio.rest.jaxrs.model.Configs;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -28,7 +25,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
 @CopilotGenerated
@@ -41,20 +37,6 @@ public class CommonSettingsRetrieverTest {
   private RestClient restClientMock;
   @InjectMocks
   private CommonSettingsRetriever commonSettingsRetriever;
-
-  @Test
-  void shouldLoadConfigurationsSuccessfully() {
-    RequestEntry requestEntry = new RequestEntry(resourcesPath(ResourcePathResolver.CONFIGURATION_ENTRIES));
-    JsonObject expectedConfig = new JsonObject().put("key", "value");
-    Configs configs = new Configs().withConfigs(List.of(new Config().withConfigName("key").withValue("value")));
-
-    doReturn(Future.succeededFuture(configs))
-      .when(restClientMock).get(eq(requestEntry), eq(Configs.class), any(RequestContext.class));
-
-    Future<JsonObject> result = commonSettingsRetriever.loadConfigurations(requestEntry, requestContextMock);
-
-    assertEquals(expectedConfig, result.result());
-  }
 
   @Test
   void shouldReturnDefaultCurrencyWhenLocaleSettingsNotPresent() {
@@ -108,19 +90,6 @@ public class CommonSettingsRetrieverTest {
     Future<String> result = commonSettingsRetriever.getSystemTimeZone(requestEntry, requestContextMock);
 
     assertEquals("PST", result.result());
-  }
-
-  @Test
-  void shouldFailToLoadConfigurationsWhenRestClientFails() {
-    RequestEntry requestEntry = new RequestEntry(resourcesPath(ResourcePathResolver.CONFIGURATION_ENTRIES));
-
-    when(restClientMock.get(eq(requestEntry), eq(Configs.class), any(RequestContext.class)))
-      .thenReturn(Future.failedFuture(new RuntimeException("Service failure")));
-
-    Future<JsonObject> result = commonSettingsRetriever.loadConfigurations(requestEntry, requestContextMock);
-
-    assertTrue(result.failed());
-    assertEquals(RuntimeException.class, result.cause().getClass());
   }
 
   @Test

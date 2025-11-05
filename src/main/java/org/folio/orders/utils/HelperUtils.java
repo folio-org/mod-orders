@@ -59,8 +59,6 @@ public class HelperUtils {
   public static final String KEY_NAME = "key";
   public static final String VALUE_NAME = "value";
 
-  public static final String DATA_EXPORT_SPRING_CONFIG_MODULE_NAME = "mod-data-export-spring";
-
   public static final String DEFAULT_POLINE_LIMIT = "1";
   public static final String REASON_COMPLETE = "Complete";
   public static final String REASON_CANCELLED = "Cancelled";

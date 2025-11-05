@@ -1272,7 +1272,6 @@
             "pieces.send-claims.collection.post"
           ],
           "modulePermissions": [
-            "configuration.entries.collection.get",
             "mod-settings.global.read.stripes-core.prefs.manage",
             "orders-storage.pieces.collection.get",
             "orders-storage.pieces.item.put",
@@ -1281,6 +1280,7 @@
             "orders-storage.purchase-orders.item.get",
             "orders-storage.titles.item.get",
             "organizations-storage.organizations.item.get",
+            "data-export.config.collection.get",
             "data-export.job.item.post",
             "data-export.job.send.item.execute"
           ]

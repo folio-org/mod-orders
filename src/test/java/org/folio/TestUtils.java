@@ -280,4 +280,12 @@ public final class TestUtils {
     return returnType.cast(method.invoke(object, params));
   }
 
+  public static void callPrivateMethod(Object object, String methodName)
+    throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+
+    var method = object.getClass().getDeclaredMethod(methodName);
+    method.setAccessible(true);
+    method.invoke(object);
+  }
+
 }
