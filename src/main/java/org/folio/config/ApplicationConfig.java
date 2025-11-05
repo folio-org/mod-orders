@@ -28,7 +28,9 @@ import org.folio.service.SuffixService;
 import org.folio.service.TagService;
 import org.folio.service.UserService;
 import org.folio.service.caches.CommonSettingsCache;
+import org.folio.service.caches.ExportConfigsCache;
 import org.folio.service.caches.InventoryCache;
+import org.folio.service.dataexport.ExportConfigsRetriever;
 import org.folio.service.settings.CommonSettingsRetriever;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
@@ -194,8 +196,13 @@ public class ApplicationConfig {
   }
 
   @Bean
-  CommonSettingsCache configurationEntriesCache (CommonSettingsRetriever commonSettingsRetriever) {
+  CommonSettingsCache configurationEntriesCache(CommonSettingsRetriever commonSettingsRetriever) {
     return new CommonSettingsCache(commonSettingsRetriever);
+  }
+
+  @Bean
+  ExportConfigsCache exportConfigsCache(ExportConfigsRetriever exportConfigsRetriever) {
+    return new ExportConfigsCache(exportConfigsRetriever);
   }
 
   @Bean
@@ -225,6 +232,11 @@ public class ApplicationConfig {
   @Bean
   CommonSettingsRetriever configurationEntriesService(RestClient restClient) {
     return new CommonSettingsRetriever(restClient);
+  }
+
+  @Bean
+  ExportConfigsRetriever exportConfigsRetriever(RestClient restClient) {
+    return new ExportConfigsRetriever(restClient);
   }
 
   @Bean

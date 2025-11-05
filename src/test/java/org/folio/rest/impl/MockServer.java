@@ -50,6 +50,9 @@ import static org.folio.TestUtils.getMinimalOrder;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
 import static org.folio.TestUtils.getTitle;
+import static org.folio.models.claiming.IntegrationDetailField.CONFIGS;
+import static org.folio.models.claiming.IntegrationDetailField.EXPORT_TYPE_SPECIFIC_PARAMETERS;
+import static org.folio.models.claiming.IntegrationDetailField.VENDOR_EDI_ORDERS_EXPORT_CONFIG;
 import static org.folio.orders.utils.HelperUtils.PO_LINES;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.FUND_ID;
@@ -61,6 +64,7 @@ import static org.folio.orders.utils.ResourcePathResolver.ACQUISITION_METHODS;
 import static org.folio.orders.utils.ResourcePathResolver.BUDGETS;
 import static org.folio.orders.utils.ResourcePathResolver.CONFIGURATION_ENTRIES;
 import static org.folio.orders.utils.ResourcePathResolver.CURRENT_BUDGET;
+import static org.folio.orders.utils.ResourcePathResolver.DATA_EXPORT_SPRING_CONFIGURATIONS;
 import static org.folio.orders.utils.ResourcePathResolver.DATA_EXPORT_SPRING_CREATE_JOB;
 import static org.folio.orders.utils.ResourcePathResolver.DATA_EXPORT_SPRING_EXECUTE_JOB;
 import static org.folio.orders.utils.ResourcePathResolver.EXPENSE_CLASSES_URL;
@@ -247,6 +251,7 @@ public class MockServer {
   public static final String CONFIG_MOCK_PATH = BASE_MOCK_DATA_PATH + "configurations.entries/%s.json";
   public static final String SETTINGS_MOCK_PATH = BASE_MOCK_DATA_PATH + "settings.entries/%s.json";
   public static final String ORDER_SETTINGS_MOCK_PATH = BASE_MOCK_DATA_PATH + "order-settings/%s.json";
+  public static final String EXPORT_CONFIG_MOCK_PATH = BASE_MOCK_DATA_PATH + "data-export-spring/export-config.json";
   public static final String LOAN_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "loanTypes/";
   public static final String LEDGER_FY_ROLLOVERS_PATH = BASE_MOCK_DATA_PATH + "ledgerFyRollovers/";
   public static final String LEDGER_FY_ROLLOVERS_ERRORS_PATH = BASE_MOCK_DATA_PATH + "ledgerFyRolloverErrors/";
@@ -696,6 +701,7 @@ public class MockServer {
     router.get(resourcesPath(CONFIGURATION_ENTRIES)).handler(ctx -> handleConfigurationOrSettingResponse(CONFIG_MOCK_PATH, ctx));
     router.get(resourcesPath(ORDER_SETTINGS)).handler(ctx -> handleConfigurationOrSettingResponse(ORDER_SETTINGS_MOCK_PATH, ctx));
     router.get(resourcesPath(SETTINGS_ENTRIES)).handler(this::handleSettingResponse);
+    router.get(resourcesPath(DATA_EXPORT_SPRING_CONFIGURATIONS)).handler(this::handleExportConfigsResponse);
     // PUT
     router.put(resourcePath(PURCHASE_ORDER_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER_STORAGE));
     router.put(resourcePath(PO_LINES_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES_STORAGE));
@@ -1666,6 +1672,21 @@ public class MockServer {
     try {
       var mockData = getMockData(SETTINGS_MOCK_PATH.formatted(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10.getValue()));
       serverResponse(ctx, 200, APPLICATION_JSON, mockData);
+    } catch (IOException e) {
+      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
+    }
+  }
+
+  private void handleExportConfigsResponse(RoutingContext ctx) {
+    try {
+      var config = new JsonObject(getMockData(EXPORT_CONFIG_MOCK_PATH));
+      var tenant = ctx.request().getHeader(OKAPI_HEADER_TENANT);
+      if (EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10.getValue().equals(tenant)) {
+        config.getJsonObject(EXPORT_TYPE_SPECIFIC_PARAMETERS.getValue())
+          .getJsonObject(VENDOR_EDI_ORDERS_EXPORT_CONFIG.getValue())
+          .put("configName", "CLAIMS_" + UUID.randomUUID());
+      }
+      serverResponse(ctx, 200, APPLICATION_JSON, JsonObject.of(CONFIGS.getValue(), JsonArray.of(config)).encode());
     } catch (IOException e) {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     }
