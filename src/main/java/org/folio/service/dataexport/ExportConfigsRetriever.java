@@ -10,8 +10,6 @@ import org.folio.rest.core.models.RequestEntry;
 
 import static org.folio.models.claiming.IntegrationDetailField.CONFIGS;
 import static org.folio.models.claiming.IntegrationDetailField.CONFIG_NAME;
-import static org.folio.models.claiming.IntegrationDetailField.EXPORT_TYPE_SPECIFIC_PARAMETERS;
-import static org.folio.models.claiming.IntegrationDetailField.VENDOR_EDI_ORDERS_EXPORT_CONFIG;
 
 @Log4j2
 @RequiredArgsConstructor
@@ -26,16 +24,10 @@ public class ExportConfigsRetriever {
         var configs = exportConfigs.getJsonArray(CONFIGS.getValue());
         for (int i = 0; i < configs.size(); i++) {
           var exportConfig = configs.getJsonObject(i);
-          result.put(getConfigName(exportConfig), exportConfig);
+          result.put(exportConfig.getString(CONFIG_NAME.getValue()), exportConfig);
         }
         return result;
       });
-  }
-
-  private static String getConfigName(JsonObject exportConfig) {
-    return exportConfig.getJsonObject(EXPORT_TYPE_SPECIFIC_PARAMETERS.getValue())
-      .getJsonObject(VENDOR_EDI_ORDERS_EXPORT_CONFIG.getValue())
-      .getString(CONFIG_NAME.getValue());
   }
 
 }
