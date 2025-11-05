@@ -14,16 +14,24 @@ import org.folio.rest.acq.model.finance.Transaction;
 public class EncumbrancesProcessingHolderBuilder {
 
   protected EncumbrancesProcessingHolder distributeHoldersByOperation(List<EncumbranceRelationsHolder> encumbranceRelationsHolders) {
-    EncumbrancesProcessingHolder holder = new EncumbrancesProcessingHolder();
-    holder.withEncumbrancesForCreate(getToBeCreatedHolders(encumbranceRelationsHolders));
-    holder.withEncumbrancesForUpdate(getToBeUpdatedHolders(encumbranceRelationsHolders));
+    EncumbrancesProcessingHolder processingHolder = new EncumbrancesProcessingHolder();
+    encumbranceRelationsHolders.stream()
+      .filter(Objects::nonNull)
+      .filter(relationsHolder -> Objects.nonNull(relationsHolder.getPurchaseOrder())
+        && Objects.nonNull(relationsHolder.getCurrentFiscalYearId()))
+      .findFirst().ifPresent(relationsHolder -> {
+        processingHolder.withPurchaseOrderId(relationsHolder.getOrderId());
+        processingHolder.withCurrentFiscalYearId(relationsHolder.getCurrentFiscalYearId());
+      });
+    processingHolder.withEncumbrancesForCreate(getToBeCreatedHolders(encumbranceRelationsHolders));
+    processingHolder.withEncumbrancesForUpdate(getToBeUpdatedHolders(encumbranceRelationsHolders));
     List<EncumbranceRelationsHolder> toDelete = getTransactionsToDelete(encumbranceRelationsHolders);
-    holder.withEncumbrancesForDelete(toDelete);
+    processingHolder.withEncumbrancesForDelete(toDelete);
     // also release transaction before delete
     List<Transaction> toRelease = toDelete.stream().map(EncumbranceRelationsHolder::getOldEncumbrance).collect(toList());
-    holder.withEncumbrancesForRelease(toRelease);
-    fixReleasedEncumbrances(holder);
-    return holder;
+    processingHolder.withEncumbrancesForRelease(toRelease);
+    fixReleasedEncumbrances(processingHolder);
+    return processingHolder;
   }
 
   private List<EncumbranceRelationsHolder> getToBeUpdatedHolders(List<EncumbranceRelationsHolder> encumbranceRelationsHolders) {

@@ -6,6 +6,9 @@ import java.util.List;
 import org.folio.rest.acq.model.finance.Transaction;
 
 public class EncumbrancesProcessingHolder {
+
+  private String purchaseOrderId;
+  private String currentFiscalYearId;
   private List<Transaction> encumbrancesForRelease;
   private List<EncumbranceRelationsHolder> encumbrancesForCreate;
   private List<EncumbranceRelationsHolder> encumbrancesForDelete;
@@ -37,6 +40,16 @@ public class EncumbrancesProcessingHolder {
     return this;
   }
 
+  public EncumbrancesProcessingHolder withPurchaseOrderId(String purchaseOrderId) {
+    this.purchaseOrderId = purchaseOrderId;
+    return this;
+  }
+
+  public EncumbrancesProcessingHolder withCurrentFiscalYearId(String fiscalYearId) {
+    this.currentFiscalYearId = fiscalYearId;
+    return this;
+  }
+
   public EncumbrancesProcessingHolder withEncumbrancesForCreate(List<EncumbranceRelationsHolder> encumbrancesForCreate) {
     this.encumbrancesForCreate = new ArrayList<>(encumbrancesForCreate);
     return this;
@@ -65,6 +78,14 @@ public class EncumbrancesProcessingHolder {
   public EncumbrancesProcessingHolder withPendingPaymentsToUpdate(List<Transaction> pendingPayments) {
     this.pendingPaymentsToUpdate = new ArrayList<>(pendingPayments);
     return this;
+  }
+
+  public String getPurchaseOrderId() {
+    return purchaseOrderId;
+  }
+
+  public String getCurrentFiscalYearId() {
+    return currentFiscalYearId;
   }
 
   public List<EncumbranceRelationsHolder> getEncumbrancesForCreate() {

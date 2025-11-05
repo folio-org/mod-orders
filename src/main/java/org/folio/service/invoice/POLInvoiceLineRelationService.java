@@ -9,6 +9,7 @@ import org.folio.models.EncumbrancesProcessingHolder;
 import org.folio.orders.utils.validators.TransactionValidator;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
+import org.folio.rest.acq.model.invoice.Invoice;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
@@ -34,48 +35,58 @@ import static org.folio.service.finance.transaction.FinanceUtils.sumAmounts;
 @Log4j2
 public class POLInvoiceLineRelationService {
 
+  private final InvoiceService invoiceService;
   private final InvoiceLineService invoiceLineService;
   private final PendingPaymentService pendingPaymentService;
 
-  public POLInvoiceLineRelationService(InvoiceLineService invoiceLineService, PendingPaymentService pendingPaymentService) {
+  public POLInvoiceLineRelationService(InvoiceService invoiceService, InvoiceLineService invoiceLineService,
+                                       PendingPaymentService pendingPaymentService) {
+    this.invoiceService = invoiceService;
     this.invoiceLineService = invoiceLineService;
     this.pendingPaymentService = pendingPaymentService;
   }
 
   public Future<EncumbrancesProcessingHolder> manageInvoiceRelation(EncumbrancesProcessingHolder processingHolder,
                                                                     RequestContext requestContext) {
-    List<Transaction> forDelete = processingHolder.getEncumbrancesForDelete().stream()
+    var forDelete = processingHolder.getEncumbrancesForDelete().stream()
       .map(EncumbranceRelationsHolder::getOldEncumbrance)
       .toList();
-    List<Transaction> forCreate = processingHolder.getEncumbrancesForCreate().stream()
+    var forCreate = processingHolder.getEncumbrancesForCreate().stream()
       .map(EncumbranceRelationsHolder::getNewEncumbrance)
       .toList();
-    List<String> poLineIds = forDelete.stream()
+    var poLineIds = forDelete.stream()
       .map(transaction -> transaction.getEncumbrance().getSourcePoLineId())
       .distinct()
       .toList();
-    return invoiceLineService.getInvoiceLinesByOrderLineIds(poLineIds, requestContext)
-      .compose(invoiceLines -> {
-        validateInvoiceLineStatuses(invoiceLines);
-        if (forCreate.isEmpty() && forDelete.isEmpty()) {
-          return Future.succeededFuture(processingHolder);
-        }
-        if (!forCreate.isEmpty() && !forDelete.isEmpty()) {
-          CurrencyUnit currency = getCurrency(processingHolder);
-          copyAmountsAndRecalculateNewEncumbrance(forCreate, forDelete, invoiceLines, currency);
-        }
-        if (forDelete.isEmpty()) {
-          return Future.succeededFuture(processingHolder);
-        }
-        if (forCreate.isEmpty()) {
-          forDelete.forEach(TransactionValidator::validateEncumbranceForDeletion);
-        }
-        List<String> encumbranceForDeleteIds = forDelete.stream()
-          .map(Transaction::getId)
-          .distinct()
-          .toList();
-        return removeEncumbranceReferenceFromTransactions(encumbranceForDeleteIds, processingHolder, requestContext);
-      });
+    return invoiceService.getInvoicesByOrderId(processingHolder.getPurchaseOrderId(), requestContext)
+      .compose(invoices ->
+         invoiceLineService.getInvoiceLinesByOrderLineIds(poLineIds, requestContext)
+          .compose(invoiceLines -> {
+            validateInvoiceLineStatuses(invoiceLines);
+            if (forCreate.isEmpty() && forDelete.isEmpty()) {
+              return Future.succeededFuture(processingHolder);
+            }
+            if (!forCreate.isEmpty() && !forDelete.isEmpty()) {
+              var currency = getCurrency(processingHolder);
+              var invoiceFiscalYearId = invoices.stream()
+                .filter(Objects::nonNull)
+                .map(Invoice::getFiscalYearId)
+                .findFirst().orElse("");
+              var matchingReleaseYear = StringUtils.equals(processingHolder.getCurrentFiscalYearId(), invoiceFiscalYearId);
+              copyAmountsAndRecalculateNewEncumbrance(matchingReleaseYear, forCreate, forDelete, invoiceLines, currency);
+            }
+            if (forDelete.isEmpty()) {
+              return Future.succeededFuture(processingHolder);
+            }
+            if (forCreate.isEmpty()) {
+              forDelete.forEach(TransactionValidator::validateEncumbranceForDeletion);
+            }
+            var encumbranceForDeleteIds = forDelete.stream()
+              .map(Transaction::getId)
+              .distinct()
+              .toList();
+            return removeEncumbranceReferenceFromTransactions(encumbranceForDeleteIds, processingHolder, requestContext);
+          }));
   }
 
   private void validateInvoiceLineStatuses(List<InvoiceLine> invoiceLines) {
@@ -100,13 +111,13 @@ public class POLInvoiceLineRelationService {
       .orElseThrow();
   }
 
-  private void copyAmountsAndRecalculateNewEncumbrance(List<Transaction> forCreate, List<Transaction> forDelete,
+  private void copyAmountsAndRecalculateNewEncumbrance(boolean matchingReleaseYear, List<Transaction> forCreate, List<Transaction> forDelete,
                                                        List<InvoiceLine> invoiceLines, CurrencyUnit currency) {
     // Update encumbrances when an order line is linked to a paid invoice
     var awaitingPayment = sumAmounts(forDelete, Encumbrance::getAmountAwaitingPayment);
     var expended = sumAmounts(forDelete, Encumbrance::getAmountExpended);
     var credited = sumAmounts(forDelete, Encumbrance::getAmountCredited);
-    var isReleaseEncumbrance = extractReleaseEncumbrance(invoiceLines);
+    var isReleaseEncumbrance = matchingReleaseYear && extractReleaseEncumbrance(invoiceLines);
     forCreate.stream().findFirst()
       .ifPresent(transaction -> {
         var oldTransaction = getOldTransaction(forDelete, transaction);
