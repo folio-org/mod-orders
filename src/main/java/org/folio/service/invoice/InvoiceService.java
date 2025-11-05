@@ -24,6 +24,7 @@ import org.folio.service.orders.OrderInvoiceRelationService;
 import io.vertx.core.Future;
 
 public class InvoiceService {
+
   private static final String INVOICE_ENDPOINT = "/invoice/invoices";
   private static final String GET_ORDER_INVOICE_REL_BY_PO_ID_RQ = "purchaseOrderId==%s";
 
@@ -38,23 +39,23 @@ public class InvoiceService {
   public Future<List<Invoice>> getInvoicesByOrderId(String orderId, RequestContext requestContext) {
     String query = String.format(GET_ORDER_INVOICE_REL_BY_PO_ID_RQ, orderId);
     return orderInvoiceRelationService.getOrderInvoiceRelationshipCollection(query, 0, Integer.MAX_VALUE, requestContext)
-                  .map(OrderInvoiceRelationshipCollection::getOrderInvoiceRelationships)
-                  .compose(orderInvoiceRel -> {
-                    if (CollectionUtils.isNotEmpty(orderInvoiceRel)) {
-                      List<String> invoiceIds = orderInvoiceRel.stream().map(OrderInvoiceRelationship::getInvoiceId).collect(Collectors.toList());
-                      return getInvoicesByIds(invoiceIds, requestContext);
-                    }
-                    return Future.succeededFuture(Collections.emptyList());
-                  });
+      .map(OrderInvoiceRelationshipCollection::getOrderInvoiceRelationships)
+      .compose(orderInvoiceRel -> {
+        if (CollectionUtils.isNotEmpty(orderInvoiceRel)) {
+          List<String> invoiceIds = orderInvoiceRel.stream().map(OrderInvoiceRelationship::getInvoiceId).collect(Collectors.toList());
+          return getInvoicesByIds(invoiceIds, requestContext);
+        }
+        return Future.succeededFuture(Collections.emptyList());
+      });
   }
 
   public Future<List<Invoice>> getInvoicesByIds(Collection<String> invoiceIds, RequestContext requestContext) {
     return collectResultsOnSuccess(
       ofSubLists(new ArrayList<>(invoiceIds), MAX_IDS_FOR_GET_RQ_15)
-                  .map(ids -> getInvoicesChunkByInvoiceIds(ids, requestContext)).toList())
-      .map(invoiceCollections -> invoiceCollections.stream()
-                                            .flatMap(invoiceCol -> invoiceCol.getInvoices().stream())
-                                            .collect(Collectors.toList()));
+        .map(ids -> getInvoicesChunkByInvoiceIds(ids, requestContext)).toList())
+        .map(invoiceCollections -> invoiceCollections.stream()
+          .flatMap(invoiceCol -> invoiceCol.getInvoices().stream())
+          .collect(Collectors.toList()));
   }
 
   private Future<InvoiceCollection> getInvoicesChunkByInvoiceIds(Collection<String> invoiceIds, RequestContext requestContext) {

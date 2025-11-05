@@ -861,9 +861,10 @@ public class ApplicationConfig {
     return new OrderLineUpdateInstanceStrategyResolver(strategies);
   }
 
-  @Bean POLInvoiceLineRelationService polInvoiceLineRelationService(InvoiceLineService invoiceLineService,
-      PendingPaymentService pendingPaymentService) {
-    return new POLInvoiceLineRelationService(invoiceLineService, pendingPaymentService);
+  @Bean POLInvoiceLineRelationService polInvoiceLineRelationService(InvoiceService invoiceService,
+                                                                    InvoiceLineService invoiceLineService,
+                                                                    PendingPaymentService pendingPaymentService) {
+    return new POLInvoiceLineRelationService(invoiceService, invoiceLineService, pendingPaymentService);
   }
 
   @Bean
