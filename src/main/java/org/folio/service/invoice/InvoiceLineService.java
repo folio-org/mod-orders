@@ -33,7 +33,7 @@ import one.util.streamex.StreamEx;
 public class InvoiceLineService {
 
   private static final String INVOICE_LINES_ENDPOINT = "/invoice/invoice-lines";
-  private static final String INVOICE_LINE_BY_ID_ENDPOINT = INVOICE_LINES_ENDPOINT + "/{id}";
+  private static final String INVOICE_LINE_BY_ID_ENDPOINT = INVOICE_LINES_ENDPOINT + "/{id}?skipPoNumbers=true";
   private static final String GET_INVOICE_LINES_ERROR = "Error when retrieving invoice lines";
   private static final String GET_INVOICE_LINE_BY_INVOICE_ID_AND_STATUS_QUERY =  "invoiceId==%s and invoiceLineStatus==%s";
   private static final String GET_INVOICE_LINE_BY_PO_LINE_ID_QUERY =  "poLineId==%s";
@@ -101,11 +101,13 @@ public class InvoiceLineService {
       }
     }
     if (CollectionUtils.isEmpty(invoiceLinesToUpdate)) {
-      logger.info("removeEncumbranceLinks:: no invoice lines to update");
+      logger.info("removeEncumbranceLinks:: No invoice lines to update");
       return Future.succeededFuture();
     }
-    logger.info("removeEncumbranceLinks:: updating invoice lines: {} with removed encumbrance links",
-      invoiceLinesToUpdate.stream().map(InvoiceLine::getId).collect(joining(", ")));
+    var invoiceIds = invoiceLinesToUpdate.stream()
+      .map(InvoiceLine::getId)
+      .collect(joining(", "));
+    logger.info("removeEncumbranceLinks:: Updating invoice lines with removed encumbrance links={} ", invoiceIds);
     return saveInvoiceLines(invoiceLinesToUpdate, requestContext);
   }
 
@@ -114,7 +116,6 @@ public class InvoiceLineService {
         .map(invLine -> saveInvoiceLine(invLine, requestContext))
         .collect(toList()))
       .mapEmpty();
-
   }
 
   private Future<Void> saveInvoiceLine(InvoiceLine invoiceLine, RequestContext requestContext) {
@@ -133,5 +134,4 @@ public class InvoiceLineService {
       .collect(joining(" OR "));
     return String.format("poLineId == (%s)", values);
   }
-
 }
