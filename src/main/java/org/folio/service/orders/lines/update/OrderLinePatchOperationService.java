@@ -1,9 +1,5 @@
 package org.folio.service.orders.lines.update;
 
-import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_TITLE;
-import static org.folio.service.inventory.InventoryUtils.INSTANCE_RECORDS_BY_ID_ENDPOINT;
-import static org.folio.service.inventory.InventoryUtils.INVENTORY_LOOKUP_ENDPOINTS;
-
 import java.util.Objects;
 
 import lombok.extern.log4j.Log4j2;
@@ -14,15 +10,12 @@ import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CreateInventoryType;
-import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.service.inventory.InventoryInstanceManager;
-import org.folio.service.inventory.InventoryUtils;
 import org.folio.service.orders.PurchaseOrderLineService;
 
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
 
 @Log4j2
 public class OrderLinePatchOperationService {
@@ -50,17 +43,13 @@ public class OrderLinePatchOperationService {
 
   public Future<Void> patch(String lineId, PatchOrderLineRequest request, RequestContext requestContext) {
     log.info("patch:: start patching operation: {} for poLineId: {}", request.getOperation(), lineId);
-    String newInstanceId = request.getReplaceInstanceRef().getNewInstanceId();
+    var newInstanceId = request.getReplaceInstanceRef().getNewInstanceId();
     return inventoryInstanceManager.createShadowInstanceIfNeeded(newInstanceId, requestContext)
       .compose(v -> purchaseOrderLineService.getOrderLineById(lineId, requestContext))
-      .compose(poLine -> patchOrderLineAndInstanceInfo(request, poLine, requestContext))
+      .compose(poLine -> patchOrderLine(request, poLine, requestContext))
       .onSuccess(v -> log.info("patch:: successfully patched operation: {} for poLineId: {}", request.getOperation(), lineId))
-      .onFailure(e -> log.error("Failed to patch operation: {} for poLineId: {}", request.getOperation(), lineId, e));
-  }
-
-  private Future<Void> patchOrderLineAndInstanceInfo(PatchOrderLineRequest request, PoLine poLine, RequestContext requestContext) {
-    return patchOrderLine(request, poLine, requestContext)
-      .compose(updatedPoLine -> updateInventoryInstanceInformation(request, updatedPoLine, requestContext));
+      .onFailure(e -> log.error("Failed to patch operation: {} for poLineId: {}", request.getOperation(), lineId, e))
+      .mapEmpty();
   }
 
   private Future<PoLine> patchOrderLine(PatchOrderLineRequest request, PoLine poLine, RequestContext requestContext) {
@@ -107,29 +96,6 @@ public class OrderLinePatchOperationService {
       return restClient.patch(requestEntry, storagePatchOrderLineRequest, requestContext);
     }
     return Future.succeededFuture();
-  }
-
-  private Future<Void> updateInventoryInstanceInformation(PatchOrderLineRequest request, PoLine poLine, RequestContext requestContext) {
-    String newInstanceId = request.getReplaceInstanceRef().getNewInstanceId();
-    poLine.setInstanceId(newInstanceId); // updating instance id in case of retrieval of poLine has old instance id because of race condition
-    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCE_RECORDS_BY_ID_ENDPOINT)).withId(newInstanceId);
-    return restClient.getAsJsonObject(requestEntry, requestContext)
-      .map(instanceRecord -> updatePoLineWithInstanceRecordInfo(instanceRecord, poLine))
-      .compose(updatePoLine -> purchaseOrderLineService.saveOrderLine(updatePoLine, requestContext))
-      .onSuccess(v -> log.info("updateInventoryInstanceInformation:: updated instance info for poLineId: {}", poLine.getId()))
-      .onFailure(v -> log.error("Error when updating retrieving instance record from inventory-storage request to by instanceId {}, poLineId {}", newInstanceId, poLine.getId()));
-  }
-
-  private PoLine updatePoLineWithInstanceRecordInfo(JsonObject lookupObj, PoLine poLine) {
-    poLine.setTitleOrPackage(lookupObj.getString(INSTANCE_TITLE));
-    poLine.setPublisher(InventoryUtils.getPublisher(lookupObj));
-    poLine.setPublicationDate(InventoryUtils.getPublicationDate(lookupObj));
-    poLine.setContributors(InventoryUtils.getContributors(lookupObj));
-    if (Objects.isNull(poLine.getDetails())) {
-      poLine.setDetails(new Details());
-    }
-    poLine.getDetails().setProductIds(InventoryUtils.getProductIds(lookupObj));
-    return poLine;
   }
 
 }
