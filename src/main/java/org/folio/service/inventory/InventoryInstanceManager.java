@@ -29,8 +29,10 @@ import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.consortium.SharingInstanceService;
 
 import java.util.Collection;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Queue;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -244,9 +246,26 @@ public class InventoryInstanceManager {
   }
 
   Future<String> getAnyInstanceIdByProductIds(List<ProductId> productIds, RequestContext requestContext) {
-    var productIdQueries = productIds.stream()
+    List<String> productIdQueries = StreamEx.of(productIds)
       .map(productId -> PRODUCT_ID_CQL.formatted(productId.getProductIdType(), productId.getProductId()))
+      .distinct()
       .toList();
+    Queue<List<String>> queryBatches = StreamEx.ofSubLists(productIdQueries, MAX_IDS_FOR_GET_RQ_15).toCollection(LinkedList::new);
+    return getAnyInstanceIdByProductIdsQueryBatches(queryBatches, requestContext);
+  }
+
+  private Future<String> getAnyInstanceIdByProductIdsQueryBatches(Queue<List<String>> queryBatches, RequestContext requestContext) {
+    if (queryBatches.isEmpty()) {
+      return Future.succeededFuture(null);
+    }
+    var nextQueriesChunk = queryBatches.poll();
+    return getAnyInstanceIdByProductIdsQueryBatch(nextQueriesChunk, requestContext)
+      .compose(instanceId -> instanceId != null
+        ? Future.succeededFuture(instanceId)
+        : getAnyInstanceIdByProductIdsQueryBatches(queryBatches, requestContext));
+  }
+
+  private Future<String> getAnyInstanceIdByProductIdsQueryBatch(List<String> productIdQueries, RequestContext requestContext) {
     var deletedQueries = List.of(getCqlExpressionForFieldNullValue("deleted"), "deleted==false");
     var query = combineCqlExpressions("and", combineCqlExpressions("or", productIdQueries), combineCqlExpressions("or", deletedQueries));
 
