@@ -350,6 +350,6 @@ public class CheckInOrderStatusChangeChangeHandlerTest {
     // Add okapi url header
     DeliveryOptions deliveryOptions = new DeliveryOptions().addHeader(X_OKAPI_URL.getName(), X_OKAPI_URL.getValue());
 
-    vertx.eventBus().request(MessageAddress.CHECKIN_ORDER_STATUS_UPDATE.address, data, deliveryOptions, replyHandler);
+    vertx.eventBus().<String>request(MessageAddress.CHECKIN_ORDER_STATUS_UPDATE.address, data, deliveryOptions).onComplete(replyHandler);
   }
 }
