@@ -229,7 +229,7 @@ public class OrderRolloverService {
 
   private Future<Void> handlePoLineUpdateFailures(List<PoLine> poLines, LedgerFiscalYearRollover ledgerFYRollover,
                                                   boolean openOrders, Throwable t, RequestContext requestContext) {
-    return GenericCompositeFuture.join(poLines.stream()
+    return Future.join(poLines.stream()
         .map(poLine -> handlePoLineUpdateFailure(poLine, ledgerFYRollover, openOrders, t, requestContext))
         .toList())
       .mapEmpty();

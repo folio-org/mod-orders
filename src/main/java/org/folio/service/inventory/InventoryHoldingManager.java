@@ -7,7 +7,6 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.RequestContextUtil;
 import org.folio.orders.utils.StreamUtils;
@@ -245,9 +244,9 @@ public class InventoryHoldingManager {
   }
 
   private Future<Void> updateHoldingRecords(List<JsonObject> holdingRecords, RequestContext requestContext) {
-    return GenericCompositeFuture.join(holdingRecords.stream()
+    return Future.join(holdingRecords.stream()
         .map(holdingRecord -> updateHolding(holdingRecord, requestContext))
-        .collect(toList()))
+        .toList())
       .mapEmpty();
   }
 

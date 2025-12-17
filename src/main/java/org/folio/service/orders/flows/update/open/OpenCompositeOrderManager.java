@@ -12,7 +12,6 @@ import java.util.Optional;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -80,10 +79,10 @@ public class OpenCompositeOrderManager {
 
   public Future<Void> openOrderUpdatePoLinesSummary(List<PoLine> poLines, RequestContext requestContext) {
     logger.debug("OpenCompositeOrderManager.openOrderUpdatePoLinesSummary");
-    return GenericCompositeFuture.join(poLines.stream()
-      .map(this::removeLocationId)
-      .map(line -> purchaseOrderLineService.saveOrderLine(line, requestContext))
-      .toList())
+    return Future.join(poLines.stream()
+        .map(this::removeLocationId)
+        .map(line -> purchaseOrderLineService.saveOrderLine(line, requestContext))
+        .toList())
       .mapEmpty();
   }
 

@@ -22,7 +22,6 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 
 public class ExpenseClassValidationService {
@@ -53,10 +52,9 @@ public class ExpenseClassValidationService {
       .filter(fundDistribution -> Objects.nonNull(fundDistribution.getExpenseClassId()))
       .collect(toMap(Function.identity(), FundDistribution::getExpenseClassId));
 
-    return CompositeFuture.join(expenseClassesByFundId.entrySet()
-      .stream()
-      .map(expenseClassByFundId -> checkExpenseClassIsActiveByFundDistribution(expenseClassByFundId, isActiveExpenseClassCheckRequired, requestContext))
-      .collect(toList()))
+    return Future.join(expenseClassesByFundId.entrySet().stream()
+        .map(expenseClassByFundId -> checkExpenseClassIsActiveByFundDistribution(expenseClassByFundId, isActiveExpenseClassCheckRequired, requestContext))
+        .toList())
       .mapEmpty();
   }
 

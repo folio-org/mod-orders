@@ -17,7 +17,6 @@ import javax.ws.rs.core.Response;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
@@ -61,9 +60,9 @@ public abstract class BaseHelper {
 
   protected <T> void completeAllFutures(List<Future<T>> futures, Message<JsonObject> message) {
     // Now wait for all operations to be completed and send reply
-    GenericCompositeFuture.join(futures)
+    Future.join(futures)
       .onSuccess(v -> message.reply(Response.Status.OK.getReasonPhrase()))
-      .onFailure(e -> message.fail(handleProcessingError(e), getErrors().get(0).getMessage()));
+      .onFailure(e -> message.fail(handleProcessingError(e), getErrors().getFirst().getMessage()));
   }
 
   protected Errors getProcessingErrors() {

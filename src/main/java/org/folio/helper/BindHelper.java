@@ -7,7 +7,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.models.ItemFields;
 import org.folio.models.pieces.BindPiecesHolder;
 import org.folio.models.pieces.PiecesHolder;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.RestConstants;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
@@ -155,7 +154,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
 
   private Future<BindPiecesHolder> checkRequestsForPieceItems(BindPiecesHolder holder, RequestContext requestContext) {
     var tenantToItem = mapTenantIdsToItemIds(holder.getPiecesGroupedByPoLine(), requestContext);
-    return GenericCompositeFuture.all(
+    return Future.all(
       tenantToItem.entrySet().stream()
         .map(entry -> {
         var locationContext = createContextWithNewTenantId(requestContext, entry.getKey());
@@ -198,7 +197,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
 
   private Future<BindPiecesHolder> updateItemStatus(BindPiecesHolder holder, RequestContext requestContext) {
     logger.debug("updateItemStatus:: Updating previous item status to 'Unavailable'");
-    return GenericCompositeFuture.all(
+    return Future.all(
       mapTenantIdsToItemIds(holder.getPiecesGroupedByPoLine(), requestContext).entrySet().stream()
         .map(entry -> {
           var locationContext = createContextWithNewTenantId(requestContext, entry.getKey());

@@ -22,7 +22,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.TemplateProcessingRequest;
 import org.folio.models.UserCollection;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.RestConstants;
 import org.folio.rest.acq.model.SettingCollection;
 import org.folio.rest.core.RestClient;
@@ -107,7 +106,7 @@ public class RoutingListService {
   private Future<Void> validateRoutingList(RoutingList rList, RequestContext requestContext) throws HttpException {
     var poLineFuture = poLineService.getOrderLineById(rList.getPoLineId(), requestContext);
     var routingListsFuture = getRoutingListsByPoLineId(rList.getPoLineId(), requestContext);
-    return GenericCompositeFuture.all(List.of(poLineFuture, routingListsFuture)).compose(f -> {
+    return Future.all(List.of(poLineFuture, routingListsFuture)).compose(f -> {
       var poLine = poLineFuture.result();
       var routingLists = routingListsFuture.result();
       List<Error> combinedErrors = RoutingListValidatorUtil.validateRoutingList(rList, routingLists, poLine);

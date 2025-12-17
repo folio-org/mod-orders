@@ -24,7 +24,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.models.ReEncumbranceHolder;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverErrorCollection;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverProgress;
@@ -148,7 +147,7 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
             .distinct()
             .collect(toList());
 
-    return GenericCompositeFuture.join(holders.stream()
+    return Future.join(holders.stream()
             .map(ReEncumbranceHolder::getRollover)
             .filter(Objects::nonNull)
             .map(rollover -> ledgerRolloverProgressService.getRolloversProgress(rollover.getId(), requestContext)

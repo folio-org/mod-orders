@@ -4,7 +4,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.folio.models.CompositeOrderRetrieveHolder;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.core.models.RequestContext;
 
 import io.vertx.core.Future;
@@ -28,7 +27,7 @@ public class CombinedOrderDataPopulateService implements CompositeOrderDynamicDa
 
   private Future<CompositeOrderRetrieveHolder> populateAllDynamicData(CompositeOrderRetrieveHolder holder,
       RequestContext requestContext) {
-    return GenericCompositeFuture.join(populateServices.stream()
+    return Future.join(populateServices.stream()
       .map(service -> service.populate(holder, requestContext))
       .collect(Collectors.toList()))
       .map(aVoid -> holder);
