@@ -1,5 +1,15 @@
 ## 13.1.0 - Unreleased
 
+## 13.0.8 - Released (Sunflower R1 2025 Bug Fix)
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v13.0.7...v13.0.8)
+
+### Bug Fixes
+* [MODDICORE-486](https://folio-org.atlassian.net/browse/MODDICORE-486) - Fix deserialization error for Location entity
+
+### Dependencies
+* Bump `data-import-processing-core` from `4.4.3` to `4.4.8`
+
 ## 13.0.7 - Released (Sunflower R1 2025 Bug Fix)
 The primary focus of this release was to provide consumer configuration for preventing rebalancing issues.
 
