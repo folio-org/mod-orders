@@ -5,37 +5,44 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.DataImportEventPayload;
-import org.folio.rest.RestConstants;
 import org.folio.rest.RestVerticle;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_REQUEST_ID_HEADER;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
+import static org.folio.rest.util.OkapiConnectionParams.USER_ID_HEADER;
+
 public class DataImportUtils {
 
-  public static final String PERMISSIONS_KEY = "USER_PERMISSIONS";
-  public static final String USER_ID_KEY = "USER_ID";
-  public static final String OKAPI_PERMISSIONS_HEADER = "X-Okapi-Permissions";
+  public static final String OKAPI_PERMISSIONS_HEADER = "x-okapi-permissions";
 
   private DataImportUtils() {
   }
 
   public static Map<String, String> extractOkapiHeaders(DataImportEventPayload eventPayload) {
     Map<String, String> headers = new HashMap<>();
-    headers.put(RestVerticle.OKAPI_HEADER_TENANT, eventPayload.getTenant());
-    headers.put(RestConstants.OKAPI_URL, eventPayload.getOkapiUrl());
+    headers.put(OKAPI_TENANT_HEADER, eventPayload.getTenant());
+    headers.put(OKAPI_URL_HEADER, eventPayload.getOkapiUrl());
     if (!isSystemUserEnabled()) {
-      headers.put(RestVerticle.OKAPI_HEADER_TOKEN, eventPayload.getToken());
+      headers.put(OKAPI_TOKEN_HEADER, eventPayload.getToken());
     }
 
-    String permissionsHeader = eventPayload.getContext().get(PERMISSIONS_KEY);
+    String permissionsHeader = eventPayload.getContext().get(OKAPI_PERMISSIONS_HEADER);
     if (StringUtils.isNotBlank(permissionsHeader)) {
       headers.put(OKAPI_PERMISSIONS_HEADER, permissionsHeader);
     }
-    String userId = eventPayload.getContext().get(USER_ID_KEY);
+    String userId = eventPayload.getContext().get(USER_ID_HEADER);
     if (StringUtils.isNotBlank(userId)) {
-      headers.put(RestVerticle.OKAPI_USERID_HEADER, userId);
+      headers.put(USER_ID_HEADER, userId);
+    }
+    String requestId = eventPayload.getContext().get(OKAPI_REQUEST_ID_HEADER);
+    if (StringUtils.isNotBlank(requestId)) {
+      headers.put(OKAPI_REQUEST_ID_HEADER, requestId);
     }
     return headers;
   }

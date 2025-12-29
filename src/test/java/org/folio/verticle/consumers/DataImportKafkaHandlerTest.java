@@ -2,9 +2,11 @@ package org.folio.verticle.consumers;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
+import io.vertx.kafka.client.producer.KafkaHeader;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.JobProfile;
@@ -20,16 +22,24 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_REQUEST_ID_HEADER;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
+import static org.folio.rest.util.OkapiConnectionParams.USER_ID_HEADER;
+import static org.folio.service.dataimport.utils.DataImportUtils.OKAPI_PERMISSIONS_HEADER;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -117,5 +127,98 @@ public class DataImportKafkaHandlerTest {
       verify(mockedEventHandler, never()).handle(any(DataImportEventPayload.class));
       mockedStatic.verify(() -> EventManager.handleEvent(any(DataImportEventPayload.class), any()), never());
     }
+  }
+
+  @Test
+  void shouldPopulateEventPayloadWithHeadersFromKafkaHeaders() {
+    // Given
+    String permissions = "orders.all";
+    String userId = "user-123";
+    String requestId = "request-456";
+    String jobExecutionId = UUID.randomUUID().toString();
+    String profileSnapshotId = UUID.randomUUID().toString();
+
+    DataImportEventPayload eventPayload = createEventPayload(jobExecutionId, profileSnapshotId);
+    Event event = new Event().withEventPayload(Json.encode(eventPayload));
+
+    KafkaHeader permissionsHeader = createKafkaHeader(OKAPI_PERMISSIONS_HEADER, permissions);
+    KafkaHeader userIdHeader = createKafkaHeader(USER_ID_HEADER, userId);
+    KafkaHeader requestIdHeader = createKafkaHeader(OKAPI_REQUEST_ID_HEADER, requestId);
+    KafkaHeader tenantHeader = createKafkaHeader(OKAPI_TENANT_HEADER, TENANT_ID);
+
+    KafkaConsumerRecord<String, String> kafkaRecord = mock(KafkaConsumerRecord.class);
+    when(kafkaRecord.value()).thenReturn(Json.encode(event));
+    when(kafkaRecord.headers()).thenReturn(List.of(permissionsHeader, userIdHeader, requestIdHeader, tenantHeader));
+    when(kafkaRecord.key()).thenReturn("test-key");
+
+    try (MockedStatic<EventManager> mockedStatic = mockStatic(EventManager.class)) {
+      ArgumentCaptor<DataImportEventPayload> payloadCaptor = ArgumentCaptor.forClass(DataImportEventPayload.class);
+      mockedStatic.when(() -> EventManager.handleEvent(payloadCaptor.capture(), any()))
+        .thenReturn(CompletableFuture.completedFuture(eventPayload));
+
+      // When
+      Future<String> future = dataImportKafkaHandler.handle(kafkaRecord);
+
+      // Then
+      assertTrue(future.succeeded());
+      DataImportEventPayload capturedPayload = payloadCaptor.getValue();
+      assertEquals(permissions, capturedPayload.getContext().get(OKAPI_PERMISSIONS_HEADER));
+      assertEquals(userId, capturedPayload.getContext().get(USER_ID_HEADER));
+      assertEquals(requestId, capturedPayload.getContext().get(OKAPI_REQUEST_ID_HEADER));
+    }
+  }
+
+  @Test
+  void shouldNotPopulateEventPayloadWhenHeadersAreMissing() {
+    // Given
+    String jobExecutionId = UUID.randomUUID().toString();
+    String profileSnapshotId = UUID.randomUUID().toString();
+
+    DataImportEventPayload eventPayload = createEventPayload(jobExecutionId, profileSnapshotId);
+    Event event = new Event().withEventPayload(Json.encode(eventPayload));
+
+    KafkaHeader tenantHeader = createKafkaHeader(OKAPI_TENANT_HEADER, TENANT_ID);
+
+    KafkaConsumerRecord<String, String> kafkaRecord = mock(KafkaConsumerRecord.class);
+    when(kafkaRecord.value()).thenReturn(Json.encode(event));
+    when(kafkaRecord.headers()).thenReturn(List.of(tenantHeader));
+    when(kafkaRecord.key()).thenReturn("test-key");
+
+    try (MockedStatic<EventManager> mockedStatic = mockStatic(EventManager.class)) {
+      ArgumentCaptor<DataImportEventPayload> payloadCaptor = ArgumentCaptor.forClass(DataImportEventPayload.class);
+      mockedStatic.when(() -> EventManager.handleEvent(payloadCaptor.capture(), any()))
+        .thenReturn(CompletableFuture.completedFuture(eventPayload));
+
+      // When
+      Future<String> future = dataImportKafkaHandler.handle(kafkaRecord);
+
+      // Then
+      assertTrue(future.succeeded());
+      DataImportEventPayload capturedPayload = payloadCaptor.getValue();
+      assertFalse(capturedPayload.getContext().containsKey(OKAPI_PERMISSIONS_HEADER));
+      assertFalse(capturedPayload.getContext().containsKey(USER_ID_HEADER));
+      assertFalse(capturedPayload.getContext().containsKey(OKAPI_REQUEST_ID_HEADER));
+    }
+  }
+
+  private DataImportEventPayload createEventPayload(String jobExecutionId, String profileSnapshotId) {
+    DataImportEventPayload payload = new DataImportEventPayload()
+      .withJobExecutionId(jobExecutionId)
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
+      .withCurrentNode(jobProfileSnapshotWrapper.getChildSnapshotWrappers().getFirst())
+      .withTenant(TENANT_ID);
+
+    HashMap<String, String> context = new HashMap<>();
+    context.put("JOB_PROFILE_SNAPSHOT_ID", profileSnapshotId);
+    payload.setContext(context);
+
+    return payload;
+  }
+
+  private KafkaHeader createKafkaHeader(String key, String value) {
+    KafkaHeader header = mock(KafkaHeader.class);
+    when(header.key()).thenReturn(key);
+    when(header.value()).thenReturn(Buffer.buffer(value));
+    return header;
   }
 }
