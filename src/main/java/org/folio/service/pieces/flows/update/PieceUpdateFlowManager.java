@@ -13,7 +13,6 @@ import org.folio.HttpStatus;
 import org.folio.models.pieces.BasePieceFlowHolder;
 import org.folio.models.pieces.PieceBatchStatusUpdateHolder;
 import org.folio.models.pieces.PieceUpdateHolder;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
@@ -156,7 +155,7 @@ public class PieceUpdateFlowManager {
       .map(titles -> titles.stream()
         .map(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext))
         .toList())
-      .map(GenericCompositeFuture::all)
+      .map(Future::all)
       .mapEmpty();
   }
 

@@ -5,16 +5,17 @@ import static org.hamcrest.Matchers.is;
 
 import java.nio.file.Path;
 
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.output.Slf4jLogConsumer;
 import org.testcontainers.images.builder.ImageFromDockerfile;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
 
@@ -29,20 +30,21 @@ import io.restassured.RestAssured;
  *
  * <p>Test installation and migration with smoke test.
  */
+@Testcontainers
 public class InstallUpgradeIT {
 
   private static final Logger LOG = LoggerFactory.getLogger(InstallUpgradeIT.class);
   private static final boolean IS_LOG_ENABLED = false;
   private static final Network NETWORK = Network.newNetwork();
 
-  @ClassRule(order = 1)
-  public static final KafkaContainer KAFKA =
+  @Container
+  private static final KafkaContainer KAFKA =
     new KafkaContainer(DockerImageName.parse("apache/kafka-native:3.8.0"))
       .withNetwork(NETWORK)
       .withNetworkAliases("mykafka");
 
-  @ClassRule(order = 2)
-  public static final GenericContainer<?> MOD_ORDERS =
+  @Container
+  private static final GenericContainer<?> MOD_ORDERS =
     new GenericContainer<>(
       new ImageFromDockerfile("mod-orders").withFileFromPath(".", Path.of(".")))
       .withNetwork(NETWORK)
@@ -50,7 +52,7 @@ public class InstallUpgradeIT {
       .withEnv("KAFKA_HOST", "mykafka")
       .withEnv("KAFKA_PORT", "9092");
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() {
     RestAssured.reset();
     RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
@@ -61,7 +63,7 @@ public class InstallUpgradeIT {
     }
   }
 
-  @Before
+  @BeforeEach
   public void beforeEach() {
     RestAssured.requestSpecification = null;
   }
@@ -69,11 +71,11 @@ public class InstallUpgradeIT {
   @Test
   public void health() {
     // request without X-Okapi-Tenant
-    when().
-      get("/admin/health").
-      then().
-      statusCode(200).
-      body(is("\"OK\""));
+    when()
+      .get("/admin/health")
+      .then()
+      .statusCode(200)
+      .body(is("\"OK\""));
   }
 
 }

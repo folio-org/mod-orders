@@ -19,7 +19,6 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.FundDistributionUtils;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.core.exceptions.ErrorCodes;
@@ -87,8 +86,7 @@ public class OpenCompositeOrderFlowValidator {
     futures.add(validateMaterialTypesFuture);
     futures.add(validateEncumbrancesFuture);
 
-    return GenericCompositeFuture.join(futures)
-      .mapEmpty();
+    return Future.join(futures).mapEmpty();
   }
 
   private Future<Void> validateFundDistributionTotal(List<PoLine> poLines) {
@@ -135,7 +133,7 @@ public class OpenCompositeOrderFlowValidator {
           .compose(funds -> populateMissingFundCodes(poLine, funds)
             .compose(v -> validateLocationRestrictions(poLine, funds, requestContext)));
       }).toList();
-    return GenericCompositeFuture.join(checkFunds).mapEmpty();
+    return Future.join(checkFunds).mapEmpty();
   }
 
   private Future<Void> populateMissingFundCodes(PoLine poLine, List<Fund> funds) {
@@ -214,7 +212,7 @@ public class OpenCompositeOrderFlowValidator {
     var polLocations = getPOLineLocations(poLine, currentTenantId);
     var holdingsByTenants = inventoryHoldingManager.getHoldingsByLocationTenants(poLine, requestContext);
 
-    return GenericCompositeFuture.all(new ArrayList<>(holdingsByTenants.values())).map(ar -> {
+    return Future.all(new ArrayList<>(holdingsByTenants.values())).map(ar -> {
       var locationsFromHoldings = holdingsByTenants.entrySet().stream()
         .map(this::mapHoldingsToLocations)
         .flatMap(List::stream)

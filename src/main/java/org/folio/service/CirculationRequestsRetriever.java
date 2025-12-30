@@ -5,7 +5,6 @@ import io.vertx.core.json.JsonObject;
 import lombok.extern.log4j.Log4j2;
 import one.util.streamex.StreamEx;
 import org.apache.commons.lang3.StringUtils;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.CommonFields;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
@@ -86,7 +85,7 @@ public class CirculationRequestsRetriever {
         }))
       .toList();
 
-    return GenericCompositeFuture.all(futures)
+    return Future.all(futures)
       .map(f -> f.<JsonObject>list().stream()
         .filter(Objects::nonNull) // filter out null objects in case of restClient failure
         .flatMap(json -> {
@@ -112,7 +111,7 @@ public class CirculationRequestsRetriever {
             .toList()))
         .toList())
       // 4. Put the list of futures in a composite one and flatMap all futures into a single list
-      .compose(requests -> GenericCompositeFuture.all(requests)
+      .compose(requests -> Future.all(requests)
         .map(cf -> StreamEx.of(cf.<List<JsonObject>>list()).toFlatList(Function.identity())))
       // 5. Prepare response body
       .map(this::prepareRequestsCollection);

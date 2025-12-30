@@ -12,7 +12,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.folio.models.PoLineLocationsPair;
 import org.folio.models.pieces.PieceUpdateHolder;
 import org.folio.models.pieces.PiecesHolder;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
@@ -189,7 +188,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       .collect(Collectors.toList());
 
     // Wait for all pieces to be retrieved and complete resulting future
-    return GenericCompositeFuture.join(futures)
+    return Future.join(futures)
       .map(v -> {
         if (logger.isDebugEnabled()) {
           int poLinesQty = piecesByPoLine.size();
@@ -269,7 +268,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
    * @return map passed as a parameter
    */
   protected Future<Map<String, List<Piece>>> storeUpdatedPieceRecords(Map<String, List<Piece>> piecesGroupedByPoLine, RequestContext requestContext) {
-    return GenericCompositeFuture.join(
+    return Future.join(
         extractAllPieces(piecesGroupedByPoLine)
           .filter(this::isSuccessfullyProcessedPiece)
           .map(piece -> piece.withStatusUpdatedDate(new Date()))
@@ -560,7 +559,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
         })
       ));
 
-    return GenericCompositeFuture.join(new ArrayList<>(purchaseOrderFutures.values())).compose(purchaseOrdersFuture -> {
+    return Future.join(new ArrayList<>(purchaseOrderFutures.values())).compose(purchaseOrdersFuture -> {
       var purchaseOrderMap = purchaseOrderFutures.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().result()));
       var futures = new ArrayList<Future<String>>();
       piecesGroupedByPoLine.keySet().stream()
@@ -646,7 +645,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
         }
       });
 
-    return GenericCompositeFuture.join(futuresForHoldingsUpdates)
+    return Future.join(futuresForHoldingsUpdates)
       .onComplete(results -> {
         if (logger.isDebugEnabled()) {
           long successQty = results.result().list().stream()
@@ -829,9 +828,9 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
 
   protected Future<Void> removeForbiddenEntities(RequestContext requestContext) {
     return titlesService.getTitlesByPieceIds(getPieceIds(), requestContext)
-      .compose(titles -> CollectionUtils.isNotEmpty(titles) ? GenericCompositeFuture
-        .join(getListOfRestrictionCheckingFutures(titles, requestContext))
-        .mapEmpty() : Future.succeededFuture());
+      .compose(titles -> CollectionUtils.isNotEmpty(titles)
+        ? Future.join(getListOfRestrictionCheckingFutures(titles, requestContext)).mapEmpty()
+        : Future.succeededFuture());
   }
 
   private List<Future<?>> getListOfRestrictionCheckingFutures(List<Title> titles, RequestContext requestContext) {

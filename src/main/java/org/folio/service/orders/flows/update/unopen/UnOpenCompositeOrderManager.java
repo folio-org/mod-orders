@@ -31,7 +31,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.folio.models.ItemStatus;
 import org.folio.models.pieces.PieceDeletionHolder;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.exceptions.ErrorCodes;
@@ -130,7 +129,7 @@ public class UnOpenCompositeOrderManager {
   }
 
   private Future<Void> processPoLines(List<PoLine> poLines, Function<PoLine, Future<?>> poLineProcessor) {
-    return GenericCompositeFuture.join(poLines.stream().map(poLineProcessor::apply).toList()).mapEmpty();
+    return Future.join(poLines.stream().map(poLineProcessor::apply).toList()).mapEmpty();
   }
 
   /**
@@ -191,7 +190,7 @@ public class UnOpenCompositeOrderManager {
           .entrySet().stream().map(entry -> entry.getValue()
             .compose(holdings -> deleteHoldings(poLine, entry.getKey(), holdings, requestContext)))
           .toList();
-        return GenericCompositeFuture.all(deleteHoldingsVsLocations).map(ar -> {
+        return Future.all(deleteHoldingsVsLocations).map(ar -> {
           var deletedHoldingVsLocationIds = deleteHoldingsVsLocations.stream()
             .map(Future::result)
             .flatMap(List::stream)
@@ -227,7 +226,7 @@ public class UnOpenCompositeOrderManager {
       .map(deletedPieces -> PoLineCommonUtil.getTenantsFromLocations(poLine).stream()
         .map(tenantId -> processInventoryOnlyWithItemsForTenant(poLine, createContextWithNewTenantId(requestContext, tenantId)))
         .toList())
-      .compose(GenericCompositeFuture::all)
+      .compose(Future::all)
       .mapEmpty();
   }
 
@@ -246,7 +245,7 @@ public class UnOpenCompositeOrderManager {
 
 
   private Future<Void> processInventoryHoldingWithItems(PoLine poLine, RequestContext requestContext) {
-    return GenericCompositeFuture.all(PoLineCommonUtil.getTenantsFromLocations(poLine).stream()
+    return Future.all(PoLineCommonUtil.getTenantsFromLocations(poLine).stream()
         .map(tenantId -> processInventoryHoldingWithItemsForTenant(poLine, requestContext, createContextWithNewTenantId(requestContext, tenantId)))
         .toList())
       .mapEmpty();
