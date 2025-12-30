@@ -13,7 +13,6 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.map.CaseInsensitiveMap;
 import org.apache.commons.lang3.ObjectUtils;
 import org.folio.helper.BaseHelper;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.exceptions.NoInventoryRecordException;
@@ -269,7 +268,7 @@ public class HelperUtils {
    * @return resulting objects
    */
   public static <T> Future<List<T>> collectResultsOnSuccess(Collection<Future<T>> futures) {
-    return GenericCompositeFuture.join(new ArrayList<>(futures))
+    return Future.join(new ArrayList<>(futures))
       .map(CompositeFuture::list);
   }
 

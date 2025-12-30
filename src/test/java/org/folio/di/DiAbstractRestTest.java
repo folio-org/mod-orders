@@ -143,7 +143,7 @@ public abstract class DiAbstractRestTest {
   public static void tearDownClass(final TestContext context) {
     Async async = context.async();
     EventManager.clearEventHandlers();
-    vertx.close(context.asyncAssertSuccess(res -> {
+    vertx.close().onComplete(context.asyncAssertSuccess(res -> {
       kafkaContainer.stop();
       kafkaProducer.close();
       async.complete();
@@ -159,7 +159,8 @@ public abstract class DiAbstractRestTest {
         .put(HTTP_PORT, port));
 
     TenantClient tenantClient = new TenantClient(okapiUrl, TENANT_ID, TOKEN);
-    vertx.deployVerticle(RestVerticle.class.getName(), options, res -> postTenant(context, async, tenantClient));
+    vertx.deployVerticle(RestVerticle.class.getName(), options)
+      .onComplete(res -> postTenant(context, async, tenantClient));
   }
 
   protected static void postTenant(TestContext context, Async async, TenantClient tenantClient) {
@@ -228,14 +229,16 @@ public abstract class DiAbstractRestTest {
     return consumerRecord;
   }
 
-  protected  <T> T getBeanFromSpringContext(Vertx vtx, Class<T> clazz) {
+  protected <T> T getBeanFromSpringContext(Vertx vtx, Class<T> clazz) {
     String parentVerticleUUID = vertx.deploymentIDs().stream()
-      .filter(v -> !((VertxImpl) vertx).getDeployment(v).isChild())
+      .filter(v -> !((VertxImpl) vertx).deploymentManager().deployment(v).isChild())
       .findFirst()
       .orElseThrow(() -> new NotFoundException("Couldn't find the parent verticle."));
 
-    Optional<Object> context = Optional.of(((VertxImpl) vtx).getDeployment(parentVerticleUUID).getContexts().stream()
-        .findFirst().map(v -> v.get("springContext")))
+    Optional<Object> context = Optional.of(((VertxImpl) vertx)
+        .deploymentManager().deployment(parentVerticleUUID).deployment().contexts().stream()
+        .findFirst()
+        .map(v -> v.get("springContext")))
       .orElseThrow(() -> new NotFoundException("Couldn't find the spring context."));
 
     if (context.isPresent()) {

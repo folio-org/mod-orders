@@ -2,6 +2,7 @@ package org.folio.rest.impl;
 
 import javax.money.convert.MonetaryConversions;
 
+import io.vertx.core.ThreadingModel;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.config.ApplicationConfig;
@@ -22,12 +23,9 @@ import io.vertx.core.Context;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.jackson.DatabindCodec;
 import io.vertx.core.spi.VerticleFactory;
-
-import static io.vertx.core.ThreadingModel.WORKER;
 
 /**
  * The class initializes vertx context adding spring context
@@ -43,22 +41,19 @@ public class InitAPIs implements InitAPI {
 
   @Override
   public void init(Vertx vertx, Context context, Handler<AsyncResult<Boolean>> resultHandler) {
-    vertx.executeBlocking(
-      () -> {
+    vertx.executeBlocking(() -> {
         SerializationConfig serializationConfig = ObjectMapperTool.getMapper().getSerializationConfig();
         DeserializationConfig deserializationConfig = ObjectMapperTool.getMapper().getDeserializationConfig();
 
         DatabindCodec.mapper().setConfig(serializationConfig);
-        DatabindCodec.prettyMapper().setConfig(serializationConfig);
         DatabindCodec.mapper().setConfig(deserializationConfig);
-        DatabindCodec.prettyMapper().setConfig(deserializationConfig);
         SpringContextUtil.init(vertx, context, ApplicationConfig.class);
         SpringContextUtil.autowireDependencies(this, context);
         initJavaMoney();
 
         return deployConsumersVerticles(vertx)
-          .onSuccess(hdr -> log.info("Consumer Verticles were successfully started"))
-          .onFailure(th -> log.error("Consumer Verticles were not started", th));
+          .onSuccess(v -> log.info("Consumer Verticles were successfully started"))
+          .onFailure(t -> log.error("Consumer Verticles were not started", t));
       })
       .onComplete(result -> {
         if (result.succeeded()) {
@@ -75,18 +70,16 @@ public class InitAPIs implements InitAPI {
     VerticleFactory verticleFactory = springContext.getBean(SpringVerticleFactory.class);
     vertx.registerVerticleFactory(verticleFactory);
 
-    Promise<String> deployDataImportConsumerPromise = Promise.promise();
-    Promise<String> deployCancelledJobConsumerPromise = Promise.promise();
+    var dataImportConsumerOptions = new DeploymentOptions()
+      .setThreadingModel(ThreadingModel.WORKER)
+      .setInstances(dataImportConsumerInstancesNumber);
+    var deployDataImportConsumerFuture = vertx.deployVerticle(getVerticleName(verticleFactory, DataImportConsumerVerticle.class), dataImportConsumerOptions);
 
-    vertx.deployVerticle(getVerticleName(verticleFactory, DataImportConsumerVerticle.class),
-      new DeploymentOptions()
-        .setThreadingModel(WORKER)
-        .setInstances(dataImportConsumerInstancesNumber), deployDataImportConsumerPromise);
+    var cancelledJobConsumerOptions = new DeploymentOptions()
+      .setThreadingModel(ThreadingModel.WORKER);
+    var deployCancelledJobConsumerFuture = vertx.deployVerticle(getVerticleName(verticleFactory, CancelledJobExecutionConsumerVerticle.class), cancelledJobConsumerOptions);
 
-    vertx.deployVerticle(getVerticleName(verticleFactory, CancelledJobExecutionConsumerVerticle.class),
-      new DeploymentOptions().setThreadingModel(WORKER), deployCancelledJobConsumerPromise);
-
-    return Future.all(deployDataImportConsumerPromise.future(), deployCancelledJobConsumerPromise.future())
+    return Future.all(deployDataImportConsumerFuture, deployCancelledJobConsumerFuture)
       .mapEmpty();
   }
 
@@ -97,7 +90,7 @@ public class InitAPIs implements InitAPI {
   private void initJavaMoney() {
     try {
       log.info("Available currency rates providers {}", MonetaryConversions.getDefaultConversionProviderChain());
-    } catch (Exception e){
+    } catch (Exception e) {
       log.error("Java Money API preload failed", e);
     }
   }

@@ -9,7 +9,6 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.acq.model.StoragePatchOrderLineRequest;
 import org.folio.rest.core.exceptions.ErrorCodes;
@@ -102,7 +101,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
                   entry.getKey(), newInstanceId, e));
             }))
             .toList();
-          return GenericCompositeFuture.all(updateHoldings).mapEmpty();
+          return Future.all(updateHoldings).mapEmpty();
         }
       );
   }
@@ -237,7 +236,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
   private Future<Void> updateItemsInInventory(List<JsonObject> items, String newHoldingId, RequestContext requestContext) {
     items.forEach(item -> item.put(ITEM_HOLDINGS_RECORD_ID, newHoldingId));
     List<Parameter> parameters = new ArrayList<>();
-    return GenericCompositeFuture.join(
+    return Future.join(
       items
         .stream()
         .map(item -> inventoryItemManager.updateItem(item, requestContext)

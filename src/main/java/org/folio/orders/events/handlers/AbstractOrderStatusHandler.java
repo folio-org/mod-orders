@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.folio.completablefuture.AsyncUtil;
 import org.folio.helper.BaseHelper;
 import org.folio.helper.PurchaseOrderHelper;
 import org.folio.rest.core.models.RequestContext;
@@ -83,9 +82,8 @@ public abstract class AbstractOrderStatusHandler extends BaseHelper implements H
   }
 
   protected Future<Void> updateOrderStatus(PurchaseOrder purchaseOrder, List<PoLine> poLines, RequestContext requestContext) {
-
-    PurchaseOrder.WorkflowStatus initialStatus = purchaseOrder.getWorkflowStatus();
-    return AsyncUtil.executeBlocking(ctx, false, () -> changeOrderStatusForPoLineUpdate(purchaseOrder, poLines))
+    var initialStatus = purchaseOrder.getWorkflowStatus();
+    return ctx.owner().executeBlocking(() -> changeOrderStatusForPoLineUpdate(purchaseOrder, poLines), false)
       .compose(isStatusChanged -> {
         if (Boolean.TRUE.equals(isStatusChanged)) {
           return purchaseOrderHelper.handleFinalOrderItemsStatus(purchaseOrder, poLines, initialStatus.value(), requestContext)

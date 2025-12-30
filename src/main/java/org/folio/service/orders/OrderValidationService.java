@@ -9,7 +9,6 @@ import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
 import org.folio.helper.PoNumberHelper;
 import org.folio.helper.PurchaseOrderLineHelper;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.AcqDesiredPermissions;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
@@ -128,7 +127,7 @@ public class OrderValidationService {
     futures.add(prefixService.validatePrefixAvailability(compPO.getPoNumberPrefix(), requestContext));
     futures.add(suffixService.validateSuffixAvailability(compPO.getPoNumberSuffix(), requestContext));
     futures.add(poNumberHelper.checkPONumberUnique(compPO.getPoNumber(), requestContext));
-    return GenericCompositeFuture.join(futures)
+    return Future.join(futures)
       .onSuccess(v -> logger.info("validateOrderForCreation :: successful"))
       .onFailure(t -> logger.error("validateOrderForCreation :: failed", t))
       .mapEmpty();
@@ -314,8 +313,7 @@ public class OrderValidationService {
       .stream()
       .map(poLine -> purchaseOrderLineHelper.setTenantDefaultCreateInventoryValues(poLine, tenantConfiguration))
       .toList();
-    return GenericCompositeFuture.join(futures)
-      .mapEmpty();
+    return Future.join(futures).mapEmpty();
   }
 
   private Future<List<Error>> validateVendor(CompositePurchaseOrder compPO, RequestContext requestContext) {

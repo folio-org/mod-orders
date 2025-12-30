@@ -12,7 +12,6 @@ import org.folio.kafka.KafkaConsumerWrapper;
 import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.kafka.ProcessRecordErrorHandler;
 import org.folio.kafka.SubscriptionDefinition;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.processing.events.EventManager;
 import org.folio.processing.events.utils.PomReaderUtil;
 import org.folio.rest.tools.utils.ModuleName;
@@ -91,7 +90,7 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
         constructModuleName() + "_" + getClass().getSimpleName()));
     });
 
-    GenericCompositeFuture.all(futures).onComplete(ar -> startPromise.complete());
+    Future.all(futures).onComplete(ar -> startPromise.complete());
   }
 
   public static String constructModuleName() {
