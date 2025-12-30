@@ -68,7 +68,7 @@
     <!--Dependency Properties-->
     <spring.version>7.0.2</spring.version>
     <aspectj.version>1.9.25.1</aspectj.version>
-    <rest-assured.version>5.5.1</rest-assured.version>
+    <rest-assured.version>6.0.0</rest-assured.version>
     <streamex.version>0.8.4</streamex.version>
     <caffeine.version>3.2.3</caffeine.version>
     <lombok.version>1.18.42</lombok.version>
@@ -95,10 +95,10 @@
     <maven-failsafe-plugin.version>3.5.4</maven-failsafe-plugin.version>
 
     <!--Test dependencies-->
-    <junit-jupiter.version>5.12.0</junit-jupiter.version>
+    <junit-jupiter.version>6.0.1</junit-jupiter.version>
     <junit-bom.version>6.0.1</junit-bom.version>
     <junit-platform.version>1.14.1</junit-platform.version>
-    <mockito.version>5.15.2</mockito.version>
+    <mockito.version>5.21.0</mockito.version>
     <assertj.version>3.27.6</assertj.version>
     <awaitility.version>4.3.0</awaitility.version>
 
