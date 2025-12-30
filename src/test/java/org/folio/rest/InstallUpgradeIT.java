@@ -35,20 +35,19 @@ public class InstallUpgradeIT {
   private static final boolean IS_LOG_ENABLED = false;
   private static final Network NETWORK = Network.newNetwork();
 
-  @ClassRule(order = 1)
   public static final KafkaContainer KAFKA =
     new KafkaContainer(DockerImageName.parse("apache/kafka-native:3.8.0"))
       .withNetwork(NETWORK)
       .withNetworkAliases("mykafka");
 
-  @ClassRule(order = 2)
   public static final GenericContainer<?> MOD_ORDERS =
     new GenericContainer<>(
       new ImageFromDockerfile("mod-orders").withFileFromPath(".", Path.of(".")))
       .withNetwork(NETWORK)
       .withExposedPorts(8081)
       .withEnv("KAFKA_HOST", "mykafka")
-      .withEnv("KAFKA_PORT", "9092");
+      .withEnv("KAFKA_PORT", "9092")
+      .dependsOn(KAFKA);
 
   @BeforeClass
   public static void beforeClass() {
