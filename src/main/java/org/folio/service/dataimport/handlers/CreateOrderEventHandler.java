@@ -100,8 +100,6 @@ public class CreateOrderEventHandler implements EventHandler {
   private static final String PAYLOAD_HAS_NO_DATA_MSG =
     "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
 
-  public static final String USER_ID_KEY = "USER_ID";
-  public static final String OKAPI_PERMISSIONS_HEADER = "X-Okapi-Permissions";
   static final String POL_LIMIT_RULE_NAME = "overridePoLinesLimit";
   private static final String ORDER_FIELD = "po";
   private static final String PO_LINES_FIELD = "poLine";
