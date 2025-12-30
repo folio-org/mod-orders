@@ -45,7 +45,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.models.EncumbranceUnreleaseHolder;
 import org.folio.models.ItemStatus;
 import org.folio.models.PoLineInvoiceLineHolder;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFieldsUtil;
@@ -425,7 +424,7 @@ public class PurchaseOrderLineHelper {
   }
 
   private Future<Void> updatePoLinesNumber(CompositePurchaseOrder compOrder, List<PoLine> poLinesFromStorage, RequestContext requestContext) {
-    return GenericCompositeFuture.join(poLinesFromStorage.stream()
+    return Future.join(poLinesFromStorage.stream()
         .map(lineFromStorage -> lineFromStorage.withPoLineNumber(buildNewPoLineNumber(lineFromStorage, compOrder.getPoNumber())))
         .map(lineFromStorage -> purchaseOrderLineService.saveOrderLine(lineFromStorage, requestContext))
         .toList())
@@ -444,7 +443,7 @@ public class PurchaseOrderLineHelper {
           .compose(v -> encumbranceService.deletePoLineEncumbrances(poLine, requestContext))
           .compose(v -> purchaseOrderLineService.deletePoLine(poLine, requestContext))));
     }
-    return GenericCompositeFuture.join(futures).mapEmpty();
+    return Future.join(futures).mapEmpty();
   }
 
   private List<Future<?>> processPoLinesUpdate(CompositePurchaseOrder compOrder, List<PoLine> poLinesFromStorage, RequestContext requestContext) {

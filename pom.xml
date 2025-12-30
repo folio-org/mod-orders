@@ -55,12 +55,12 @@
     <ramlfiles_path>${basedir}/ramls</ramlfiles_path>
     <ramlfiles_util_path>${ramlfiles_path}/raml-util</ramlfiles_util_path>
     <ramlfiles_acq_models_path>${ramlfiles_path}/acq-models</ramlfiles_acq_models_path>
-    <raml-module-builder.version>35.4.0</raml-module-builder.version>
+    <raml-module-builder.version>36.0.0-SNAPSHOT</raml-module-builder.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
     <!--Dependency Management Properties-->
-    <vertx.version>4.5.13</vertx.version>
+    <vertx.version>5.0.5</vertx.version>
     <jackson-bom.version>2.18.2</jackson-bom.version>
     <log4j.version>2.24.3</log4j.version>
     <testcontainers-bom.version>1.20.5</testcontainers-bom.version>
@@ -76,10 +76,10 @@
     <!--Folio dependencies properties-->
     <folio-module-descriptor-validator.version>1.0.0</folio-module-descriptor-validator.version>
     <mod-configuration-client.version>5.11.0</mod-configuration-client.version>
-    <folio-di-support.version>3.0.0</folio-di-support.version>
+    <folio-di-support.version>4.0.0-SNAPSHOT</folio-di-support.version>
     <mod-di-converter-storage-client.version>2.3.1</mod-di-converter-storage-client.version>
-    <data-import-processing-core.version>4.5.0-SNAPSHOT</data-import-processing-core.version>
-    <folio-kafka-wrapper.version>3.4.0-SNAPSHOT</folio-kafka-wrapper.version>
+    <data-import-processing-core.version>5.0.0-SNAPSHOT</data-import-processing-core.version>
+    <folio-kafka-wrapper.version>4.0.0-SNAPSHOT</folio-kafka-wrapper.version>
 
     <!--Maven plugin dependencies-->
     <build-helper-maven-plugin.version>3.6.0</build-helper-maven-plugin.version>
@@ -266,20 +266,8 @@
       <version>${folio-kafka-wrapper.version}</version>
     </dependency>
     <dependency>
-      <groupId>com.github.rworsnop</groupId>
-      <artifactId>vertx-concurrent</artifactId>
-      <version>1.0.0</version>
-    </dependency>
-    <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-circuit-breaker</artifactId>
-    </dependency>
-    <!--vertx-rx-java required for vertx-concurrent-1.0.0 -->
-    <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-rx-java</artifactId>
-      <version>${vertx.version}</version>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.springframework</groupId>

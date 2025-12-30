@@ -26,7 +26,6 @@ import org.folio.Materialtypes;
 import org.folio.Mtype;
 import org.folio.Organization;
 import org.folio.OrganizationCollection;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
@@ -137,7 +136,7 @@ public class MappingParametersCache {
     var acquisitionsMethodsFuture = getAcquisitionMethods(params);
     var tenantConfigurationAddressesFuture = getTenantConfigurationAddresses(params);
 
-    return GenericCompositeFuture.join(Arrays.asList(locationsFuture, materialTypesFuture, contributorNameTypesFuture,
+    return Future.join(Arrays.asList(locationsFuture, materialTypesFuture, contributorNameTypesFuture,
         organizationsFuture, fundsFuture, identifierTypesFuture, expenseClassesFuture, acquisitionsUnitsFuture,
         acquisitionsMethodsFuture, tenantConfigurationAddressesFuture))
       .map(v -> new MappingParameters()

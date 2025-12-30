@@ -21,7 +21,6 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.models.PoLineLocationsPair;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.ErrorCodes;
@@ -137,13 +136,12 @@ public class PurchaseOrderLineService {
   }
 
   private Future<Void> saveOrderLinesCollections(List<PoLineCollection> poLineCollections, RequestContext requestContext) {
-    return GenericCompositeFuture.join(poLineCollections
-      .stream()
-      .map(poLineCollection -> {
-        log.info("saveOrderLines:: start saving {} po lines in batch", poLineCollection.getTotalRecords());
-        RequestEntry requestEntry = new RequestEntry(BATCH_ENDPOINT);
-        return restClient.put(requestEntry, poLineCollection, requestContext);
-      }).toList())
+    return Future.join(poLineCollections.stream()
+        .map(poLineCollection -> {
+          log.info("saveOrderLines:: start saving {} po lines in batch", poLineCollection.getTotalRecords());
+          RequestEntry requestEntry = new RequestEntry(BATCH_ENDPOINT);
+          return restClient.put(requestEntry, poLineCollection, requestContext);
+        }).toList())
       .mapEmpty();
   }
 
@@ -255,9 +253,10 @@ public class PurchaseOrderLineService {
 
   public Future<Void> deletePoLinesByOrderId(String orderId, RequestContext requestContext) {
     return getLinesByOrderId(orderId, requestContext)
-      .compose(jsonObjects -> GenericCompositeFuture.join(jsonObjects.stream()
-        .map(line -> deleteLineById(line.getId(), requestContext)).toList()))
-       .recover(t -> {
+      .compose(jsonObjects -> Future.join(jsonObjects.stream()
+        .map(line -> deleteLineById(line.getId(), requestContext))
+        .toList()))
+      .recover(t -> {
         log.error("Exception deleting poLine data for order id={}", orderId, t);
         throw new CompletionException(t.getCause());
       })

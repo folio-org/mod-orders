@@ -1,7 +1,9 @@
 package org.folio.orders.events.handlers;
 
 import static org.folio.TestConfig.X_OKAPI_URL;
+import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.clearServiceInteractions;
+import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestConfig.mockPort;
 import static org.folio.TestConstants.ID_DOES_NOT_EXIST;
@@ -57,7 +59,6 @@ import org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus;
 import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
-import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -102,7 +103,7 @@ public class CheckInOrderStatusChangeChangeHandlerTest {
       runningOnOwn = true;
     }
     vertx = Vertx.vertx();
-    SpringContextUtil.init(vertx, vertx.getOrCreateContext(), ApplicationConfig.class);
+    initSpringContext(ApplicationConfig.class);
   }
 
   @BeforeEach
@@ -112,8 +113,7 @@ public class CheckInOrderStatusChangeChangeHandlerTest {
     okapiHeadersMock.put(X_OKAPI_TOKEN.getName(), X_OKAPI_TOKEN.getValue());
     okapiHeadersMock.put(X_OKAPI_TENANT.getName(), X_OKAPI_TENANT.getValue());
     okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
-    String okapiURL = okapiHeadersMock.getOrDefault(OKAPI_URL, "");
-    SpringContextUtil.autowireDependencies(this, vertx.getOrCreateContext());
+    autowireDependencies(this);
     vertx.eventBus().consumer(MessageAddress.CHECKIN_ORDER_STATUS_UPDATE.address, new CheckInOrderStatusChangeChangeHandler(vertx, encumbranceService,
                           purchaseOrderStorageService, purchaseOrderHelper, purchaseOrderLineService));
   }
@@ -350,6 +350,6 @@ public class CheckInOrderStatusChangeChangeHandlerTest {
     // Add okapi url header
     DeliveryOptions deliveryOptions = new DeliveryOptions().addHeader(X_OKAPI_URL.getName(), X_OKAPI_URL.getValue());
 
-    vertx.eventBus().request(MessageAddress.CHECKIN_ORDER_STATUS_UPDATE.address, data, deliveryOptions, replyHandler);
+    vertx.eventBus().<String>request(MessageAddress.CHECKIN_ORDER_STATUS_UPDATE.address, data, deliveryOptions).onComplete(replyHandler);
   }
 }

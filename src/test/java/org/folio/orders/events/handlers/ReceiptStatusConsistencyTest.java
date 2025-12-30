@@ -1,7 +1,9 @@
 package org.folio.orders.events.handlers;
 
 import static org.folio.TestConfig.X_OKAPI_URL;
+import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.clearServiceInteractions;
+import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestUtils.checkVertxContextCompletion;
 import static org.folio.TestUtils.getMockAsJson;
@@ -34,7 +36,6 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.pieces.PieceStorageService;
-import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -79,12 +80,12 @@ public class ReceiptStatusConsistencyTest {
     }
 
     vertx = Vertx.vertx();
-    SpringContextUtil.init(vertx, vertx.getOrCreateContext(), ApplicationConfig.class);
+    initSpringContext(ApplicationConfig.class);
   }
 
   @BeforeEach
   void setUp() {
-    SpringContextUtil.autowireDependencies(this, vertx.getOrCreateContext());
+    autowireDependencies(this);
     vertx.eventBus().consumer(TEST_ADDRESS, new ReceiptStatusConsistency(vertx, pieceStorageService, purchaseOrderLineService));
   }
 
@@ -235,6 +236,6 @@ public class ReceiptStatusConsistencyTest {
     // Add okapi url header
     DeliveryOptions deliveryOptions = new DeliveryOptions().addHeader(X_OKAPI_URL.getName(), X_OKAPI_URL.getValue());
 
-    vertx.eventBus().request(TEST_ADDRESS, data, deliveryOptions, replyHandler);
+    vertx.eventBus().<String>request(TEST_ADDRESS, data, deliveryOptions).onComplete(replyHandler);
   }
 }

@@ -8,7 +8,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.completablefuture.VertxFutureRepeater;
 import org.folio.models.ItemStatus;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.models.RequestContext;
@@ -47,12 +46,10 @@ public class InventoryItemStatusSyncService {
                                                 List<Location> locations,
                                                 ItemStatus newStatus,
                                                 RequestContext requestContext) {
-    return GenericCompositeFuture.all(
-      PoLineCommonUtil.getTenantsFromLocations(locations)
-        .stream()
+    return Future.all(PoLineCommonUtil.getTenantsFromLocations(locations).stream()
         .map(tenantId -> updateItemStatusForTenant(poLineId, newStatus, RequestContextUtil.createContextWithNewTenantId(requestContext, tenantId)))
-        .toList()
-    ).mapEmpty();
+        .toList())
+      .mapEmpty();
   }
 
   private Future<Void> updateItemStatusForTenant(String poLineId, ItemStatus status, RequestContext requestContext) {
@@ -94,16 +91,13 @@ public class InventoryItemStatusSyncService {
       String tenantId = entry.getKey();
       List<String> poLineIds = entry.getValue();
       RequestContext updatedContext = RequestContextUtil.createContextWithNewTenantId(requestContext, tenantId);
-      Future<Void> updateItemFeature =
-        GenericCompositeFuture.join(
-            StreamEx.ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ_15)
-              .map(chunk -> VertxFutureRepeater.repeat(MAX_REPEAT_ON_FAILURE, () -> updateItemStatuses(chunk, currentStatus, newStatus, updatedContext)))
-              .toList())
-          .mapEmpty();
+      Future<Void> updateItemFeature = Future.join(StreamEx.ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ_15)
+          .map(chunk -> VertxFutureRepeater.repeat(MAX_REPEAT_ON_FAILURE, () -> updateItemStatuses(chunk, currentStatus, newStatus, updatedContext)))
+          .toList())
+        .mapEmpty();
       futures.add(updateItemFeature);
     }
-    return GenericCompositeFuture.all(futures)
-      .mapEmpty();
+    return Future.all(futures).mapEmpty();
   }
 
   private Future<Void> updateItemStatuses(List<String> poLineIds,
@@ -141,7 +135,10 @@ public class InventoryItemStatusSyncService {
   }
 
   private Future<Void> updateItemsInInventory(List<JsonObject> items, RequestContext requestContext) {
-    return GenericCompositeFuture.join(items.stream().map(item -> inventoryItemManager.updateItem(item, requestContext)).toList())
+    return Future.join(items.stream()
+        .map(item -> inventoryItemManager.updateItem(item, requestContext))
+        .toList())
       .mapEmpty();
   }
+
 }

@@ -9,7 +9,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.QueryUtils;
 import org.folio.rest.acq.model.tag.Tag;
 import org.folio.rest.acq.model.tag.TagCollection;
@@ -48,8 +47,7 @@ public class TagService {
         List<Future<Tag>> futures = new ArrayList<>();
         tagsForCreate.forEach(tag -> futures.add(createTag(tag, requestContext)));
 
-        return GenericCompositeFuture.join(futures)
-          .mapEmpty();
+        return Future.join(futures).mapEmpty();
       });
   }
 

@@ -2,9 +2,8 @@ package org.folio.service.dataimport;
 
 import io.vertx.core.Future;
 import io.vertx.pgclient.PgException;
+import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.dao.RecordIdStorageDao;
 import org.folio.kafka.exception.DuplicateEventException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,13 +11,13 @@ import org.springframework.stereotype.Service;
 
 import java.util.concurrent.CompletableFuture;
 
+@Log4j2
 @Service
 public class OrderIdStorageServiceImpl implements IdStorageService {
 
-  private final static Logger LOGGER = LogManager.getLogger();
   public static final String PG_CONSTRAINT_ERROR_CODE = "23505";
 
-  private RecordIdStorageDao orderRecordIdStorageDao;
+  private final RecordIdStorageDao orderRecordIdStorageDao;
 
   @Autowired
   public OrderIdStorageServiceImpl(RecordIdStorageDao orderRecordIdStorageDao) {
@@ -27,18 +26,16 @@ public class OrderIdStorageServiceImpl implements IdStorageService {
 
   @Override
   public Future<String> store(String recordId, String tenantId) {
-    LOGGER.debug("get :: recordId: {}, tenantId: {}", recordId, tenantId);
+    log.debug("store :: recordId: {}, tenantId: {}", recordId, tenantId);
 
     CompletableFuture<String> future = new CompletableFuture<>();
 
     orderRecordIdStorageDao.store(recordId, tenantId)
       .onSuccess(future::complete)
       .onFailure(ex -> {
-        if (ex instanceof PgException) {
-          PgException currentException = (PgException) ex;
-          if (StringUtils.equals(currentException.getCode(), PG_CONSTRAINT_ERROR_CODE)) {
-            LOGGER.info("handle:: Source record with {} id is already exists: {}",
-              recordId, DuplicateEventException.class);
+        if (ex instanceof PgException currentException) {
+          if (StringUtils.equals(currentException.getSqlState(), PG_CONSTRAINT_ERROR_CODE)) {
+            log.info("store:: Source record with {} id is already exists: {}", recordId, DuplicateEventException.class);
             future.completeExceptionally(new DuplicateEventException(String.format("Source record with %s id is already exists", recordId)));
             return;
           }
