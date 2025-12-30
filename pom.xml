@@ -60,45 +60,46 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
     <!--Dependency Management Properties-->
-    <vertx.version>5.0.5</vertx.version>
-    <jackson-bom.version>2.18.2</jackson-bom.version>
-    <log4j.version>2.24.3</log4j.version>
-    <testcontainers-bom.version>1.20.5</testcontainers-bom.version>
+    <vertx.version>5.0.6</vertx.version>
+    <jackson-bom.version>2.20.1</jackson-bom.version>
+    <log4j.version>2.25.3</log4j.version>
+    <testcontainers-bom.version>2.0.3</testcontainers-bom.version>
 
     <!--Dependency Properties-->
-    <spring.version>6.2.3</spring.version>
-    <aspectj.version>1.9.22.1</aspectj.version>
+    <spring.version>7.0.2</spring.version>
+    <aspectj.version>1.9.25.1</aspectj.version>
     <rest-assured.version>5.5.1</rest-assured.version>
-    <streamex.version>0.8.3</streamex.version>
-    <caffeine.version>3.2.0</caffeine.version>
-    <lombok.version>1.18.36</lombok.version>
+    <streamex.version>0.8.4</streamex.version>
+    <caffeine.version>3.2.3</caffeine.version>
+    <lombok.version>1.18.42</lombok.version>
 
     <!--Folio dependencies properties-->
     <folio-module-descriptor-validator.version>1.0.0</folio-module-descriptor-validator.version>
-    <mod-configuration-client.version>5.11.0</mod-configuration-client.version>
+    <mod-configuration-client.version>5.12.0</mod-configuration-client.version>
     <folio-di-support.version>4.0.0-SNAPSHOT</folio-di-support.version>
-    <mod-di-converter-storage-client.version>2.3.1</mod-di-converter-storage-client.version>
+    <mod-di-converter-storage-client.version>2.4.2</mod-di-converter-storage-client.version>
     <data-import-processing-core.version>5.0.0-SNAPSHOT</data-import-processing-core.version>
     <folio-kafka-wrapper.version>4.0.0-SNAPSHOT</folio-kafka-wrapper.version>
 
     <!--Maven plugin dependencies-->
-    <build-helper-maven-plugin.version>3.6.0</build-helper-maven-plugin.version>
-    <aspectj-maven-plugin.version>1.14</aspectj-maven-plugin.version>
-    <exec-maven-plugin.version>3.5.0</exec-maven-plugin.version>
-    <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
-    <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
-    <maven-antrun-plugin.version>3.1.0</maven-antrun-plugin.version>
-    <maven-shade-plugin.version>3.6.0</maven-shade-plugin.version>
-    <maven-release-plugin.version>3.1.1</maven-release-plugin.version>
-    <maven-surefire-plugin.version>3.5.2</maven-surefire-plugin.version>
+    <build-helper-maven-plugin.version>3.6.1</build-helper-maven-plugin.version>
+    <aspectj-maven-plugin.version>1.14.1</aspectj-maven-plugin.version>
+    <exec-maven-plugin.version>3.6.3</exec-maven-plugin.version>
+    <maven-resources-plugin.version>3.4.0</maven-resources-plugin.version>
+    <maven-compiler-plugin.version>3.14.1</maven-compiler-plugin.version>
+    <maven-antrun-plugin.version>3.2.0</maven-antrun-plugin.version>
+    <maven-shade-plugin.version>3.6.1</maven-shade-plugin.version>
+    <maven-release-plugin.version>3.3.1</maven-release-plugin.version>
+    <maven-surefire-plugin.version>3.5.4</maven-surefire-plugin.version>
     <copy-rename-maven-plugin.version>1.0.1</copy-rename-maven-plugin.version>
-    <maven-failsafe-plugin.version>3.5.2</maven-failsafe-plugin.version>
+    <maven-failsafe-plugin.version>3.5.4</maven-failsafe-plugin.version>
 
     <!--Test dependencies-->
     <junit-jupiter.version>5.12.0</junit-jupiter.version>
-    <junit-bom.version>5.12.0</junit-bom.version>
+    <junit-bom.version>6.0.1</junit-bom.version>
+    <junit-platform.version>1.14.1</junit-platform.version>
     <mockito.version>5.15.2</mockito.version>
-    <assertj.version>3.27.3</assertj.version>
+    <assertj.version>3.27.6</assertj.version>
     <awaitility.version>4.3.0</awaitility.version>
 
     <!--Sonar exclusion-->
@@ -252,7 +253,7 @@
     <dependency>
       <groupId>org.javamoney</groupId>
       <artifactId>moneta</artifactId>
-      <version>1.4.4</version>
+      <version>1.4.5</version>
       <type>pom</type>
     </dependency>
     <dependency>
@@ -294,6 +295,7 @@
     <dependency>
       <groupId>org.junit.platform</groupId>
       <artifactId>junit-platform-runner</artifactId>
+      <version>${junit-platform.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -343,13 +345,18 @@
     </dependency>
     <dependency>
       <groupId>org.testcontainers</groupId>
-      <artifactId>kafka</artifactId>
+      <artifactId>testcontainers-junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>testcontainers-kafka</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.folio</groupId>
       <artifactId>data-import-utils</artifactId>
-      <version>1.12.1</version>
+      <version>1.14.0</version>
       <type>jar</type>
       <exclusions>
         <exclusion>
