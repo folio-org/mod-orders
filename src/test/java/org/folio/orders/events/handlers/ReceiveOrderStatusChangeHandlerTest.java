@@ -1,7 +1,9 @@
 package org.folio.orders.events.handlers;
 
 import static org.folio.TestConfig.X_OKAPI_URL;
+import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.clearServiceInteractions;
+import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestConstants.ID_DOES_NOT_EXIST;
 import static org.folio.TestConstants.ID_FOR_INTERNAL_SERVER_ERROR;
@@ -51,7 +53,6 @@ import org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus;
 import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
-import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -96,12 +97,12 @@ public class ReceiveOrderStatusChangeHandlerTest {
       runningOnOwn = true;
     }
     vertx = Vertx.vertx();
-    SpringContextUtil.init(vertx, vertx.getOrCreateContext(), ApplicationConfig.class);
+    initSpringContext(ApplicationConfig.class);
   }
 
   @BeforeEach
   void initMocks(){
-    SpringContextUtil.autowireDependencies(this, vertx.getOrCreateContext());
+    autowireDependencies(this);
     vertx.eventBus().consumer(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE.address, new ReceiveOrderStatusChangeHandler(vertx, encumbranceService,
         purchaseOrderStorageService, purchaseOrderHelper, purchaseOrderLineService));
   }
