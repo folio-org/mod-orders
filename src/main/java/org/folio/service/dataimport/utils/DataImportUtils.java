@@ -15,10 +15,10 @@ import static org.folio.rest.util.OkapiConnectionParams.OKAPI_REQUEST_ID_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
-import static org.folio.rest.util.OkapiConnectionParams.USER_ID_HEADER;
 
 public class DataImportUtils {
 
+  public static final String OKAPI_USER_ID_HEADER = "x-okapi-user-id";
   public static final String OKAPI_PERMISSIONS_HEADER = "x-okapi-permissions";
 
   private DataImportUtils() {
@@ -36,9 +36,9 @@ public class DataImportUtils {
     if (StringUtils.isNotBlank(permissionsHeader)) {
       headers.put(OKAPI_PERMISSIONS_HEADER, permissionsHeader);
     }
-    String userId = eventPayload.getContext().get(USER_ID_HEADER);
+    String userId = eventPayload.getContext().get(OKAPI_USER_ID_HEADER);
     if (StringUtils.isNotBlank(userId)) {
-      headers.put(USER_ID_HEADER, userId);
+      headers.put(OKAPI_USER_ID_HEADER, userId);
     }
     String requestId = eventPayload.getContext().get(OKAPI_REQUEST_ID_HEADER);
     if (StringUtils.isNotBlank(requestId)) {
