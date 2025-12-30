@@ -19,7 +19,7 @@ import static org.folio.rest.util.OkapiConnectionParams.USER_ID_HEADER;
 
 public class DataImportUtils {
 
-  public static final String OKAPI_PERMISSIONS_HEADER = "X-Okapi-Permissions";
+  public static final String OKAPI_PERMISSIONS_HEADER = "x-okapi-permissions";
 
   private DataImportUtils() {
   }

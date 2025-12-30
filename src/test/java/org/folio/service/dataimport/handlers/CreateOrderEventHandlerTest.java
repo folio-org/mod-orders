@@ -6,6 +6,7 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.folio.ActionProfile;
@@ -23,7 +24,6 @@ import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.kafka.exception.DuplicateEventException;
 import org.folio.orders.utils.AcqDesiredPermissions;
 import org.folio.processing.events.EventManager;
-import org.folio.rest.RestConstants;
 import org.folio.rest.client.TenantClient;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
@@ -38,6 +38,7 @@ import org.folio.rest.jaxrs.model.MappingRule;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.RepeatableSubfieldMapping;
+import org.folio.rest.util.OkapiConnectionParams;
 import org.folio.service.dataimport.PoLineImportProgressService;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
@@ -97,7 +98,9 @@ import static org.folio.rest.jaxrs.model.MappingRule.RepeatableFieldAction.EXTEN
 import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
-import static org.folio.service.dataimport.handlers.CreateOrderEventHandler.OKAPI_PERMISSIONS_HEADER;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_REQUEST_ID_HEADER;
+import static org.folio.rest.util.OkapiConnectionParams.USER_ID_HEADER;
+import static org.folio.service.dataimport.utils.DataImportUtils.OKAPI_PERMISSIONS_HEADER;
 import static org.folio.service.orders.AcquisitionsUnitsServiceTest.USER_ID_ASSIGNED_TO_ACQ_UNITS;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -1299,7 +1302,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
       .withContext(new HashMap<>() {{
         put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
-        put(CreateOrderEventHandler.USER_ID_KEY, MockServer.ORDER_ID_DUPLICATION_ERROR_USER_ID);
+        put(USER_ID_HEADER, MockServer.ORDER_ID_DUPLICATION_ERROR_USER_ID);
         put(RECORD_ID_HEADER, record.getId());
       }});
 
@@ -1761,9 +1764,19 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     } else {
       addHeader(producerRecord, RECORD_ID_HEADER, record.getId());
     }
-    addHeader(producerRecord, RestConstants.OKAPI_URL, payload.getOkapiUrl());
-    addHeader(producerRecord, OKAPI_PERMISSIONS_HEADER, payload.getContext().getOrDefault(OKAPI_PERMISSIONS_HEADER, ""));
-    addHeader(producerRecord, OKAPI_USERID_HEADER, payload.getContext().getOrDefault(OKAPI_USERID_HEADER, ""));
+    addHeader(producerRecord, OkapiConnectionParams.OKAPI_URL_HEADER, payload.getOkapiUrl());
+    String permissions = payload.getContext().get(OKAPI_PERMISSIONS_HEADER);
+    if (StringUtils.isNotBlank(permissions)) {
+      addHeader(producerRecord, OKAPI_PERMISSIONS_HEADER, permissions);
+    }
+    String userId = payload.getContext().get(USER_ID_HEADER);
+    if (StringUtils.isNotBlank(userId)) {
+      addHeader(producerRecord, USER_ID_HEADER, userId);
+    }
+    String requestId = payload.getContext().get(OKAPI_REQUEST_ID_HEADER);
+    if (StringUtils.isNotBlank(requestId)) {
+      addHeader(producerRecord, OKAPI_REQUEST_ID_HEADER, requestId);
+    }
     return producerRecord;
   }
 
