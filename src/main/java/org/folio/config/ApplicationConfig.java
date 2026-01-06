@@ -31,6 +31,7 @@ import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.caches.ExportConfigsCache;
 import org.folio.service.caches.InventoryCache;
 import org.folio.service.dataexport.ExportConfigsRetriever;
+import org.folio.service.orders.HoldingDetailService;
 import org.folio.service.settings.CommonSettingsRetriever;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
@@ -418,6 +419,11 @@ public class ApplicationConfig {
   HoldingsSummaryService holdingsSummaryService(PurchaseOrderStorageService purchaseOrderStorageService,
       PurchaseOrderLineService purchaseOrderLineService, PieceStorageService pieceStorageService) {
     return new HoldingsSummaryService(purchaseOrderStorageService, purchaseOrderLineService, pieceStorageService);
+  }
+
+  @Bean
+  HoldingDetailService holdingsDetailService(PieceStorageService pieceStorageService, InventoryItemManager inventoryItemManager) {
+    return new HoldingDetailService(pieceStorageService, inventoryItemManager);
   }
 
   @Bean

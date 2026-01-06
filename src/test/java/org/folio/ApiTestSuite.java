@@ -80,6 +80,7 @@ import org.folio.service.orders.CombinedOrderDataPopulateServiceTest;
 import org.folio.service.orders.CompositeOrderRetrieveHolderBuilderTest;
 import org.folio.service.orders.CompositeOrderTotalFieldsPopulateServiceTest;
 import org.folio.service.orders.FundsDistributionServiceTest;
+import org.folio.service.orders.HoldingDetailServiceTest;
 import org.folio.service.orders.OrderFiscalYearServiceTest;
 import org.folio.service.orders.OrderInvoiceRelationServiceTest;
 import org.folio.service.orders.OrderReEncumberServiceTest;
@@ -372,6 +373,10 @@ public class ApiTestSuite {
 
   @Nested
   class HoldingsSummaryServiceTestNested extends HoldingsSummaryServiceTest {
+  }
+
+  @Nested
+  class HoldingDetailServiceTestNested extends HoldingDetailServiceTest {
   }
 
   @Nested

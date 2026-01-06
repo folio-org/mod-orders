@@ -48,6 +48,7 @@ import static org.folio.service.inventory.InventoryUtils.ITEM_BY_ID_ENDPOINT;
 import static org.folio.service.inventory.InventoryUtils.isPurchaseOrderClosedOrPoLineCancelled;
 
 public class InventoryItemManager {
+
   private static final Logger logger = LogManager.getLogger(InventoryItemManager.class);
 
   public static final String ID = "id";
