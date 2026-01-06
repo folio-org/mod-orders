@@ -276,7 +276,7 @@ public class HoldingDetailServiceTest {
   @ParameterizedTest(name = "{0}")
   @MethodSource("provideGroupingTestCases")
   void testGroupPiecesByTenantIdAndHoldingId(String testName, List<Piece> pieces, int expectedTenantGroups,
-                                              int expectedHoldingGroups) {
+                                             int expectedHoldingGroups) {
     var result = holdingDetailService.groupPiecesByTenantIdAndHoldingId(pieces);
 
     assertNotNull(result);
@@ -856,8 +856,8 @@ public class HoldingDetailServiceTest {
   void testCreatePieceDetailEdgeCases(String testName, List<Piece> pieces, int expectedPieceDetailCount) {
     var holdingIds = pieces.isEmpty() ? Collections.<String>emptyList()
       : List.of(pieces.getFirst() != null && pieces.getFirst().getHoldingId() != null
-        ? pieces.getFirst().getHoldingId()
-        : UUID.randomUUID().toString());
+      ? pieces.getFirst().getHoldingId()
+      : UUID.randomUUID().toString());
 
     if (holdingIds.isEmpty()) {
       // For empty test cases
