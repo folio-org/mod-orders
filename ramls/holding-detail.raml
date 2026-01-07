@@ -1,0 +1,39 @@
+#%RAML 1.0
+title: "Holding detail"
+baseUri: http://github.com/org/folio/mod-orders
+version: v1
+protocols: [ HTTP, HTTPS ]
+
+documentation:
+  - title: Holding detail API
+    content: <b>API retrieve to holding detail.</b>
+
+types:
+  holding-detail-collection: !include acq-models/mod-orders/schemas/holdingDetailCollection.json
+  holding-detail-results: !include acq-models/mod-orders/schemas/holdingDetailResults.json
+  errors: !include raml-util/schemas/errors.schema
+  UUID:
+    type: string
+    pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
+
+traits:
+  validate: !include raml-util/traits/validation.raml
+
+resourceTypes:
+  post-with-200: !include rtypes/post-json-200.raml
+
+/orders/holding-detail:
+  displayName: Holding detail
+  description: |
+    Holding detail. The endpoint is used to:
+    - Accept a list of holding ids
+    - Retrieve linked details, i.e. pieces and items by each holding id
+  type:
+    post-with-200:
+      requestSchema: holding-detail-collection
+      responseSchema: holding-detail-results
+      requestExample: !include acq-models/mod-orders/examples/holdingDetailCollection.sample
+      responseExample: !include acq-models/mod-orders/examples/holdingDetailResults.sample
+  is: [validate]
+  post:
+    description: Holding detail

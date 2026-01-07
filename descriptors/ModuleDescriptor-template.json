@@ -1141,6 +1141,25 @@
       ]
     },
     {
+      "id": "orders.holding-detail",
+      "version": "1.0",
+      "handlers": [
+        {
+          "methods": [
+            "POST"
+          ],
+          "pathPattern": "/orders/holding-detail",
+          "permissionsRequired": [
+            "orders.holding-detail.item.post"
+          ],
+          "modulePermissions": [
+            "orders-storage.pieces.collection.get",
+            "inventory-storage.items.collection.get"
+          ]
+        }
+      ]
+    },
+    {
       "id": "orders.export-history",
       "version": "1.0",
       "handlers": [
@@ -2090,6 +2109,11 @@
       "description" : "Holding summary"
     },
     {
+      "permissionName":  "orders.holding-detail.item.post",
+      "displayName" : "orders holding-detail post",
+      "description" : "Holding detail"
+    },
+    {
       "permissionName" : "orders.routing-lists.collection.get",
       "displayName" : "orders routing-list collection get",
       "description" : "Orders routing-list collection get"
@@ -2199,6 +2223,7 @@
         "orders.fiscal-years.collection.get",
         "orders.rollover.item.post",
         "orders.holding-summary.collection.get",
+        "orders.holding-detail.item.post",
         "orders.acquisition-methods.all",
         "orders.export-history.all",
         "orders.routing-lists.all",

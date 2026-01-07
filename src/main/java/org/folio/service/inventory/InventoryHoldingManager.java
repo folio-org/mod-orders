@@ -45,6 +45,7 @@ import static org.folio.service.inventory.InventoryUtils.HOLDINGS_RECORDS;
 import static org.folio.service.inventory.InventoryUtils.INVENTORY_LOOKUP_ENDPOINTS;
 
 public class InventoryHoldingManager {
+
   private static final Logger logger = LogManager.getLogger(InventoryHoldingManager.class);
 
   public static final String ID = "id";
