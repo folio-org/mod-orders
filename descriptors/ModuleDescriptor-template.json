@@ -1153,7 +1153,8 @@
             "orders.holding-detail.item.post"
           ],
           "modulePermissions": [
-            "orders-storage.pieces.collection.get"
+            "orders-storage.pieces.collection.get",
+            "inventory-storage.items.collection.get"
           ]
         }
       ]
