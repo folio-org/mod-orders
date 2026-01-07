@@ -4,6 +4,7 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
 import org.folio.models.HoldingDetailHolder;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.HoldingDetailResults;
@@ -54,7 +55,7 @@ public class HoldingDetailService {
           .forEach((tenantId, groupedPiecesByHoldingId) -> {
             if (Objects.nonNull(groupedPiecesByHoldingId)) {
               groupedPiecesByHoldingId.forEach((holdingId, groupedPieces) -> {
-                log.info("postOrdersHoldingDetail:: Processing holding detail by tenant={}, holding id={}", tenantId, holdingId);
+                log.info("postOrdersHoldingDetail:: Processing holding detail by tenant={}, holding id={}, pieces={}", getTenantId(tenantId), holdingId, groupedPieces.size());
                 var piecesDetail = createPieceDetail(groupedPieces);
                 var holdersFuture = getHolderFuture(tenantId, holdingId, piecesDetail, requestContext);
                 holdersFutures.add(holdersFuture);
@@ -83,7 +84,7 @@ public class HoldingDetailService {
 
   protected Future<HoldingDetailHolder> getHolderFuture(String tenantId, String holdingId, List<PiecesDetail> piecesDetail,
                                                         RequestContext requestContext) {
-    var localRequestContext = createContextWithNewTenantId(requestContext, tenantId);
+    var localRequestContext = StringUtils.isNotBlank(tenantId) ? createContextWithNewTenantId(requestContext, tenantId) : requestContext;
     return inventoryItemManager.getItemsByHoldingId(holdingId, localRequestContext)
       .map(items -> {
         if (Objects.isNull(items)) {
@@ -109,14 +110,18 @@ public class HoldingDetailService {
       .map(piece -> new PiecesDetail()
         .withId(piece.getId())
         .withItemId(piece.getItemId())
-        .withTenantId(piece.getReceivingTenantId()))
+        .withTenantId(getTenantId(piece.getReceivingTenantId())))
       .toList();
   }
 
   private ItemsDetail createItemDetail(String tenantId, JsonObject item) {
     return new ItemsDetail()
       .withId(item.getString(ID))
-      .withTenantId(tenantId);
+      .withTenantId(getTenantId(tenantId));
+  }
+
+  private String getTenantId(String tenantId) {
+    return StringUtils.isNotBlank(tenantId) ? tenantId : null;
   }
 
   private HoldingDetailResults createHoldingDetailResults(List<HoldingDetailHolder> holders) {
