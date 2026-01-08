@@ -1,5 +1,13 @@
 ## 13.0.0 - Unreleased
 
+## 12.9.14 - Released (Ramsons R2 2024)
+The primary focus of this release was to implement RMB logging improvements and security fixes
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.9.13...v12.9.14)
+
+### Bug Fixes
+* [MODORDERS-1384](https://issues.folio.org/browse/MODORDERS-1384) - Ramsons CSP - RMB Logging release - RMB 35.3.2
+
+
 ## 12.9.13 - Released (Ramsons R2 2024)
 The primary focus of this release was to resolve issue with updating receiving piece overwriting data in related item record.
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.9.12...v12.9.13)
