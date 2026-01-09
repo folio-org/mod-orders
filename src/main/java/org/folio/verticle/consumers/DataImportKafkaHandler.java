@@ -16,13 +16,11 @@ import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.mapper.reader.record.marc.MarcBibReaderFactory;
-import org.folio.rest.RestVerticle;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.util.OkapiConnectionParams;
 import org.folio.service.caches.CancelledJobsIdsCache;
 import org.folio.service.caches.JobProfileSnapshotCache;
 import org.folio.service.dataimport.OrderWriterFactory;
-import org.folio.service.dataimport.handlers.CreateOrderEventHandler;
 import org.folio.service.dataimport.utils.DataImportUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -33,6 +31,9 @@ import java.util.Map;
 
 import static java.lang.String.format;
 import static org.folio.DataImportEventTypes.DI_ERROR;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_REQUEST_ID_HEADER;
+import static org.folio.rest.util.OkapiConnectionParams.USER_ID_HEADER;
+import static org.folio.service.dataimport.utils.DataImportUtils.OKAPI_PERMISSIONS_HEADER;
 
 @Component
 @Qualifier("DataImportKafkaHandler")
@@ -107,12 +108,15 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
   private void populatePayloadWithUserIdAndPermissions(KafkaConsumerRecord<String, String> kafkaRecord,
                                                        DataImportEventPayload eventPayload) {
     for (KafkaHeader header: kafkaRecord.headers()) {
-      if (CreateOrderEventHandler.OKAPI_PERMISSIONS_HEADER.equalsIgnoreCase(header.key())) {
+      if (OKAPI_PERMISSIONS_HEADER.equalsIgnoreCase(header.key())) {
         String permissions = header.value().toString();
-        eventPayload.getContext().put(DataImportUtils.PERMISSIONS_KEY, permissions);
-      } else if (RestVerticle.OKAPI_USERID_HEADER.equalsIgnoreCase(header.key())) {
+        eventPayload.getContext().put(OKAPI_PERMISSIONS_HEADER, permissions);
+      } else if (USER_ID_HEADER.equalsIgnoreCase(header.key())) {
         String userId = header.value().toString();
-        eventPayload.getContext().put(DataImportUtils.USER_ID_KEY, userId);
+        eventPayload.getContext().put(USER_ID_HEADER, userId);
+      } else if (OKAPI_REQUEST_ID_HEADER.equalsIgnoreCase(header.key())) {
+        String requestId = header.value().toString();
+        eventPayload.getContext().put(OKAPI_REQUEST_ID_HEADER, requestId);
       }
     }
   }
