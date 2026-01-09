@@ -100,8 +100,8 @@ public class PiecesClaimingService {
               log.info("sendClaims:: Cannot find pieces with late status to process - No claims are sent");
               throwHttpException(CANNOT_FIND_PIECES_WITH_LATE_STATUS_TO_PROCESS, claimingCollection, HttpStatus.HTTP_BAD_REQUEST);
             }
-            pieceIdsByVendors.forEach((vendor, piecesByVendor) ->
-              log.info("createVendorPiecePair:: Using pieces by vendor map, vendorId: {}, piecesByVendor: {}", vendor.getId(), piecesByVendor));
+            pieceIdsByVendors.forEach((vendor, pieceIdsByVendor) ->
+              log.info("createVendorPiecePair:: Using pieces by vendor map, vendorId: {}, pieceIdsByVendor: {}", vendor.getId(), pieceIdsByVendor));
             var vendorWithoutIntegrationDetails = findFirstMissingVendorWithoutIntegrationDetail(config, pieceIdsByVendors);
             if (Objects.nonNull(vendorWithoutIntegrationDetails)) {
               log.info("sendClaims:: Unable to generate claims because no claim integrations exist - No claims are sent");

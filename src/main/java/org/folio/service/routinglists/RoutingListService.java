@@ -213,7 +213,7 @@ public class RoutingListService {
         return address.getAddressLine1();
       }
     }
-    logger.warn("getUserAddress:: Required address is not found with addressTypId={}", addressTypeId);
+    logger.warn("getUserAddress:: Required address is not found with addressTypeId={}", addressTypeId);
     return "";
   }
 
