@@ -518,13 +518,13 @@ public class InventoryManagerTest {
     //given
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
     JsonObject instances = new JsonObject(getMockData(INSTANCE_RECORDS_MOCK_DATA_PATH));
-    doReturn(succeededFuture(instances)).when(inventoryInstanceManager).searchInstancesByProducts(any(), eq(requestContext));
+    doReturn(succeededFuture(instances)).when(inventoryInstanceManager).getAnyInstanceIdByProductIds(any(), eq(requestContext));
     doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryInstanceManager).createInstanceRecord(any(Title.class), eq(requestContext));
     //When
     inventoryInstanceManager.getOrCreateInstanceRecord(title, false, requestContext).result();
     //Then
     verify(inventoryInstanceManager, times(0)).createInstanceRecord(any(Title.class), eq(requestContext));
-    verify(inventoryInstanceManager, times(1)).searchInstancesByProducts(any(), eq(requestContext));
+    verify(inventoryInstanceManager, times(1)).getAnyInstanceIdByProductIds(any(), eq(requestContext));
   }
 
 

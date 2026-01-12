@@ -1,5 +1,14 @@
 ## 13.1.0 - Unreleased
 
+## 13.0.9 - Released (Sunflower R1 2025 Bug Fix)
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v13.0.8...v13.0.9)
+
+### Bug Fixes
+* [MODORDERS-1385](https://folio-org.atlassian.net/browse/MODORDERS-1385) - Sunflower CSP - RMB Logging release - RMB 35.4.2
+* [MODORDERS-1378](https://folio-org.atlassian.net/browse/MODORDERS-1378) - POL creation is slow when adding an excessive number of product IDs
+* [MODORDERS-1369](https://folio-org.atlassian.net/browse/MODORDERS-1369) - Exclude Instances Marked "Set for Deletion" in Matching Logic
+  
 ## 13.0.8 - Released (Sunflower R1 2025 Bug Fix)
 
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v13.0.7...v13.0.8)
