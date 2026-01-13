@@ -525,6 +525,41 @@ public class OrderFiscalYearServiceTest {
     assertEquals("FY2022", holder.getPrevious().get(0).getName());
   }
 
+  @Test
+  void testGetAvailableFiscalYears_DuplicateCurrentFiscalYears_DeduplicatedInResult() {
+    // Given - Two ledgers both returning the same current fiscal year
+    Transaction transaction1 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withFromFundId(FUND_ID_1);
+    Transaction transaction2 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withFromFundId(FUND_ID_2);
+    List<Transaction> transactions = List.of(transaction1, transaction2);
+
+    FiscalYear fy = new FiscalYear().withId(FISCAL_YEAR_ID_1).withName("FY2025");
+    List<FiscalYear> fiscalYears = List.of(fy);
+
+    Fund fund1 = new Fund().withId(FUND_ID_1).withLedgerId(LEDGER_ID_1);
+    Fund fund2 = new Fund().withId(FUND_ID_2).withLedgerId(LEDGER_ID_2);
+    List<Fund> funds = List.of(fund1, fund2);
+
+    mockServices(transactions, fiscalYears, funds);
+    when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_1, requestContext)).thenReturn(Future.succeededFuture(fy));
+    when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_2, requestContext)).thenReturn(Future.succeededFuture(fy));
+    when(fiscalYearService.getPlannedFiscalYear(LEDGER_ID_1, requestContext)).thenReturn(Future.succeededFuture(null));
+    when(fiscalYearService.getPlannedFiscalYear(LEDGER_ID_2, requestContext)).thenReturn(Future.succeededFuture(null));
+
+    // When
+    Future<FiscalYearsHolder> result = orderFiscalYearService.getAvailableFiscalYears(ORDER_ID, requestContext);
+
+    // Then
+    assertTrue(result.succeeded());
+    FiscalYearsHolder holder = result.result();
+
+    // Current list should not contain duplicates even though both ledgers returned the same FY
+    assertEquals(1, holder.getCurrent().size());
+    assertEquals("FY2025", holder.getCurrent().get(0).getName());
+
+    // Previous should be empty because the only available FY moved to current
+    assertTrue(holder.getPrevious().isEmpty());
+  }
+
   private void mockServices(List<Transaction> transactions, List<FiscalYear> fiscalYears, List<Fund> funds) {
     when(purchaseOrderStorageService.getCompositeOrderById(ORDER_ID, requestContext))
       .thenReturn(Future.succeededFuture(new CompositePurchaseOrder()));
