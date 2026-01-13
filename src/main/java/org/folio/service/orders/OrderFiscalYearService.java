@@ -7,6 +7,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Fund;
@@ -112,8 +113,6 @@ public class OrderFiscalYearService {
   }
 
   private FiscalYearsHolder buildResultHolder(List<FiscalYear> availableFiscalYears, List<FiscalYear> currentFiscalYears, List<FiscalYear> plannedFiscalYears) {
-    Comparator<FiscalYear> nameComparator = Comparator.comparing(FiscalYear::getName).reversed();
-
     Set<String> plannedFiscalYearIds = plannedFiscalYears.stream()
       .map(FiscalYear::getId)
       .collect(Collectors.toSet());
@@ -136,11 +135,13 @@ public class OrderFiscalYearService {
       .toList();
 
     return new FiscalYearsHolder()
-      .withCurrent(mutableCurrentFiscalYears.stream()
-        .sorted(nameComparator)
+      .withCurrent(StreamEx.of(mutableCurrentFiscalYears)
+        .reverseSorted(Comparator.comparing(FiscalYear::getName))
+        .distinct(FiscalYear::getId)
         .toList())
-      .withPrevious(filteredAvailableFiscalYears.stream()
-        .sorted(nameComparator)
+      .withPrevious(StreamEx.of(filteredAvailableFiscalYears)
+        .reverseSorted(Comparator.comparing(FiscalYear::getName))
+        .distinct(FiscalYear::getId)
         .toList());
   }
 }
