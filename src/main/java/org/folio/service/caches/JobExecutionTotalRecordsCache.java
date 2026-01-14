@@ -32,12 +32,11 @@ public class JobExecutionTotalRecordsCache {
   private static final String JOB_PROGRESS_FIELD = "progress";
   private static final String JOB_TOTAL_RECORDS_FIELD = "total";
 
-  @Value("${orders.cache.job.records.amount.expiration.seconds:3600}")
-  private long cacheExpirationTime;
-  private AsyncCache<String, Integer> cache;
+  private final AsyncCache<String, Integer> cache;
 
   @Autowired
-  public JobExecutionTotalRecordsCache(Vertx vertx) {
+  public JobExecutionTotalRecordsCache(Vertx vertx,
+    @Value("${orders.cache.job.records.amount.expiration.seconds:3600}") long cacheExpirationTime) {
     cache = buildAsyncCache(vertx, cacheExpirationTime);
   }
 
