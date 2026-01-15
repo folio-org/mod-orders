@@ -14,6 +14,8 @@ import org.folio.rest.jaxrs.model.ItemsDetailCollection;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PiecesDetail;
 import org.folio.rest.jaxrs.model.PiecesDetailCollection;
+import org.folio.rest.jaxrs.model.PoLinesDetail;
+import org.folio.rest.jaxrs.model.PoLinesDetailCollection;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.pieces.PieceStorageService;
 
@@ -56,8 +58,9 @@ public class HoldingDetailService {
             if (Objects.nonNull(groupedPiecesByHoldingId)) {
               groupedPiecesByHoldingId.forEach((holdingId, groupedPieces) -> {
                 log.info("postOrdersHoldingDetail:: Processing holding detail by tenant={}, holding id={}, pieces={}", getTenantId(tenantId), holdingId, groupedPieces.size());
+                var poLinesDetails = createPoLineDetail(groupedPieces);
                 var piecesDetail = createPieceDetail(groupedPieces);
-                var holdersFuture = getHolderFuture(tenantId, holdingId, piecesDetail, requestContext);
+                var holdersFuture = getHolderFuture(tenantId, holdingId, poLinesDetails, piecesDetail, requestContext);
                 holdersFutures.add(holdersFuture);
               });
             }
@@ -78,12 +81,16 @@ public class HoldingDetailService {
     return pieces.stream()
       .filter(Objects::nonNull)
       .filter(piece -> Objects.nonNull(piece.getHoldingId()))
-      .map(piece -> Objects.nonNull(piece.getReceivingTenantId()) ? piece : piece.withReceivingTenantId(""))
+      .map(this::getPieceWithNonNullReceivingTenant)
       .collect(Collectors.groupingBy(Piece::getReceivingTenantId, Collectors.groupingBy(Piece::getHoldingId)));
   }
 
-  protected Future<HoldingDetailHolder> getHolderFuture(String tenantId, String holdingId, List<PiecesDetail> piecesDetail,
-                                                        RequestContext requestContext) {
+  private Piece getPieceWithNonNullReceivingTenant(Piece piece) {
+    return Objects.nonNull(piece.getReceivingTenantId()) ? piece : piece.withReceivingTenantId("");
+  }
+
+  protected Future<HoldingDetailHolder> getHolderFuture(String tenantId, String holdingId, List<PoLinesDetail> poLinesDetails,
+                                                        List<PiecesDetail> piecesDetail, RequestContext requestContext) {
     var localRequestContext = StringUtils.isNotBlank(tenantId) ? createContextWithNewTenantId(requestContext, tenantId) : requestContext;
     return inventoryItemManager.getItemsByHoldingId(holdingId, localRequestContext)
       .map(items -> {
@@ -96,9 +103,22 @@ public class HoldingDetailService {
           .toList();
       })
       .map(itemsDetail -> {
+        var finalPoLinesDetail = Objects.nonNull(poLinesDetails) ? poLinesDetails : Collections.<PoLinesDetail>emptyList();
         var finalPiecesDetail = Objects.nonNull(piecesDetail) ? piecesDetail : Collections.<PiecesDetail>emptyList();
-        return new HoldingDetailHolder(holdingId, finalPiecesDetail, itemsDetail);
+        return new HoldingDetailHolder(holdingId, finalPoLinesDetail, finalPiecesDetail, itemsDetail);
       });
+  }
+
+  private List<PoLinesDetail> createPoLineDetail(List<Piece> groupedPieces) {
+    if (CollectionUtils.isEmpty(groupedPieces)) {
+      return Collections.emptyList();
+    }
+    return groupedPieces.stream()
+      .filter(Objects::nonNull)
+      .map(Piece::getPoLineId)
+      .distinct()
+      .map(poLineId -> new PoLinesDetail().withId(poLineId))
+      .toList();
   }
 
   private List<PiecesDetail> createPieceDetail(List<Piece> groupedPieces) {
@@ -109,6 +129,7 @@ public class HoldingDetailService {
       .filter(Objects::nonNull)
       .map(piece -> new PiecesDetail()
         .withId(piece.getId())
+        .withPoLineId(piece.getPoLineId())
         .withItemId(piece.getItemId())
         .withTenantId(getTenantId(piece.getReceivingTenantId())))
       .toList();
@@ -131,8 +152,13 @@ public class HoldingDetailService {
     }
     var holdingDetailResults = new HoldingDetailResults();
     holders.forEach(holder -> {
+      var poLinesDetailCollection = new PoLinesDetailCollection();
       var piecesDetailCollection = new PiecesDetailCollection();
       var itemsDetailCollection = new ItemsDetailCollection();
+      if (Objects.nonNull(holder.poLines())) {
+        poLinesDetailCollection.withPoLinesDetail(holder.poLines())
+          .withTotalRecords(holder.poLines().size());
+      }
       if (Objects.nonNull(holder.pieces())) {
         piecesDetailCollection.withPiecesDetail(holder.pieces())
           .withTotalRecords(holder.pieces().size());
@@ -142,6 +168,7 @@ public class HoldingDetailService {
           .withTotalRecords(holder.items().size());
       }
       var holdingDetailProperty = new HoldingDetailResultsProperty()
+        .withPoLinesDetailCollection(poLinesDetailCollection)
         .withPiecesDetailCollection(piecesDetailCollection)
         .withItemsDetailCollection(itemsDetailCollection);
       holdingDetailResults.withAdditionalProperty(holder.holdingId(), holdingDetailProperty);
