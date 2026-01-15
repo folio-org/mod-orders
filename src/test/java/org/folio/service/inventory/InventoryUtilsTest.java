@@ -162,7 +162,7 @@ public class InventoryUtilsTest {
     String accessionNumber = "New Accession";
     String callNumber = "New Call";
 
-    InventoryUtils.updateCommonItemFields(item, null, false,
+    InventoryUtils.updateCommonItemFields(item, null,
       displaySummary, enumeration, copyNumber, chronology,
       barcode, accessionNumber, callNumber);
 
@@ -173,27 +173,6 @@ public class InventoryUtilsTest {
     assertEquals(barcode, item.getString(ITEM_BARCODE));
     assertEquals(accessionNumber, item.getString(ITEM_ACCESSION_NUMBER));
     assertEquals(callNumber, item.getString(ITEM_LEVEL_CALL_NUMBER));
-  }
-
-  @Test
-  void updatesCertainItemFieldsWhenValuesAreEmpty() {
-    JsonObject item = new JsonObject();
-    Piece pieceFromStorage = new Piece()
-      .withDisplaySummary("Old Display")
-      .withEnumeration("Old Enum")
-      .withCopyNumber("Old Copy")
-      .withChronology("Old Chrono")
-      .withBarcode("Old Barcode")
-      .withAccessionNumber("Old Accession")
-      .withCallNumber("Old Call");
-
-    InventoryUtils.updateCommonItemFields(item, pieceFromStorage, true,
-      "", null, "", "", "", "", "");
-
-    assertFalse(item.isEmpty());
-    assertEquals("", item.getString(ITEM_BARCODE));
-    assertEquals("", item.getString(ITEM_ACCESSION_NUMBER));
-    assertEquals("", item.getString(ITEM_LEVEL_CALL_NUMBER));
   }
 
   @Test
@@ -208,10 +187,13 @@ public class InventoryUtilsTest {
       .withAccessionNumber("Old Accession")
       .withCallNumber("Old Call");
 
-    InventoryUtils.updateCommonItemFields(item, pieceFromStorage, false,
+    InventoryUtils.updateCommonItemFields(item, pieceFromStorage,
       "", null, "", "", "", "", "");
 
-    assertTrue(item.isEmpty());
+    assertFalse(item.isEmpty());
+    assertEquals("", item.getString(ITEM_BARCODE));
+    assertEquals("", item.getString(ITEM_ACCESSION_NUMBER));
+    assertEquals("", item.getString(ITEM_LEVEL_CALL_NUMBER));
   }
 
   @Test
@@ -227,7 +209,7 @@ public class InventoryUtilsTest {
       .withAccessionNumber(existingValue)
       .withCallNumber(existingValue);
 
-    InventoryUtils.updateCommonItemFields(item, pieceFromStorage, false,
+    InventoryUtils.updateCommonItemFields(item, pieceFromStorage,
       existingValue, existingValue, existingValue, existingValue,
       existingValue, existingValue, existingValue);
 
@@ -249,7 +231,7 @@ public class InventoryUtilsTest {
     String newBarcode = "New Barcode";
     String newCallNumber = "New Call";
 
-    InventoryUtils.updateCommonItemFields(item, pieceFromStorage, false,
+    InventoryUtils.updateCommonItemFields(item, pieceFromStorage,
       pieceFromStorage.getDisplaySummary(),
       pieceFromStorage.getEnumeration(),
       pieceFromStorage.getCopyNumber(),

@@ -202,7 +202,7 @@ public class InventoryUtils {
   }
 
   public static void updateItemWithPieceFields(JsonObject item, Piece pieceFromStorage, Piece piece) {
-    updateCommonItemFields(item, pieceFromStorage, true,
+    updateCommonItemFields(item, pieceFromStorage,
       piece.getDisplaySummary(),
       piece.getEnumeration(),
       piece.getCopyNumber(),
@@ -213,7 +213,7 @@ public class InventoryUtils {
 
   public static void updateItemWithCheckinPieceFields(JsonObject item, Piece pieceFromStorage, CheckInPiece checkinPiece) {
     item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, checkinPiece.getItemStatus().value()));
-    updateCommonItemFields(item, pieceFromStorage, false,
+    updateCommonItemFields(item, pieceFromStorage,
       checkinPiece.getDisplaySummary(),
       checkinPiece.getEnumeration(),
       checkinPiece.getCopyNumber(),
@@ -228,7 +228,7 @@ public class InventoryUtils {
       receivedItem.withItemStatus(ReceivedItem.ItemStatus.ORDER_CLOSED);
     }
     item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, receivedItem.getItemStatus().value()));
-    updateCommonItemFields(item, pieceFromStorage, false,
+    updateCommonItemFields(item, pieceFromStorage,
       receivedItem.getDisplaySummary(),
       receivedItem.getEnumeration(),
       receivedItem.getCopyNumber(),
@@ -240,7 +240,6 @@ public class InventoryUtils {
 
   static void updateCommonItemFields(JsonObject item,
                                      Piece pieceFromStorage,
-                                     boolean allowEmptyValues,
                                      String displaySummary,
                                      String enumeration,
                                      String copyNumber,
@@ -252,9 +251,9 @@ public class InventoryUtils {
     updateItemField(item, ITEM_ENUMERATION, pieceFromStorage, Piece::getEnumeration, enumeration);
     updateItemField(item, COPY_NUMBER, pieceFromStorage, Piece::getCopyNumber, copyNumber);
     updateItemField(item, ITEM_CHRONOLOGY, pieceFromStorage, Piece::getChronology, chronology);
-    updateItemField(item, ITEM_BARCODE, pieceFromStorage, Piece::getBarcode, barcode, allowEmptyValues);
-    updateItemField(item, ITEM_ACCESSION_NUMBER, pieceFromStorage, Piece::getAccessionNumber, accessionNumber, allowEmptyValues);
-    updateItemField(item, ITEM_LEVEL_CALL_NUMBER, pieceFromStorage, Piece::getCallNumber, callNumber, allowEmptyValues);
+    updateItemField(item, ITEM_BARCODE, pieceFromStorage, Piece::getBarcode, barcode, true);
+    updateItemField(item, ITEM_ACCESSION_NUMBER, pieceFromStorage, Piece::getAccessionNumber, accessionNumber, true);
+    updateItemField(item, ITEM_LEVEL_CALL_NUMBER, pieceFromStorage, Piece::getCallNumber, callNumber, true);
   }
 
   private void updateItemField(JsonObject item, String itemFieldName, Piece storedPiece, Function<Piece, String> existingValueExtractor, String valueToUpdate) {
