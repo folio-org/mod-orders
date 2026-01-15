@@ -27,6 +27,8 @@ import org.folio.service.caches.InventoryCache;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.function.Function;
 
 import static java.util.Map.entry;
 import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
@@ -200,7 +202,7 @@ public class InventoryUtils {
   }
 
   public static void updateItemWithPieceFields(JsonObject item, Piece pieceFromStorage, Piece piece) {
-    updateCommonItemFields(item, pieceFromStorage,
+    updateCommonItemFields(item, pieceFromStorage, true,
       piece.getDisplaySummary(),
       piece.getEnumeration(),
       piece.getCopyNumber(),
@@ -211,7 +213,7 @@ public class InventoryUtils {
 
   public static void updateItemWithCheckinPieceFields(JsonObject item, Piece pieceFromStorage, CheckInPiece checkinPiece) {
     item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, checkinPiece.getItemStatus().value()));
-    updateCommonItemFields(item, pieceFromStorage,
+    updateCommonItemFields(item, pieceFromStorage, false,
       checkinPiece.getDisplaySummary(),
       checkinPiece.getEnumeration(),
       checkinPiece.getCopyNumber(),
@@ -226,7 +228,7 @@ public class InventoryUtils {
       receivedItem.withItemStatus(ReceivedItem.ItemStatus.ORDER_CLOSED);
     }
     item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, receivedItem.getItemStatus().value()));
-    updateCommonItemFields(item, pieceFromStorage,
+    updateCommonItemFields(item, pieceFromStorage, false,
       receivedItem.getDisplaySummary(),
       receivedItem.getEnumeration(),
       receivedItem.getCopyNumber(),
@@ -238,6 +240,7 @@ public class InventoryUtils {
 
   static void updateCommonItemFields(JsonObject item,
                                      Piece pieceFromStorage,
+                                     boolean allowEmptyValues,
                                      String displaySummary,
                                      String enumeration,
                                      String copyNumber,
@@ -245,20 +248,24 @@ public class InventoryUtils {
                                      String barcode,
                                      String accessionNumber,
                                      String callNumber) {
-    updateItemField(item, ITEM_DISPLAY_SUMMARY, pieceFromStorage != null ? pieceFromStorage.getDisplaySummary() : null, displaySummary);
-    updateItemField(item, ITEM_ENUMERATION, pieceFromStorage != null ? pieceFromStorage.getEnumeration() : null, enumeration);
-    updateItemField(item, COPY_NUMBER, pieceFromStorage != null ? pieceFromStorage.getCopyNumber() : null, copyNumber);
-    updateItemField(item, ITEM_CHRONOLOGY,  pieceFromStorage != null ? pieceFromStorage.getChronology() : null, chronology);
-    updateItemField(item, ITEM_BARCODE,  pieceFromStorage != null ? pieceFromStorage.getBarcode() : null, barcode);
-    updateItemField(item, ITEM_ACCESSION_NUMBER,  pieceFromStorage != null ? pieceFromStorage.getAccessionNumber() : null, accessionNumber);
-    updateItemField(item, ITEM_LEVEL_CALL_NUMBER,  pieceFromStorage != null ? pieceFromStorage.getCallNumber() : null, callNumber);
+    updateItemField(item, ITEM_DISPLAY_SUMMARY, pieceFromStorage, Piece::getDisplaySummary, displaySummary);
+    updateItemField(item, ITEM_ENUMERATION, pieceFromStorage, Piece::getEnumeration, enumeration);
+    updateItemField(item, COPY_NUMBER, pieceFromStorage, Piece::getCopyNumber, copyNumber);
+    updateItemField(item, ITEM_CHRONOLOGY, pieceFromStorage, Piece::getChronology, chronology);
+    updateItemField(item, ITEM_BARCODE, pieceFromStorage, Piece::getBarcode, barcode, allowEmptyValues);
+    updateItemField(item, ITEM_ACCESSION_NUMBER, pieceFromStorage, Piece::getAccessionNumber, accessionNumber, allowEmptyValues);
+    updateItemField(item, ITEM_LEVEL_CALL_NUMBER, pieceFromStorage, Piece::getCallNumber, callNumber, allowEmptyValues);
   }
 
-  private void updateItemField(JsonObject item, String itemFieldName, String existingValue, String valueToUpdate) {
-    if (StringUtils.isEmpty(valueToUpdate)) {
-      return;
-    }
-    if (StringUtils.equals(existingValue, valueToUpdate)) {
+  private void updateItemField(JsonObject item, String itemFieldName, Piece storedPiece, Function<Piece, String> existingValueExtractor, String valueToUpdate) {
+    updateItemField(item, itemFieldName, storedPiece, existingValueExtractor, valueToUpdate, false);
+  }
+
+  private void updateItemField(JsonObject item, String itemFieldName, Piece storedPiece, Function<Piece, String> existingValueExtractor, String valueToUpdate, boolean allowEmptyValue) {
+    var existingValue = Optional.ofNullable(storedPiece)
+      .map(existingValueExtractor)
+      .orElse(null);
+    if (!allowEmptyValue && StringUtils.isEmpty(valueToUpdate) || StringUtils.equals(existingValue, valueToUpdate)) {
       return;
     }
     item.put(itemFieldName, valueToUpdate);
