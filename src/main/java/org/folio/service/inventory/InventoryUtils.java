@@ -208,7 +208,8 @@ public class InventoryUtils {
       piece.getCopyNumber(),
       piece.getChronology(),
       piece.getBarcode(),
-      piece.getAccessionNumber(), piece.getCallNumber());
+      piece.getAccessionNumber(),
+      piece.getCallNumber());
   }
 
   public static void updateItemWithCheckinPieceFields(JsonObject item, Piece pieceFromStorage, CheckInPiece checkinPiece) {
@@ -219,7 +220,8 @@ public class InventoryUtils {
       checkinPiece.getCopyNumber(),
       checkinPiece.getChronology(),
       checkinPiece.getBarcode(),
-      checkinPiece.getAccessionNumber(), checkinPiece.getCallNumber());
+      checkinPiece.getAccessionNumber(),
+      checkinPiece.getCallNumber());
   }
 
   public static void updateItemWithReceivedItemFields(PiecesHolder holder, JsonObject item,
@@ -234,7 +236,7 @@ public class InventoryUtils {
       receivedItem.getCopyNumber(),
       receivedItem.getChronology(),
       receivedItem.getBarcode(),
-      null, // ReceivedItem has no getAccessionNumber method
+      receivedItem.getAccessionNumber(),
       receivedItem.getCallNumber());
   }
 
