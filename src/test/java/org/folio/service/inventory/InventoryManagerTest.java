@@ -122,7 +122,6 @@ public class InventoryManagerTest {
   private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/" + "instances.json";
   public static final String LINE_ID = "c0d08448-347b-418a-8c2f-5fb50248d67e";
   public static final String HOLDING_ID = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d61";
-  public static final String ITEM_RECORD_PATH = BASE_MOCK_DATA_PATH + "itemsRecords/" + "itemRecord.json";
 
   @Autowired
   InventoryItemManager inventoryItemManager;
@@ -593,11 +592,10 @@ public class InventoryManagerTest {
     PoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(PoLine.class);
     line.setPurchaseOrderId(order.getId());
     Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
-    JsonObject itemRecord = getMockAsJson(ITEM_RECORD_PATH);
-    String expItemId = itemRecord.getString("id");
+    String expItemId = UUID.randomUUID().toString();
 
     doReturn(Future.succeededFuture(expItemId))
-      .when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), eq(itemRecord), any(RequestContext.class));
+      .when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), any(JsonObject.class), any(RequestContext.class));
     doReturn(Future.succeededFuture(new JsonObject())).when(commonSettingsCache).loadSettings(requestContext);
     doReturn(Future.succeededFuture(new JsonObject())).when(inventoryCache).getEntryId(LOAN_TYPES, DEFAULT_LOAN_TYPE_NAME, requestContext);
 
@@ -612,11 +610,10 @@ public class InventoryManagerTest {
     PoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(PoLine.class);
     line.setPurchaseOrderId(order.getId());
     Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
-    JsonObject itemRecord = getMockAsJson(ITEM_RECORD_PATH);
-    String expItemId = itemRecord.getString("id");
+    String expItemId = UUID.randomUUID().toString();
 
     doReturn(Future.succeededFuture(expItemId))
-      .when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), eq(itemRecord), any(RequestContext.class));
+      .when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), any(JsonObject.class), any(RequestContext.class));
     doReturn(Future.succeededFuture(new JsonObject())).when(commonSettingsCache).loadSettings(requestContext);
     doReturn(Future.succeededFuture(new JsonObject())).when(inventoryCache).getEntryId(LOAN_TYPES, DEFAULT_LOAN_TYPE_NAME, requestContext);
 

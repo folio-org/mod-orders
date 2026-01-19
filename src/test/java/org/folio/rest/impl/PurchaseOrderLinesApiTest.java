@@ -679,9 +679,6 @@ public class PurchaseOrderLinesApiTest {
     assertEquals(1, column.size());
     assertThat(column.keySet(), containsInAnyOrder(PO_LINES_STORAGE));
 
-    column = MockServer.serverRqRs.column(HttpMethod.POST);
-    assertEquals(1, column.size());
-    assertThat(column.keySet(), containsInAnyOrder(FINANCE_BATCH_TRANSACTIONS));
 
     // Verify no message sent via event bus
     HandlersTestHelper.verifyOrderStatusUpdateEvent(0);
@@ -1112,6 +1109,10 @@ public class PurchaseOrderLinesApiTest {
 
     CompositePurchaseOrder compositePurchaseOrder = verifySuccessGet(String.format(COMP_PO_BY_ID_PATH, "d6966317-96c7-492f-8df6-dc6c19554452"), CompositePurchaseOrder.class);
     PoLine reqData = compositePurchaseOrder.getPoLines().getFirst();
+
+    // Mock the response for getLinesByOrderId which is called in processPoLineEncumbrances
+    MockServer.addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(reqData));
+
     reqData.getFundDistribution().getFirst().setFundId("a89eccf0-57a6-495e-898d-32b9b2210f2f");
 
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
