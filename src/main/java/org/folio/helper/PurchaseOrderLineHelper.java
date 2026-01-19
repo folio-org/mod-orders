@@ -619,13 +619,18 @@ public class PurchaseOrderLineHelper {
 
     var workflowType = compOrder.getWorkflowStatus() == PENDING ? OrderWorkflowType.PENDING_TO_PENDING : OrderWorkflowType.PENDING_TO_OPEN;
     var strategy = encumbranceWorkflowStrategyFactory.getStrategy(workflowType);
-    var poFromStorage = JsonObject.mapFrom(compOrder).mapTo(CompositePurchaseOrder.class);
     return purchaseOrderLineService.getLinesByOrderId(compOrder.getId(), requestContext)
-      .map(poLines -> StreamEx.of(poLines)
-        .filter(line -> !line.getId().equals(poLine.getId()))
-        .append(poLine)
-        .toList())
-      .compose(poLines -> strategy.processEncumbrances(compOrder.withPoLines(poLines), poFromStorage, requestContext));
+      .compose(storagePoLines -> {
+        // Create list with modified line
+        var modifiedPoLines = StreamEx.of(storagePoLines)
+          .filter(line -> !line.getId().equals(poLine.getId()))
+          .append(poLine)
+          .toList();
+        // Create poFromStorage with unmodified lines
+        var poFromStorage = JsonObject.mapFrom(compOrder).mapTo(CompositePurchaseOrder.class);
+        poFromStorage.setPoLines(storagePoLines);
+        return strategy.processEncumbrances(compOrder.withPoLines(modifiedPoLines), poFromStorage, requestContext);
+      });
   }
 
   private Future<Void> updateInventoryItemStatus(PoLine compOrderLine, PoLine lineFromStorage, RequestContext requestContext) {
