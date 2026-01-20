@@ -14,8 +14,6 @@ import java.util.stream.Collectors;
 
 public class DataImportUtils {
 
-  public static final String PERMISSIONS_KEY = "USER_PERMISSIONS";
-  public static final String USER_ID_KEY = "USER_ID";
   public static final String OKAPI_PERMISSIONS_HEADER = "X-Okapi-Permissions";
 
   private DataImportUtils() {
@@ -29,13 +27,17 @@ public class DataImportUtils {
       headers.put(RestVerticle.OKAPI_HEADER_TOKEN, eventPayload.getToken());
     }
 
-    String permissionsHeader = eventPayload.getContext().get(PERMISSIONS_KEY);
+    String permissionsHeader = eventPayload.getContext().get(OKAPI_PERMISSIONS_HEADER);
     if (StringUtils.isNotBlank(permissionsHeader)) {
       headers.put(OKAPI_PERMISSIONS_HEADER, permissionsHeader);
     }
-    String userId = eventPayload.getContext().get(USER_ID_KEY);
+    String userId = eventPayload.getContext().get(RestVerticle.OKAPI_USERID_HEADER);
     if (StringUtils.isNotBlank(userId)) {
       headers.put(RestVerticle.OKAPI_USERID_HEADER, userId);
+    }
+    String requestId = eventPayload.getContext().get(RestVerticle.OKAPI_REQUESTID_HEADER);
+    if (StringUtils.isNotBlank(requestId)) {
+      headers.put(RestVerticle.OKAPI_REQUESTID_HEADER, requestId);
     }
     return headers;
   }

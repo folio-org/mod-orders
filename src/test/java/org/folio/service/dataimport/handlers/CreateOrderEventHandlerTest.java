@@ -24,6 +24,7 @@ import org.folio.kafka.exception.DuplicateEventException;
 import org.folio.orders.utils.AcqDesiredPermissions;
 import org.folio.processing.events.EventManager;
 import org.folio.rest.RestConstants;
+import org.folio.rest.RestVerticle;
 import org.folio.rest.client.TenantClient;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
@@ -1299,7 +1300,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
       .withContext(new HashMap<>() {{
         put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
-        put(CreateOrderEventHandler.USER_ID_KEY, MockServer.ORDER_ID_DUPLICATION_ERROR_USER_ID);
+        put(RestVerticle.OKAPI_USERID_HEADER, MockServer.ORDER_ID_DUPLICATION_ERROR_USER_ID);
         put(RECORD_ID_HEADER, record.getId());
       }});
 
