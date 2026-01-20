@@ -109,10 +109,13 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     for (KafkaHeader header: kafkaRecord.headers()) {
       if (CreateOrderEventHandler.OKAPI_PERMISSIONS_HEADER.equalsIgnoreCase(header.key())) {
         String permissions = header.value().toString();
-        eventPayload.getContext().put(DataImportUtils.PERMISSIONS_KEY, permissions);
+        eventPayload.getContext().put(CreateOrderEventHandler.OKAPI_PERMISSIONS_HEADER, permissions);
       } else if (RestVerticle.OKAPI_USERID_HEADER.equalsIgnoreCase(header.key())) {
         String userId = header.value().toString();
-        eventPayload.getContext().put(DataImportUtils.USER_ID_KEY, userId);
+        eventPayload.getContext().put(RestVerticle.OKAPI_USERID_HEADER, userId);
+      } else if (RestVerticle.OKAPI_REQUESTID_HEADER.equalsIgnoreCase(header.key())) {
+        String requestId = header.value().toString();
+        eventPayload.getContext().put(RestVerticle.OKAPI_REQUESTID_HEADER, requestId);
       }
     }
   }
