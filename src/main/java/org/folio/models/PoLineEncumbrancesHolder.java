@@ -19,11 +19,6 @@ public class PoLineEncumbrancesHolder {
     this.encumbrances = new ArrayList<>();
   }
 
-  public PoLineEncumbrancesHolder addEncumbrance(Transaction encumbrance) {
-    this.encumbrances.add(encumbrance);
-    return this;
-  }
-
   public PoLineEncumbrancesHolder withEncumbrances(List<Transaction> encumbrances) {
     this.encumbrances = new ArrayList<>(encumbrances);
     return this;

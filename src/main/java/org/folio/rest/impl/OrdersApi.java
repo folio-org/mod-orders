@@ -92,7 +92,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
       Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     purchaseOrderHelper
-      .getPurchaseOrders(limit, offset, query, new RequestContext(vertxContext, okapiHeaders))
+      .getPurchaseOrders(query, offset, limit, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(orders -> asyncResultHandler.handle(succeededFuture(buildOkResponse(orders))))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
