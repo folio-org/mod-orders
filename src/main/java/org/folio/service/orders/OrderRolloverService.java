@@ -1,5 +1,6 @@
 package org.folio.service.orders;
 
+import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.groupingBy;
@@ -144,11 +145,11 @@ public class OrderRolloverService {
         errors.add(t);
         return succeededFuture();
       })
-      .map(v -> {
-        for (Throwable error : errors) {
-          throw new RuntimeException(error.getCause());
+      .compose(v -> {
+        if (!errors.isEmpty()) {
+          return failedFuture(errors.getFirst());
         }
-        return null;
+        return succeededFuture();
       });
   }
 
@@ -438,7 +439,7 @@ public class OrderRolloverService {
     logger.error("Orders rollover failed for ledger {}", rollover.getLedgerId(), t);
     return ledgerRolloverErrorService.saveRolloverError(rollover.getId(), t, ORDER_ROLLOVER, "Overall order rollover", requestContext)
       .compose(v -> ledgerRolloverProgressService.updateRolloverProgress(progress.withOrdersRolloverStatus(ERROR).withOverallRolloverStatus(ERROR), requestContext))
-      .compose(v -> Future.failedFuture(t));
+      .compose(v -> failedFuture(t));
   }
 
   private Future<Void> calculateAndUpdateOverallProgressStatus(LedgerFiscalYearRolloverProgress progress, RequestContext requestContext) {

@@ -23,7 +23,7 @@ public class GetByChunksFutureIterator<T> extends FutureIterator<List<T>> {
 
   public GetByChunksFutureIterator(String baseQuery, int chunkSize, Function<String, Future<List<T>>> getFunction) {
     if (chunkSize <= 0) {
-      throw new RuntimeException("GetByChunksFutureIterator: chunkSize must be strictly positive");
+      throw new FutureIteratorException("GetByChunksFutureIterator: chunkSize must be strictly positive");
     }
     this.baseQuery = baseQuery;
     this.chunkSize = chunkSize;

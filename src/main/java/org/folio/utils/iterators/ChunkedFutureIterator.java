@@ -17,7 +17,7 @@ public class ChunkedFutureIterator<T> extends FutureIterator<List<T>> {
 
   public ChunkedFutureIterator(FutureIterator<T> inputIterator, int chunkSize) {
     if (chunkSize <= 0) {
-      throw new RuntimeException("ChunkedFutureIterator: chunkSize must be strictly positive");
+      throw new FutureIteratorException("ChunkedFutureIterator: chunkSize must be strictly positive");
     }
     this.inputIterator = inputIterator;
     this.chunkSize = chunkSize;
