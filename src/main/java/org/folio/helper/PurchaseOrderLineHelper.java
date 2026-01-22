@@ -40,6 +40,7 @@ import javax.ws.rs.core.Response;
 
 import io.vertx.core.json.JsonArray;
 import lombok.extern.log4j.Log4j2;
+import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.models.EncumbranceUnreleaseHolder;
@@ -71,7 +72,6 @@ import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.service.ProtectionService;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.EncumbranceService;
-import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.finance.transaction.TransactionService;
 import org.folio.service.inventory.InventoryInstanceManager;
@@ -615,14 +615,24 @@ public class PurchaseOrderLineHelper {
         .findFirst()
         .ifPresent(storageFundDistribution -> fundDistribution.setEncumbrance(storageFundDistribution.getEncumbrance())));
 
-    if (isEncumbranceUpdateNeeded(compOrder, poLine, storagePoLine)) {
-      OrderWorkflowType workflowType = compOrder.getWorkflowStatus() == PENDING ?
-        OrderWorkflowType.PENDING_TO_PENDING : OrderWorkflowType.PENDING_TO_OPEN;
-      EncumbranceWorkflowStrategy strategy = encumbranceWorkflowStrategyFactory.getStrategy(workflowType);
-      CompositePurchaseOrder poFromStorage = JsonObject.mapFrom(compOrder).mapTo(CompositePurchaseOrder.class);
-      return strategy.processEncumbrances(compOrder.withPoLines(Collections.singletonList(poLine)), poFromStorage, requestContext);
+    if (!isEncumbranceUpdateNeeded(compOrder, poLine, storagePoLine)) {
+      return Future.succeededFuture();
     }
-    return Future.succeededFuture();
+
+    var workflowType = compOrder.getWorkflowStatus() == PENDING ? OrderWorkflowType.PENDING_TO_PENDING : OrderWorkflowType.PENDING_TO_OPEN;
+    var strategy = encumbranceWorkflowStrategyFactory.getStrategy(workflowType);
+    return purchaseOrderLineService.getLinesByOrderId(compOrder.getId(), requestContext)
+      .compose(storagePoLines -> {
+        // Create list with modified line
+        var modifiedPoLines = StreamEx.of(storagePoLines)
+          .filter(line -> !line.getId().equals(poLine.getId()))
+          .append(poLine)
+          .toList();
+        // Create poFromStorage with unmodified lines
+        var poFromStorage = JsonObject.mapFrom(compOrder).mapTo(CompositePurchaseOrder.class);
+        poFromStorage.setPoLines(storagePoLines);
+        return strategy.processEncumbrances(compOrder.withPoLines(modifiedPoLines), poFromStorage, requestContext);
+      });
   }
 
   private Future<Void> updateInventoryItemStatus(PoLine compOrderLine, PoLine lineFromStorage, RequestContext requestContext) {

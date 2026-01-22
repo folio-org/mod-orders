@@ -190,7 +190,10 @@ public class InventoryUtilsTest {
     InventoryUtils.updateCommonItemFields(item, pieceFromStorage,
       "", null, "", "", "", "", "");
 
-    assertTrue(item.isEmpty());
+    assertFalse(item.isEmpty());
+    assertEquals("", item.getString(ITEM_BARCODE));
+    assertEquals("", item.getString(ITEM_ACCESSION_NUMBER));
+    assertEquals("", item.getString(ITEM_LEVEL_CALL_NUMBER));
   }
 
   @Test
