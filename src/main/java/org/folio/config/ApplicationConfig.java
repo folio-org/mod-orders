@@ -207,12 +207,14 @@ public class ApplicationConfig {
   }
 
   @Bean
-  OrderRolloverService rolloverOrderService(FundService fundService, PurchaseOrderLineService purchaseOrderLineService, TransactionService transactionService,
-                                            CommonSettingsCache commonSettingsCache, LedgerRolloverProgressService ledgerRolloverProgressService,
-                                            LedgerRolloverErrorService ledgerRolloverErrorService, FailedLedgerRolloverPoLineDao failedLedgerRolloverPoLineDao,
-                                            CacheableExchangeRateService cacheableExchangeRateService) {
-    return new OrderRolloverService(fundService, purchaseOrderLineService, transactionService, commonSettingsCache,
-      ledgerRolloverProgressService, ledgerRolloverErrorService, failedLedgerRolloverPoLineDao, cacheableExchangeRateService);
+  OrderRolloverService rolloverOrderService(FundService fundService, PurchaseOrderStorageService purchaseOrderStorageService,
+      PurchaseOrderLineService purchaseOrderLineService, TransactionService transactionService,
+      CommonSettingsCache commonSettingsCache, LedgerRolloverProgressService ledgerRolloverProgressService,
+      LedgerRolloverErrorService ledgerRolloverErrorService, FailedLedgerRolloverPoLineDao failedLedgerRolloverPoLineDao,
+      CacheableExchangeRateService cacheableExchangeRateService) {
+    return new OrderRolloverService(fundService, purchaseOrderStorageService, purchaseOrderLineService, transactionService,
+      commonSettingsCache, ledgerRolloverProgressService, ledgerRolloverErrorService, failedLedgerRolloverPoLineDao,
+      cacheableExchangeRateService);
   }
 
   @Bean

@@ -20,7 +20,10 @@ import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.models.PoLineLocationsPair;
+import org.folio.utils.iterators.FutureIterator;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.ErrorCodes;
@@ -42,6 +45,7 @@ import org.folio.service.orders.utils.PoLineFields;
 
 @Log4j2
 public class PurchaseOrderLineService {
+  private static final Logger logger = LogManager.getLogger();
 
   private static final String ENDPOINT = "/orders-storage/po-lines";
   private static final String BATCH_ENDPOINT = "/orders-storage/po-lines-batch";
@@ -52,6 +56,7 @@ public class PurchaseOrderLineService {
 
   private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling %s %s - %s";
   private static final int PO_LINE_BATCH_PARTITION_SIZE = 100;
+  private static final int PO_LINES_CHUNK_SIZE = 100;
 
   private final RestClient restClient;
   private final InventoryHoldingManager inventoryHoldingManager;
@@ -62,13 +67,13 @@ public class PurchaseOrderLineService {
   }
 
   public Future<PoLineCollection> getOrderLineCollection(String query, int offset, int limit, RequestContext requestContext) {
+    logger.debug("getOrderLineCollection:: query: {}", query);
     RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query).withOffset(offset).withLimit(limit);
     return restClient.get(requestEntry, PoLineCollection.class, requestContext);
   }
 
   public Future<List<PoLine>> getOrderLines(String query, int offset, int limit, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query).withOffset(offset).withLimit(limit);
-    return restClient.get(requestEntry, PoLineCollection.class, requestContext)
+    return getOrderLineCollection(query, offset, limit, requestContext)
       .map(PoLineCollection::getPoLines);
   }
 
@@ -83,6 +88,16 @@ public class PurchaseOrderLineService {
       .map(lists -> lists.stream()
         .flatMap(Collection::stream)
         .toList());
+  }
+
+  /**
+   * This is useful to retrieve a potentially large number of po lines based on some order ids.
+   * The number of order ids should not be too large (divide by chunks if needed).
+   */
+  public FutureIterator<List<PoLine>> getOrderLinesByOrderIds(List<String> orderIds, RequestContext requestContext) {
+    String baseQuery = convertIdsToCqlQuery(orderIds, "purchaseOrderId");
+    return FutureIterator.getByChunks(baseQuery, PO_LINES_CHUNK_SIZE,
+      query -> getOrderLines(query, 0, PO_LINES_CHUNK_SIZE, requestContext));
   }
 
   public Future<Void> saveOrderLine(PoLine poLine, RequestContext requestContext) {
@@ -126,6 +141,10 @@ public class PurchaseOrderLineService {
     }
 
     return saveOrderLinesCollections(poLineCollections, requestContext);
+  }
+
+  public int getPoLinePartitionSize() {
+    return PO_LINE_BATCH_PARTITION_SIZE;
   }
 
   private List<PoLineCollection> getPartitionedPoLines(List<PoLine> orderLines) {

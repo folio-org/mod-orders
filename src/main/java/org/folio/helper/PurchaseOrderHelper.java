@@ -136,14 +136,14 @@ public class PurchaseOrderHelper {
   /**
    * Retrieve a list of {@link PurchaseOrder} objects retrieved from storage by provided query.
    *
-   * @param limit limit the number of elements returned in the response
-   * @param offset skip over a number of elements by specifying an offset value for the query
    * @param query A query expressed as a CQL string using valid searchable fields.
+   * @param offset skip over a number of elements by specifying an offset value for the query
+   * @param limit limit the number of elements returned in the response
    * @return completable future with {@link PurchaseOrderCollection} object on success or an exception if processing fails
    */
-  public Future<PurchaseOrderCollection> getPurchaseOrders(int limit, int offset, String query, RequestContext requestContext) {
+  public Future<PurchaseOrderCollection> getPurchaseOrders(String query, int offset, int limit, RequestContext requestContext) {
     return protectionService.getQueryWithAcqUnitsCheck(StringUtils.EMPTY, query, requestContext)
-      .compose(finalQuery -> purchaseOrderStorageService.getPurchaseOrders(finalQuery, limit, offset, requestContext))
+      .compose(finalQuery -> purchaseOrderStorageService.getPurchaseOrders(finalQuery, offset, limit, requestContext))
       .onFailure(t -> logger.error("Error getting orders", t));
   }
 

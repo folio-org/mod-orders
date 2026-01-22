@@ -57,7 +57,7 @@ public class PurchaseOrderStorageServiceTest {
       .thenReturn(Future.succeededFuture(purchaseOrderCollection));
 
     String expectedQuery =  String.format("id==%s", orderId);
-    PurchaseOrderCollection actOrders = purchaseOrderStorageService.getPurchaseOrders(expectedQuery, Integer.MAX_VALUE, 0, requestContext).result();
+    PurchaseOrderCollection actOrders = purchaseOrderStorageService.getPurchaseOrders(expectedQuery, 0, Integer.MAX_VALUE, requestContext).result();
 
     verify(restClientMock).get(any(RequestEntry.class), eq(PurchaseOrderCollection.class), eq(requestContext));
     assertEquals(purchaseOrderCollection, actOrders);
