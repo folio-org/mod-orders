@@ -60,13 +60,13 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
     <!--Dependency Management Properties-->
-    <vertx.version>5.0.6</vertx.version>
-    <jackson-bom.version>2.20.1</jackson-bom.version>
+    <vertx.version>5.0.7</vertx.version>
+    <jackson-bom.version>2.21.0</jackson-bom.version>
     <log4j.version>2.25.3</log4j.version>
     <testcontainers-bom.version>2.0.3</testcontainers-bom.version>
 
     <!--Dependency Properties-->
-    <spring.version>7.0.2</spring.version>
+    <spring.version>7.0.3</spring.version>
     <aspectj.version>1.9.25.1</aspectj.version>
     <rest-assured.version>6.0.0</rest-assured.version>
     <streamex.version>0.8.4</streamex.version>
@@ -77,7 +77,7 @@
     <folio-module-descriptor-validator.version>1.0.0</folio-module-descriptor-validator.version>
     <mod-configuration-client.version>5.12.0</mod-configuration-client.version>
     <folio-di-support.version>4.0.0-SNAPSHOT</folio-di-support.version>
-    <mod-di-converter-storage-client.version>2.4.2</mod-di-converter-storage-client.version>
+    <mod-di-converter-storage-client.version>2.4.3</mod-di-converter-storage-client.version>
     <data-import-processing-core.version>5.0.0-SNAPSHOT</data-import-processing-core.version>
     <folio-kafka-wrapper.version>4.0.0-SNAPSHOT</folio-kafka-wrapper.version>
 
@@ -96,10 +96,10 @@
 
     <!--Test dependencies-->
     <junit-jupiter.version>6.0.1</junit-jupiter.version>
-    <junit-bom.version>6.0.1</junit-bom.version>
+    <junit-bom.version>6.0.2</junit-bom.version>
     <junit-platform.version>1.14.1</junit-platform.version>
     <mockito.version>5.21.0</mockito.version>
-    <assertj.version>3.27.6</assertj.version>
+    <assertj.version>3.27.7</assertj.version>
     <awaitility.version>4.3.0</awaitility.version>
 
     <!--Sonar exclusion-->
