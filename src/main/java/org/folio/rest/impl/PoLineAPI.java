@@ -40,6 +40,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 
 public class PoLineAPI extends BaseApi implements OrdersOrderLines {
+
   private static final Logger logger = LogManager.getLogger();
 
   @Autowired
@@ -58,7 +59,7 @@ public class PoLineAPI extends BaseApi implements OrdersOrderLines {
   @Override
   @Validate
   public void getOrdersOrderLines(String totalRecords, int offset, int limit, String query, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+                                  Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     helper.getOrderLines(limit, offset, query, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(lines -> asyncResultHandler.handle(succeededFuture(buildOkResponse(lines))))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
@@ -67,7 +68,7 @@ public class PoLineAPI extends BaseApi implements OrdersOrderLines {
   @Override
   @Validate
   public void postOrdersOrderLines(PoLine poLine, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+                                   Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
     commonSettingsCache.loadSettings(requestContext)
       .compose(tenantConfig -> helper.createPoLine(poLine, tenantConfig, requestContext))
@@ -82,8 +83,8 @@ public class PoLineAPI extends BaseApi implements OrdersOrderLines {
   @Override
   @Validate
   public void getOrdersOrderLinesById(String lineId, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    logger.debug("Started Invocation of POLine Request with id = {}", lineId);
+                                      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    logger.debug("getOrdersOrderLinesById:: Handling GET Order Line operation with id={}", lineId);
     helper.getPoLine(lineId, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(poLine -> asyncResultHandler.handle(succeededFuture(buildOkResponse(poLine))))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
@@ -92,7 +93,7 @@ public class PoLineAPI extends BaseApi implements OrdersOrderLines {
   @Override
   @Validate
   public void deleteOrdersOrderLinesById(String lineId, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+                                         Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     helper.deleteLine(lineId, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
@@ -101,8 +102,8 @@ public class PoLineAPI extends BaseApi implements OrdersOrderLines {
   @Override
   @Validate
   public void putOrdersOrderLinesById(String lineId, PoLine poLine, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    logger.debug("Handling PUT Order Line operation...");
+                                      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    logger.debug("putOrdersOrderLinesById:: Handling PUT Order Line operation...");
     // Set id if this is available only in path
     RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
     if (StringUtils.isEmpty(poLine.getId())) {
@@ -135,14 +136,12 @@ public class PoLineAPI extends BaseApi implements OrdersOrderLines {
 
   @Override
   @Validate
-  public void patchOrdersOrderLinesById(String lineId,  PatchOrderLineRequest request,
-      Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
-      Context vertxContext) {
+  public void patchOrdersOrderLinesById(String lineId,  PatchOrderLineRequest request, Map<String, String> okapiHeaders,
+                                        Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
-
     orderLinePatchOperationService.patch(lineId, request, requestContext)
-        .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
-        .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
+      .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
