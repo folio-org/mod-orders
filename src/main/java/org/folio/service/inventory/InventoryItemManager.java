@@ -132,7 +132,6 @@ public class InventoryItemManager {
   }
 
   public Future<Void> updateItem(JsonObject item, RequestContext requestContext) {
-    logger.info("updateItem:: Updating item, id={}", item.getString("id"));
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(ITEM_BY_ID_ENDPOINT)).withId(item.getString(ID));
     return restClient.put(requestEntry, item, requestContext);
   }
