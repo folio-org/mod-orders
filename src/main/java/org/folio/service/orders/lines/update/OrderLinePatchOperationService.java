@@ -42,12 +42,12 @@ public class OrderLinePatchOperationService {
   }
 
   public Future<Void> patch(String lineId, PatchOrderLineRequest request, RequestContext requestContext) {
-    log.info("patch:: start patching operation: {} for poLineId: {}", request.getOperation(), lineId);
+    log.info("patch:: Start patching operation: {} for poLineId: {}", request.getOperation(), lineId);
     var newInstanceId = request.getReplaceInstanceRef().getNewInstanceId();
     return inventoryInstanceManager.createShadowInstanceIfNeeded(newInstanceId, requestContext)
       .compose(v -> purchaseOrderLineService.getOrderLineById(lineId, requestContext))
       .compose(poLine -> patchOrderLine(request, poLine, requestContext))
-      .onSuccess(v -> log.info("patch:: successfully patched operation: {} for poLineId: {}", request.getOperation(), lineId))
+      .onSuccess(v -> log.info("patch:: Successfully patched operation: {} for poLineId: {}", request.getOperation(), lineId))
       .onFailure(e -> log.error("Failed to patch operation: {} for poLineId: {}", request.getOperation(), lineId, e))
       .mapEmpty();
   }

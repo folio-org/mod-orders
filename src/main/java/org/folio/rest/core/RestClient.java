@@ -8,6 +8,7 @@ import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.core.exceptions.ExceptionUtil.getHttpException;
 
 import java.util.Map;
+import java.util.Objects;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -64,7 +65,12 @@ public class RestClient {
           return Future.failedFuture(getHttpException(response.statusCode(), error));
         }
       })
-      .map(bufferHttpResponse -> bufferHttpResponse.bodyAsJsonObject().mapTo(responseType))
+      .map(bufferHttpResponse -> {
+        if (Objects.nonNull(bufferHttpResponse) && Objects.nonNull(bufferHttpResponse.bodyAsJsonObject())) {
+          return bufferHttpResponse.bodyAsJsonObject().mapTo(responseType);
+        }
+        return null;
+      })
       .onFailure(log::error);
   }
 

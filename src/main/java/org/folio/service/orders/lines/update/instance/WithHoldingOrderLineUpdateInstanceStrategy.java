@@ -7,6 +7,7 @@ import lombok.extern.log4j.Log4j2;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
 import org.folio.orders.utils.RequestContextUtil;
@@ -42,6 +43,9 @@ import static org.folio.orders.utils.HelperUtils.chainCall;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.service.inventory.InventoryItemManager.ID;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_HOLDINGS_RECORD_ID;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_MATERIAL_TYPE_ID;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_PERMANENT_LOAN_TYPE_ID;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS;
 import static org.folio.service.pieces.PieceUtil.getPiecesLocations;
 
 @Log4j2
@@ -49,6 +53,13 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
 
   private static final String HOLDINGS_ITEMS = "holdingsItems";
   private static final String BARE_HOLDINGS_ITEMS = "bareHoldingsItems";
+  private static final String VERSION = "_version";
+  private static final String MATERIAL_TYPE = "materialType";
+  private static final String PERMANENT_LOAN_TYPE = "permanentLoanType";
+  private static final String ITEM_ID = "itemId";
+  private static final String TENANT_ID = "tenantId";
+  private static final String ORIGINAL_ERROR = "originalError";
+
   private final PieceStorageService pieceStorageService;
   private final PurchaseOrderLineService purchaseOrderLineService;
 
@@ -234,24 +245,38 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
   }
 
   private Future<Void> updateItemsInInventory(List<JsonObject> items, String newHoldingId, RequestContext requestContext) {
-    items.forEach(item -> item.put(ITEM_HOLDINGS_RECORD_ID, newHoldingId));
-    List<Parameter> parameters = new ArrayList<>();
-    return Future.join(
-      items
-        .stream()
-        .map(item -> inventoryItemManager.updateItem(item, requestContext)
-          .otherwise(ex -> {
-            var itemIdParam = new Parameter().withKey("itemId").withValue(item.getString(ID));
-            if (ex.getCause() instanceof HttpException httpException) {
-              itemIdParam.withAdditionalProperty("originalError", httpException.getError().getMessage());
-            }
-            var tenantIdParam = new Parameter().withKey("tenantId").withValue(TenantTool.tenantId(requestContext.getHeaders()));
-            parameters.add(itemIdParam);
-            parameters.add(tenantIdParam);
-            return null;
-          }))
-        .toList())
-      .mapEmpty()
+    log.info("updateItemsInInventory:: Updating items in batch, items={}, new holding id={}", items.size(), newHoldingId);
+    var partialItems = new ArrayList<JsonObject>();
+    items.forEach(item -> {
+      var partialItem = new JsonObject()
+        .put(ID, item.getString(ID))
+        .put(ITEM_HOLDINGS_RECORD_ID, newHoldingId)
+        .put(ITEM_STATUS, item.getValue(ITEM_STATUS))
+        .put(VERSION, item.getString(VERSION));
+      if (StringUtils.isNotBlank(item.getString(MATERIAL_TYPE))
+        && item.getValue(MATERIAL_TYPE) instanceof JsonObject materialType) {
+        partialItem.put(ITEM_MATERIAL_TYPE_ID, materialType.getValue(ID));
+      }
+      if (StringUtils.isNotBlank(item.getString(PERMANENT_LOAN_TYPE))
+        && item.getValue(PERMANENT_LOAN_TYPE) instanceof JsonObject permanentLoanType) {
+        partialItem.put(ITEM_PERMANENT_LOAN_TYPE_ID, permanentLoanType.getValue(ID));
+      }
+      partialItems.add(partialItem);
+    });
+    var parameters = new ArrayList<Parameter>();
+    return inventoryItemManager.batchUpsertItems(partialItems, requestContext)
+      .otherwise(ex -> {
+        items.forEach(item -> {
+          var itemIdParam = new Parameter().withKey(ITEM_ID).withValue(item.getString(ID));
+          if (ex.getCause() instanceof HttpException httpException) {
+            itemIdParam.withAdditionalProperty(ORIGINAL_ERROR, httpException.getError().getMessage());
+          }
+          var tenantIdParam = new Parameter().withKey(TENANT_ID).withValue(TenantTool.tenantId(requestContext.getHeaders()));
+          parameters.add(itemIdParam);
+          parameters.add(tenantIdParam);
+        });
+        return null;
+      })
       .compose(v -> CollectionUtils.isNotEmpty(parameters)
         ? Future.failedFuture(new HttpException(500, ErrorCodes.ITEM_UPDATE_FAILED.toError().withParameters(parameters)))
         : Future.succeededFuture());
@@ -286,5 +311,4 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
         .filter(location -> !usedHoldingIds.contains(location.getHoldingId()))
         .toList());
   }
-
 }
