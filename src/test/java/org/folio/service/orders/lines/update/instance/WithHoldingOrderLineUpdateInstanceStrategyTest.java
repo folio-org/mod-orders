@@ -618,4 +618,328 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
         vertxTestContext.completeNow();
       });
   }
+
+  @Test
+  void testUpdateItemsWithMaterialTypeAndPermanentLoanType() throws IOException {
+    // given
+    var instanceId = UUID.randomUUID().toString();
+    var itemId = UUID.randomUUID().toString();
+    var materialTypeId = UUID.randomUUID().toString();
+    var permanentLoanTypeId = UUID.randomUUID().toString();
+
+    var holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
+    var holding = holdingsCollection.getJsonArray("holdingsRecords").getJsonObject(0);
+    var holdingId = holding.getString(ID);
+    var orderLineId = holding.getString("purchaseOrderLineIdentifier");
+
+    var locations = new ArrayList<Location>();
+    locations.add(new Location()
+      .withHoldingId(holdingId)
+      .withQuantity(1)
+      .withQuantityPhysical(1));
+
+    var item = new JsonObject()
+      .put(TestConstants.ID, itemId)
+      .put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ItemStatus.ON_ORDER.value()))
+      .put(ITEM_HOLDINGS_RECORD_ID, holdingId)
+      .put("materialType", new JsonObject().put(ID, materialTypeId))
+      .put("permanentLoanType", new JsonObject().put(ID, permanentLoanTypeId))
+      .put("_version", "1");
+
+    var poLine = new PoLine()
+      .withId(orderLineId)
+      .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
+      .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
+      .withLocations(locations);
+
+    var patchOrderLineRequest = new PatchOrderLineRequest()
+      .withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
+      .withReplaceInstanceRef(new ReplaceInstanceRef()
+        .withNewInstanceId(instanceId)
+        .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.CREATE)
+        .withDeleteAbandonedHoldings(false));
+
+    var orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
+      .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
+
+    doReturn(succeededFuture()).when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(instanceId), any(RequestContext.class));
+    doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryHoldingManager)
+      .createHolding(eq(instanceId), eq(locations.getFirst()), eq(requestContext));
+    doReturn(succeededFuture(List.of(item))).when(inventoryItemManager).getItemsByHoldingIdAndOrderLineId(eq(holdingId), eq(orderLineId), eq(requestContext));
+    doReturn(succeededFuture(null)).when(inventoryItemManager).batchUpsertItems(any(), eq(requestContext));
+
+    // when
+    withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).result();
+
+    // then
+    verify(inventoryItemManager, times(1)).batchUpsertItems(any(), eq(requestContext));
+  }
+
+  @Test
+  void testUpdateItemsWithMaterialTypeOnly() throws IOException {
+    // given
+    var instanceId = UUID.randomUUID().toString();
+    var itemId = UUID.randomUUID().toString();
+    var materialTypeId = UUID.randomUUID().toString();
+
+    var holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
+    var holding = holdingsCollection.getJsonArray("holdingsRecords").getJsonObject(0);
+    var holdingId = holding.getString(ID);
+    var orderLineId = holding.getString("purchaseOrderLineIdentifier");
+
+    var locations = new ArrayList<Location>();
+    locations.add(new Location()
+      .withHoldingId(holdingId)
+      .withQuantity(1)
+      .withQuantityPhysical(1));
+
+    var item = new JsonObject()
+      .put(TestConstants.ID, itemId)
+      .put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ItemStatus.ON_ORDER.value()))
+      .put(ITEM_HOLDINGS_RECORD_ID, holdingId)
+      .put("materialType", new JsonObject().put(ID, materialTypeId))
+      .put("_version", "1");
+
+    var poLine = new PoLine()
+      .withId(orderLineId)
+      .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
+      .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
+      .withLocations(locations);
+
+    var patchOrderLineRequest = new PatchOrderLineRequest()
+      .withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
+      .withReplaceInstanceRef(new ReplaceInstanceRef()
+        .withNewInstanceId(instanceId)
+        .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.CREATE)
+        .withDeleteAbandonedHoldings(false));
+
+    var orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
+      .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
+
+    doReturn(succeededFuture()).when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(instanceId), any(RequestContext.class));
+    doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryHoldingManager)
+      .createHolding(eq(instanceId), eq(locations.getFirst()), eq(requestContext));
+    doReturn(succeededFuture(List.of(item))).when(inventoryItemManager).getItemsByHoldingIdAndOrderLineId(eq(holdingId), eq(orderLineId), eq(requestContext));
+    doReturn(succeededFuture(null)).when(inventoryItemManager).batchUpsertItems(any(), eq(requestContext));
+
+    // when
+    withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).result();
+
+    // then
+    verify(inventoryItemManager, times(1)).batchUpsertItems(any(), eq(requestContext));
+  }
+
+  @Test
+  void testUpdateItemsWithPermanentLoanTypeOnly() throws IOException {
+    // given
+    var instanceId = UUID.randomUUID().toString();
+    var itemId = UUID.randomUUID().toString();
+    var permanentLoanTypeId = UUID.randomUUID().toString();
+
+    var holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
+    var holding = holdingsCollection.getJsonArray("holdingsRecords").getJsonObject(0);
+    var holdingId = holding.getString(ID);
+    var orderLineId = holding.getString("purchaseOrderLineIdentifier");
+
+    var locations = new ArrayList<Location>();
+    locations.add(new Location()
+      .withHoldingId(holdingId)
+      .withQuantity(1)
+      .withQuantityPhysical(1));
+
+    var item = new JsonObject()
+      .put(TestConstants.ID, itemId)
+      .put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ItemStatus.ON_ORDER.value()))
+      .put(ITEM_HOLDINGS_RECORD_ID, holdingId)
+      .put("permanentLoanType", new JsonObject().put(ID, permanentLoanTypeId))
+      .put("_version", "1");
+
+    var poLine = new PoLine()
+      .withId(orderLineId)
+      .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
+      .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
+      .withLocations(locations);
+
+    var patchOrderLineRequest = new PatchOrderLineRequest()
+      .withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
+      .withReplaceInstanceRef(new ReplaceInstanceRef()
+        .withNewInstanceId(instanceId)
+        .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.CREATE)
+        .withDeleteAbandonedHoldings(false));
+
+    var orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
+      .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
+
+    doReturn(succeededFuture()).when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(instanceId), any(RequestContext.class));
+    doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryHoldingManager)
+      .createHolding(eq(instanceId), eq(locations.getFirst()), eq(requestContext));
+    doReturn(succeededFuture(List.of(item))).when(inventoryItemManager).getItemsByHoldingIdAndOrderLineId(eq(holdingId), eq(orderLineId), eq(requestContext));
+    doReturn(succeededFuture(null)).when(inventoryItemManager).batchUpsertItems(any(), eq(requestContext));
+
+    // when
+    withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).result();
+
+    // then
+    verify(inventoryItemManager, times(1)).batchUpsertItems(any(), eq(requestContext));
+  }
+
+  @Test
+  void testUpdateItemsWithoutMaterialTypeAndPermanentLoanType() throws IOException {
+    // given
+    var instanceId = UUID.randomUUID().toString();
+    var itemId = UUID.randomUUID().toString();
+
+    var holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
+    var holding = holdingsCollection.getJsonArray("holdingsRecords").getJsonObject(0);
+    var holdingId = holding.getString(ID);
+    var orderLineId = holding.getString("purchaseOrderLineIdentifier");
+
+    var locations = new ArrayList<Location>();
+    locations.add(new Location()
+      .withHoldingId(holdingId)
+      .withQuantity(1)
+      .withQuantityPhysical(1));
+
+    var item = new JsonObject()
+      .put(TestConstants.ID, itemId)
+      .put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ItemStatus.ON_ORDER.value()))
+      .put(ITEM_HOLDINGS_RECORD_ID, holdingId)
+      .put("_version", "1");
+
+    var poLine = new PoLine()
+      .withId(orderLineId)
+      .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
+      .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
+      .withLocations(locations);
+
+    var patchOrderLineRequest = new PatchOrderLineRequest()
+      .withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
+      .withReplaceInstanceRef(new ReplaceInstanceRef()
+        .withNewInstanceId(instanceId)
+        .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.CREATE)
+        .withDeleteAbandonedHoldings(false));
+
+    var orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
+      .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
+
+    doReturn(succeededFuture()).when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(instanceId), any(RequestContext.class));
+    doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryHoldingManager)
+      .createHolding(eq(instanceId), eq(locations.getFirst()), eq(requestContext));
+    doReturn(succeededFuture(List.of(item))).when(inventoryItemManager).getItemsByHoldingIdAndOrderLineId(eq(holdingId), eq(orderLineId), eq(requestContext));
+    doReturn(succeededFuture(null)).when(inventoryItemManager).batchUpsertItems(any(), eq(requestContext));
+
+    // when
+    withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).result();
+
+    // then
+    verify(inventoryItemManager, times(1)).batchUpsertItems(any(), eq(requestContext));
+  }
+
+  @Test
+  void testUpdateItemsWithBlankMaterialTypeAndPermanentLoanType() throws IOException {
+    // given
+    var instanceId = UUID.randomUUID().toString();
+    var itemId = UUID.randomUUID().toString();
+
+    var holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
+    var holding = holdingsCollection.getJsonArray("holdingsRecords").getJsonObject(0);
+    var holdingId = holding.getString(ID);
+    var orderLineId = holding.getString("purchaseOrderLineIdentifier");
+
+    var locations = new ArrayList<Location>();
+    locations.add(new Location()
+      .withHoldingId(holdingId)
+      .withQuantity(1)
+      .withQuantityPhysical(1));
+
+    var item = new JsonObject()
+      .put(TestConstants.ID, itemId)
+      .put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ItemStatus.ON_ORDER.value()))
+      .put(ITEM_HOLDINGS_RECORD_ID, holdingId)
+      .put("materialType", "")
+      .put("permanentLoanType", "")
+      .put("_version", "1");
+
+    var poLine = new PoLine()
+      .withId(orderLineId)
+      .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
+      .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
+      .withLocations(locations);
+
+    var patchOrderLineRequest = new PatchOrderLineRequest()
+      .withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
+      .withReplaceInstanceRef(new ReplaceInstanceRef()
+        .withNewInstanceId(instanceId)
+        .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.CREATE)
+        .withDeleteAbandonedHoldings(false));
+
+    var orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
+      .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
+
+    doReturn(succeededFuture()).when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(instanceId), any(RequestContext.class));
+    doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryHoldingManager)
+      .createHolding(eq(instanceId), eq(locations.getFirst()), eq(requestContext));
+    doReturn(succeededFuture(List.of(item))).when(inventoryItemManager).getItemsByHoldingIdAndOrderLineId(eq(holdingId), eq(orderLineId), eq(requestContext));
+    doReturn(succeededFuture(null)).when(inventoryItemManager).batchUpsertItems(any(), eq(requestContext));
+
+    // when
+    withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).result();
+
+    // then
+    verify(inventoryItemManager, times(1)).batchUpsertItems(any(), eq(requestContext));
+  }
+
+  @Test
+  void testUpdateItemsWithNonJsonObjectMaterialType() throws IOException {
+    // given
+    var instanceId = UUID.randomUUID().toString();
+    var itemId = UUID.randomUUID().toString();
+
+    var holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
+    var holding = holdingsCollection.getJsonArray("holdingsRecords").getJsonObject(0);
+    var holdingId = holding.getString(ID);
+    var orderLineId = holding.getString("purchaseOrderLineIdentifier");
+
+    var locations = new ArrayList<Location>();
+    locations.add(new Location()
+      .withHoldingId(holdingId)
+      .withQuantity(1)
+      .withQuantityPhysical(1));
+
+    var item = new JsonObject()
+      .put(TestConstants.ID, itemId)
+      .put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ItemStatus.ON_ORDER.value()))
+      .put(ITEM_HOLDINGS_RECORD_ID, holdingId)
+      .put("materialType", "not-a-json-object")
+      .put("permanentLoanType", "not-a-json-object")
+      .put("_version", "1");
+
+    var poLine = new PoLine()
+      .withId(orderLineId)
+      .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
+      .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
+      .withLocations(locations);
+
+    var patchOrderLineRequest = new PatchOrderLineRequest()
+      .withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
+      .withReplaceInstanceRef(new ReplaceInstanceRef()
+        .withNewInstanceId(instanceId)
+        .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.CREATE)
+        .withDeleteAbandonedHoldings(false));
+
+    var orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
+      .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
+
+    doReturn(succeededFuture()).when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(instanceId), any(RequestContext.class));
+    doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryHoldingManager)
+      .createHolding(eq(instanceId), eq(locations.getFirst()), eq(requestContext));
+    doReturn(succeededFuture(List.of(item))).when(inventoryItemManager).getItemsByHoldingIdAndOrderLineId(eq(holdingId), eq(orderLineId), eq(requestContext));
+    doReturn(succeededFuture(null)).when(inventoryItemManager).batchUpsertItems(any(), eq(requestContext));
+
+    // when
+    withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).result();
+
+    // then
+    verify(inventoryItemManager, times(1)).batchUpsertItems(any(), eq(requestContext));
+  }
 }
