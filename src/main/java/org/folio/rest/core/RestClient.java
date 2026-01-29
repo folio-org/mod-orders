@@ -8,7 +8,6 @@ import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.core.exceptions.ExceptionUtil.getHttpException;
 
 import java.util.Map;
-import java.util.Objects;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -65,12 +64,7 @@ public class RestClient {
           return Future.failedFuture(getHttpException(response.statusCode(), error));
         }
       })
-      .map(bufferHttpResponse -> {
-        if (Objects.nonNull(bufferHttpResponse) && Objects.nonNull(bufferHttpResponse.bodyAsJsonObject())) {
-          return bufferHttpResponse.bodyAsJsonObject().mapTo(responseType);
-        }
-        return null;
-      })
+      .map(bufferHttpResponse -> bufferHttpResponse.bodyAsJsonObject().mapTo(responseType))
       .onFailure(log::error);
   }
 
@@ -109,13 +103,13 @@ public class RestClient {
   }
 
   public <T> Future<Void> patch(RequestEntry requestEntry, T dataObject, RequestContext requestContext) {
-    String endpoint = requestEntry.buildEndpoint();
+    var endpoint = requestEntry.buildEndpoint();
     return patch(endpoint, dataObject, requestContext);
   }
 
   public <T> Future<Void> patch(String endpoint, T dataObject, RequestContext requestContext) {
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
-    Promise<Void> promise = Promise.promise();
+    var promise = Promise.<Void>promise();
     return getVertxWebClient(requestContext.getContext())
       .patchAbs(buildAbsEndpoint(caseInsensitiveHeader, endpoint))
       .putHeaders(caseInsensitiveHeader)

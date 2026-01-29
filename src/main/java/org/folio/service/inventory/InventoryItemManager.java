@@ -72,9 +72,7 @@ public class InventoryItemManager {
   public static final String BARCODE_ALREADY_EXIST_ERROR = "lower(jsonb ->> 'barcode'::text) value already exists in table item";
   private static final String LOOKUP_ITEM_QUERY = "purchaseOrderLineIdentifier==%s and holdingsRecordId==%s";
   private static final String ITEM_STORAGE_ENDPOINT = "/item-storage/items";
-  private static final String BATCH_ITEMS_STORAGE_ENDPOINT = "/item-storage/batch/synchronous";
   private static final String BUILDING_PIECE_MESSAGE = "Building {} {} piece(s) for PO Line with id={}";
-  private static final String UPSERT = "upsert";
 
   private final RestClient restClient;
   private final CommonSettingsCache commonSettingsCache;
@@ -465,15 +463,13 @@ public class InventoryItemManager {
       .orElseGet(List::of);
   }
 
-  public Future<Void> batchUpsertItems(List<JsonObject> items, RequestContext requestContext) {
-    logger.info("batchUpsertItems:: Updating items={}", items.size());
-    var requestEntry = new RequestEntry(BATCH_ITEMS_STORAGE_ENDPOINT);
-    requestEntry.withQueryParameter(UPSERT, true);
+  public Future<Void> batchUpdatePartialItems(List<JsonObject> items, RequestContext requestContext) {
+    logger.info("batchUpdatePartialItems:: Batch updating partial items={}", items.size());
+    var requestEntry = new RequestEntry(ITEM_STORAGE_ENDPOINT);
     var tenantId = TenantTool.tenantId(requestContext.getHeaders());
-    logger.info("batchUpsertItems:: Trying to batch upsert items in inventory for tenant: {}", tenantId);
+    logger.info("batchUpdatePartialItems:: Trying to batch update partial items in inventory for tenant: {}", tenantId);
     var payload = new JsonObject()
       .put(InventoryUtils.ITEMS, items);
-    return restClient.postBatch(requestEntry, payload, JsonObject.class, requestContext)
-      .mapEmpty();
+    return restClient.patch(requestEntry, payload, requestContext);
   }
 }

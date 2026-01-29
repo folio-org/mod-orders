@@ -246,7 +246,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     verify(inventoryHoldingManager, times(1)).getOrCreateHoldingRecordByInstanceAndLocation(instanceId, locations.get(0), requestContext);
     verify(inventoryHoldingManager, never()).getOrCreateHoldingRecordByInstanceAndLocation(instanceId, locations.get(1), requestContext);
     verify(inventoryItemManager, times(1)).getItemsByHoldingIdAndOrderLineId(anyString(), anyString(), any(RequestContext.class));
-    verify(inventoryItemManager, times(1)).batchUpsertItems(any(), any(RequestContext.class));
+    verify(inventoryItemManager, times(1)).batchUpdatePartialItems(any(), any(RequestContext.class));
   }
 
   @Test
@@ -292,14 +292,14 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryHoldingManager)
       .getOrCreateHoldingRecordByInstanceAndLocation(eq(instanceId), eq(locations.getFirst()), eq(requestContext));
     doReturn(succeededFuture(List.of(item))).when(inventoryItemManager).getItemsByHoldingIdAndOrderLineId(eq(holdingId), eq(orderLineId), eq(requestContext));
-    doReturn(succeededFuture(null)).when(inventoryItemManager).batchUpsertItems(any(), eq(requestContext));
+    doReturn(succeededFuture(null)).when(inventoryItemManager).batchUpdatePartialItems(any(), eq(requestContext));
 
     withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).result();
 
     verify(inventoryInstanceManager, times(1)).createShadowInstanceIfNeeded(eq(instanceId), any(RequestContext.class));
     verify(inventoryHoldingManager, times(1)).getOrCreateHoldingRecordByInstanceAndLocation(instanceId, locations.getFirst(), requestContext);
     verify(inventoryItemManager, times(1)).getItemsByHoldingIdAndOrderLineId(holdingId, orderLineId, requestContext);
-    verify(inventoryItemManager, times(1)).batchUpsertItems(any(), eq(requestContext));
+    verify(inventoryItemManager, times(1)).batchUpdatePartialItems(any(), eq(requestContext));
   }
 
   @Test
@@ -416,7 +416,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     when(inventoryItemManager.getItemsByHoldingIdAndOrderLineId(eq(usedHoldingId), eq(orderLineId), any(RequestContext.class))).thenReturn(succeededFuture(List.of()));
     when(inventoryHoldingManager.deleteHoldingById(eq(holdingIds.get(0)), eq(true), any(RequestContext.class))).thenReturn(succeededFuture(null));
     when(inventoryHoldingManager.deleteHoldingById(eq(holdingIds.get(1)), eq(true), any(RequestContext.class))).thenReturn(succeededFuture(null));
-    when(inventoryItemManager.batchUpsertItems(any(), eq(requestContext))).thenReturn(succeededFuture(null));
+    when(inventoryItemManager.batchUpdatePartialItems(any(), eq(requestContext))).thenReturn(succeededFuture(null));
     when(pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext)).thenReturn(succeededFuture(List.of(new Piece().withHoldingId(usedHoldingId))));
     when(purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext)).thenReturn(succeededFuture(List.of(new PoLine().withLocations(List.of(new Location().withHoldingId(usedHoldingId))))));
 
@@ -431,7 +431,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
       verify(inventoryHoldingManager, times(1)).deleteHoldingById(eq(holdingIds.get(1)), eq(true), any(RequestContext.class));
       verify(inventoryHoldingManager, times(0)).deleteHoldingById(eq(usedHoldingId), eq(true), any(RequestContext.class));
       verify(inventoryItemManager, times(3)).getItemsByHoldingIdAndOrderLineId(anyString(), anyString(), any(RequestContext.class));
-      verify(inventoryItemManager, times(3)).batchUpsertItems(any(), any(RequestContext.class));
+      verify(inventoryItemManager, times(3)).batchUpdatePartialItems(any(), any(RequestContext.class));
       vertxTestContext.completeNow();
     });
   }
@@ -490,7 +490,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
         .createHolding(eq(instanceId), eq(locations.get(1)), eq(requestContext));
     doReturn(succeededFuture(List.of(items.get(0)))).when(inventoryItemManager).getItemsByHoldingIdAndOrderLineId(eq(holdingIds.get(0)), eq(orderLineId), eq(requestContext));
     doReturn(succeededFuture(List.of(items.get(1)))).when(inventoryItemManager).getItemsByHoldingIdAndOrderLineId(eq(holdingIds.get(1)), eq(orderLineId), eq(requestContext));
-    doReturn(succeededFuture(null)).when(inventoryItemManager).batchUpsertItems(any(), eq(requestContext));
+    doReturn(succeededFuture(null)).when(inventoryItemManager).batchUpdatePartialItems(any(), eq(requestContext));
 
     withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).result();
 
@@ -498,7 +498,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     verify(inventoryHoldingManager, times(1)).createHolding(instanceId, locations.get(0), requestContext);
     verify(inventoryHoldingManager, times(1)).createHolding(instanceId, locations.get(1), requestContext);
     verify(inventoryItemManager, times(2)).getItemsByHoldingIdAndOrderLineId(anyString(), anyString(), any(RequestContext.class));
-    verify(inventoryItemManager, times(2)).batchUpsertItems(any(), any(RequestContext.class));
+    verify(inventoryItemManager, times(2)).batchUpdatePartialItems(any(), any(RequestContext.class));
   }
 
   @Test
@@ -544,14 +544,14 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryHoldingManager)
         .createHolding(eq(instanceId), eq(locations.getFirst()), eq(requestContext));
     doReturn(succeededFuture(List.of(item))).when(inventoryItemManager).getItemsByHoldingIdAndOrderLineId(eq(holdingId), eq(orderLineId), eq(requestContext));
-    doReturn(succeededFuture(null)).when(inventoryItemManager).batchUpsertItems(any(), eq(requestContext));
+    doReturn(succeededFuture(null)).when(inventoryItemManager).batchUpdatePartialItems(any(), eq(requestContext));
 
     withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).result();
 
     verify(inventoryInstanceManager, times(1)).createShadowInstanceIfNeeded(eq(instanceId), any(RequestContext.class));
     verify(inventoryHoldingManager, times(1)).createHolding(instanceId, locations.getFirst(), requestContext);
     verify(inventoryItemManager, times(1)).getItemsByHoldingIdAndOrderLineId(holdingId, orderLineId, requestContext);
-    verify(inventoryItemManager, times(1)).batchUpsertItems(any(), eq(requestContext));
+    verify(inventoryItemManager, times(1)).batchUpdatePartialItems(any(), eq(requestContext));
   }
 
   @Test
@@ -597,7 +597,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryHoldingManager)
         .createHolding(eq(instanceId), eq(locations.getFirst()), eq(requestContext));
     doReturn(succeededFuture(List.of(item))).when(inventoryItemManager).getItemsByHoldingIdAndOrderLineId(eq(holdingId), eq(orderLineId), eq(requestContext));
-    doReturn(Future.failedFuture(new HttpException(500, ErrorCodes.GENERIC_ERROR_CODE))).when(inventoryItemManager).batchUpsertItems(any(), eq(requestContext));
+    doReturn(Future.failedFuture(new HttpException(500, ErrorCodes.GENERIC_ERROR_CODE))).when(inventoryItemManager).batchUpdatePartialItems(any(), eq(requestContext));
 
     vertxTestContext.assertFailure(withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext))
       .onComplete(res-> {
@@ -614,7 +614,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
         verify(inventoryInstanceManager, times(1)).createShadowInstanceIfNeeded(eq(instanceId), any(RequestContext.class));
         verify(inventoryHoldingManager, times(1)).createHolding(instanceId, locations.getFirst(), requestContext);
         verify(inventoryItemManager, times(1)).getItemsByHoldingIdAndOrderLineId(holdingId, orderLineId, requestContext);
-        verify(inventoryItemManager, times(1)).batchUpsertItems(any(), eq(requestContext));
+        verify(inventoryItemManager, times(1)).batchUpdatePartialItems(any(), eq(requestContext));
         vertxTestContext.completeNow();
       });
   }
@@ -666,13 +666,13 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryHoldingManager)
       .createHolding(eq(instanceId), eq(locations.getFirst()), eq(requestContext));
     doReturn(succeededFuture(List.of(item))).when(inventoryItemManager).getItemsByHoldingIdAndOrderLineId(eq(holdingId), eq(orderLineId), eq(requestContext));
-    doReturn(succeededFuture(null)).when(inventoryItemManager).batchUpsertItems(any(), eq(requestContext));
+    doReturn(succeededFuture(null)).when(inventoryItemManager).batchUpdatePartialItems(any(), eq(requestContext));
 
     // when
     withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).result();
 
     // then
-    verify(inventoryItemManager, times(1)).batchUpsertItems(any(), eq(requestContext));
+    verify(inventoryItemManager, times(1)).batchUpdatePartialItems(any(), eq(requestContext));
   }
 
   @Test
@@ -720,13 +720,13 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryHoldingManager)
       .createHolding(eq(instanceId), eq(locations.getFirst()), eq(requestContext));
     doReturn(succeededFuture(List.of(item))).when(inventoryItemManager).getItemsByHoldingIdAndOrderLineId(eq(holdingId), eq(orderLineId), eq(requestContext));
-    doReturn(succeededFuture(null)).when(inventoryItemManager).batchUpsertItems(any(), eq(requestContext));
+    doReturn(succeededFuture(null)).when(inventoryItemManager).batchUpdatePartialItems(any(), eq(requestContext));
 
     // when
     withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).result();
 
     // then
-    verify(inventoryItemManager, times(1)).batchUpsertItems(any(), eq(requestContext));
+    verify(inventoryItemManager, times(1)).batchUpdatePartialItems(any(), eq(requestContext));
   }
 
   @Test
@@ -774,13 +774,13 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryHoldingManager)
       .createHolding(eq(instanceId), eq(locations.getFirst()), eq(requestContext));
     doReturn(succeededFuture(List.of(item))).when(inventoryItemManager).getItemsByHoldingIdAndOrderLineId(eq(holdingId), eq(orderLineId), eq(requestContext));
-    doReturn(succeededFuture(null)).when(inventoryItemManager).batchUpsertItems(any(), eq(requestContext));
+    doReturn(succeededFuture(null)).when(inventoryItemManager).batchUpdatePartialItems(any(), eq(requestContext));
 
     // when
     withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).result();
 
     // then
-    verify(inventoryItemManager, times(1)).batchUpsertItems(any(), eq(requestContext));
+    verify(inventoryItemManager, times(1)).batchUpdatePartialItems(any(), eq(requestContext));
   }
 
   @Test
@@ -826,13 +826,13 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryHoldingManager)
       .createHolding(eq(instanceId), eq(locations.getFirst()), eq(requestContext));
     doReturn(succeededFuture(List.of(item))).when(inventoryItemManager).getItemsByHoldingIdAndOrderLineId(eq(holdingId), eq(orderLineId), eq(requestContext));
-    doReturn(succeededFuture(null)).when(inventoryItemManager).batchUpsertItems(any(), eq(requestContext));
+    doReturn(succeededFuture(null)).when(inventoryItemManager).batchUpdatePartialItems(any(), eq(requestContext));
 
     // when
     withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).result();
 
     // then
-    verify(inventoryItemManager, times(1)).batchUpsertItems(any(), eq(requestContext));
+    verify(inventoryItemManager, times(1)).batchUpdatePartialItems(any(), eq(requestContext));
   }
 
   @Test
@@ -880,13 +880,13 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryHoldingManager)
       .createHolding(eq(instanceId), eq(locations.getFirst()), eq(requestContext));
     doReturn(succeededFuture(List.of(item))).when(inventoryItemManager).getItemsByHoldingIdAndOrderLineId(eq(holdingId), eq(orderLineId), eq(requestContext));
-    doReturn(succeededFuture(null)).when(inventoryItemManager).batchUpsertItems(any(), eq(requestContext));
+    doReturn(succeededFuture(null)).when(inventoryItemManager).batchUpdatePartialItems(any(), eq(requestContext));
 
     // when
     withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).result();
 
     // then
-    verify(inventoryItemManager, times(1)).batchUpsertItems(any(), eq(requestContext));
+    verify(inventoryItemManager, times(1)).batchUpdatePartialItems(any(), eq(requestContext));
   }
 
   @Test
@@ -934,12 +934,12 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryHoldingManager)
       .createHolding(eq(instanceId), eq(locations.getFirst()), eq(requestContext));
     doReturn(succeededFuture(List.of(item))).when(inventoryItemManager).getItemsByHoldingIdAndOrderLineId(eq(holdingId), eq(orderLineId), eq(requestContext));
-    doReturn(succeededFuture(null)).when(inventoryItemManager).batchUpsertItems(any(), eq(requestContext));
+    doReturn(succeededFuture(null)).when(inventoryItemManager).batchUpdatePartialItems(any(), eq(requestContext));
 
     // when
     withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).result();
 
     // then
-    verify(inventoryItemManager, times(1)).batchUpsertItems(any(), eq(requestContext));
+    verify(inventoryItemManager, times(1)).batchUpdatePartialItems(any(), eq(requestContext));
   }
 }

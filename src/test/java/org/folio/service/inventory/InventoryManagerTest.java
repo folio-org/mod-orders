@@ -885,31 +885,28 @@ public class InventoryManagerTest {
       .put(InventoryItemManager.ITEM_STATUS, new JsonObject().put(InventoryItemManager.ITEM_STATUS_NAME, "Available"));
     var items = Arrays.asList(item1, item2);
 
-    var response = new JsonObject()
-      .put(ITEMS, new JsonArray().add(item1).add(item2));
-    doReturn(succeededFuture(response)).when(restClient).postBatch(any(RequestEntry.class), any(JsonObject.class), eq(JsonObject.class), eq(requestContext));
+    doReturn(succeededFuture(null)).when(restClient).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
 
     // When
-    var result = inventoryItemManager.batchUpsertItems(items, requestContext);
+    var result = inventoryItemManager.batchUpdatePartialItems(items, requestContext);
 
     // Then
     assertTrue(result.succeeded());
-    verify(restClient, times(1)).postBatch(any(RequestEntry.class), any(JsonObject.class), eq(JsonObject.class), eq(requestContext));
+    verify(restClient, times(1)).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
   }
 
   @Test
   void testBatchUpsertItemsShouldHandleEmptyList() {
     // given
     var items = Collections.<JsonObject>emptyList();
-    var response = new JsonObject().put(ITEMS, new JsonArray());
-    doReturn(succeededFuture(response)).when(restClient).postBatch(any(RequestEntry.class), any(JsonObject.class), eq(JsonObject.class), eq(requestContext));
+    doReturn(succeededFuture(null)).when(restClient).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
 
     // When
-    var result = inventoryItemManager.batchUpsertItems(items, requestContext);
+    var result = inventoryItemManager.batchUpdatePartialItems(items, requestContext);
 
     // Then
     assertTrue(result.succeeded());
-    verify(restClient, times(1)).postBatch(any(RequestEntry.class), any(JsonObject.class), eq(JsonObject.class), eq(requestContext));
+    verify(restClient, times(1)).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
   }
 
   @Test
@@ -922,15 +919,14 @@ public class InventoryManagerTest {
       .put(InventoryItemManager.ITEM_STATUS, new JsonObject().put(InventoryItemManager.ITEM_STATUS_NAME, "On order"));
     var items = Collections.singletonList(item);
 
-    var response = new JsonObject().put(ITEMS, new JsonArray().add(item));
-    doReturn(succeededFuture(response)).when(restClient).postBatch(any(RequestEntry.class), any(JsonObject.class), eq(JsonObject.class), eq(requestContext));
+    doReturn(succeededFuture(null)).when(restClient).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
 
     // When
-    var result = inventoryItemManager.batchUpsertItems(items, requestContext);
+    var result = inventoryItemManager.batchUpdatePartialItems(items, requestContext);
 
     // Then
     assertTrue(result.succeeded());
-    verify(restClient, times(1)).postBatch(any(RequestEntry.class), any(JsonObject.class), eq(JsonObject.class), eq(requestContext));
+    verify(restClient, times(1)).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
   }
 
   @Test
@@ -944,42 +940,39 @@ public class InventoryManagerTest {
 
     var errorMessage = "Internal server error";
     doReturn(Future.failedFuture(new HttpException(500, errorMessage)))
-      .when(restClient).postBatch(any(RequestEntry.class), any(JsonObject.class), eq(JsonObject.class), eq(requestContext));
+      .when(restClient).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
 
     // When
-    var result = inventoryItemManager.batchUpsertItems(items, requestContext);
+    var result = inventoryItemManager.batchUpdatePartialItems(items, requestContext);
 
     // Then
     assertTrue(result.failed());
     assertThat(result.cause(), IsInstanceOf.instanceOf(HttpException.class));
     var exception = (HttpException) result.cause();
     assertEquals(500, exception.getCode());
-    verify(restClient, times(1)).postBatch(any(RequestEntry.class), any(JsonObject.class), eq(JsonObject.class), eq(requestContext));
+    verify(restClient, times(1)).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
   }
 
   @Test
   void testBatchUpsertItemsShouldHandleLargeNumberOfItems() {
     // given
     var items = new ArrayList<JsonObject>();
-    var itemsArray = new JsonArray();
     for (int i = 0; i < 100; i++) {
       var item = new JsonObject()
         .put(ID, UUID.randomUUID().toString())
         .put(InventoryItemManager.ITEM_BARCODE, "barcode" + i)
         .put(InventoryItemManager.ITEM_STATUS, new JsonObject().put(InventoryItemManager.ITEM_STATUS_NAME, "Available"));
       items.add(item);
-      itemsArray.add(item);
     }
 
-    var response = new JsonObject().put(ITEMS, itemsArray);
-    doReturn(succeededFuture(response)).when(restClient).postBatch(any(RequestEntry.class), any(JsonObject.class), eq(JsonObject.class), eq(requestContext));
+    doReturn(succeededFuture(null)).when(restClient).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
 
     // When
-    var result = inventoryItemManager.batchUpsertItems(items, requestContext);
+    var result = inventoryItemManager.batchUpdatePartialItems(items, requestContext);
 
     // Then
     assertTrue(result.succeeded());
-    verify(restClient, times(1)).postBatch(any(RequestEntry.class), any(JsonObject.class), eq(JsonObject.class), eq(requestContext));
+    verify(restClient, times(1)).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
   }
 
   @Test
@@ -991,14 +984,13 @@ public class InventoryManagerTest {
       .put(InventoryItemManager.ITEM_BARCODE, "barcode");
     var items = Collections.singletonList(item);
 
-    var response = new JsonObject().put(ITEMS, new JsonArray().add(item));
-    doReturn(succeededFuture(response)).when(restClient).postBatch(any(RequestEntry.class), any(JsonObject.class), eq(JsonObject.class), eq(requestContext));
+    doReturn(succeededFuture(null)).when(restClient).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
 
     // When
-    inventoryItemManager.batchUpsertItems(items, requestContext).result();
+    inventoryItemManager.batchUpdatePartialItems(items, requestContext).result();
 
     // Then
-    verify(restClient).postBatch(any(RequestEntry.class), any(JsonObject.class), eq(JsonObject.class), eq(requestContext));
+    verify(restClient).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
   }
 
   @Test
@@ -1020,15 +1012,14 @@ public class InventoryManagerTest {
       .put(InventoryItemManager.ITEM_DISCOVERY_SUPPRESS, false);
     var items = Collections.singletonList(item);
 
-    var response = new JsonObject().put(ITEMS, new JsonArray().add(item));
-    doReturn(succeededFuture(response)).when(restClient).postBatch(any(RequestEntry.class), any(JsonObject.class), eq(JsonObject.class), eq(requestContext));
+    doReturn(succeededFuture(null)).when(restClient).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
 
     // When
-    var result = inventoryItemManager.batchUpsertItems(items, requestContext);
+    var result = inventoryItemManager.batchUpdatePartialItems(items, requestContext);
 
     // Then
     assertTrue(result.succeeded());
-    verify(restClient, times(1)).postBatch(any(RequestEntry.class), any(JsonObject.class), eq(JsonObject.class), eq(requestContext));
+    verify(restClient, times(1)).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
   }
 
   @Test
@@ -1045,15 +1036,14 @@ public class InventoryManagerTest {
       .put(ID, UUID.randomUUID().toString())
       .put(InventoryItemManager.ITEM_STATUS, new JsonObject().put(InventoryItemManager.ITEM_STATUS_NAME, "Available")));
 
-    var response = new JsonObject().put(ITEMS, new JsonArray(items));
-    doReturn(succeededFuture(response)).when(restClient).postBatch(any(RequestEntry.class), any(JsonObject.class), eq(JsonObject.class), eq(requestContext));
+    doReturn(succeededFuture(null)).when(restClient).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
 
     // When
-    var result = inventoryItemManager.batchUpsertItems(items, requestContext);
+    var result = inventoryItemManager.batchUpdatePartialItems(items, requestContext);
 
     // Then
     assertTrue(result.succeeded());
-    verify(restClient, times(1)).postBatch(any(RequestEntry.class), any(JsonObject.class), eq(JsonObject.class), eq(requestContext));
+    verify(restClient, times(1)).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
   }
 
   @Test
@@ -1067,17 +1057,17 @@ public class InventoryManagerTest {
 
     var errorMessage = "Network timeout";
     doReturn(Future.failedFuture(new HttpException(504, errorMessage)))
-      .when(restClient).postBatch(any(RequestEntry.class), any(JsonObject.class), eq(JsonObject.class), eq(requestContext));
+      .when(restClient).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
 
     // When
-    var result = inventoryItemManager.batchUpsertItems(items, requestContext);
+    var result = inventoryItemManager.batchUpdatePartialItems(items, requestContext);
 
     // Then
     assertTrue(result.failed());
     assertThat(result.cause(), IsInstanceOf.instanceOf(HttpException.class));
     var exception = (HttpException) result.cause();
     assertEquals(504, exception.getCode());
-    verify(restClient, times(1)).postBatch(any(RequestEntry.class), any(JsonObject.class), eq(JsonObject.class), eq(requestContext));
+    verify(restClient, times(1)).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
   }
 
   @Test
@@ -1091,17 +1081,17 @@ public class InventoryManagerTest {
 
     var errorMessage = "Invalid item data";
     doReturn(Future.failedFuture(new HttpException(400, errorMessage)))
-      .when(restClient).postBatch(any(RequestEntry.class), any(JsonObject.class), eq(JsonObject.class), eq(requestContext));
+      .when(restClient).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
 
     // When
-    var result = inventoryItemManager.batchUpsertItems(items, requestContext);
+    var result = inventoryItemManager.batchUpdatePartialItems(items, requestContext);
 
     // Then
     assertTrue(result.failed());
     assertThat(result.cause(), IsInstanceOf.instanceOf(HttpException.class));
     var exception = (HttpException) result.cause();
     assertEquals(400, exception.getCode());
-    verify(restClient, times(1)).postBatch(any(RequestEntry.class), any(JsonObject.class), eq(JsonObject.class), eq(requestContext));
+    verify(restClient, times(1)).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
   }
 
   /**
