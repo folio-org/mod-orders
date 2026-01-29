@@ -113,6 +113,7 @@ import org.folio.service.pieces.flows.update.PieceUpdateFlowPoLineServiceTest;
 import org.folio.service.pieces.validators.PieceValidatorUtilTest;
 import org.folio.service.routinglists.RoutingListServiceTest;
 import org.folio.service.settings.SettingsRetrieverTest;
+import org.folio.utils.iterators.FutureIteratorTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
@@ -385,6 +386,10 @@ public class ApiTestSuite {
 
   @Nested
   class CompositePoLineValidationServiceTestNested extends CompositePoLineValidationServiceTest {
+  }
+
+  @Nested
+  class FutureIteratorTestNested extends FutureIteratorTest {
   }
 
   @Nested
