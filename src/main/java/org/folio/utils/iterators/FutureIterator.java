@@ -14,6 +14,7 @@ import static io.vertx.core.Future.succeededFuture;
  * Items are not loaded into memory.
  */
 public abstract class FutureIterator<T> {
+
   private Future<T> futureNext = null;
 
   /**

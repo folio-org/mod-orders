@@ -10,6 +10,7 @@ import static io.vertx.core.Future.succeededFuture;
  * A future iterator created from a normal iterator.
  */
 public class FutureIteratorFromIterator<T> extends FutureIterator<T> {
+
   Iterator<T> inputIterator;
 
   public FutureIteratorFromIterator(Iterator<T> inputIterator) {

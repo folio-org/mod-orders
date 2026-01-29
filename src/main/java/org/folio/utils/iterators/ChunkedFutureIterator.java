@@ -11,6 +11,7 @@ import static io.vertx.core.Future.succeededFuture;
  * A future iterator taking elements from an input iterator and returning them by chunks.
  */
 public class ChunkedFutureIterator<T> extends FutureIterator<List<T>> {
+
   private final FutureIterator<T> inputIterator;
   private final int chunkSize;
   private boolean done = false;

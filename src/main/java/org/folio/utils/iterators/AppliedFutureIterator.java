@@ -11,6 +11,7 @@ import static io.vertx.core.Future.succeededFuture;
  * Skips the entry if the result of the function is null.
  */
 public class AppliedFutureIterator<T,R> extends FutureIterator<R> {
+
   private final FutureIterator<T> inputIterator;
   private final Function<T, Future<R>> f;
 
