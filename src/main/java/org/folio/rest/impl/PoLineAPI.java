@@ -59,7 +59,7 @@ public class PoLineAPI extends BaseApi implements OrdersOrderLines {
   @Validate
   public void getOrdersOrderLines(String totalRecords, int offset, int limit, String query, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    helper.getOrderLines(limit, offset, query, new RequestContext(vertxContext, okapiHeaders))
+    helper.getOrderLines(query, offset, limit, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(lines -> asyncResultHandler.handle(succeededFuture(buildOkResponse(lines))))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
