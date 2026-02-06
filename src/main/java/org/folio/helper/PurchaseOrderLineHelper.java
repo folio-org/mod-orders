@@ -151,16 +151,18 @@ public class PurchaseOrderLineHelper {
    * must be used only when there is a necessity to search/filter on the
    * Composite Purchase Order fields
    *
-   * @param limit Limit the number of elements returned in the response
-   * @param offset Skip over a number of elements by specifying an offset value for the query
    * @param query A query expressed as a CQL string (see dev.folio.org/reference/glossary#cql) using valid searchable fields.
+   * @param offset Skip over a number of elements by specifying an offset value for the query
+   * @param limit Limit the number of elements returned in the response
    * @return Completable future which holds {@link PoLineCollection} on success or an exception on any error
    */
-  public Future<PoLineCollection> getOrderLines(int limit, int offset, String query, RequestContext requestContext) {
+  public Future<PoLineCollection> getOrderLines(String query, int offset, int limit, RequestContext requestContext) {
     return protectionService.getQueryWithAcqUnitsCheck("purchaseOrder.", query, requestContext)
       .compose(finalQuery -> {
         RequestEntry requestEntry = new RequestEntry(resourcesPath(PO_LINES_STORAGE))
-          .withQuery(finalQuery).withLimit(limit).withOffset(offset);
+          .withQuery(finalQuery)
+          .withOffset(offset)
+          .withLimit(limit);
         return restClient.get(requestEntry, PoLineCollection.class, requestContext);
       })
       .onFailure(t -> logger.error("Error getting orderLines", t));

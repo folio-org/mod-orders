@@ -2,7 +2,6 @@ package org.folio.service.orders;
 
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
-import static java.lang.Thread.sleep;
 import static java.util.Collections.singletonList;
 import static org.folio.TestConfig.mockPort;
 import static org.folio.TestConstants.X_OKAPI_TOKEN;
@@ -15,14 +14,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +42,7 @@ import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.FundDistribution.DistributionType;
 import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
 import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PoLineCollection;
+import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.RolloverStatus;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
@@ -53,6 +51,8 @@ import org.folio.service.finance.rollover.LedgerRolloverErrorService;
 import org.folio.service.finance.rollover.LedgerRolloverProgressService;
 import org.folio.service.finance.transaction.TransactionService;
 import org.folio.utils.CurrencyConversionMockHelper;
+import org.folio.utils.iterators.FutureIterator;
+import org.folio.utils.iterators.FutureIteratorFromIterator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -84,6 +84,8 @@ public class OrderRolloverServiceTest {
   private FundService fundService;
   @Mock
   private TransactionService transactionService;
+  @Mock
+  private PurchaseOrderStorageService purchaseOrderStorageService;
   @Mock
   private PurchaseOrderLineService purchaseOrderLineService;
   @Mock
@@ -210,6 +212,20 @@ public class OrderRolloverServiceTest {
     List<Fund> funds = List.of(new Fund().withId(fundId1).withLedgerId(ledgerId), new Fund().withId(fundId2).withLedgerId(ledgerId),
       new Fund().withId(fundId3).withLedgerId(ledgerId));
 
+    PurchaseOrder order1 = new PurchaseOrder()
+      .withId(orderId1)
+      .withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN)
+      .withOrderType(PurchaseOrder.OrderType.ONE_TIME);
+    PurchaseOrder order2 = new PurchaseOrder()
+      .withId(orderId1)
+      .withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN)
+      .withOrderType(PurchaseOrder.OrderType.ONGOING);
+    PurchaseOrder order3 = new PurchaseOrder()
+      .withId(orderId1)
+      .withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN)
+      .withOrderType(PurchaseOrder.OrderType.ONGOING);
+    List<PurchaseOrder> orders = List.of(order1, order2, order3);
+
     FundDistribution fundDistributionOneTime = new FundDistribution().withFundId(fundId1).withValue(fundAmount)
       .withEncumbrance(prevEncumbrId1);
     FundDistribution fundDistributionOngoing2 = new FundDistribution().withFundId(fundId2).withValue(fundAmount)
@@ -230,18 +246,15 @@ public class OrderRolloverServiceTest {
       .withFundDistribution(List.of(fundDistributionOngoing3));
 
     List<PoLine> poLines = List.of(poLineOneTime, poLineOngoing2, poLineOngoing3);
-    PoLineCollection poLineCollection = new PoLineCollection()
-      .withPoLines(poLines)
-      .withTotalRecords(poLines.size());
-    PoLineCollection emptyPoLineCollection = new PoLineCollection()
-      .withPoLines(new ArrayList<>())
-      .withTotalRecords(0);
 
     doReturn(succeededFuture(funds)).when(fundService).getFundsByLedgerId(ledgerId, requestContext);
-    doReturn(succeededFuture(poLineCollection), succeededFuture(emptyPoLineCollection))
-      .when(purchaseOrderLineService).getOrderLineCollection(anyString(), anyInt(), anyInt(), any());
-    doReturn(succeededFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
-    doReturn(succeededFuture()).when(purchaseOrderLineService).saveOrderLinesWithoutSearchLocationsUpdate(anyList(), any());
+    FutureIterator<List<PurchaseOrder>> orderIterator1 = new FutureIteratorFromIterator<>(List.of(orders).listIterator());
+    FutureIterator<List<PurchaseOrder>> orderIterator2 = new FutureIteratorFromIterator<>(Collections.emptyIterator());
+    doReturn(orderIterator1, orderIterator2).when(purchaseOrderStorageService).getPurchaseOrderIterator(anyString(), eq(requestContext));
+    doReturn(100).when(purchaseOrderLineService).getPoLinePartitionSize();
+    FutureIterator<List<PoLine>> futureIterator = new FutureIteratorFromIterator<>(List.of(poLines).listIterator());
+    doReturn(futureIterator).when(purchaseOrderLineService).getOrderLinesByOrderIds(anyList(), eq(requestContext));
+    doReturn(succeededFuture()).when(purchaseOrderLineService).saveOrderLinesWithoutSearchLocationsUpdate(anyList(), eq(requestContext));
 
     LedgerFiscalYearRolloverProgress progress = new LedgerFiscalYearRolloverProgress().withId(UUID.randomUUID().toString())
       .withLedgerRolloverId(ledgerFiscalYearRollover.getId()).withOverallRolloverStatus(RolloverStatus.IN_PROGRESS)
@@ -324,6 +337,12 @@ public class OrderRolloverServiceTest {
 
     List<Fund> funds = List.of(new Fund().withId(fundId1).withLedgerId(ledgerId), new Fund().withId(fundId2).withLedgerId(ledgerId));
 
+    PurchaseOrder order = new PurchaseOrder()
+      .withId(orderId1)
+      .withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN)
+      .withOrderType(PurchaseOrder.OrderType.ONE_TIME);
+    List<PurchaseOrder> orders = List.of(order);
+
     FundDistribution fundDistributionOneTime = new FundDistribution()
       .withFundId(fundId1)
       .withValue(50d)
@@ -341,18 +360,15 @@ public class OrderRolloverServiceTest {
       .withFundDistribution(List.of(fundDistributionOneTime, fundDistributionOngoing));
 
     List<PoLine> poLines = List.of(poLineOneTime);
-    PoLineCollection poLineCollection = new PoLineCollection()
-      .withPoLines(poLines)
-      .withTotalRecords(poLines.size());
-    PoLineCollection emptyPoLineCollection = new PoLineCollection()
-      .withPoLines(new ArrayList<>())
-      .withTotalRecords(0);
 
     doReturn(succeededFuture(funds)).when(fundService).getFundsByLedgerId(ledgerId, requestContext);
-    doReturn(succeededFuture(poLineCollection), succeededFuture(emptyPoLineCollection))
-      .when(purchaseOrderLineService).getOrderLineCollection(anyString(), anyInt(), anyInt(), any());
-    doReturn(succeededFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
-    doReturn(succeededFuture()).when(purchaseOrderLineService).saveOrderLinesWithoutSearchLocationsUpdate(anyList(), any());
+    FutureIterator<List<PurchaseOrder>> orderIterator1 = new FutureIteratorFromIterator<>(List.of(orders).listIterator());
+    FutureIterator<List<PurchaseOrder>> orderIterator2 = new FutureIteratorFromIterator<>(Collections.emptyIterator());
+    doReturn(orderIterator1, orderIterator2).when(purchaseOrderStorageService).getPurchaseOrderIterator(anyString(), eq(requestContext));
+    doReturn(100).when(purchaseOrderLineService).getPoLinePartitionSize();
+    FutureIterator<List<PoLine>> poLineIterator = new FutureIteratorFromIterator<>(List.of(poLines).listIterator());
+    doReturn(poLineIterator).when(purchaseOrderLineService).getOrderLinesByOrderIds(anyList(), eq(requestContext));
+    doReturn(succeededFuture()).when(purchaseOrderLineService).saveOrderLinesWithoutSearchLocationsUpdate(anyList(), eq(requestContext));
 
     LedgerFiscalYearRolloverProgress progress = new LedgerFiscalYearRolloverProgress().withId(UUID.randomUUID().toString())
       .withLedgerRolloverId(ledgerFiscalYearRollover.getId()).withOverallRolloverStatus(RolloverStatus.IN_PROGRESS)
@@ -433,6 +449,20 @@ public class OrderRolloverServiceTest {
     List<Fund> funds = List.of(new Fund().withId(fundId1).withLedgerId(ledgerId), new Fund().withId(fundId2).withLedgerId(ledgerId),
       new Fund().withId(fundId3).withLedgerId(ledgerId));
 
+    PurchaseOrder order1 = new PurchaseOrder()
+      .withId(orderId1)
+      .withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN)
+      .withOrderType(PurchaseOrder.OrderType.ONE_TIME);
+    PurchaseOrder order2 = new PurchaseOrder()
+      .withId(orderId1)
+      .withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN)
+      .withOrderType(PurchaseOrder.OrderType.ONGOING);
+    PurchaseOrder order3 = new PurchaseOrder()
+      .withId(orderId1)
+      .withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN)
+      .withOrderType(PurchaseOrder.OrderType.ONGOING);
+    List<PurchaseOrder> orders = List.of(order1, order2, order3);
+
     FundDistribution fundDistributionOneTime = new FundDistribution().withFundId(fundId1).withValue(fundAmount)
       .withEncumbrance(prevEncumbrId1);
     FundDistribution fundDistributionOngoing2 = new FundDistribution().withFundId(fundId2).withValue(fundAmount)
@@ -452,18 +482,16 @@ public class OrderRolloverServiceTest {
     PoLine poLineOngoing3 = new PoLine().withId(poLineId3).withPurchaseOrderId(orderId3).withCost(costOngoing3)
       .withFundDistribution(List.of(fundDistributionOngoing3));
     List<PoLine> poLines = List.of(poLineOneTime, poLineOngoing2, poLineOngoing3);
-    PoLineCollection poLineCollection = new PoLineCollection()
-      .withPoLines(poLines)
-      .withTotalRecords(poLines.size());
-    PoLineCollection emptyPoLineCollection = new PoLineCollection()
-      .withPoLines(new ArrayList<>())
-      .withTotalRecords(0);
 
     doReturn(succeededFuture(funds)).when(fundService).getFundsByLedgerId(ledgerId, requestContext);
-    doReturn(succeededFuture(poLineCollection), succeededFuture(emptyPoLineCollection))
-      .when(purchaseOrderLineService).getOrderLineCollection(anyString(), anyInt(), anyInt(), any());
-    doReturn(succeededFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
-    doReturn(succeededFuture()).when(purchaseOrderLineService).saveOrderLinesWithoutSearchLocationsUpdate(anyList(), any());
+    FutureIterator<List<PurchaseOrder>> orderIterator1 = new FutureIteratorFromIterator<>(List.of(orders).listIterator());
+    FutureIterator<List<PurchaseOrder>> orderIterator2 = new FutureIteratorFromIterator<>(Collections.emptyIterator());
+    doReturn(orderIterator1, orderIterator2).when(purchaseOrderStorageService).getPurchaseOrderIterator(anyString(), eq(requestContext));
+    doReturn(100).when(purchaseOrderLineService).getPoLinePartitionSize();
+    FutureIterator<List<PoLine>> poLineIterator = new FutureIteratorFromIterator<>(List.of(poLines).listIterator());
+    doReturn(poLineIterator).when(purchaseOrderLineService).getOrderLinesByOrderIds(anyList(), eq(requestContext));
+    doReturn(succeededFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), eq(requestContext));
+    doReturn(succeededFuture()).when(purchaseOrderLineService).saveOrderLinesWithoutSearchLocationsUpdate(anyList(), eq(requestContext));
 
     LedgerFiscalYearRolloverProgress progress = new LedgerFiscalYearRolloverProgress().withId(UUID.randomUUID().toString())
       .withLedgerRolloverId(ledgerFiscalYearRollover.getId()).withOverallRolloverStatus(RolloverStatus.IN_PROGRESS)
@@ -514,9 +542,8 @@ public class OrderRolloverServiceTest {
   }
 
   @Test
-  @DisplayName("Should remove encumbrance links and encumbrances if needed for closed orders")
-  void shouldRemoveEncumbranceLinksAndEncumbrancesIfNeededForClosedOrders(VertxTestContext vertxTestContext)
-    throws InterruptedException {
+  @DisplayName("Should remove encumbrance links if needed for closed orders")
+  void shouldRemoveEncumbranceLinksIfNeededForClosedOrders(VertxTestContext vertxTestContext) {
     String fromFiscalYearId = UUID.randomUUID().toString();
     String ledgerId = UUID.randomUUID().toString();
     String toFiscalYearId = UUID.randomUUID().toString();
@@ -539,6 +566,12 @@ public class OrderRolloverServiceTest {
 
     List<Fund> funds = singletonList(new Fund().withId(fundId).withLedgerId(ledgerId));
 
+    PurchaseOrder order = new PurchaseOrder()
+      .withId(orderId)
+      .withWorkflowStatus(PurchaseOrder.WorkflowStatus.CLOSED)
+      .withOrderType(PurchaseOrder.OrderType.ONE_TIME);
+    List<PurchaseOrder> orders = List.of(order);
+
     FundDistribution fundDistribution = new FundDistribution()
       .withFundId(fundId)
       .withValue(100d)
@@ -557,12 +590,6 @@ public class OrderRolloverServiceTest {
       .withFundDistribution(singletonList(fundDistribution));
 
     List<PoLine> poLines = singletonList(poLine);
-    PoLineCollection poLineCollection = new PoLineCollection()
-      .withPoLines(poLines)
-      .withTotalRecords(poLines.size());
-    PoLineCollection emptyPoLineCollection = new PoLineCollection()
-      .withPoLines(new ArrayList<>())
-      .withTotalRecords(0);
 
     LedgerFiscalYearRolloverProgress progress = new LedgerFiscalYearRolloverProgress().withId(UUID.randomUUID().toString())
       .withLedgerRolloverId(ledgerFiscalYearRollover.getId()).withOverallRolloverStatus(RolloverStatus.IN_PROGRESS)
@@ -575,12 +602,14 @@ public class OrderRolloverServiceTest {
     doReturn(succeededFuture()).when(ledgerRolloverProgressService).updateRolloverProgress(progress.withOrdersRolloverStatus(RolloverStatus.SUCCESS), requestContext);
     doReturn(succeededFuture(funds)).when(fundService).getFundsByLedgerId(ledgerId, requestContext);
 
-    doReturn(succeededFuture(emptyPoLineCollection), succeededFuture(poLineCollection))
-      .when(purchaseOrderLineService).getOrderLineCollection(anyString(), anyInt(), anyInt(), any(RequestContext.class));
-    doReturn(succeededFuture(poLineCollection.getPoLines()))
-      .when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any(RequestContext.class));
+    FutureIterator<List<PurchaseOrder>> orderIterator1 = new FutureIteratorFromIterator<>(Collections.emptyIterator());
+    FutureIterator<List<PurchaseOrder>> orderIterator2 = new FutureIteratorFromIterator<>(List.of(orders).listIterator());
+    doReturn(orderIterator1, orderIterator2).when(purchaseOrderStorageService).getPurchaseOrderIterator(anyString(), eq(requestContext));
+    doReturn(100).when(purchaseOrderLineService).getPoLinePartitionSize();
+    FutureIterator<List<PoLine>> poLineIterator = new FutureIteratorFromIterator<>(List.of(poLines).listIterator());
+    doReturn(poLineIterator).when(purchaseOrderLineService).getOrderLinesByOrderIds(anyList(), eq(requestContext));
 
-    doReturn(succeededFuture()).when(purchaseOrderLineService).saveOrderLinesWithoutSearchLocationsUpdate(anyList(), any());
+    doReturn(succeededFuture()).when(purchaseOrderLineService).saveOrderLinesWithoutSearchLocationsUpdate(anyList(), eq(requestContext));
 
     doReturn(succeededFuture(systemCurrency)).when(configurationEntriesCache).getSystemCurrency(requestContext);
 
@@ -594,17 +623,11 @@ public class OrderRolloverServiceTest {
       .withFromFundId(fundId)
       .withEncumbrance(encumbrance);
     List<Transaction> encumbrances = singletonList(transaction);
-    doReturn(succeededFuture(encumbrances)).when(transactionService).getTransactions(anyString(), any());
-
-    doReturn(succeededFuture(null)).when(transactionService).batchDelete(anyList(), any());
+    doReturn(succeededFuture(encumbrances)).when(transactionService).getTransactions(anyString(), eq(requestContext));
 
     Future<Void> future = orderRolloverService.startRollover(ledgerFiscalYearRollover, progress, requestContext);
-    sleep(3000);
     vertxTestContext.assertComplete(future)
       .onSuccess(result -> {
-        verify(transactionService, times(1)).batchDelete(
-          argThat(transactionIds -> transactionIds.size() == 1 && currEncumbrId.equals(transactionIds.get(0))), any());
-
         verify(purchaseOrderLineService).saveOrderLinesWithoutSearchLocationsUpdate(argumentCaptor.capture(), any(RequestContext.class));
         assertThat(argumentCaptor.getAllValues().get(0).get(0).getFundDistribution().get(0).getEncumbrance(), equalTo(null));
 
@@ -731,43 +754,43 @@ public class OrderRolloverServiceTest {
     Assertions.assertEquals(BigDecimal.valueOf(totalAmount), totalAmountAfterConversion);
   }
 
-  private static Stream<Arguments> testBuildOpenOrClosedOrderQueryByFundIdsAndTypesArgs() {
+  private static Stream<Arguments> testBuildOrderQueryArgs() {
     return Stream.of(
-      Arguments.of("(purchaseOrder.orderType == One-Time) and (purchaseOrder.workflowStatus==Open) and (fundDistribution =/@fundId \"%s\") sortBy metadata.createdDate",
+      Arguments.of("(orderType == One-Time) and (workflowStatus==Open) and (poLine.fundDistribution =/@fundId (%s))",
         true,
         List.of(new EncumbranceRollover().withOrderType(EncumbranceRollover.OrderType.ONE_TIME).withBasedOn(EncumbranceRollover.BasedOn.INITIAL_AMOUNT).withIncreaseBy(0d))),
-      Arguments.of("(purchaseOrder.orderType == One-Time) and (purchaseOrder.workflowStatus<>Open) and (fundDistribution =/@fundId \"%s\") and (fundDistribution == \"*\\\"encumbrance\\\": \\\"*\") sortBy metadata.createdDate",
+      Arguments.of("(orderType == One-Time) and (workflowStatus<>Open) and (poLine.fundDistribution =/@fundId (%s)) and (poLine.fundDistribution == \"*\\\"encumbrance\\\": \\\"*\")",
         false,
         List.of(new EncumbranceRollover().withOrderType(EncumbranceRollover.OrderType.ONE_TIME).withBasedOn(EncumbranceRollover.BasedOn.INITIAL_AMOUNT).withIncreaseBy(0d)))
     );
   }
 
   @ParameterizedTest
-  @MethodSource("testBuildOpenOrClosedOrderQueryByFundIdsAndTypesArgs")
-  void testBuildOpenOrClosedOrderQueryByFundIdsAndTypes(String expectedQueryTemplate, boolean openOrders, List<EncumbranceRollover> encumbranceRollovers) {
+  @MethodSource("testBuildOrderQueryArgs")
+  void testBuildOrderQuery(String expectedQueryTemplate, boolean openOrders, List<EncumbranceRollover> encumbranceRollovers) {
     var fundId = UUID.randomUUID().toString();
     var ledgerFiscalYearRollover = new LedgerFiscalYearRollover().withId(UUID.randomUUID().toString()).withEncumbrancesRollover(encumbranceRollovers);
     var expectedQuery = String.format(expectedQueryTemplate, fundId);
-    var actualQuery = orderRolloverService.buildOpenOrClosedOrderQueryByFundIdsAndTypes(List.of(fundId), openOrders, ledgerFiscalYearRollover);
+    var actualQuery = orderRolloverService.buildBaseOrderQuery(List.of(fundId), openOrders, ledgerFiscalYearRollover);
     Assertions.assertEquals(expectedQuery, actualQuery);
   }
 
-  private static Stream<Arguments> testBuildOpenOrClosedOrderQueryByFundIdsAndTypesWithoutSettingsArgs() {
+  private static Stream<Arguments> testBuildOrderQueryWithoutSettingsArgs() {
     return Stream.of(
-      Arguments.of("(purchaseOrder.workflowStatus==Open) and (fundDistribution =/@fundId \"%s\") sortBy metadata.createdDate",
+      Arguments.of("(workflowStatus==Open) and (poLine.fundDistribution =/@fundId (%s))",
         true),
-      Arguments.of("(purchaseOrder.workflowStatus<>Open) and (fundDistribution =/@fundId \"%s\") and (fundDistribution == \"*\\\"encumbrance\\\": \\\"*\") sortBy metadata.createdDate",
+      Arguments.of("(workflowStatus<>Open) and (poLine.fundDistribution =/@fundId (%s)) and (poLine.fundDistribution == \"*\\\"encumbrance\\\": \\\"*\")",
         false)
     );
   }
 
   @ParameterizedTest
-  @MethodSource("testBuildOpenOrClosedOrderQueryByFundIdsAndTypesWithoutSettingsArgs")
-  void testBuildOpenOrClosedOrderQueryByFundIdsAndTypesWithoutSettings(String expectedQueryTemplate, boolean openOrders) {
+  @MethodSource("testBuildOrderQueryWithoutSettingsArgs")
+  void testBuildOrderQueryWithoutSettings(String expectedQueryTemplate, boolean openOrders) {
     var fundId = UUID.randomUUID().toString();
     var ledgerFiscalYearRollover = new LedgerFiscalYearRollover().withId(UUID.randomUUID().toString()).withEncumbrancesRollover(List.of());
     var expectedQuery = String.format(expectedQueryTemplate, fundId);
-    var actualQuery = orderRolloverService.buildOpenOrClosedOrderQueryByFundIdsAndTypes(List.of(fundId), openOrders, ledgerFiscalYearRollover);
+    var actualQuery = orderRolloverService.buildBaseOrderQuery(List.of(fundId), openOrders, ledgerFiscalYearRollover);
     Assertions.assertEquals(expectedQuery, actualQuery);
   }
 }

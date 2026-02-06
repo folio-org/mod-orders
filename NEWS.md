@@ -1,5 +1,12 @@
 ## 13.1.0 - Unreleased
 
+## 13.0.10 - Released (Sunflower R1 2025 Bug Fix)
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v13.0.9...v13.0.10)
+
+### Bug Fixes
+* [MODORDERS-1388](https://folio-org.atlassian.net/browse/MODORDERS-1388) - PO wasn't rolled over correctly. All encumbrances not created or Links not updated
+
 ## 13.0.9 - Released (Sunflower R1 2025 Bug Fix)
 
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v13.0.8...v13.0.9)
