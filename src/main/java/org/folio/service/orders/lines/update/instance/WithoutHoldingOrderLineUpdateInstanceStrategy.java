@@ -31,5 +31,4 @@ public class WithoutHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLine
       ? Future.succeededFuture()
       : deleteAbandonedHoldings(holder.getStoragePoLine().getLocations(), requestContext).mapEmpty();
   }
-
 }

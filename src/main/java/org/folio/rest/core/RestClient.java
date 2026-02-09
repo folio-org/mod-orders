@@ -103,13 +103,13 @@ public class RestClient {
   }
 
   public <T> Future<Void> patch(RequestEntry requestEntry, T dataObject, RequestContext requestContext) {
-    String endpoint = requestEntry.buildEndpoint();
+    var endpoint = requestEntry.buildEndpoint();
     return patch(endpoint, dataObject, requestContext);
   }
 
   public <T> Future<Void> patch(String endpoint, T dataObject, RequestContext requestContext) {
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
-    Promise<Void> promise = Promise.promise();
+    var promise = Promise.<Void>promise();
     return getVertxWebClient(requestContext.getContext())
       .patchAbs(buildAbsEndpoint(caseInsensitiveHeader, endpoint))
       .putHeaders(caseInsensitiveHeader)

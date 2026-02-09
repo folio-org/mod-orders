@@ -71,7 +71,7 @@ public class InventoryItemManager {
 
   public static final String BARCODE_ALREADY_EXIST_ERROR = "lower(jsonb ->> 'barcode'::text) value already exists in table item";
   private static final String LOOKUP_ITEM_QUERY = "purchaseOrderLineIdentifier==%s and holdingsRecordId==%s";
-  private static final String ITEM_STOR_ENDPOINT = "/item-storage/items";
+  private static final String ITEM_STORAGE_ENDPOINT = "/item-storage/items";
   private static final String BUILDING_PIECE_MESSAGE = "Building {} {} piece(s) for PO Line with id={}";
 
   private final RestClient restClient;
@@ -109,7 +109,7 @@ public class InventoryItemManager {
   }
 
   public Future<List<JsonObject>> getItemsByPoLineIdsAndStatus(List<String> poLineIds, String itemStatus, RequestContext requestContext) {
-    logger.debug("getItemsByStatus start");
+    logger.debug("getItemsByPoLineIdsAndStatus:: Started");
     List<Future<List<JsonObject>>> futures = StreamEx
       .ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ_15)
       .map(ids -> {
@@ -235,7 +235,7 @@ public class InventoryItemManager {
   private Future<List<JsonObject>> searchStorageExistingItems(String poLineId, String holdingId, int expectedQuantity,
                                                               RequestContext requestContext) {
     String query = String.format(LOOKUP_ITEM_QUERY, poLineId, holdingId);
-    RequestEntry requestEntry = new RequestEntry(ITEM_STOR_ENDPOINT).withQuery(query).withOffset(0).withLimit(expectedQuantity);
+    RequestEntry requestEntry = new RequestEntry(ITEM_STORAGE_ENDPOINT).withQuery(query).withOffset(0).withLimit(expectedQuantity);
     return restClient.getAsJsonObject(requestEntry, requestContext)
       .map(itemsCollection -> {
         List<JsonObject> items = extractEntities(itemsCollection);
@@ -318,11 +318,11 @@ public class InventoryItemManager {
       Piece pieceWithHoldingId = new Piece().withHoldingId(holdingId);
       if (poLine.getOrderFormat() == ELECTRONIC_RESOURCE) {
         createMissingElectronicItems(compPO, poLine, pieceWithHoldingId, ITEM_QUANTITY, requestContext)
-          .onSuccess(idS -> itemFuture.complete(idS.get(0)))
+          .onSuccess(idS -> itemFuture.complete(idS.getFirst()))
           .onFailure(itemFuture::fail);
       } else {
         createMissingPhysicalItems(compPO, poLine, pieceWithHoldingId, ITEM_QUANTITY, requestContext)
-          .onSuccess(idS -> itemFuture.complete(idS.get(0)))
+          .onSuccess(idS -> itemFuture.complete(idS.getFirst()))
           .onFailure(itemFuture::fail);
       }
     } catch (Exception e) {
@@ -436,9 +436,9 @@ public class InventoryItemManager {
 
   private Future<String> createItemInInventory(JsonObject itemData, RequestContext requestContext) {
     Promise<String> promise = Promise.promise();
-    RequestEntry requestEntry = new RequestEntry(ITEM_STOR_ENDPOINT);
+    RequestEntry requestEntry = new RequestEntry(ITEM_STORAGE_ENDPOINT);
     String tenantId = TenantTool.tenantId(requestContext.getHeaders());
-    logger.info("Trying to create Item in inventory in tenant: {}", tenantId);
+    logger.info("createItemInInventory:: Trying to create Item in inventory in tenant: {}", tenantId);
     restClient.postJsonObjectAndGetId(requestEntry, itemData, requestContext)
       .onSuccess(promise::complete)
       // In case item creation failed, return null instead of id
@@ -463,4 +463,13 @@ public class InventoryItemManager {
       .orElseGet(List::of);
   }
 
+  public Future<Void> batchUpdatePartialItems(List<JsonObject> items, RequestContext requestContext) {
+    logger.info("batchUpdatePartialItems:: Batch updating partial items={}", items.size());
+    var requestEntry = new RequestEntry(ITEM_STORAGE_ENDPOINT);
+    var tenantId = TenantTool.tenantId(requestContext.getHeaders());
+    logger.info("batchUpdatePartialItems:: Trying to batch update partial items in inventory for tenant: {}", tenantId);
+    var payload = new JsonObject()
+      .put(InventoryUtils.ITEMS, items);
+    return restClient.patch(requestEntry, payload, requestContext);
+  }
 }

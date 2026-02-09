@@ -54,6 +54,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -867,6 +868,230 @@ public class InventoryManagerTest {
     inventoryInstanceManager.createShadowInstanceIfNeeded(instanceId, requestContext).result();
 
     verify(sharingInstanceService).createShadowInstance(instanceId, configuration.get(), requestContext);
+  }
+
+  @Test
+  void testBatchUpsertItemsShouldUpdateMultipleItems() {
+    // given
+    var itemId1 = UUID.randomUUID().toString();
+    var itemId2 = UUID.randomUUID().toString();
+    var item1 = new JsonObject()
+      .put(ID, itemId1)
+      .put(InventoryItemManager.ITEM_BARCODE, "barcode1")
+      .put(InventoryItemManager.ITEM_STATUS, new JsonObject().put(InventoryItemManager.ITEM_STATUS_NAME, "Available"));
+    var item2 = new JsonObject()
+      .put(ID, itemId2)
+      .put(InventoryItemManager.ITEM_BARCODE, "barcode2")
+      .put(InventoryItemManager.ITEM_STATUS, new JsonObject().put(InventoryItemManager.ITEM_STATUS_NAME, "Available"));
+    var items = Arrays.asList(item1, item2);
+
+    doReturn(succeededFuture(null)).when(restClient).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+
+    // When
+    var result = inventoryItemManager.batchUpdatePartialItems(items, requestContext);
+
+    // Then
+    assertTrue(result.succeeded());
+    verify(restClient, times(1)).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+  }
+
+  @Test
+  void testBatchUpsertItemsShouldHandleEmptyList() {
+    // given
+    var items = Collections.<JsonObject>emptyList();
+    doReturn(succeededFuture(null)).when(restClient).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+
+    // When
+    var result = inventoryItemManager.batchUpdatePartialItems(items, requestContext);
+
+    // Then
+    assertTrue(result.succeeded());
+    verify(restClient, times(1)).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+  }
+
+  @Test
+  void testBatchUpsertItemsShouldHandleSingleItem() {
+    // given
+    var itemId = UUID.randomUUID().toString();
+    var item = new JsonObject()
+      .put(ID, itemId)
+      .put(InventoryItemManager.ITEM_BARCODE, "barcode")
+      .put(InventoryItemManager.ITEM_STATUS, new JsonObject().put(InventoryItemManager.ITEM_STATUS_NAME, "On order"));
+    var items = Collections.singletonList(item);
+
+    doReturn(succeededFuture(null)).when(restClient).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+
+    // When
+    var result = inventoryItemManager.batchUpdatePartialItems(items, requestContext);
+
+    // Then
+    assertTrue(result.succeeded());
+    verify(restClient, times(1)).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+  }
+
+  @Test
+  void testBatchUpsertItemsShouldHandleFailure() {
+    // given
+    var itemId = UUID.randomUUID().toString();
+    var item = new JsonObject()
+      .put(ID, itemId)
+      .put(InventoryItemManager.ITEM_BARCODE, "barcode");
+    var items = Collections.singletonList(item);
+
+    var errorMessage = "Internal server error";
+    doReturn(Future.failedFuture(new HttpException(500, errorMessage)))
+      .when(restClient).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+
+    // When
+    var result = inventoryItemManager.batchUpdatePartialItems(items, requestContext);
+
+    // Then
+    assertTrue(result.failed());
+    assertThat(result.cause(), IsInstanceOf.instanceOf(HttpException.class));
+    var exception = (HttpException) result.cause();
+    assertEquals(500, exception.getCode());
+    verify(restClient, times(1)).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+  }
+
+  @Test
+  void testBatchUpsertItemsShouldHandleLargeNumberOfItems() {
+    // given
+    var items = new ArrayList<JsonObject>();
+    for (int i = 0; i < 100; i++) {
+      var item = new JsonObject()
+        .put(ID, UUID.randomUUID().toString())
+        .put(InventoryItemManager.ITEM_BARCODE, "barcode" + i)
+        .put(InventoryItemManager.ITEM_STATUS, new JsonObject().put(InventoryItemManager.ITEM_STATUS_NAME, "Available"));
+      items.add(item);
+    }
+
+    doReturn(succeededFuture(null)).when(restClient).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+
+    // When
+    var result = inventoryItemManager.batchUpdatePartialItems(items, requestContext);
+
+    // Then
+    assertTrue(result.succeeded());
+    verify(restClient, times(1)).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+  }
+
+  @Test
+  void testBatchUpsertItemsShouldIncludeUpsertParameter() {
+    // given
+    var itemId = UUID.randomUUID().toString();
+    var item = new JsonObject()
+      .put(ID, itemId)
+      .put(InventoryItemManager.ITEM_BARCODE, "barcode");
+    var items = Collections.singletonList(item);
+
+    doReturn(succeededFuture(null)).when(restClient).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+
+    // When
+    inventoryItemManager.batchUpdatePartialItems(items, requestContext).result();
+
+    // Then
+    verify(restClient).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+  }
+
+  @Test
+  void testBatchUpsertItemsShouldHandleItemsWithAllFields() {
+    // given
+    var itemId = UUID.randomUUID().toString();
+    var holdingId = UUID.randomUUID().toString();
+    var materialTypeId = UUID.randomUUID().toString();
+    var loanTypeId = UUID.randomUUID().toString();
+    var item = new JsonObject()
+      .put(ID, itemId)
+      .put(InventoryItemManager.ITEM_BARCODE, "barcode123")
+      .put(InventoryItemManager.ITEM_HOLDINGS_RECORD_ID, holdingId)
+      .put(InventoryItemManager.ITEM_MATERIAL_TYPE_ID, materialTypeId)
+      .put(InventoryItemManager.ITEM_PERMANENT_LOAN_TYPE_ID, loanTypeId)
+      .put(InventoryItemManager.ITEM_STATUS, new JsonObject().put(InventoryItemManager.ITEM_STATUS_NAME, "Available"))
+      .put(InventoryItemManager.ITEM_ENUMERATION, "v.1")
+      .put(InventoryItemManager.ITEM_CHRONOLOGY, "2023")
+      .put(InventoryItemManager.ITEM_DISCOVERY_SUPPRESS, false);
+    var items = Collections.singletonList(item);
+
+    doReturn(succeededFuture(null)).when(restClient).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+
+    // When
+    var result = inventoryItemManager.batchUpdatePartialItems(items, requestContext);
+
+    // Then
+    assertTrue(result.succeeded());
+    verify(restClient, times(1)).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+  }
+
+  @Test
+  void testBatchUpsertItemsShouldHandleMixedItemTypes() {
+    // given
+    var items = new ArrayList<JsonObject>();
+    // Physical item
+    items.add(new JsonObject()
+      .put(ID, UUID.randomUUID().toString())
+      .put(InventoryItemManager.ITEM_BARCODE, "physical-barcode")
+      .put(InventoryItemManager.ITEM_STATUS, new JsonObject().put(InventoryItemManager.ITEM_STATUS_NAME, "On order")));
+    // Electronic item
+    items.add(new JsonObject()
+      .put(ID, UUID.randomUUID().toString())
+      .put(InventoryItemManager.ITEM_STATUS, new JsonObject().put(InventoryItemManager.ITEM_STATUS_NAME, "Available")));
+
+    doReturn(succeededFuture(null)).when(restClient).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+
+    // When
+    var result = inventoryItemManager.batchUpdatePartialItems(items, requestContext);
+
+    // Then
+    assertTrue(result.succeeded());
+    verify(restClient, times(1)).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+  }
+
+  @Test
+  void testBatchUpsertItemsShouldHandleNetworkFailure() {
+    // given
+    var itemId = UUID.randomUUID().toString();
+    var item = new JsonObject()
+      .put(ID, itemId)
+      .put(InventoryItemManager.ITEM_BARCODE, "barcode");
+    var items = Collections.singletonList(item);
+
+    var errorMessage = "Network timeout";
+    doReturn(Future.failedFuture(new HttpException(504, errorMessage)))
+      .when(restClient).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+
+    // When
+    var result = inventoryItemManager.batchUpdatePartialItems(items, requestContext);
+
+    // Then
+    assertTrue(result.failed());
+    assertThat(result.cause(), IsInstanceOf.instanceOf(HttpException.class));
+    var exception = (HttpException) result.cause();
+    assertEquals(504, exception.getCode());
+    verify(restClient, times(1)).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+  }
+
+  @Test
+  void testBatchUpsertItemsShouldHandleBadRequestError() {
+    // given
+    var itemId = UUID.randomUUID().toString();
+    var item = new JsonObject()
+      .put(ID, itemId)
+      .put(InventoryItemManager.ITEM_BARCODE, "invalid-barcode");
+    var items = Collections.singletonList(item);
+
+    var errorMessage = "Invalid item data";
+    doReturn(Future.failedFuture(new HttpException(400, errorMessage)))
+      .when(restClient).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+
+    // When
+    var result = inventoryItemManager.batchUpdatePartialItems(items, requestContext);
+
+    // Then
+    assertTrue(result.failed());
+    assertThat(result.cause(), IsInstanceOf.instanceOf(HttpException.class));
+    var exception = (HttpException) result.cause();
+    assertEquals(400, exception.getCode());
+    verify(restClient, times(1)).patch(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
   }
 
   /**

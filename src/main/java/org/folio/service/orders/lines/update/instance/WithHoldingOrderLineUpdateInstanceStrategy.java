@@ -49,6 +49,11 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
 
   private static final String HOLDINGS_ITEMS = "holdingsItems";
   private static final String BARE_HOLDINGS_ITEMS = "bareHoldingsItems";
+  private static final String VERSION = "_version";
+  private static final String ITEM_ID = "itemId";
+  private static final String TENANT_ID = "tenantId";
+  private static final String ORIGINAL_ERROR = "originalError";
+
   private final PieceStorageService pieceStorageService;
   private final PurchaseOrderLineService purchaseOrderLineService;
 
@@ -234,24 +239,27 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
   }
 
   private Future<Void> updateItemsInInventory(List<JsonObject> items, String newHoldingId, RequestContext requestContext) {
-    items.forEach(item -> item.put(ITEM_HOLDINGS_RECORD_ID, newHoldingId));
-    List<Parameter> parameters = new ArrayList<>();
-    return Future.join(
-      items
-        .stream()
-        .map(item -> inventoryItemManager.updateItem(item, requestContext)
-          .otherwise(ex -> {
-            var itemIdParam = new Parameter().withKey("itemId").withValue(item.getString(ID));
-            if (ex.getCause() instanceof HttpException httpException) {
-              itemIdParam.withAdditionalProperty("originalError", httpException.getError().getMessage());
-            }
-            var tenantIdParam = new Parameter().withKey("tenantId").withValue(TenantTool.tenantId(requestContext.getHeaders()));
-            parameters.add(itemIdParam);
-            parameters.add(tenantIdParam);
-            return null;
-          }))
-        .toList())
-      .mapEmpty()
+    log.info("updateItemsInInventory:: Updating items in batch, items={}, new holding id={}", items.size(), newHoldingId);
+    var partialItems = items.stream()
+      .map(item -> new JsonObject()
+        .put(ID, item.getString(ID))
+        .put(ITEM_HOLDINGS_RECORD_ID, newHoldingId)
+        .put(VERSION, item.getString(VERSION)))
+      .toList();
+    var parameters = new ArrayList<Parameter>();
+    return inventoryItemManager.batchUpdatePartialItems(partialItems, requestContext)
+      .otherwise(ex -> {
+        items.forEach(item -> {
+          var itemIdParam = new Parameter().withKey(ITEM_ID).withValue(item.getString(ID));
+          if (ex.getCause() instanceof HttpException httpException) {
+            itemIdParam.withAdditionalProperty(ORIGINAL_ERROR, httpException.getError().getMessage());
+          }
+          var tenantIdParam = new Parameter().withKey(TENANT_ID).withValue(TenantTool.tenantId(requestContext.getHeaders()));
+          parameters.add(itemIdParam);
+          parameters.add(tenantIdParam);
+        });
+        return null;
+      })
       .compose(v -> CollectionUtils.isNotEmpty(parameters)
         ? Future.failedFuture(new HttpException(500, ErrorCodes.ITEM_UPDATE_FAILED.toError().withParameters(parameters)))
         : Future.succeededFuture());
@@ -286,5 +294,4 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
         .filter(location -> !usedHoldingIds.contains(location.getHoldingId()))
         .toList());
   }
-
 }
