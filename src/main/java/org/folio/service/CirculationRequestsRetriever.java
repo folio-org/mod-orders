@@ -37,7 +37,7 @@ import static org.folio.service.inventory.util.RequestFields.ITEM_ID;
 @Log4j2
 public class CirculationRequestsRetriever {
 
-  private static final String OPEN_REQUEST_STATUS = "Open - *";
+  private static final String OPEN_REQUEST_STATUS = "Open*";
 
   private final PieceStorageService pieceStorageService;
 
@@ -49,7 +49,7 @@ public class CirculationRequestsRetriever {
   }
 
   public Future<Integer> getNumberOfRequestsByItemId(String itemId, RequestContext requestContext) {
-    String query = String.format("(itemId==%s and status=\"%s*\")", itemId, OPEN_REQUEST_STATUS);
+    String query = String.format("(itemId==%s and status=\"%s\")", itemId, OPEN_REQUEST_STATUS);
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(REQUESTS))
       .withQuery(query).withOffset(0).withLimit(0); // limit = 0 means payload will include only totalRecords value
     return restClient.getAsJsonObject(requestEntry, requestContext)
