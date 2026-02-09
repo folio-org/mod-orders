@@ -49,7 +49,7 @@ class TitleValidationServiceTest {
     List<Error> errors = titleValidationService.validateTitle(title);
     assertThat(errors, hasSize(1));
     assertEquals(POL_NUMBER_INVALID_OR_TOO_LONG.toError().getCode(), errors.get(0).getCode());
-    assertEquals("POL number is invalid or bigger than 22 symbols", errors.get(0).getMessage());
+    assertEquals("POL number is invalid or bigger than 26 symbols", errors.get(0).getMessage());
   }
 
   @Test
