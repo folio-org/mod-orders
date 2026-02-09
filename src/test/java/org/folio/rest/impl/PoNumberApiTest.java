@@ -81,10 +81,9 @@ public class PoNumberApiTest {
   }
 
   @Test
-  void testPoNumberValidateWithInvalidPattern()
-  {
+  void testPoNumberValidateWithInvalidPattern() {
     JsonObject poNumber=new JsonObject();
-    poNumber.put(PO_NUMBER, "1111111111111111111111");
+    poNumber.put(PO_NUMBER, "12345678901234567890123"); // 23 characters - exceeds limit of 22
     verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422);
   }
 
