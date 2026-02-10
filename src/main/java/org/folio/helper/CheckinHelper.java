@@ -12,6 +12,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.folio.models.pieces.PiecesHolder;
 import org.folio.orders.events.handlers.MessageAddress;
+import org.folio.orders.utils.StreamUtils;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CheckinCollection;
@@ -22,6 +23,8 @@ import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
 import org.folio.service.inventory.InventoryUtils;
+import org.folio.service.pieces.PieceUpdateInventoryService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -40,8 +43,10 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
 
   public static final String IS_ITEM_ORDER_CLOSED_PRESENT = "isItemOrderClosedPresent";
 
-  public CheckinHelper(CheckinCollection checkinCollection, Map<String, String> okapiHeaders,
-                       Context ctx) {
+  @Autowired
+  private PieceUpdateInventoryService pieceUpdateInventoryService;
+
+  public CheckinHelper(CheckinCollection checkinCollection, Map<String, String> okapiHeaders, Context ctx) {
     super(okapiHeaders, ctx);
     // Convert request to map representation
     CheckinCollection checkinCollectionClone = JsonObject.mapFrom(checkinCollection).mapTo(CheckinCollection.class);
@@ -57,12 +62,12 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     }
   }
 
-  public Future<ReceivingResults> checkinPieces(CheckinCollection checkinCollection, RequestContext requestContext) {
+  public Future<ReceivingResults> checkinPieces(CheckinCollection checkinCollection, boolean deleteHoldings, RequestContext requestContext) {
     return removeForbiddenEntities(requestContext)
-      .compose(voidResult -> processCheckInPieces(checkinCollection, requestContext));
+      .compose(voidResult -> processCheckInPieces(checkinCollection, deleteHoldings, requestContext));
   }
 
-  private Future<ReceivingResults> processCheckInPieces(CheckinCollection checkinCollection, RequestContext requestContext) {
+  private Future<ReceivingResults> processCheckInPieces(CheckinCollection checkinCollection, boolean deleteHoldings, RequestContext requestContext) {
     PiecesHolder holder = new PiecesHolder();
     // 1. Get purchase order and poLine from storage
     return findAndSetPurchaseOrderPoLinePair(extractPoLineId(checkinCollection), holder, requestContext)
@@ -72,14 +77,15 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       .compose(piecesByPoLineIds -> filterMissingLocations(piecesByPoLineIds, requestContext))
       // 4. Update items in the Inventory if required
       .compose(pieces -> updateInventoryItemsAndHoldings(pieces, holder, requestContext))
-      // 5. Update piece records with checkIn details which do not have
-      // associated item
+      // 5. Delete abandoned holdings if deleteHoldings flag is set to true
+      .compose(pieces -> deleteHoldings(pieces, deleteHoldings, requestContext))
+      // 6. Update piece records with checkIn details which do not have an associated item
       .map(this::updatePieceRecordsWithoutItems)
-      // 6. Update received piece records in the storage
+      // 7. Update received piece records in the storage
       .compose(piecesGroupedByPoLine -> storeUpdatedPieceRecords(piecesGroupedByPoLine, requestContext))
-      // 7. Update PO Line status
+      // 8. Update PO Line status
       .compose(piecesGroupedByPoLine -> updateOrderAndPoLinesStatus(holder.getPiecesFromStorage(), piecesGroupedByPoLine, checkinCollection, requestContext))
-      // 8. Return results to the client
+      // 9. Return results to the client
       .map(piecesGroupedByPoLine -> prepareResponseBody(checkinCollection, piecesGroupedByPoLine));
   }
 
@@ -203,6 +209,13 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
         promise.complete(false);
       });
     return promise.future();
+  }
+
+  private Future<Map<String, List<Piece>>> deleteHoldings(Map<String, List<Piece>> piecesGroupedByPoLine, boolean deleteHoldings, RequestContext requestContext) {
+    return deleteHoldings
+      ? pieceUpdateInventoryService.deleteHoldingsConnectedToPieces(StreamUtils.flatten(piecesGroupedByPoLine.values()), requestContext).map(piecesGroupedByPoLine)
+      : Future.succeededFuture(piecesGroupedByPoLine);
+
   }
 
   private void updatePieceWithCheckinInfo(Piece piece) {
