@@ -43,6 +43,10 @@ public class StreamUtils {
     return collection.stream().map(mapper).collect(Collectors.toSet());
   }
 
+  public static <T, C extends Collection<T>> List<T> flatten(Collection<C> collection) {
+    return collection.stream().flatMap(Collection::stream).toList();
+  }
+
   public static <T, K> Map<K, T> listToMap(Collection<T> collection, Function<T, K> toKey) {
     return listToMap(collection, toKey, Function.identity());
   }
