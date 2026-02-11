@@ -24,6 +24,7 @@ import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
 import org.folio.service.inventory.InventoryUtils;
 import org.folio.service.pieces.PieceUpdateInventoryService;
+import org.folio.service.pieces.PieceUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.ArrayList;
@@ -32,6 +33,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.groupingBy;
@@ -75,17 +77,15 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       .compose(voidResult -> createItemsWithPieceUpdate(checkinCollection, holder, requestContext))
       // 3. Filter locationId
       .compose(piecesByPoLineIds -> filterMissingLocations(piecesByPoLineIds, requestContext))
-      // 4. Update items in the Inventory if required
-      .compose(pieces -> updateInventoryItemsAndHoldings(pieces, holder, requestContext))
-      // 5. Delete abandoned holdings if deleteHoldings flag is set to true
-      .compose(pieces -> deleteHoldings(pieces, deleteHoldings, requestContext))
-      // 6. Update piece records with checkIn details which do not have an associated item
+      // 4. Update items in the Inventory if required and delete abandoned holdings if deleteHoldings flag is set to true
+      .compose(pieces -> processInventory(pieces, holder, deleteHoldings, requestContext))
+      // 5. Update piece records with checkIn details which do not have an associated item
       .map(this::updatePieceRecordsWithoutItems)
-      // 7. Update received piece records in the storage
+      // 6. Update received piece records in the storage
       .compose(piecesGroupedByPoLine -> storeUpdatedPieceRecords(piecesGroupedByPoLine, requestContext))
-      // 8. Update PO Line status
+      // 7. Update PO Line status
       .compose(piecesGroupedByPoLine -> updateOrderAndPoLinesStatus(holder.getPiecesFromStorage(), piecesGroupedByPoLine, checkinCollection, requestContext))
-      // 9. Return results to the client
+      // 8. Return results to the client
       .map(piecesGroupedByPoLine -> prepareResponseBody(checkinCollection, piecesGroupedByPoLine));
   }
 
@@ -211,11 +211,12 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     return promise.future();
   }
 
-  private Future<Map<String, List<Piece>>> deleteHoldings(Map<String, List<Piece>> piecesGroupedByPoLine, boolean deleteHoldings, RequestContext requestContext) {
-    return deleteHoldings
-      ? pieceUpdateInventoryService.deleteHoldingsConnectedToPieces(StreamUtils.flatten(piecesGroupedByPoLine.values()), requestContext).map(piecesGroupedByPoLine)
-      : Future.succeededFuture(piecesGroupedByPoLine);
-
+  protected Future<Map<String, List<Piece>>> processInventory(Map<String, List<Piece>> piecesGroupedByPoLine, PiecesHolder holder, boolean deleteHoldings, RequestContext requestContext) {
+    Map<Pair<String, String>, Set<String>> piecesGroupedByHoldings = PieceUtil.groupPiecesByHoldings(StreamUtils.flatten(piecesGroupedByPoLine.values()));
+    return updateInventoryItemsAndHoldings(piecesGroupedByPoLine, holder, requestContext)
+      .compose(pieces -> deleteHoldings
+        ? pieceUpdateInventoryService.deleteHoldingsConnectedToPieces(piecesGroupedByHoldings, requestContext).map(pieces)
+        : Future.succeededFuture(pieces));
   }
 
   private void updatePieceWithCheckinInfo(Piece piece) {

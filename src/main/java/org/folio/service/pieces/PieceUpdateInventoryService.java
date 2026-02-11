@@ -5,13 +5,12 @@ import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTena
 import static org.folio.service.inventory.InventoryHoldingManager.HOLDING_PERMANENT_LOCATION_ID;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.folio.rest.core.models.RequestContext;
@@ -61,18 +60,11 @@ public class PieceUpdateInventoryService {
   }
 
   public Future<List<Pair<String, String>>> deleteHoldingsConnectedToPieces(List<Piece> pieces, RequestContext requestContext) {
-    var viablePieces = StreamEx.of(pieces)
-      .filter(piece -> piece != null && piece.getHoldingId() != null)
-      .toList();
-    return viablePieces.isEmpty()
-      ? Future.succeededFuture()
-      : collectResultsOnSuccess(doDeleteHolding(viablePieces, requestContext));
+   return deleteHoldingsConnectedToPieces(PieceUtil.groupPiecesByHoldings(pieces), requestContext);
   }
 
-  private List<Future<Pair<String, String>>> doDeleteHolding(List<Piece> pieces, RequestContext requestContext) {
-    return StreamEx.of(pieces)
-      .groupingBy(piece -> Pair.of(piece.getHoldingId(), piece.getReceivingTenantId()), Collectors.mapping(Piece::getId, Collectors.toSet()))
-      .entrySet().stream()
+  public Future<List<Pair<String, String>>> deleteHoldingsConnectedToPieces(Map<Pair<String, String>, Set<String>> holdingIdsToPieces, RequestContext requestContext) {
+    var futures = holdingIdsToPieces.entrySet().stream()
       .map(entry -> {
         var holdingId = entry.getKey().getKey();
         var receivingTenantId = entry.getKey().getValue();
@@ -82,6 +74,7 @@ public class PieceUpdateInventoryService {
           .compose(holding -> getUpdatePossibleForHolding(holding, holdingId, pieceIds, locationContext, requestContext))
           .compose(isUpdatePossibleVsHolding -> deleteHoldingIfPossible(isUpdatePossibleVsHolding, holdingId, locationContext));
       }).toList();
+    return collectResultsOnSuccess(futures);
   }
 
   private Future<Pair<Boolean, JsonObject>> getUpdatePossibleForHolding(JsonObject holding, String holdingId, Set<String> pieceIds,
