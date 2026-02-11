@@ -95,7 +95,7 @@ public class PieceUpdateInventoryService {
     var isUpdatePossible = isUpdatePossibleVsHolding.getKey();
     var holding = isUpdatePossibleVsHolding.getValue();
     if (isUpdatePossible && !holding.isEmpty()) {
-      return inventoryHoldingManager.deleteHoldingById(holdingId, false, locationContext)
+      return inventoryHoldingManager.deleteHoldingById(holdingId, true, locationContext)
         .map(v -> Pair.of(holdingId, holding.getString(HOLDING_PERMANENT_LOCATION_ID)));
     }
     return Future.succeededFuture();
