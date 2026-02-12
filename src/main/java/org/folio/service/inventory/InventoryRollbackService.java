@@ -35,7 +35,7 @@ public class InventoryRollbackService {
    * @return future that completes when instance deletion is attempted
    */
   public Future<Void> deleteOrphanedInstanceIfNeeded(PoLine poLine, Set<String> createdInstanceIds,
-                                                      RequestContext requestContext) {
+                                                     RequestContext requestContext) {
     if (StringUtils.isBlank(poLine.getInstanceId())) {
       log.debug("deleteOrphanedInstanceIfNeeded:: No instanceId on poLine, skipping instance deletion");
       return Future.succeededFuture();
