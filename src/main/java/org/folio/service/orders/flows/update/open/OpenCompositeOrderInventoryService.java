@@ -3,6 +3,7 @@ package org.folio.service.orders.flows.update.open;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -45,17 +46,20 @@ public class OpenCompositeOrderInventoryService {
   }
 
   public Future<Void> processInventory(Map<String, List<Title>> lineIdsTitles, CompositePurchaseOrder compPO,
-                                       boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+                                       boolean isInstanceMatchingDisabled, Set<String> createdInstanceIds,
+                                       RequestContext requestContext) {
     logger.debug("OpenCompositeOrderInventoryService.processInventory compPO.id={}", compPO.getId());
     return chainCall(compPO.getPoLines(), poLine ->
-        processInventory(compPO, poLine, getFirstTitleIdIfExist(lineIdsTitles, poLine), isInstanceMatchingDisabled, requestContext));
+      processInventory(compPO, poLine, getFirstTitleIdIfExist(lineIdsTitles, poLine), isInstanceMatchingDisabled, createdInstanceIds, requestContext));
   }
 
   public Future<Void> processInventory(CompositePurchaseOrder compPO, PoLine poLine, String titleId,
-                                       boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+                                       boolean isInstanceMatchingDisabled, Set<String> createdInstanceIds,
+                                       RequestContext requestContext) {
     logger.debug("processInventory:: Executing a strategy for: {}", poLine.getOrderFormat().value());
     return processInventoryStrategyResolver.getHoldingAndItemStrategy(poLine.getOrderFormat().value())
-      .processInventory(compPO, poLine, titleId, isInstanceMatchingDisabled, inventoryItemManager, inventoryHoldingManager, inventoryInstanceManager, openCompositeOrderPieceService, restClient, requestContext);
+      .processInventory(compPO, poLine, titleId, isInstanceMatchingDisabled, createdInstanceIds,
+        inventoryItemManager, inventoryHoldingManager, inventoryInstanceManager, openCompositeOrderPieceService, restClient, requestContext);
   }
 
   private String getFirstTitleIdIfExist(Map<String, List<Title>> lineIdsTitles, PoLine poLine) {

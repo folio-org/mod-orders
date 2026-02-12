@@ -39,6 +39,7 @@ import org.springframework.context.annotation.Bean;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -128,11 +129,11 @@ public class OpenCompositeOrderInventoryServiceTest {
     PoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(PoLine.class);
     JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
 
-    doReturn(succeededFuture(line)).when(inventoryInstanceManager).openOrderHandleInstance(any(), anyBoolean(), eq(requestContext));
+    doReturn(succeededFuture(line)).when(inventoryInstanceManager).openOrderHandleInstance(any(), anyBoolean(), any(), eq(requestContext));
     doReturn(succeededFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(), eq(requestContext));
     doReturn(succeededFuture(requestContext)).when(consortiumConfigurationService).cloneRequestContextIfNeeded(any(), any());
 
-    openCompositeOrderInventoryService.processInventory(purchaseOrder, line, titleId, false, requestContext).result();
+    openCompositeOrderInventoryService.processInventory(purchaseOrder, line, titleId, false, new HashSet<>(), requestContext).result();
 
     assertEquals(line.getLocations().getFirst().getHoldingId(), "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d63");
     verify(processInventoryStrategyResolver, times(1)).getHoldingAndItemStrategy(any());
@@ -151,11 +152,11 @@ public class OpenCompositeOrderInventoryServiceTest {
 
     JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
 
-    doReturn(succeededFuture(line)).when(inventoryInstanceManager).openOrderHandleInstance(any(), anyBoolean(), eq(requestContext));
+    doReturn(succeededFuture(line)).when(inventoryInstanceManager).openOrderHandleInstance(any(), anyBoolean(), any(), eq(requestContext));
     doReturn(succeededFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(), requestContextCaptor.capture());
     doReturn(succeededFuture(newContext)).when(consortiumConfigurationService).cloneRequestContextIfNeeded(any(), any());
 
-    openCompositeOrderInventoryService.processInventory(purchaseOrder, line, titleId, false, requestContext).result();
+    openCompositeOrderInventoryService.processInventory(purchaseOrder, line, titleId, false, new HashSet<>(), requestContext).result();
 
     RequestContext capturedRequestContext = requestContextCaptor.getValue();
     assertEquals(location.getTenantId(), tenantId(capturedRequestContext.getHeaders()));
@@ -174,11 +175,11 @@ public class OpenCompositeOrderInventoryServiceTest {
 
     JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
 
-    doReturn(succeededFuture(line)).when(inventoryInstanceManager).openOrderHandleInstance(any(), anyBoolean(), eq(requestContext));
+    doReturn(succeededFuture(line)).when(inventoryInstanceManager).openOrderHandleInstance(any(), anyBoolean(), any(), eq(requestContext));
     doReturn(succeededFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(), requestContextCaptor.capture());
     doReturn(succeededFuture(requestContext)).when(consortiumConfigurationService).cloneRequestContextIfNeeded(any(), any());
 
-    openCompositeOrderInventoryService.processInventory(purchaseOrder, line, titleId, false, requestContext).result();
+    openCompositeOrderInventoryService.processInventory(purchaseOrder, line, titleId, false, new HashSet<>(), requestContext).result();
 
     RequestContext capturedRequestContext = requestContextCaptor.getValue();
     assertEquals(tenantId(okapiHeadersMock), tenantId(capturedRequestContext.getHeaders()));

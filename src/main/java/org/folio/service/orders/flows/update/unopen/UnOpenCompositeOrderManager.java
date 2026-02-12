@@ -40,6 +40,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.CirculationRequestsRetriever;
 import org.folio.service.ProtectionService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
@@ -199,7 +200,7 @@ public class UnOpenCompositeOrderManager {
           return null;
         });
       })
-      .onSuccess(v -> log.debug("Pieces, Holdings deleted after UnOpen order"))
+      .onSuccess(v -> log.info("Pieces and Holdings deleted after UnOpen order for poLine id: {}", poLine.getId()))
       .mapEmpty();
   }
 
@@ -257,7 +258,8 @@ public class UnOpenCompositeOrderManager {
     return inventoryItemManager.getItemsByPoLineIdsAndStatus(List.of(poLine.getId()), ItemStatus.ON_ORDER.value(), locationContext)
       .compose(onOrderItems -> {
         if (CollectionUtils.isEmpty(onOrderItems)) {
-          return Future.succeededFuture();
+          log.info("processInventoryHoldingWithItemsForTenant:: No items found for poLine {}, will attempt to delete holdings", poLine.getId());
+          return deleteHoldingsForLocation(poLine, locationContext);
         }
         List<String> itemIds = onOrderItems.stream().map(item -> item.getString(ID)).toList();
         if (PoLineCommonUtil.isReceiptNotRequired(poLine.getReceiptStatus())) {
@@ -283,6 +285,33 @@ public class UnOpenCompositeOrderManager {
               .mapEmpty();
           });
       });
+  }
+
+  private Future<Void> deleteHoldingsForLocation(PoLine poLine, RequestContext locationContext) {
+    String tenantId = TenantTool.tenantId(locationContext.getHeaders());
+    Map<String, Future<List<JsonObject>>> holdingsByTenant =
+      inventoryHoldingManager.getHoldingsByLocationTenants(poLine, locationContext);
+    Future<List<JsonObject>> holdingsFuture = holdingsByTenant.get(tenantId);
+    if (holdingsFuture == null) {
+      log.info("deleteHoldingsForLocation:: No holdings map entry for tenant {}", tenantId);
+      return Future.succeededFuture();
+    }
+
+    return holdingsFuture
+      .compose(holdings -> {
+        if (CollectionUtils.isEmpty(holdings)) {
+          log.info("deleteHoldingsForLocation:: No holdings found for poLine {} in tenant {}", poLine.getId(), tenantId);
+          return Future.succeededFuture(List.of());
+        }
+        return deleteHoldings(poLine, tenantId, holdings, locationContext);
+      })
+      .map(deletedHoldingVsLocationIds -> {
+        log.info("deleteHoldingsForLocation:: Deleted {} holdings for poLine {} in tenant {}",
+          deletedHoldingVsLocationIds.size(), poLine.getId(), tenantId);
+        updateLocations(poLine, deletedHoldingVsLocationIds);
+        return null;
+      })
+      .mapEmpty();
   }
 
   private Future<List<Pair<String, String>>> deleteHoldingsByItems(PoLine poLine, List<JsonObject> deletedItems, RequestContext requestContext) {
