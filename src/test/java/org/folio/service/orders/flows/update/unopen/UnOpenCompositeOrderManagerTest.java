@@ -21,10 +21,12 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
@@ -39,7 +41,6 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceCollection;
-import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.service.CirculationRequestsRetriever;
 import org.folio.service.ProtectionService;
@@ -47,6 +48,7 @@ import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategy;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryItemManager;
+import org.folio.service.inventory.InventoryRollbackService;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
@@ -388,6 +390,8 @@ public class UnOpenCompositeOrderManagerTest {
     doReturn(succeededFuture()).when(inventoryHoldingManager).deleteHoldingById(eq(HOLDING_ID), eq(true), RequestContextMatcher.matchCentralTenant());
     JsonObject holding = new JsonObject().put("id", HOLDING_ID).put("permanentLocationId", poLine.getLocations().get(0).getLocationId());
     doReturn(Map.of("folio_shared", succeededFuture(List.of(holding)))).when(inventoryHoldingManager).getHoldingsByLocationTenants(poLine, requestContext);
+    doReturn(succeededFuture(Collections.emptyList())).when(purchaseOrderLineService).getPoLinesByHoldingIds(anyList(), any(RequestContext.class));
+    doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByHoldingIds(anyList(), any(RequestContext.class));
   }
 
   private JsonObject getItem() {
@@ -417,6 +421,93 @@ public class UnOpenCompositeOrderManagerTest {
     assertEquals(PoLine.PaymentStatus.PAYMENT_NOT_REQUIRED, order.getPoLines().get(0).getPaymentStatus());
     verify(openToPendingEncumbranceStrategy).processEncumbrances(order, orderFromStorage, requestContext);
     verify(purchaseOrderLineService).saveOrderLine(any(PoLine.class), eq(requestContext));
+  }
+
+  @Test
+  void testRollbackInventory_NoItemsFound_ShouldDeleteHoldings() throws Exception {
+    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+    PoLine poLine = order.getPoLines().get(0);
+    poLine.setId(UUID.randomUUID().toString());
+    poLine.setCheckinItems(false); // Synchronized workflow
+
+    var location = new org.folio.rest.jaxrs.model.Location()
+      .withLocationId("locationId")
+      .withQuantity(1)
+      .withQuantityPhysical(1);
+    poLine.setLocations(List.of(location));
+
+    when(inventoryItemManager.getItemsByPoLineIdsAndStatus(anyList(), anyString(), any(RequestContext.class)))
+      .thenReturn(succeededFuture(Collections.emptyList()));
+
+    JsonObject holding = new JsonObject()
+      .put("id", HOLDING_ID)
+      .put("permanentLocationId", EFFECTIVE_LOCATION_ID);
+    when(inventoryHoldingManager.getHoldingsByLocationTenants(any(PoLine.class), any(RequestContext.class)))
+      .thenReturn(Map.of("folio_shared", succeededFuture(List.of(holding))));
+
+    when(purchaseOrderLineService.getPoLinesByHoldingIds(anyList(), any(RequestContext.class)))
+      .thenReturn(succeededFuture(Collections.emptyList()));
+    when(pieceStorageService.getPiecesByHoldingIds(anyList(), any(RequestContext.class)))
+      .thenReturn(succeededFuture(Collections.emptyList()));
+    when(inventoryItemManager.getItemsByHoldingId(eq(HOLDING_ID), any(RequestContext.class)))
+      .thenReturn(succeededFuture(Collections.emptyList()));
+    when(inventoryHoldingManager.deleteHoldingById(anyString(), anyBoolean(), any(RequestContext.class)))
+      .thenReturn(succeededFuture(null));
+
+    var future = unOpenCompositeOrderManager.rollbackInventory(order, requestContext);
+    future.toCompletionStage().toCompletableFuture().get();
+
+    verify(inventoryHoldingManager).deleteHoldingById(eq(HOLDING_ID), eq(true), any(RequestContext.class));
+  }
+
+  @Test
+  void testRollbackInventory_NoItemsNoHoldings_ShouldSucceed() throws Exception {
+    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+    PoLine poLine = order.getPoLines().get(0);
+    poLine.setId(UUID.randomUUID().toString());
+    poLine.setCheckinItems(false);
+
+    var location = new org.folio.rest.jaxrs.model.Location()
+      .withLocationId("locationId")
+      .withQuantity(1)
+      .withQuantityPhysical(1);
+    poLine.setLocations(List.of(location));
+
+    when(inventoryItemManager.getItemsByPoLineIdsAndStatus(anyList(), anyString(), any(RequestContext.class)))
+      .thenReturn(succeededFuture(Collections.emptyList()));
+    String tenantId = "diku";
+    when(inventoryHoldingManager.getHoldingsByLocationTenants(any(PoLine.class), any(RequestContext.class)))
+      .thenReturn(Map.of(tenantId, succeededFuture(Collections.emptyList())));
+
+    var future = unOpenCompositeOrderManager.rollbackInventory(order, requestContext);
+
+    future.toCompletionStage().toCompletableFuture().get();
+    verify(inventoryHoldingManager, never()).deleteHoldingById(anyString(), anyBoolean(), any(RequestContext.class));
+  }
+
+  @Test
+  void testRollbackInventory_NoHoldingsMapEntry_ShouldSucceed() throws Exception {
+    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+    PoLine poLine = order.getPoLines().get(0);
+    poLine.setId(UUID.randomUUID().toString());
+    poLine.setCheckinItems(false);
+
+    var location = new org.folio.rest.jaxrs.model.Location()
+      .withLocationId("locationId")
+      .withQuantity(1)
+      .withQuantityPhysical(1);
+    poLine.setLocations(List.of(location));
+
+    when(inventoryItemManager.getItemsByPoLineIdsAndStatus(anyList(), anyString(), any(RequestContext.class)))
+      .thenReturn(succeededFuture(Collections.emptyList()));
+
+    when(inventoryHoldingManager.getHoldingsByLocationTenants(any(PoLine.class), any(RequestContext.class)))
+      .thenReturn(Map.of("otherTenant", succeededFuture(Collections.emptyList())));
+
+    var future = unOpenCompositeOrderManager.rollbackInventory(order, requestContext);
+
+    future.toCompletionStage().toCompletableFuture().get();
+    verify(inventoryHoldingManager, never()).deleteHoldingById(anyString(), anyBoolean(), any(RequestContext.class));
   }
 
   /**
@@ -465,6 +556,11 @@ public class UnOpenCompositeOrderManagerTest {
     }
 
     @Bean
+    InventoryRollbackService inventoryRollbackService() {
+      return mock(InventoryRollbackService.class);
+    }
+
+    @Bean
     UnOpenCompositeOrderManager unOpenCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
                                                             EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
                                                             InventoryItemManager inventoryItemManager,
@@ -474,7 +570,8 @@ public class UnOpenCompositeOrderManagerTest {
                                                             ProtectionService protectionService,
                                                             CirculationRequestsRetriever circulationRequestsRetriever) {
       return spy(new UnOpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory, inventoryItemManager,
-        inventoryHoldingManager, pieceStorageService, purchaseOrderStorageService, protectionService, circulationRequestsRetriever));
+        inventoryHoldingManager, pieceStorageService, purchaseOrderStorageService, protectionService, circulationRequestsRetriever
+      ));
     }
   }
 }

@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Stream;
 
@@ -115,11 +116,13 @@ public class InventoryInstanceManager {
         : createInstanceRecord(title, suppressDiscovery, requestContext));
   }
 
-  public Future<PoLine> openOrderHandleInstance(PoLine poLine, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+  public Future<PoLine> openOrderHandleInstance(PoLine poLine, boolean isInstanceMatchingDisabled,
+                                                 Set<String> createdInstanceIds, RequestContext requestContext) {
     logger.debug("InventoryInstanceManager.openOrderHandleInstance");
     return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
       .compose(configuration ->
-        getOrCreateInstanceRecordForPoLine(poLine, isInstanceMatchingDisabled, configuration.orElse(null), requestContext))
+        getOrCreateInstanceRecordForPoLine(poLine, isInstanceMatchingDisabled, createdInstanceIds,
+          configuration.orElse(null), requestContext))
       .map(poLine::withInstanceId);
   }
 
@@ -197,10 +200,12 @@ public class InventoryInstanceManager {
    *
    * @param poLine - PO line to retrieve instance record id for
    * @param isInstanceMatchingDisabled - If true, do not look for instance in inventory, always create it if missing
+   * @param createdInstanceIds - Set to track newly created instance IDs
    * @param configuration - consortium configuration (null in a non-ECS environment)
    * @return Future with instance id
    */
   private Future<String> getOrCreateInstanceRecordForPoLine(PoLine poLine, boolean isInstanceMatchingDisabled,
+                                                            Set<String> createdInstanceIds,
                                                             ConsortiumConfiguration configuration, RequestContext requestContext) {
     logger.debug("getOrCreateInstanceRecordForPoLine:: poLine.id={}", poLine.getId());
     if (poLine.getInstanceId() != null) {
@@ -209,7 +214,11 @@ public class InventoryInstanceManager {
     // proceed with new instance record creation if no productId is provided
     if (!isProductIdsExist(poLine) || isInstanceMatchingDisabled) {
       logger.debug("getOrCreateInstanceRecordForPoLine:: no productId is provided - create instance record");
-      return createInstanceRecord(poLine, requestContext);
+      return createInstanceRecord(poLine, requestContext)
+        .map(instanceId -> {
+          createdInstanceIds.add(instanceId);
+          return instanceId;
+        });
     }
     return getInstanceRecordAndShareIfNeeded(poLine, configuration, requestContext)
       .compose(id -> {
@@ -217,7 +226,11 @@ public class InventoryInstanceManager {
           return Future.succeededFuture(id);
         }
         logger.debug("getOrCreateInstanceRecordForPoLine:: instance not found - create it");
-        return createInstanceRecord(poLine, requestContext);
+        return createInstanceRecord(poLine, requestContext)
+          .map(instanceId -> {
+            createdInstanceIds.add(instanceId);
+            return instanceId;
+          });
       });
   }
 

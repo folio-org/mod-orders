@@ -63,6 +63,7 @@ import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.finance.transaction.TransactionService;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryInstanceManager;
+import org.folio.service.inventory.InventoryRollbackService;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.inventory.InventoryItemRequestService;
 import org.folio.service.inventory.InventoryItemStatusSyncService;
@@ -581,6 +582,11 @@ public class ApplicationConfig {
   }
 
   @Bean
+  InventoryRollbackService inventoryRollbackService(RestClient restClient) {
+    return new InventoryRollbackService(restClient);
+  }
+
+  @Bean
   UnOpenCompositeOrderManager unOpenCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
                                                           EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
                                                           InventoryItemManager inventoryItemManager,
@@ -800,9 +806,10 @@ public class ApplicationConfig {
   @Bean OpenCompositeOrderManager openCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
     EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
     TitlesService titlesService, OpenCompositeOrderInventoryService openCompositeOrderInventoryService,
-    OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator, UnOpenCompositeOrderManager unOpenCompositeOrderManager) {
+    OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator, UnOpenCompositeOrderManager unOpenCompositeOrderManager,
+    InventoryRollbackService inventoryRollbackService) {
     return new OpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory,
-      titlesService, openCompositeOrderInventoryService, openCompositeOrderFlowValidator, unOpenCompositeOrderManager);
+      titlesService, openCompositeOrderInventoryService, openCompositeOrderFlowValidator, unOpenCompositeOrderManager, inventoryRollbackService);
   }
 
   @Bean OpenCompositeOrderHolderBuilder openCompositeOrderHolderBuilder(PieceStorageService pieceStorageService, TitlesService titlesService) {
