@@ -76,13 +76,10 @@ public class OpenCompositeOrderManager {
           isInstanceMatchingDisabled(config), createdInstanceIds, requestContext)
         .recover(t -> {
           logger.error("Error when processing inventory to open the order, order id={}", compPO.getId(), t);
-          return unOpenCompositeOrderManager.rollbackInventory(compPO, requestContext)
-            .onSuccess(v -> logger.info("Successfully rolled back inventory changes after inventory processing failure, order id={}", compPO.getId()))
-            .onFailure(t2 -> logger.error("Error when trying to rollback inventory changes after inventory processing failure, order id={}", compPO.getId(), t2))
-            .compose(v -> deleteOrphanedInstancesForOrder(compPO, createdInstanceIds, requestContext))
+          return rollbackInventoryAndDeleteOrphanedInstances(compPO, createdInstanceIds, requestContext)
             .transform(v -> Future.failedFuture(t));
         }))
-      .compose(v -> finishProcessingEncumbrancesForOpenOrder(compPO, poFromStorage, requestContext))
+      .compose(v -> finishProcessingEncumbrancesForOpenOrder(compPO, poFromStorage, createdInstanceIds, requestContext))
       .map(v -> asFuture(() -> changePoLineStatuses(compPO)))
       .compose(v -> openOrderUpdatePoLinesSummary(compPO.getPoLines(), requestContext));
   }
@@ -157,7 +154,7 @@ public class OpenCompositeOrderManager {
   }
 
   private Future<Void> finishProcessingEncumbrancesForOpenOrder(CompositePurchaseOrder compPO,
-      CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
+      CompositePurchaseOrder poFromStorage, Set<String> createdInstanceIds, RequestContext requestContext) {
     logger.debug("OpenCompositeOrderManager.finishProcessingEncumbrancesForOpenOrder compPO.id={}", compPO.getId());
     EncumbranceWorkflowStrategy strategy = encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.PENDING_TO_OPEN);
     return strategy.processEncumbrances(compPO, poFromStorage, requestContext)
@@ -165,10 +162,8 @@ public class OpenCompositeOrderManager {
       .recover(t -> {
         logger.error("Error when processing encumbrances to open the order, order id={}", compPO.getId(), t);
         // There was an error when processing the encumbrances despite the previous validations.
-        // Try to rollback inventory changes
-        return unOpenCompositeOrderManager.rollbackInventory(compPO, requestContext)
-          .onSuccess(v -> logger.info("Successfully rolled back inventory changes, order id={}", compPO.getId()))
-          .onFailure(t2 -> logger.error("Error when trying to rollback inventory changes, order id={}", compPO.getId(), t2))
+        // Try to rollback inventory changes and delete orphaned instances
+        return rollbackInventoryAndDeleteOrphanedInstances(compPO, createdInstanceIds, requestContext)
           .transform(v -> Future.failedFuture(t));
       });
   }
@@ -190,6 +185,15 @@ public class OpenCompositeOrderManager {
       .map(poLine -> inventoryRollbackService.deleteOrphanedInstanceIfNeeded(poLine, createdInstanceIds, requestContext))
       .toList();
     return Future.all(futures).mapEmpty();
+  }
+  
+  private Future<Void> rollbackInventoryAndDeleteOrphanedInstances(CompositePurchaseOrder compPO,
+                                                                     Set<String> createdInstanceIds,
+                                                                     RequestContext requestContext) {
+    return unOpenCompositeOrderManager.rollbackInventory(compPO, requestContext)
+      .onSuccess(v -> logger.info("Successfully rolled back inventory changes, order id={}", compPO.getId()))
+      .onFailure(t -> logger.error("Error when trying to rollback inventory changes, order id={}", compPO.getId(), t))
+      .compose(v -> deleteOrphanedInstancesForOrder(compPO, createdInstanceIds, requestContext));
   }
 
 }
