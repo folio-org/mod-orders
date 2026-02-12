@@ -34,3 +34,11 @@ resourceTypes:
   is: [validate]
   post:
     description: Check-in items spanning one or more po_lines in this order
+    queryParameters:
+      deleteHoldings:
+        displayName: The associated holdings should be removed
+        description: The associated holdings should be removed
+        type: boolean
+        required: false
+        example: true
+        default: false
