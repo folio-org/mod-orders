@@ -305,13 +305,12 @@ public class UnOpenCompositeOrderManager {
         }
         return deleteHoldings(poLine, tenantId, holdings, locationContext);
       })
-      .map(deletedHoldingVsLocationIds -> {
+      .compose(deletedHoldingVsLocationIds -> {
         log.info("deleteHoldingsForLocation:: Deleted {} holdings for poLine {} in tenant {}",
           deletedHoldingVsLocationIds.size(), poLine.getId(), tenantId);
         updateLocations(poLine, deletedHoldingVsLocationIds);
-        return null;
-      })
-      .mapEmpty();
+        return Future.succeededFuture();
+      });
   }
 
   private Future<List<Pair<String, String>>> deleteHoldingsByItems(PoLine poLine, List<JsonObject> deletedItems, RequestContext requestContext) {

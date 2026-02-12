@@ -1,6 +1,7 @@
 package org.folio.service.inventory;
 
 import io.vertx.core.Future;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -16,13 +17,10 @@ import static org.folio.service.inventory.InventoryUtils.INSTANCE_RECORDS_BY_ID_
 import static org.folio.service.inventory.InventoryUtils.INVENTORY_LOOKUP_ENDPOINTS;
 
 @Log4j2
+@RequiredArgsConstructor
 public class InventoryRollbackService {
 
   private final RestClient restClient;
-
-  public InventoryRollbackService(RestClient restClient) {
-    this.restClient = restClient;
-  }
 
   /**
    * Deletes an orphaned instance (instance with no remaining holdings) if applicable.
