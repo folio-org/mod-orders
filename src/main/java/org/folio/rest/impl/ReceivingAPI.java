@@ -50,11 +50,11 @@ public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersExpect,
 
   @Override
   @Validate
-  public void postOrdersCheckIn(CheckinCollection entity, Map<String, String> okapiHeaders,
+  public void postOrdersCheckIn(boolean deleteHoldings, CheckinCollection entity, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.debug("CheckIn {} items", entity.getTotalRecords());
     CheckinHelper helper = new CheckinHelper(entity, okapiHeaders, vertxContext);
-    helper.checkinPieces(entity, new RequestContext(vertxContext, okapiHeaders))
+    helper.checkinPieces(entity, deleteHoldings, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(result -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(result))))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }

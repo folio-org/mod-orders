@@ -35,15 +35,18 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
 
+@ExtendWith(MockitoExtension.class)
 public class PieceUpdateInventoryServiceTest {
+
   @Autowired
   private PieceUpdateInventoryService pieceUpdateInventoryService;
   @Autowired
@@ -54,14 +57,13 @@ public class PieceUpdateInventoryServiceTest {
   private  PieceStorageService pieceStorageService;
   @Mock
   private Map<String, String> okapiHeadersMock;
-  private final Context ctx = getFirstContextFromVertx(getVertx());
 
+  private final Context ctx = getFirstContextFromVertx(getVertx());
   private RequestContext requestContext;
   private static boolean runningOnOwn;
 
   @BeforeEach
   void initMocks(){
-    MockitoAnnotations.openMocks(this);
     autowireDependencies(this);
     requestContext = new RequestContext(ctx, okapiHeadersMock);
   }

@@ -8,9 +8,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import lombok.experimental.UtilityClass;
+import one.util.streamex.StreamEx;
+import org.apache.commons.lang3.tuple.Pair;
 import org.folio.models.pieces.PieceBatchStatusUpdateHolder;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
@@ -124,6 +127,12 @@ public class PieceUtil {
         .withLocationId(piece.getLocationId())
         .withTenantId(piece.getReceivingTenantId()))
       .toList();
+  }
+
+  public static Map<Pair<String, String>, Set<String>> groupPiecesByHoldings(List<Piece> pieces) {
+    return StreamEx.of(pieces)
+      .filter(piece -> piece != null && piece.getHoldingId() != null)
+      .groupingBy(piece -> Pair.of(piece.getHoldingId(), piece.getReceivingTenantId()), Collectors.mapping(Piece::getId, Collectors.toSet()));
   }
 
 }

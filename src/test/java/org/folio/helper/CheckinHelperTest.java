@@ -49,6 +49,7 @@ import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
 import org.folio.service.ProtectionService;
+import org.folio.service.pieces.PieceUpdateInventoryService;
 import org.folio.service.settings.CommonSettingsRetriever;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryInstanceManager;
@@ -66,11 +67,11 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
-@ExtendWith(VertxExtension.class)
+@ExtendWith({VertxExtension.class, MockitoExtension.class})
 public class CheckinHelperTest {
 
   @Autowired
@@ -79,6 +80,8 @@ public class CheckinHelperTest {
   PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager;
   @Autowired
   PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService;
+  @Autowired
+  PieceUpdateInventoryService pieceUpdateInventoryService;
   @Autowired
   ItemRecreateInventoryService itemRecreateInventoryService;
   @Autowired
@@ -108,7 +111,6 @@ public class CheckinHelperTest {
 
   @BeforeEach
   void beforeEach() {
-    MockitoAnnotations.openMocks(this);
     autowireDependencies(this);
     var ctxMock = getFirstContextFromVertx(getVertx());
     okapiHeadersMock = new HashMap<>();
@@ -327,17 +329,18 @@ public class CheckinHelperTest {
     PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager() {
       return mock(PieceCreateFlowInventoryManager.class);
     }
-
     @Bean
     PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService() {
       return mock(PieceUpdateFlowPoLineService.class);
     }
-
+    @Bean
+    PieceUpdateInventoryService pieceUpdateInventoryService() {
+      return mock(PieceUpdateInventoryService.class);
+    }
     @Bean
     CommonSettingsRetriever configurationEntriesService() {
       return mock(CommonSettingsRetriever.class);
     }
-
     @Bean
     ProtectionService protectionService() {
       return mock(ProtectionService.class);
