@@ -30,12 +30,14 @@ import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.pieces.PieceUtil;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import static java.util.stream.Collectors.toList;
+import static one.util.streamex.StreamEx.ofSubLists;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.QueryUtils.convertIdsToCqlQuery;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
@@ -266,8 +268,8 @@ public class InventoryItemManager {
       .collect(toList());
   }
 
-  private List<Piece> buildPieces(Location location, PoLine poLine, Piece.Format pieceFormat, List<String> createdItemIds,
-                                  List<String> existingItemIds) {
+  private List<Piece> buildPieces(Location location, PoLine poLine, Piece.Format pieceFormat,
+                                  List<String> createdItemIds, List<String> existingItemIds) {
     List<String> itemIds = ListUtils.union(createdItemIds, existingItemIds);
     logger.info(BUILDING_PIECE_MESSAGE, itemIds.size(), pieceFormat, poLine.getId());
     return StreamEx.of(itemIds).map(itemId -> openOrderBuildPiece(poLine, itemId, pieceFormat, location)).toList();
@@ -307,6 +309,17 @@ public class InventoryItemManager {
         logger.debug("{} existing items found for holding with '{}' id", items.size(), holdingId);
         return items;
       });
+  }
+
+  public Future<List<JsonObject>> getItemsByHoldingIds(List<String> holdingIds, RequestContext requestContext) {
+    var futures = ofSubLists(new ArrayList<>(holdingIds), MAX_IDS_FOR_GET_RQ_15)
+      .map(holdingIdsChunk -> convertIdsToCqlQuery(holdingIdsChunk, ITEM_HOLDINGS_RECORD_ID))
+      .map(query -> getItemRecordsByQuery(query, requestContext))
+      .toList();
+    return collectResultsOnSuccess(futures)
+      .map(lists -> StreamEx.of(lists)
+        .flatMap(Collection::stream)
+        .toList());
   }
 
   public Future<String> openOrderCreateItemRecord(CompositePurchaseOrder compPO, PoLine poLine,

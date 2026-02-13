@@ -425,10 +425,14 @@ public class ApplicationConfig {
   }
 
   @Bean
-  HoldingDetailService holdingsDetailService(PurchaseOrderLineService purchaseOrderLineService,
+  HoldingDetailService holdingsDetailService(ConsortiumConfigurationService consortiumConfigurationService,
+                                             ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever,
+                                             SettingsRetriever settingsRetriever,
+                                             PurchaseOrderLineService purchaseOrderLineService,
                                              PieceStorageService pieceStorageService,
                                              InventoryItemManager inventoryItemManager) {
-    return new HoldingDetailService(purchaseOrderLineService, pieceStorageService, inventoryItemManager);
+    return new HoldingDetailService(consortiumConfigurationService, consortiumUserTenantsRetriever, settingsRetriever,
+                                    purchaseOrderLineService, pieceStorageService, inventoryItemManager);
   }
 
   @Bean
