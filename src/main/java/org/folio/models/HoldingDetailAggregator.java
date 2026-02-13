@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Objects;
 
 public class HoldingDetailAggregator {
+
   private Map<String, List<PoLine>> poLinesByHoldingId = new HashMap<>();
   private Map<String, List<Piece>> piecesByHoldingId = new HashMap<>();
   private Map<String, List<JsonObject>> itemsByHoldingId = new HashMap<>();
@@ -19,11 +20,11 @@ public class HoldingDetailAggregator {
     return poLinesByHoldingId;
   }
 
-  public Map<String, List<Piece>>  getPiecesByHoldingId() {
+  public Map<String, List<Piece>> getPiecesByHoldingId() {
     return piecesByHoldingId;
   }
 
-  public Map<String, List<JsonObject>>  getItemsByHoldingId() {
+  public Map<String, List<JsonObject>> getItemsByHoldingId() {
     return itemsByHoldingId;
   }
 
