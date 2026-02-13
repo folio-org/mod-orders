@@ -5,9 +5,11 @@ import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.O
 import static org.folio.service.UserService.getCurrentUserId;
 
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
@@ -19,6 +21,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
+import org.folio.service.inventory.InventoryRollbackService;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.flows.update.unopen.UnOpenCompositeOrderManager;
@@ -39,18 +42,21 @@ public class OpenCompositeOrderManager {
   private final OpenCompositeOrderInventoryService openCompositeOrderInventoryService;
   private final OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator;
   private final UnOpenCompositeOrderManager unOpenCompositeOrderManager;
+  private final InventoryRollbackService inventoryRollbackService;
 
   public OpenCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
       EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
       TitlesService titlesService, OpenCompositeOrderInventoryService openCompositeOrderInventoryService,
       OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
-      UnOpenCompositeOrderManager unOpenCompositeOrderManager) {
+      UnOpenCompositeOrderManager unOpenCompositeOrderManager,
+      InventoryRollbackService inventoryRollbackService) {
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.encumbranceWorkflowStrategyFactory = encumbranceWorkflowStrategyFactory;
     this.titlesService = titlesService;
     this.openCompositeOrderInventoryService = openCompositeOrderInventoryService;
     this.openCompositeOrderFlowValidator = openCompositeOrderFlowValidator;
     this.unOpenCompositeOrderManager = unOpenCompositeOrderManager;
+    this.inventoryRollbackService = inventoryRollbackService;
   }
 
   /**
@@ -62,11 +68,18 @@ public class OpenCompositeOrderManager {
   public Future<Void> process(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, JsonObject config, RequestContext requestContext) {
     logger.debug("OpenCompositeOrderManager.process compPO.id={}", compPO.getId());
     updateIncomingOrder(compPO, poFromStorage, requestContext);
+    Set<String> createdInstanceIds = new HashSet<>();
     return openCompositeOrderFlowValidator.validate(compPO, poFromStorage, requestContext)
       .compose(aCompPO -> titlesService.fetchNonPackageTitles(compPO, requestContext))
       .map(lineIdTitles -> populateInstanceId(lineIdTitles, compPO.getPoLines()))
-      .compose(linesIdTitles -> openCompositeOrderInventoryService.processInventory(linesIdTitles, compPO, isInstanceMatchingDisabled(config), requestContext))
-      .compose(v -> finishProcessingEncumbrancesForOpenOrder(compPO, poFromStorage, requestContext))
+      .compose(linesIdTitles -> openCompositeOrderInventoryService.processInventory(linesIdTitles, compPO,
+          isInstanceMatchingDisabled(config), createdInstanceIds, requestContext)
+        .recover(t -> {
+          logger.error("Error when processing inventory to open the order, order id={}", compPO.getId(), t);
+          return rollbackInventoryAndDeleteOrphanedInstances(compPO, createdInstanceIds, requestContext)
+            .transform(v -> Future.failedFuture(t));
+        }))
+      .compose(v -> finishProcessingEncumbrancesForOpenOrder(compPO, poFromStorage, createdInstanceIds, requestContext))
       .map(v -> asFuture(() -> changePoLineStatuses(compPO)))
       .compose(v -> openOrderUpdatePoLinesSummary(compPO.getPoLines(), requestContext));
   }
@@ -141,7 +154,7 @@ public class OpenCompositeOrderManager {
   }
 
   private Future<Void> finishProcessingEncumbrancesForOpenOrder(CompositePurchaseOrder compPO,
-      CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
+      CompositePurchaseOrder poFromStorage, Set<String> createdInstanceIds, RequestContext requestContext) {
     logger.debug("OpenCompositeOrderManager.finishProcessingEncumbrancesForOpenOrder compPO.id={}", compPO.getId());
     EncumbranceWorkflowStrategy strategy = encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.PENDING_TO_OPEN);
     return strategy.processEncumbrances(compPO, poFromStorage, requestContext)
@@ -149,10 +162,8 @@ public class OpenCompositeOrderManager {
       .recover(t -> {
         logger.error("Error when processing encumbrances to open the order, order id={}", compPO.getId(), t);
         // There was an error when processing the encumbrances despite the previous validations.
-        // Try to rollback inventory changes
-        return unOpenCompositeOrderManager.rollbackInventory(compPO, requestContext)
-          .onSuccess(v -> logger.info("Successfully rolled back inventory changes, order id={}", compPO.getId()))
-          .onFailure(t2 -> logger.error("Error when trying to rollback inventory changes, order id={}", compPO.getId(), t2))
+        // Try to rollback inventory changes and delete orphaned instances
+        return rollbackInventoryAndDeleteOrphanedInstances(compPO, createdInstanceIds, requestContext)
           .transform(v -> Future.failedFuture(t));
       });
   }
@@ -166,6 +177,23 @@ public class OpenCompositeOrderManager {
       compPO.setPoLines(clonedPoFromStorage.getPoLines());
     }
     compPO.getPoLines().forEach(poLine -> PoLineCommonUtil.updateLocationsQuantity(poLine.getLocations()));
+  }
+
+  private Future<Void> deleteOrphanedInstancesForOrder(CompositePurchaseOrder compPO, Set<String> createdInstanceIds,
+                                                        RequestContext requestContext) {
+    List<Future<Void>> futures = compPO.getPoLines().stream()
+      .map(poLine -> inventoryRollbackService.deleteOrphanedInstanceIfNeeded(poLine, createdInstanceIds, requestContext))
+      .toList();
+    return Future.all(futures).mapEmpty();
+  }
+  
+  private Future<Void> rollbackInventoryAndDeleteOrphanedInstances(CompositePurchaseOrder compPO,
+                                                                     Set<String> createdInstanceIds,
+                                                                     RequestContext requestContext) {
+    return unOpenCompositeOrderManager.rollbackInventory(compPO, requestContext)
+      .onSuccess(v -> logger.info("Successfully rolled back inventory changes, order id={}", compPO.getId()))
+      .onFailure(t -> logger.error("Error when trying to rollback inventory changes, order id={}", compPO.getId(), t))
+      .compose(v -> deleteOrphanedInstancesForOrder(compPO, createdInstanceIds, requestContext));
   }
 
 }

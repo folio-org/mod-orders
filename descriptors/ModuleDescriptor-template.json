@@ -2277,6 +2277,7 @@
         "inventory.instances.collection.get",
         "inventory.instances.item.get",
         "inventory.instances.item.post",
+        "inventory.instances.item.delete",
         "inventory.items.collection.get",
         "inventory.items.item.get",
         "inventory.items.item.put",

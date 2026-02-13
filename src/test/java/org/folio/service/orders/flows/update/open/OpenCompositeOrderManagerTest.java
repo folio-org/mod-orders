@@ -16,7 +16,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.HashMap;
@@ -26,6 +29,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -35,9 +39,11 @@ import org.folio.helper.PurchaseOrderLineHelper;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.ProtectionService;
+import org.folio.service.inventory.InventoryRollbackService;
 import org.folio.service.settings.CommonSettingsRetriever;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.EncumbranceService;
@@ -92,6 +98,10 @@ public class OpenCompositeOrderManagerTest {
   private EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
   @Autowired
   private OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator;
+  @Autowired
+  private InventoryRollbackService inventoryRollbackService;
+  @Autowired
+  private UnOpenCompositeOrderManager unOpenCompositeOrderManager;
 
   @Mock
   private Map<String, String> okapiHeadersMock;
@@ -152,7 +162,7 @@ public class OpenCompositeOrderManagerTest {
     when(titlesService.fetchNonPackageTitles(any(), any()))
       .thenReturn(succeededFuture(emptyTitles));
 
-    when(openCompositeOrderInventoryService.processInventory(any(), any(), anyBoolean(), any()))
+    when(openCompositeOrderInventoryService.processInventory(any(), any(), anyBoolean(), any(), any()))
       .thenReturn(succeededFuture());
 
     var mockStrategy = mock(EncumbranceWorkflowStrategy.class);
@@ -173,6 +183,51 @@ public class OpenCompositeOrderManagerTest {
         vertxTestContext.completeNow();
       }))
       .onFailure(vertxTestContext::failNow);
+  }
+
+  @Test
+  @CopilotGenerated(model = "Claude 3.5 Sonnet")
+  void testInventoryProcessingFailure_ShouldTriggerRollbackAndDeleteOrphanedInstances(VertxTestContext vertxTestContext) {
+    // Given: Setup order with PoLines that have instanceIds
+    var poLine1 = new PoLine()
+      .withId(UUID.randomUUID().toString())
+      .withInstanceId("instance1");
+    var poLine2 = new PoLine()
+      .withId(UUID.randomUUID().toString())
+      .withInstanceId("instance2");
+
+    var compPO = new CompositePurchaseOrder()
+      .withId(UUID.randomUUID().toString())
+      .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.PENDING)
+      .withPoLines(List.of(poLine1, poLine2));
+    var poFromStorage = JsonObject.mapFrom(compPO).mapTo(CompositePurchaseOrder.class);
+    var config = new JsonObject().put(DISABLE_INSTANCE_MARCHING_CONFIG_NAME,
+      new JsonObject().put(DISABLE_INSTANCE_MARCHING_CONFIG_KEY, false).encode());
+
+    when(openCompositeOrderFlowValidator.validate(any(), any(), any()))
+      .thenReturn(succeededFuture());
+    Map<String, List<Title>> titles = new HashMap<>();
+    when(titlesService.fetchNonPackageTitles(any(), any()))
+      .thenReturn(succeededFuture(titles));
+
+    var inventoryError = new RuntimeException("Item material type invalid");
+    when(openCompositeOrderInventoryService.processInventory(any(), any(), anyBoolean(), any(), any()))
+      .thenReturn(Future.failedFuture(inventoryError));
+    when(unOpenCompositeOrderManager.rollbackInventory(any(), any()))
+      .thenReturn(succeededFuture());
+    when(inventoryRollbackService.deleteOrphanedInstanceIfNeeded(any(), any(), any()))
+      .thenReturn(succeededFuture());
+
+    // When
+    var future = openCompositeOrderManager.process(compPO, poFromStorage, config, requestContext);
+
+    // Then: Should fail with original error, but rollback should have been triggered
+    vertxTestContext.assertFailure(future)
+      .onComplete(ar -> vertxTestContext.verify(() -> {
+        verify(unOpenCompositeOrderManager, times(1)).rollbackInventory(eq(compPO), eq(requestContext));
+        verify(inventoryRollbackService, times(2)).deleteOrphanedInstanceIfNeeded(any(), any(), eq(requestContext));
+        vertxTestContext.completeNow();
+      }));
   }
 
   private static class ContextConfiguration {
@@ -259,12 +314,19 @@ public class OpenCompositeOrderManagerTest {
       return mock(UnOpenCompositeOrderManager.class);
     }
 
+    @Bean
+    InventoryRollbackService inventoryRollbackService() {
+      return mock(InventoryRollbackService.class);
+    }
+
     @Bean OpenCompositeOrderManager openCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
       EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
       TitlesService titlesService, OpenCompositeOrderInventoryService openCompositeOrderInventoryService,
-      OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator, UnOpenCompositeOrderManager unOpenCompositeOrderManager) {
+      OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator, UnOpenCompositeOrderManager unOpenCompositeOrderManager,
+      InventoryRollbackService inventoryRollbackService) {
       return new OpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory,
-          titlesService, openCompositeOrderInventoryService, openCompositeOrderFlowValidator, unOpenCompositeOrderManager);
+          titlesService, openCompositeOrderInventoryService, openCompositeOrderFlowValidator, unOpenCompositeOrderManager,
+          inventoryRollbackService);
     }
   }
 }

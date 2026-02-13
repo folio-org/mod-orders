@@ -24,6 +24,7 @@ import org.folio.service.orders.flows.update.open.OpenCompositeOrderPieceService
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.folio.orders.utils.FutureUtils.asFuture;
 import static org.folio.orders.utils.HelperUtils.chainCallAccumulated;
@@ -60,11 +61,13 @@ public abstract class ProcessInventoryStrategy {
    * Creates Inventory records associated with given PO line and updates PO line with corresponding links.
    *
    * @param poLine PO line to update Inventory for
+   * @param createdInstanceIds Set to track newly created instance IDs
    * @return CompletableFuture with void.
    */
   public Future<Void> processInventory(CompositePurchaseOrder compPO,
                                        PoLine poLine, String titleId,
                                        boolean isInstanceMatchingDisabled,
+                                       Set<String> createdInstanceIds,
                                        InventoryItemManager inventoryItemManager,
                                        InventoryHoldingManager inventoryHoldingManager,
                                        InventoryInstanceManager inventoryInstanceManager,
@@ -82,7 +85,7 @@ public abstract class ProcessInventoryStrategy {
         openCompositeOrderPieceService);
     }
 
-    return inventoryInstanceManager.openOrderHandleInstance(poLine, isInstanceMatchingDisabled, requestContext)
+    return inventoryInstanceManager.openOrderHandleInstance(poLine, isInstanceMatchingDisabled, createdInstanceIds, requestContext)
       .compose(polWithInstanceId -> handleHoldingsAndItemsRecords(compPO, polWithInstanceId,
         inventoryItemManager, inventoryHoldingManager, restClient, requestContext))
       .compose(piecesWithItemId -> handlePieces(poLine, titleId, piecesWithItemId, isInstanceMatchingDisabled,

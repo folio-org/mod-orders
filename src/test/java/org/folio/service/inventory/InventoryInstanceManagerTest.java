@@ -30,6 +30,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -95,7 +96,7 @@ public class InventoryInstanceManagerTest {
       new Location().withTenantId(CENTRAL_TENANT)));
     doReturn(succeededFuture(Optional.empty())).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
 
-    inventoryInstanceManager.openOrderHandleInstance(poLine, false, requestContext).result();
+    inventoryInstanceManager.openOrderHandleInstance(poLine, false, new HashSet<>(), requestContext).result();
 
     verifyNoInteractions(restClient);
     verifyNoInteractions(sharingInstanceService);
@@ -113,7 +114,7 @@ public class InventoryInstanceManagerTest {
     doReturn(succeededFuture(emptyInstanceCollection))
       .when(restClient).getAsJsonObject(any(RequestEntry.class), any(RequestContext.class));
 
-    inventoryInstanceManager.openOrderHandleInstance(poLine, false, requestContext).result();
+    inventoryInstanceManager.openOrderHandleInstance(poLine, false, new HashSet<>(), requestContext).result();
 
     verifyNoInteractions(sharingInstanceService);
   }
@@ -154,7 +155,7 @@ public class InventoryInstanceManagerTest {
       when(restClient.postJsonObjectAndGetId(any(RequestEntry.class), any(JsonObject.class), any(RequestContext.class)))
         .thenReturn(succeededFuture("mock-instance-id"));
 
-      inventoryInstanceManager.openOrderHandleInstance(poLine, false, requestContext).result();
+      inventoryInstanceManager.openOrderHandleInstance(poLine, false, new HashSet<>(), requestContext).result();
 
       // Verify instance was created with suppressDiscovery=true
       var instanceCaptor = ArgumentCaptor.forClass(JsonObject.class);
@@ -191,7 +192,7 @@ public class InventoryInstanceManagerTest {
     SharingInstanceCollection collection = getSharingInstanceCollection(instanceId);
     doReturn(succeededFuture(collection)).when(sharingInstanceService).getSharingInstances(instanceId, configuration.get(), requestContext);
 
-    inventoryInstanceManager.openOrderHandleInstance(poLine, false, requestContext).result();
+    inventoryInstanceManager.openOrderHandleInstance(poLine, false, new HashSet<>(), requestContext).result();
 
     verify(sharingInstanceService, never()).createShadowInstance(anyString(), any(ConsortiumConfiguration.class), any(RequestContext.class));
   }
@@ -227,7 +228,7 @@ public class InventoryInstanceManagerTest {
 
     ArgumentCaptor<RequestContext> requestContextCaptor = ArgumentCaptor.forClass(RequestContext.class);
 
-    inventoryInstanceManager.openOrderHandleInstance(poLine, false, requestContext).result();
+    inventoryInstanceManager.openOrderHandleInstance(poLine, false, new HashSet<>(), requestContext).result();
 
     verify(sharingInstanceService, times(1))
       .createShadowInstance(eq(centralInstanceId), eq(configuration.get()), requestContextCaptor.capture());
