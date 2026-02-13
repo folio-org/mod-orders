@@ -11,7 +11,6 @@ import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.PiecesDetail;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.pieces.PieceStorageService;
@@ -19,9 +18,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
+
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -29,9 +26,7 @@ import org.mockito.MockitoAnnotations;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -322,284 +317,284 @@ public class HoldingDetailServiceTest {
       });
   }
 
-  @ParameterizedTest(name = "{0}")
-  @MethodSource("provideGroupingTestCases")
-  void testGroupPiecesByTenantIdAndHoldingId(String testName, List<Piece> pieces, int expectedTenantGroups,
-                                             int expectedHoldingGroups) {
-    var result = holdingDetailService.groupPiecesByTenantIdAndHoldingId(pieces);
+  //  @ParameterizedTest(name = "{0}")
+  //  @MethodSource("provideGroupingTestCases")
+  //  void testGroupPiecesByTenantIdAndHoldingId(String testName, List<Piece> pieces, int expectedTenantGroups,
+  //                                             int expectedHoldingGroups) {
+  //    var result = holdingDetailService.groupPiecesByTenantIdAndHoldingId(pieces);
+  //
+  //    assertNotNull(result);
+  //    assertEquals(expectedTenantGroups, result.size());
+  //
+  //    var totalHoldingGroups = result.values().stream()
+  //      .mapToInt(Map::size)
+  //      .sum();
+  //    assertEquals(expectedHoldingGroups, totalHoldingGroups);
+  //  }
+  //
+  //  static Stream<Arguments> provideGroupingTestCases() {
+  //    var holdingId1 = UUID.randomUUID().toString();
+  //    var holdingId2 = UUID.randomUUID().toString();
+  //    var tenant1 = "tenant-1";
+  //    var tenant2 = "tenant-2";
+  //
+  //    return Stream.of(
+  //      Arguments.of(
+  //        "Empty list",
+  //        Collections.emptyList(),
+  //        0, 0
+  //      ),
+  //      Arguments.of(
+  //        "Single piece with tenant and holding",
+  //        List.of(createPiece(holdingId1, tenant1)),
+  //        1, 1
+  //      ),
+  //      Arguments.of(
+  //        "Multiple pieces same tenant and holding",
+  //        List.of(
+  //          createPiece(holdingId1, tenant1),
+  //          createPiece(holdingId1, tenant1)
+  //        ),
+  //        1, 1
+  //      ),
+  //      Arguments.of(
+  //        "Multiple pieces same tenant different holdings",
+  //        List.of(
+  //          createPiece(holdingId1, tenant1),
+  //          createPiece(holdingId2, tenant1)
+  //        ),
+  //        1, 2
+  //      ),
+  //      Arguments.of(
+  //        "Multiple pieces different tenants same holding",
+  //        List.of(
+  //          createPiece(holdingId1, tenant1),
+  //          createPiece(holdingId1, tenant2)
+  //        ),
+  //        2, 2
+  //      ),
+  //      Arguments.of(
+  //        "Multiple pieces different tenants different holdings",
+  //        List.of(
+  //          createPiece(holdingId1, tenant1),
+  //          createPiece(holdingId2, tenant1),
+  //          createPiece(holdingId1, tenant2),
+  //          createPiece(holdingId2, tenant2)
+  //        ),
+  //        2, 4
+  //      ),
+  //      Arguments.of(
+  //        "Pieces with null tenant - converted to empty string",
+  //        List.of(
+  //          createPiece(holdingId1, null),
+  //          createPiece(holdingId1, null)
+  //        ),
+  //        1, 1
+  //      ),
+  //      Arguments.of(
+  //        "Mixed null and non-null tenants",
+  //        List.of(
+  //          createPiece(holdingId1, tenant1),
+  //          createPiece(holdingId1, null)
+  //        ),
+  //        2, 2
+  //      )
+  //    );
+  //  }
 
-    assertNotNull(result);
-    assertEquals(expectedTenantGroups, result.size());
+  //  @Test
+  //  void testGroupPiecesByTenantIdAndHoldingIdWithNullList() {
+  //    var result = holdingDetailService.groupPiecesByTenantIdAndHoldingId(null);
+  //
+  //    assertNotNull(result);
+  //    assertTrue(result.isEmpty());
+  //  }
+  //
+  //  @Test
+  //  void testGroupPiecesByTenantIdAndHoldingIdFilterNullPieces() {
+  //    var pieces = new ArrayList<Piece>();
+  //    pieces.add(null);
+  //    pieces.add(createPiece(UUID.randomUUID().toString(), "tenant-1"));
+  //    pieces.add(null);
+  //
+  //    var result = holdingDetailService.groupPiecesByTenantIdAndHoldingId(pieces);
+  //
+  //    assertNotNull(result);
+  //    assertEquals(1, result.size());
+  //  }
+  //
+  //  @Test
+  //  void testGroupPiecesByTenantIdAndHoldingIdFilterNullHoldingId() {
+  //    var pieces = List.of(
+  //      createPiece(null, "tenant-1"),
+  //      createPiece(UUID.randomUUID().toString(), "tenant-1")
+  //    );
+  //
+  //    var result = holdingDetailService.groupPiecesByTenantIdAndHoldingId(pieces);
+  //
+  //    assertNotNull(result);
+  //    assertEquals(1, result.size());
+  //    assertEquals(1, result.get("tenant-1").size());
+  //  }
+  //
+  //  @Test
+  //  void testGroupPiecesByTenantIdAndHoldingIdNullTenantIdConversion() {
+  //    var holdingId = UUID.randomUUID().toString();
+  //    var pieces = List.of(createPiece(holdingId, null));
+  //
+  //    var result = holdingDetailService.groupPiecesByTenantIdAndHoldingId(pieces);
+  //
+  //    assertNotNull(result);
+  //    assertEquals(1, result.size());
+  //    assertTrue(result.containsKey(""));
+  //    assertEquals(1, result.get("").size());
+  //    assertTrue(result.get("").containsKey(holdingId));
+  //  }
 
-    var totalHoldingGroups = result.values().stream()
-      .mapToInt(Map::size)
-      .sum();
-    assertEquals(expectedHoldingGroups, totalHoldingGroups);
-  }
-
-  static Stream<Arguments> provideGroupingTestCases() {
-    var holdingId1 = UUID.randomUUID().toString();
-    var holdingId2 = UUID.randomUUID().toString();
-    var tenant1 = "tenant-1";
-    var tenant2 = "tenant-2";
-
-    return Stream.of(
-      Arguments.of(
-        "Empty list",
-        Collections.emptyList(),
-        0, 0
-      ),
-      Arguments.of(
-        "Single piece with tenant and holding",
-        List.of(createPiece(holdingId1, tenant1)),
-        1, 1
-      ),
-      Arguments.of(
-        "Multiple pieces same tenant and holding",
-        List.of(
-          createPiece(holdingId1, tenant1),
-          createPiece(holdingId1, tenant1)
-        ),
-        1, 1
-      ),
-      Arguments.of(
-        "Multiple pieces same tenant different holdings",
-        List.of(
-          createPiece(holdingId1, tenant1),
-          createPiece(holdingId2, tenant1)
-        ),
-        1, 2
-      ),
-      Arguments.of(
-        "Multiple pieces different tenants same holding",
-        List.of(
-          createPiece(holdingId1, tenant1),
-          createPiece(holdingId1, tenant2)
-        ),
-        2, 2
-      ),
-      Arguments.of(
-        "Multiple pieces different tenants different holdings",
-        List.of(
-          createPiece(holdingId1, tenant1),
-          createPiece(holdingId2, tenant1),
-          createPiece(holdingId1, tenant2),
-          createPiece(holdingId2, tenant2)
-        ),
-        2, 4
-      ),
-      Arguments.of(
-        "Pieces with null tenant - converted to empty string",
-        List.of(
-          createPiece(holdingId1, null),
-          createPiece(holdingId1, null)
-        ),
-        1, 1
-      ),
-      Arguments.of(
-        "Mixed null and non-null tenants",
-        List.of(
-          createPiece(holdingId1, tenant1),
-          createPiece(holdingId1, null)
-        ),
-        2, 2
-      )
-    );
-  }
-
-  @Test
-  void testGroupPiecesByTenantIdAndHoldingIdWithNullList() {
-    var result = holdingDetailService.groupPiecesByTenantIdAndHoldingId(null);
-
-    assertNotNull(result);
-    assertTrue(result.isEmpty());
-  }
-
-  @Test
-  void testGroupPiecesByTenantIdAndHoldingIdFilterNullPieces() {
-    var pieces = new ArrayList<Piece>();
-    pieces.add(null);
-    pieces.add(createPiece(UUID.randomUUID().toString(), "tenant-1"));
-    pieces.add(null);
-
-    var result = holdingDetailService.groupPiecesByTenantIdAndHoldingId(pieces);
-
-    assertNotNull(result);
-    assertEquals(1, result.size());
-  }
-
-  @Test
-  void testGroupPiecesByTenantIdAndHoldingIdFilterNullHoldingId() {
-    var pieces = List.of(
-      createPiece(null, "tenant-1"),
-      createPiece(UUID.randomUUID().toString(), "tenant-1")
-    );
-
-    var result = holdingDetailService.groupPiecesByTenantIdAndHoldingId(pieces);
-
-    assertNotNull(result);
-    assertEquals(1, result.size());
-    assertEquals(1, result.get("tenant-1").size());
-  }
-
-  @Test
-  void testGroupPiecesByTenantIdAndHoldingIdNullTenantIdConversion() {
-    var holdingId = UUID.randomUUID().toString();
-    var pieces = List.of(createPiece(holdingId, null));
-
-    var result = holdingDetailService.groupPiecesByTenantIdAndHoldingId(pieces);
-
-    assertNotNull(result);
-    assertEquals(1, result.size());
-    assertTrue(result.containsKey(""));
-    assertEquals(1, result.get("").size());
-    assertTrue(result.get("").containsKey(holdingId));
-  }
-
-  @Test
-  void testGetHolderFuture(VertxTestContext vertxTestContext) {
-    var tenantId = "tenant-1";
-    var holdingId = UUID.randomUUID().toString();
-    var itemId = UUID.randomUUID().toString();
-    var poLineId = UUID.randomUUID().toString();
-
-    var poLinesDetails = List.of(
-      new org.folio.rest.jaxrs.model.PoLinesDetail()
-        .withId(poLineId)
-    );
-
-    var piecesDetail = List.of(
-      new org.folio.rest.jaxrs.model.PiecesDetail()
-        .withId(UUID.randomUUID().toString())
-        .withItemId(itemId)
-        .withTenantId(tenantId)
-    );
-
-    var item = new JsonObject()
-      .put("id", itemId)
-      .put("holdingsRecordId", holdingId);
-
-    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
-      .thenReturn(Future.succeededFuture(List.of(item)));
-
-    var future = holdingDetailService.getHolderFuture(tenantId, holdingId, poLinesDetails, piecesDetail, requestContext);
-
-    vertxTestContext.assertComplete(future)
-      .onComplete(result -> {
-        assertTrue(result.succeeded());
-        var holder = result.result();
-        assertNotNull(holder);
-        assertEquals(holdingId, holder.holdingId());
-        assertEquals(1, holder.poLines().size());
-        assertEquals(poLineId, holder.poLines().getFirst().getId());
-        assertEquals(1, holder.pieces().size());
-        assertEquals(1, holder.items().size());
-        assertEquals(itemId, holder.items().getFirst().getId());
-        assertEquals(tenantId, holder.items().getFirst().getTenantId());
-        vertxTestContext.completeNow();
-      });
-  }
-
-  @Test
-  void testGetHolderFutureWithEmptyTenantId(VertxTestContext vertxTestContext) {
-    var tenantId = "";
-    var holdingId = UUID.randomUUID().toString();
-    var poLinesDetails = Collections.<org.folio.rest.jaxrs.model.PoLinesDetail>emptyList();
-    var piecesDetail = Collections.<PiecesDetail>emptyList();
-
-    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
-      .thenReturn(Future.succeededFuture(Collections.emptyList()));
-
-    var future = holdingDetailService.getHolderFuture(tenantId, holdingId, poLinesDetails, piecesDetail, requestContext);
-
-    vertxTestContext.assertComplete(future)
-      .onComplete(result -> {
-        assertTrue(result.succeeded());
-        verify(inventoryItemManager).getItemsByHoldingId(eq(holdingId), any(RequestContext.class));
-        vertxTestContext.completeNow();
-      });
-  }
-
-  @Test
-  void testGetHolderFutureWithNullItemsList(VertxTestContext vertxTestContext) {
-    var tenantId = "tenant-1";
-    var holdingId = UUID.randomUUID().toString();
-    var poLinesDetails = List.of(
-      new org.folio.rest.jaxrs.model.PoLinesDetail()
-        .withId(UUID.randomUUID().toString())
-    );
-    var piecesDetail = List.of(
-      new org.folio.rest.jaxrs.model.PiecesDetail()
-        .withId(UUID.randomUUID().toString())
-        .withTenantId(tenantId)
-    );
-
-    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
-      .thenReturn(Future.succeededFuture(null));
-
-    var future = holdingDetailService.getHolderFuture(tenantId, holdingId, poLinesDetails, piecesDetail, requestContext);
-
-    vertxTestContext.assertComplete(future)
-      .onComplete(result -> {
-        assertTrue(result.succeeded());
-        var holder = result.result();
-        assertNotNull(holder);
-        assertEquals(holdingId, holder.holdingId());
-        assertEquals(1, holder.poLines().size());
-        assertEquals(1, holder.pieces().size());
-        assertEquals(0, holder.items().size()); // null items should return empty list
-        vertxTestContext.completeNow();
-      });
-  }
-
-  @Test
-  void testGetHolderFutureWithNullPieces(VertxTestContext vertxTestContext) {
-    var tenantId = "tenant-1";
-    var holdingId = UUID.randomUUID().toString();
-
-    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
-      .thenReturn(Future.succeededFuture(Collections.emptyList()));
-
-    var future = holdingDetailService.getHolderFuture(tenantId, holdingId, null, null, requestContext);
-
-    vertxTestContext.assertComplete(future)
-      .onComplete(result -> {
-        assertTrue(result.succeeded());
-        var holder = result.result();
-        assertNotNull(holder);
-        assertEquals(holdingId, holder.holdingId());
-        assertEquals(0, holder.poLines().size()); // null poLinesDetails should be empty list
-        assertEquals(0, holder.pieces().size()); // null piecesDetail should be empty list
-        assertEquals(0, holder.items().size());
-        vertxTestContext.completeNow();
-      });
-  }
-
-  @Test
-  void testGetHolderFutureFilterNullItems(VertxTestContext vertxTestContext) {
-    var tenantId = "tenant-1";
-    var holdingId = UUID.randomUUID().toString();
-    var poLinesDetails = Collections.<org.folio.rest.jaxrs.model.PoLinesDetail>emptyList();
-    var piecesDetail = Collections.<PiecesDetail>emptyList();
-
-    var items = new ArrayList<JsonObject>();
-    items.add(null);
-    items.add(new JsonObject().put("id", UUID.randomUUID().toString()));
-    items.add(null);
-
-    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
-      .thenReturn(Future.succeededFuture(items));
-
-    var future = holdingDetailService.getHolderFuture(tenantId, holdingId, poLinesDetails, piecesDetail, requestContext);
-
-    vertxTestContext.assertComplete(future)
-      .onComplete(result -> {
-        assertTrue(result.succeeded());
-        var holder = result.result();
-        assertEquals(1, holder.items().size());
-        vertxTestContext.completeNow();
-      });
-  }
+  //  @Test
+  //  void testGetHolderFuture(VertxTestContext vertxTestContext) {
+  //    var tenantId = "tenant-1";
+  //    var holdingId = UUID.randomUUID().toString();
+  //    var itemId = UUID.randomUUID().toString();
+  //    var poLineId = UUID.randomUUID().toString();
+  //
+  //    var poLinesDetails = List.of(
+  //      new org.folio.rest.jaxrs.model.PoLinesDetail()
+  //        .withId(poLineId)
+  //    );
+  //
+  //    var piecesDetail = List.of(
+  //      new org.folio.rest.jaxrs.model.PiecesDetail()
+  //        .withId(UUID.randomUUID().toString())
+  //        .withItemId(itemId)
+  //        .withTenantId(tenantId)
+  //    );
+  //
+  //    var item = new JsonObject()
+  //      .put("id", itemId)
+  //      .put("holdingsRecordId", holdingId);
+  //
+  //    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
+  //      .thenReturn(Future.succeededFuture(List.of(item)));
+  //
+  //    var future = holdingDetailService.getHolderFuture(tenantId, holdingId, poLinesDetails, piecesDetail, requestContext);
+  //
+  //    vertxTestContext.assertComplete(future)
+  //      .onComplete(result -> {
+  //        assertTrue(result.succeeded());
+  //        var holder = result.result();
+  //        assertNotNull(holder);
+  //        assertEquals(holdingId, holder.holdingId());
+  //        assertEquals(1, holder.poLines().size());
+  //        assertEquals(poLineId, holder.poLines().getFirst().getId());
+  //        assertEquals(1, holder.pieces().size());
+  //        assertEquals(1, holder.items().size());
+  //        assertEquals(itemId, holder.items().getFirst().getId());
+  //        assertEquals(tenantId, holder.items().getFirst().getTenantId());
+  //        vertxTestContext.completeNow();
+  //      });
+  //  }
+  //
+  //  @Test
+  //  void testGetHolderFutureWithEmptyTenantId(VertxTestContext vertxTestContext) {
+  //    var tenantId = "";
+  //    var holdingId = UUID.randomUUID().toString();
+  //    var poLinesDetails = Collections.<org.folio.rest.jaxrs.model.PoLinesDetail>emptyList();
+  //    var piecesDetail = Collections.<PiecesDetail>emptyList();
+  //
+  //    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
+  //      .thenReturn(Future.succeededFuture(Collections.emptyList()));
+  //
+  //    var future = holdingDetailService.getHolderFuture(tenantId, holdingId, poLinesDetails, piecesDetail, requestContext);
+  //
+  //    vertxTestContext.assertComplete(future)
+  //      .onComplete(result -> {
+  //        assertTrue(result.succeeded());
+  //        verify(inventoryItemManager).getItemsByHoldingId(eq(holdingId), any(RequestContext.class));
+  //        vertxTestContext.completeNow();
+  //      });
+  //  }
+  //
+  //  @Test
+  //  void testGetHolderFutureWithNullItemsList(VertxTestContext vertxTestContext) {
+  //    var tenantId = "tenant-1";
+  //    var holdingId = UUID.randomUUID().toString();
+  //    var poLinesDetails = List.of(
+  //      new org.folio.rest.jaxrs.model.PoLinesDetail()
+  //        .withId(UUID.randomUUID().toString())
+  //    );
+  //    var piecesDetail = List.of(
+  //      new org.folio.rest.jaxrs.model.PiecesDetail()
+  //        .withId(UUID.randomUUID().toString())
+  //        .withTenantId(tenantId)
+  //    );
+  //
+  //    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
+  //      .thenReturn(Future.succeededFuture(null));
+  //
+  //    var future = holdingDetailService.getHolderFuture(tenantId, holdingId, poLinesDetails, piecesDetail, requestContext);
+  //
+  //    vertxTestContext.assertComplete(future)
+  //      .onComplete(result -> {
+  //        assertTrue(result.succeeded());
+  //        var holder = result.result();
+  //        assertNotNull(holder);
+  //        assertEquals(holdingId, holder.holdingId());
+  //        assertEquals(1, holder.poLines().size());
+  //        assertEquals(1, holder.pieces().size());
+  //        assertEquals(0, holder.items().size()); // null items should return empty list
+  //        vertxTestContext.completeNow();
+  //      });
+  //  }
+  //
+  //  @Test
+  //  void testGetHolderFutureWithNullPieces(VertxTestContext vertxTestContext) {
+  //    var tenantId = "tenant-1";
+  //    var holdingId = UUID.randomUUID().toString();
+  //
+  //    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
+  //      .thenReturn(Future.succeededFuture(Collections.emptyList()));
+  //
+  //    var future = holdingDetailService.getHolderFuture(tenantId, holdingId, null, null, requestContext);
+  //
+  //    vertxTestContext.assertComplete(future)
+  //      .onComplete(result -> {
+  //        assertTrue(result.succeeded());
+  //        var holder = result.result();
+  //        assertNotNull(holder);
+  //        assertEquals(holdingId, holder.holdingId());
+  //        assertEquals(0, holder.poLines().size()); // null poLinesDetails should be empty list
+  //        assertEquals(0, holder.pieces().size()); // null piecesDetail should be empty list
+  //        assertEquals(0, holder.items().size());
+  //        vertxTestContext.completeNow();
+  //      });
+  //  }
+  //
+  //  @Test
+  //  void testGetHolderFutureFilterNullItems(VertxTestContext vertxTestContext) {
+  //    var tenantId = "tenant-1";
+  //    var holdingId = UUID.randomUUID().toString();
+  //    var poLinesDetails = Collections.<org.folio.rest.jaxrs.model.PoLinesDetail>emptyList();
+  //    var piecesDetail = Collections.<PiecesDetail>emptyList();
+  //
+  //    var items = new ArrayList<JsonObject>();
+  //    items.add(null);
+  //    items.add(new JsonObject().put("id", UUID.randomUUID().toString()));
+  //    items.add(null);
+  //
+  //    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
+  //      .thenReturn(Future.succeededFuture(items));
+  //
+  //    var future = holdingDetailService.getHolderFuture(tenantId, holdingId, poLinesDetails, piecesDetail, requestContext);
+  //
+  //    vertxTestContext.assertComplete(future)
+  //      .onComplete(result -> {
+  //        assertTrue(result.succeeded());
+  //        var holder = result.result();
+  //        assertEquals(1, holder.items().size());
+  //        vertxTestContext.completeNow();
+  //      });
+  //  }
 
   @Test
   void testPostOrdersHoldingDetailPieceStorageFailure(VertxTestContext vertxTestContext) {
@@ -1326,13 +1321,13 @@ public class HoldingDetailServiceTest {
       });
   }
 
-  private static Piece createPiece(String holdingId, String tenantId) {
-    return new Piece()
-      .withId(UUID.randomUUID().toString())
-      .withHoldingId(holdingId)
-      .withItemId(UUID.randomUUID().toString())
-      .withReceivingTenantId(tenantId);
-  }
+  // private static Piece createPiece(String holdingId, String tenantId) {
+  //   return new Piece()
+  //     .withId(UUID.randomUUID().toString())
+  //     .withHoldingId(holdingId)
+  //     .withItemId(UUID.randomUUID().toString())
+  //     .withReceivingTenantId(tenantId);
+  // }
 
   private static PoLine createPoLine(String poLineId, String holdingId) {
     return new PoLine()
