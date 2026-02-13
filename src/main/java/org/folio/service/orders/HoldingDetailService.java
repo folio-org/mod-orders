@@ -93,7 +93,8 @@ public class HoldingDetailService {
             if (aggregator.getPoLinesByHoldingId().containsKey(holdingId)) {
               var poLinesDetails = aggregator.getPoLinesByHoldingId().get(holdingId).stream()
                 .filter(Objects::nonNull)
-                .map(poLine -> new PoLinesDetail().withId(poLine.getId()))
+                .map(poLine -> new PoLinesDetail().withId(poLine.getId())
+                  .withCheckinItems(poLine.getCheckinItems()))
                 .toList();
               allPoLinesDetails.addAll(poLinesDetails);
             }

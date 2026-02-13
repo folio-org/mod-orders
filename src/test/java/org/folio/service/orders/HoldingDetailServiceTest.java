@@ -1153,6 +1153,47 @@ public class HoldingDetailServiceTest {
       });
   }
 
+  @ParameterizedTest(name = "checkinItems = {0}")
+  @MethodSource("provideCheckinItemsValues")
+  void testPoLinesDetailWithCheckinItems(Boolean checkinItems, VertxTestContext vertxTestContext) {
+    var holdingId = UUID.randomUUID().toString();
+    var holdingIds = List.of(holdingId);
+    var poLineId = UUID.randomUUID().toString();
+
+    var poLine = new PoLine()
+      .withId(poLineId)
+      .withCheckinItems(checkinItems)
+      .withLocations(List.of(new Location().withHoldingId(holdingId)));
+
+    when(purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext))
+      .thenReturn(Future.succeededFuture(List.of(poLine)));
+    when(pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext))
+      .thenReturn(Future.succeededFuture(Collections.emptyList()));
+    when(inventoryItemManager.getItemsByHoldingIds(holdingIds, requestContext))
+      .thenReturn(Future.succeededFuture(Collections.emptyList()));
+
+    var future = holdingDetailService.postOrdersHoldingDetail(holdingIds, requestContext);
+
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        var property = result.result().getAdditionalProperties().get(holdingId);
+        var poLinesDetail = property.getPoLinesDetailCollection().getPoLinesDetail();
+        assertEquals(1, poLinesDetail.size());
+        assertEquals(poLineId, poLinesDetail.getFirst().getId());
+        assertEquals(checkinItems, poLinesDetail.getFirst().getCheckinItems());
+        vertxTestContext.completeNow();
+      });
+  }
+
+  static Stream<Arguments> provideCheckinItemsValues() {
+    return Stream.of(
+      Arguments.of(true),
+      Arguments.of(false),
+      Arguments.of((Boolean) null)
+    );
+  }
+
   @Test
   void testCentralOrderingEnabledWithMultipleTenants(VertxTestContext vertxTestContext) {
     var holdingId1 = UUID.randomUUID().toString();
