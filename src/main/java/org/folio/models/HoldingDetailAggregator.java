@@ -12,9 +12,14 @@ import java.util.Objects;
 
 public class HoldingDetailAggregator {
 
+  private String tenant;
   private Map<String, List<PoLine>> poLinesByHoldingId = new HashMap<>();
   private Map<String, List<Piece>> piecesByHoldingId = new HashMap<>();
   private Map<String, List<JsonObject>> itemsByHoldingId = new HashMap<>();
+
+  public String getTenant() {
+    return tenant;
+  }
 
   public Map<String, List<PoLine>> getPoLinesByHoldingId() {
     return poLinesByHoldingId;
@@ -29,6 +34,9 @@ public class HoldingDetailAggregator {
   }
 
   public String getPieceTenantIdByItemId(String itemId) {
+    if (Objects.isNull(itemId)) {
+      return null;
+    }
     return piecesByHoldingId.values().stream()
       .flatMap(List::stream)
       .filter(Objects::nonNull)
@@ -39,15 +47,19 @@ public class HoldingDetailAggregator {
       .orElse(null);
   }
 
+  public void setTenant(String tenant) {
+    this.tenant = tenant;
+  }
+
   public void setPoLinesByHoldingId(Map<String, List<PoLine>> poLines) {
-    this.poLinesByHoldingId = poLines;
+    this.poLinesByHoldingId = Objects.requireNonNullElse(poLines, new HashMap<>());
   }
 
   public void setPiecesByHoldingId(Map<String, List<Piece>> pieces) {
-    this.piecesByHoldingId = pieces;
+    this.piecesByHoldingId = Objects.requireNonNullElse(pieces, new HashMap<>());
   }
 
   public void setItemsByHoldingId(Map<String, List<JsonObject>> items) {
-    this.itemsByHoldingId = items;
+    this.itemsByHoldingId = Objects.requireNonNullElse(items, new HashMap<>());
   }
 }

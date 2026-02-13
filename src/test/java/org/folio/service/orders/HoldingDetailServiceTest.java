@@ -9,11 +9,19 @@ import org.apache.commons.collections4.map.CaseInsensitiveMap;
 import org.folio.CopilotGenerated;
 import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.ItemsDetail;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PiecesDetail;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.tools.utils.TenantTool;
+import org.folio.models.consortium.ConsortiumConfiguration;
+import org.folio.rest.acq.model.Setting;
+import org.folio.service.consortium.ConsortiumConfigurationService;
+import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.pieces.PieceStorageService;
+import org.folio.service.settings.SettingsRetriever;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,6 +44,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -45,6 +55,9 @@ import static org.mockito.Mockito.when;
 public class HoldingDetailServiceTest {
 
   @InjectMocks private HoldingDetailService holdingDetailService;
+  @Mock private ConsortiumConfigurationService consortiumConfigurationService;
+  @Mock private ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever;
+  @Mock private SettingsRetriever settingsRetriever;
   @Mock private PurchaseOrderLineService purchaseOrderLineService;
   @Mock private PieceStorageService pieceStorageService;
   @Mock private InventoryItemManager inventoryItemManager;
@@ -60,6 +73,11 @@ public class HoldingDetailServiceTest {
     okapiHeaders.put(XOkapiHeaders.USER_ID, "test-user");
     when(requestContext.getHeaders()).thenReturn(okapiHeaders);
     when(requestContext.getContext()).thenReturn(vertxContext);
+
+    // Setup default behavior for consortium and settings mocks to return empty results
+    // This ensures existing tests continue to work without modification (non-consortium mode)
+    when(consortiumConfigurationService.getConsortiumConfiguration(any()))
+      .thenReturn(Future.succeededFuture(java.util.Optional.empty()));
   }
 
   @AfterEach
@@ -1131,6 +1149,357 @@ public class HoldingDetailServiceTest {
         var poLinesDetailCollection = property.getPoLinesDetailCollection();
         assertEquals(2, poLinesDetailCollection.getTotalRecords());
         assertEquals(2, poLinesDetailCollection.getPoLinesDetail().size());
+        vertxTestContext.completeNow();
+      });
+  }
+
+  @Test
+  void testCentralOrderingEnabledWithMultipleTenants(VertxTestContext vertxTestContext) {
+    var holdingId1 = UUID.randomUUID().toString();
+    var holdingId2 = UUID.randomUUID().toString();
+    var holdingIds = List.of(holdingId1, holdingId2);
+    var consortiumId = UUID.randomUUID().toString();
+    var centralTenantId = "central-tenant";
+    var memberTenant1 = "member-tenant-1";
+    var memberTenant2 = "member-tenant-2";
+    var userTenants = List.of(memberTenant1, memberTenant2);
+
+    // Setup consortium configuration
+    var consortiumConfig = new ConsortiumConfiguration(centralTenantId, consortiumId);
+    when(consortiumConfigurationService.getConsortiumConfiguration(requestContext))
+      .thenReturn(Future.succeededFuture(java.util.Optional.of(consortiumConfig)));
+
+    // Setup central ordering setting
+    doReturn(Future.succeededFuture(java.util.Optional.of(new Setting().withValue("true"))))
+      .when(settingsRetriever).getSettingByKey(any(), any());
+
+    // Setup user tenants retrieval
+    when(consortiumUserTenantsRetriever.getUserTenants(consortiumId, centralTenantId, requestContext))
+      .thenReturn(Future.succeededFuture(userTenants));
+
+    // Create test data for member-tenant-1
+    var poLine1Tenant1 = createPoLine(UUID.randomUUID().toString(), holdingId1);
+    var piece1Tenant1 = new Piece()
+      .withId(UUID.randomUUID().toString())
+      .withPoLineId(poLine1Tenant1.getId())
+      .withHoldingId(holdingId1)
+      .withReceivingTenantId(memberTenant1);
+    var item1Tenant1 = new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("holdingsRecordId", holdingId1);
+
+    // Create test data for member-tenant-2
+    var poLine1Tenant2 = createPoLine(UUID.randomUUID().toString(), holdingId2);
+    var piece1Tenant2 = new Piece()
+      .withId(UUID.randomUUID().toString())
+      .withPoLineId(poLine1Tenant2.getId())
+      .withHoldingId(holdingId2)
+      .withReceivingTenantId(memberTenant2);
+    var item1Tenant2 = new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("holdingsRecordId", holdingId2);
+
+    // Mock responses for member-tenant-1 context
+    when(purchaseOrderLineService.getPoLinesByHoldingIds(eq(holdingIds), any()))
+      .thenAnswer(invocation -> {
+        var ctx = (RequestContext) invocation.getArgument(1);
+        var tenant = TenantTool.tenantId(ctx.getHeaders());
+        if (memberTenant1.equals(tenant)) {
+          return Future.succeededFuture(List.of(poLine1Tenant1));
+        } else if (memberTenant2.equals(tenant)) {
+          return Future.succeededFuture(List.of(poLine1Tenant2));
+        }
+        return Future.succeededFuture(Collections.emptyList());
+      });
+
+    when(pieceStorageService.getPiecesByHoldingIds(eq(holdingIds), any()))
+      .thenAnswer(invocation -> {
+        var ctx = (RequestContext) invocation.getArgument(1);
+        var tenant = TenantTool.tenantId(ctx.getHeaders());
+        if (memberTenant1.equals(tenant)) {
+          return Future.succeededFuture(List.of(piece1Tenant1));
+        } else if (memberTenant2.equals(tenant)) {
+          return Future.succeededFuture(List.of(piece1Tenant2));
+        }
+        return Future.succeededFuture(Collections.emptyList());
+      });
+
+    when(inventoryItemManager.getItemsByHoldingIds(eq(holdingIds), any()))
+      .thenAnswer(invocation -> {
+        var ctx = (RequestContext) invocation.getArgument(1);
+        var tenant = TenantTool.tenantId(ctx.getHeaders());
+        if (memberTenant1.equals(tenant)) {
+          return Future.succeededFuture(List.of(item1Tenant1));
+        } else if (memberTenant2.equals(tenant)) {
+          return Future.succeededFuture(List.of(item1Tenant2));
+        }
+        return Future.succeededFuture(Collections.emptyList());
+      });
+
+    var future = holdingDetailService.postOrdersHoldingDetail(holdingIds, requestContext);
+
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        var holdingDetailResults = result.result();
+        assertNotNull(holdingDetailResults);
+
+        // Both holdings should be present
+        assertEquals(2, holdingDetailResults.getAdditionalProperties().size());
+        assertTrue(holdingDetailResults.getAdditionalProperties().containsKey(holdingId1));
+        assertTrue(holdingDetailResults.getAdditionalProperties().containsKey(holdingId2));
+
+        // Verify holdingId1 has data from tenant1
+        var property1 = holdingDetailResults.getAdditionalProperties().get(holdingId1);
+        assertEquals(1, property1.getPoLinesDetailCollection().getPoLinesDetail().size());
+        assertEquals(1, property1.getPiecesDetailCollection().getPiecesDetail().size());
+        assertEquals(1, property1.getItemsDetailCollection().getItemsDetail().size());
+        assertEquals(memberTenant1, property1.getPiecesDetailCollection().getPiecesDetail().getFirst().getTenantId());
+
+        // Verify holdingId2 has data from tenant2
+        var property2 = holdingDetailResults.getAdditionalProperties().get(holdingId2);
+        assertEquals(1, property2.getPoLinesDetailCollection().getPoLinesDetail().size());
+        assertEquals(1, property2.getPiecesDetailCollection().getPiecesDetail().size());
+        assertEquals(1, property2.getItemsDetailCollection().getItemsDetail().size());
+        assertEquals(memberTenant2, property2.getPiecesDetailCollection().getPiecesDetail().getFirst().getTenantId());
+
+        vertxTestContext.completeNow();
+      });
+  }
+
+  @Test
+  void testCentralOrderingWithMultipleTenantsAndOverlappingData(VertxTestContext vertxTestContext) {
+    var holdingId = UUID.randomUUID().toString();
+    var holdingIds = List.of(holdingId);
+    var consortiumId = UUID.randomUUID().toString();
+    var centralTenantId = "central-tenant";
+    var memberTenant1 = "member-tenant-1";
+    var memberTenant2 = "member-tenant-2";
+    var userTenants = List.of(memberTenant1, memberTenant2);
+
+    // Setup consortium configuration
+    var consortiumConfig = new ConsortiumConfiguration(centralTenantId, consortiumId);
+    when(consortiumConfigurationService.getConsortiumConfiguration(requestContext))
+      .thenReturn(Future.succeededFuture(java.util.Optional.of(consortiumConfig)));
+
+    doReturn(Future.succeededFuture(java.util.Optional.of(new Setting().withValue("true"))))
+      .when(settingsRetriever).getSettingByKey(any(), any());
+
+    when(consortiumUserTenantsRetriever.getUserTenants(consortiumId, centralTenantId, requestContext))
+      .thenReturn(Future.succeededFuture(userTenants));
+
+    // Both tenants have data for the same holdingId
+    var poLineId1 = UUID.randomUUID().toString();
+    var poLineId2 = UUID.randomUUID().toString();
+    var poLine1 = createPoLine(poLineId1, holdingId);
+    var poLine2 = createPoLine(poLineId2, holdingId);
+
+    var piece1 = new Piece()
+      .withId(UUID.randomUUID().toString())
+      .withPoLineId(poLineId1)
+      .withHoldingId(holdingId)
+      .withItemId(UUID.randomUUID().toString())
+      .withReceivingTenantId(memberTenant1);
+
+    var piece2 = new Piece()
+      .withId(UUID.randomUUID().toString())
+      .withPoLineId(poLineId2)
+      .withHoldingId(holdingId)
+      .withItemId(UUID.randomUUID().toString())
+      .withReceivingTenantId(memberTenant2);
+
+    var item1 = new JsonObject()
+      .put("id", piece1.getItemId())
+      .put("holdingsRecordId", holdingId);
+
+    var item2 = new JsonObject()
+      .put("id", piece2.getItemId())
+      .put("holdingsRecordId", holdingId);
+
+    when(purchaseOrderLineService.getPoLinesByHoldingIds(eq(holdingIds), any()))
+      .thenAnswer(invocation -> {
+        var ctx = (RequestContext) invocation.getArgument(1);
+        var tenant = TenantTool.tenantId(ctx.getHeaders());
+        if (memberTenant1.equals(tenant)) {
+          return Future.succeededFuture(List.of(poLine1));
+        } else if (memberTenant2.equals(tenant)) {
+          return Future.succeededFuture(List.of(poLine2));
+        }
+        return Future.succeededFuture(Collections.emptyList());
+      });
+
+    when(pieceStorageService.getPiecesByHoldingIds(eq(holdingIds), any()))
+      .thenAnswer(invocation -> {
+        var ctx = (RequestContext) invocation.getArgument(1);
+        var tenant = TenantTool.tenantId(ctx.getHeaders());
+        if (memberTenant1.equals(tenant)) {
+          return Future.succeededFuture(List.of(piece1));
+        } else if (memberTenant2.equals(tenant)) {
+          return Future.succeededFuture(List.of(piece2));
+        }
+        return Future.succeededFuture(Collections.emptyList());
+      });
+
+    when(inventoryItemManager.getItemsByHoldingIds(eq(holdingIds), any()))
+      .thenAnswer(invocation -> {
+        var ctx = (RequestContext) invocation.getArgument(1);
+        var tenant = TenantTool.tenantId(ctx.getHeaders());
+        if (memberTenant1.equals(tenant)) {
+          return Future.succeededFuture(List.of(item1));
+        } else if (memberTenant2.equals(tenant)) {
+          return Future.succeededFuture(List.of(item2));
+        }
+        return Future.succeededFuture(Collections.emptyList());
+      });
+
+    var future = holdingDetailService.postOrdersHoldingDetail(holdingIds, requestContext);
+
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        var holdingDetailResults = result.result();
+        assertNotNull(holdingDetailResults);
+        assertEquals(1, holdingDetailResults.getAdditionalProperties().size());
+
+        var property = holdingDetailResults.getAdditionalProperties().get(holdingId);
+        assertNotNull(property);
+
+        // Should have aggregated data from both tenants
+        assertEquals(2, property.getPoLinesDetailCollection().getPoLinesDetail().size());
+        assertEquals(2, property.getPiecesDetailCollection().getPiecesDetail().size());
+        assertEquals(2, property.getItemsDetailCollection().getItemsDetail().size());
+
+        // Verify both tenant IDs are present in pieces
+        var tenantIds = property.getPiecesDetailCollection().getPiecesDetail().stream()
+          .map(PiecesDetail::getTenantId)
+          .toList();
+        assertTrue(tenantIds.contains(memberTenant1));
+        assertTrue(tenantIds.contains(memberTenant2));
+
+        // Verify item tenant IDs are correctly mapped from pieces
+        var itemTenantIds = property.getItemsDetailCollection().getItemsDetail().stream()
+          .map(ItemsDetail::getTenantId)
+          .toList();
+        assertTrue(itemTenantIds.contains(memberTenant1));
+        assertTrue(itemTenantIds.contains(memberTenant2));
+
+        vertxTestContext.completeNow();
+      });
+  }
+
+  @Test
+  void testCentralOrderingDisabled(VertxTestContext vertxTestContext) {
+    var holdingId = UUID.randomUUID().toString();
+    var holdingIds = List.of(holdingId);
+    var consortiumId = UUID.randomUUID().toString();
+    var centralTenantId = "central-tenant";
+
+    // Consortium exists but central ordering is disabled
+    var consortiumConfig = new ConsortiumConfiguration(centralTenantId, consortiumId);
+    when(consortiumConfigurationService.getConsortiumConfiguration(requestContext))
+      .thenReturn(Future.succeededFuture(java.util.Optional.of(consortiumConfig)));
+
+    // Central ordering is disabled or not set
+    when(settingsRetriever.getSettingByKey(any(), any()))
+      .thenReturn(Future.succeededFuture(java.util.Optional.empty()));
+
+    // Should not call getUserTenants when central ordering is disabled
+    when(consortiumUserTenantsRetriever.getUserTenants(any(), any(), any()))
+      .thenReturn(Future.succeededFuture(Collections.emptyList()));
+
+    var poLine = createPoLine(UUID.randomUUID().toString(), holdingId);
+    when(purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext))
+      .thenReturn(Future.succeededFuture(List.of(poLine)));
+    when(pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext))
+      .thenReturn(Future.succeededFuture(Collections.emptyList()));
+    when(inventoryItemManager.getItemsByHoldingIds(holdingIds, requestContext))
+      .thenReturn(Future.succeededFuture(Collections.emptyList()));
+
+    var future = holdingDetailService.postOrdersHoldingDetail(holdingIds, requestContext);
+
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        var holdingDetailResults = result.result();
+        assertNotNull(holdingDetailResults);
+        assertEquals(1, holdingDetailResults.getAdditionalProperties().size());
+
+        var property = holdingDetailResults.getAdditionalProperties().get(holdingId);
+        assertEquals(1, property.getPoLinesDetailCollection().getPoLinesDetail().size());
+
+        vertxTestContext.completeNow();
+      });
+  }
+
+  @Test
+  void testCentralOrderingWithPartialTenantFailure(VertxTestContext vertxTestContext) {
+    var holdingId = UUID.randomUUID().toString();
+    var holdingIds = List.of(holdingId);
+    var consortiumId = UUID.randomUUID().toString();
+    var centralTenantId = "central-tenant";
+    var memberTenant1 = "member-tenant-1";
+    var memberTenant2 = "member-tenant-2";
+    var userTenants = List.of(memberTenant1, memberTenant2);
+
+    var consortiumConfig = new ConsortiumConfiguration(centralTenantId, consortiumId);
+    when(consortiumConfigurationService.getConsortiumConfiguration(requestContext))
+      .thenReturn(Future.succeededFuture(java.util.Optional.of(consortiumConfig)));
+
+    doReturn(Future.succeededFuture(java.util.Optional.of(new Setting().withValue("true"))))
+      .when(settingsRetriever).getSettingByKey(any(), any());
+
+    when(consortiumUserTenantsRetriever.getUserTenants(consortiumId, centralTenantId, requestContext))
+      .thenReturn(Future.succeededFuture(userTenants));
+
+    var poLine1 = createPoLine(UUID.randomUUID().toString(), holdingId);
+    var piece1 = new Piece()
+      .withId(UUID.randomUUID().toString())
+      .withPoLineId(poLine1.getId())
+      .withHoldingId(holdingId)
+      .withReceivingTenantId(memberTenant1);
+
+    // Tenant 1 succeeds, Tenant 2 fails for poLines
+    when(purchaseOrderLineService.getPoLinesByHoldingIds(eq(holdingIds), any()))
+      .thenAnswer(invocation -> {
+        var ctx = (RequestContext) invocation.getArgument(1);
+        var tenant = TenantTool.tenantId(ctx.getHeaders());
+        if (memberTenant1.equals(tenant)) {
+          return Future.succeededFuture(List.of(poLine1));
+        } else if (memberTenant2.equals(tenant)) {
+          return Future.failedFuture(new RuntimeException("Tenant 2 poLines service error"));
+        }
+        return Future.succeededFuture(Collections.emptyList());
+      });
+
+    when(pieceStorageService.getPiecesByHoldingIds(eq(holdingIds), any()))
+      .thenAnswer(invocation -> {
+        var ctx = (RequestContext) invocation.getArgument(1);
+        var tenant = TenantTool.tenantId(ctx.getHeaders());
+        if (memberTenant1.equals(tenant)) {
+          return Future.succeededFuture(List.of(piece1));
+        }
+        return Future.succeededFuture(Collections.emptyList());
+      });
+
+    when(inventoryItemManager.getItemsByHoldingIds(eq(holdingIds), any()))
+      .thenReturn(Future.succeededFuture(Collections.emptyList()));
+
+    var future = holdingDetailService.postOrdersHoldingDetail(holdingIds, requestContext);
+
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded(), "Should succeed even with partial tenant failure due to graceful degradation");
+        var holdingDetailResults = result.result();
+        assertNotNull(holdingDetailResults);
+
+        var property = holdingDetailResults.getAdditionalProperties().get(holdingId);
+        assertNotNull(property);
+
+        // Should have data from tenant1 only, tenant2 failed gracefully
+        assertEquals(1, property.getPoLinesDetailCollection().getPoLinesDetail().size());
+        assertEquals(1, property.getPiecesDetailCollection().getPiecesDetail().size());
+        assertEquals(memberTenant1, property.getPiecesDetailCollection().getPiecesDetail().getFirst().getTenantId());
+
         vertxTestContext.completeNow();
       });
   }
