@@ -18,6 +18,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -27,13 +30,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -67,9 +69,10 @@ public class HoldingDetailServiceTest {
     }
   }
 
-  @Test
-  void testPostOrdersHoldingDetailWithNullHoldingIds(VertxTestContext vertxTestContext) {
-    var future = holdingDetailService.postOrdersHoldingDetail(null, requestContext);
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("provideNullOrEmptyHoldingIds")
+  void testPostOrdersHoldingDetailWithInvalidHoldingIds(String testName, List<String> holdingIds, VertxTestContext vertxTestContext) {
+    var future = holdingDetailService.postOrdersHoldingDetail(holdingIds, requestContext);
 
     vertxTestContext.assertComplete(future)
       .onComplete(result -> {
@@ -78,25 +81,17 @@ public class HoldingDetailServiceTest {
         assertNotNull(holdingDetailResults);
         assertEquals(0, holdingDetailResults.getAdditionalProperties().size());
         verify(purchaseOrderLineService, never()).getPoLinesByHoldingIds(any(), any());
-        verify(pieceStorageService, never()).getPiecesByLineIdsByChunks(any(), any());
+        verify(pieceStorageService, never()).getPiecesByHoldingIds(any(), any());
+        verify(inventoryItemManager, never()).getItemsByHoldingIds(any(), any());
         vertxTestContext.completeNow();
       });
   }
 
-  @Test
-  void testPostOrdersHoldingDetailWithEmptyHoldingIds(VertxTestContext vertxTestContext) {
-    var future = holdingDetailService.postOrdersHoldingDetail(Collections.emptyList(), requestContext);
-
-    vertxTestContext.assertComplete(future)
-      .onComplete(result -> {
-        assertTrue(result.succeeded());
-        var holdingDetailResults = result.result();
-        assertNotNull(holdingDetailResults);
-        assertEquals(0, holdingDetailResults.getAdditionalProperties().size());
-        verify(purchaseOrderLineService, never()).getPoLinesByHoldingIds(any(), any());
-        verify(pieceStorageService, never()).getPiecesByLineIdsByChunks(any(), any());
-        vertxTestContext.completeNow();
-      });
+  static Stream<Arguments> provideNullOrEmptyHoldingIds() {
+    return Stream.of(
+      Arguments.of("Null holding IDs", null),
+      Arguments.of("Empty holding IDs list", Collections.emptyList())
+    );
   }
 
   @Test
@@ -108,7 +103,9 @@ public class HoldingDetailServiceTest {
 
     when(purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(List.of(poLine)));
-    when(pieceStorageService.getPiecesByLineIdsByChunks(List.of(poLineId), requestContext))
+    when(pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext))
+      .thenReturn(Future.succeededFuture(Collections.emptyList()));
+    when(inventoryItemManager.getItemsByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(Collections.emptyList()));
 
     var future = holdingDetailService.postOrdersHoldingDetail(holdingIds, requestContext);
@@ -123,9 +120,10 @@ public class HoldingDetailServiceTest {
         var property = holdingDetailResults.getAdditionalProperties().get(holdingId);
         assertEquals(1, property.getPoLinesDetailCollection().getPoLinesDetail().size());
         assertEquals(0, property.getPiecesDetailCollection().getPiecesDetail().size());
+        assertEquals(0, property.getItemsDetailCollection().getItemsDetail().size());
         verify(purchaseOrderLineService).getPoLinesByHoldingIds(holdingIds, requestContext);
-        verify(pieceStorageService).getPiecesByLineIdsByChunks(List.of(poLineId), requestContext);
-        verify(inventoryItemManager, never()).getItemsByHoldingId(anyString(), any());
+        verify(pieceStorageService).getPiecesByHoldingIds(holdingIds, requestContext);
+        verify(inventoryItemManager).getItemsByHoldingIds(holdingIds, requestContext);
         vertxTestContext.completeNow();
       });
   }
@@ -153,9 +151,9 @@ public class HoldingDetailServiceTest {
 
     when(purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(List.of(poLine)));
-    when(pieceStorageService.getPiecesByLineIdsByChunks(List.of(poLineId), requestContext))
+    when(pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(List.of(piece)));
-    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
+    when(inventoryItemManager.getItemsByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(List.of(item)));
 
     var future = holdingDetailService.postOrdersHoldingDetail(holdingIds, requestContext);
@@ -179,8 +177,8 @@ public class HoldingDetailServiceTest {
         assertEquals(1, property.getItemsDetailCollection().getItemsDetail().size());
 
         verify(purchaseOrderLineService).getPoLinesByHoldingIds(holdingIds, requestContext);
-        verify(pieceStorageService).getPiecesByLineIdsByChunks(List.of(poLineId), requestContext);
-        verify(inventoryItemManager).getItemsByHoldingId(eq(holdingId), any(RequestContext.class));
+        verify(pieceStorageService).getPiecesByHoldingIds(holdingIds, requestContext);
+        verify(inventoryItemManager).getItemsByHoldingIds(holdingIds, requestContext);
         vertxTestContext.completeNow();
       });
   }
@@ -212,17 +210,15 @@ public class HoldingDetailServiceTest {
       .withItemId(UUID.randomUUID().toString())
       .withReceivingTenantId(tenant2);
 
-    var item1 = new JsonObject().put("id", UUID.randomUUID().toString());
-    var item2 = new JsonObject().put("id", UUID.randomUUID().toString());
+    var item1 = new JsonObject().put("id", UUID.randomUUID().toString()).put("holdingsRecordId", holdingId1);
+    var item2 = new JsonObject().put("id", UUID.randomUUID().toString()).put("holdingsRecordId", holdingId2);
 
     when(purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(List.of(poLine1, poLine2)));
-    when(pieceStorageService.getPiecesByLineIdsByChunks(List.of(poLineId1, poLineId2), requestContext))
+    when(pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(List.of(piece1, piece2)));
-    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId1), any(RequestContext.class)))
-      .thenReturn(Future.succeededFuture(List.of(item1)));
-    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId2), any(RequestContext.class)))
-      .thenReturn(Future.succeededFuture(List.of(item2)));
+    when(inventoryItemManager.getItemsByHoldingIds(holdingIds, requestContext))
+      .thenReturn(Future.succeededFuture(List.of(item1, item2)));
 
     var future = holdingDetailService.postOrdersHoldingDetail(holdingIds, requestContext);
 
@@ -236,9 +232,8 @@ public class HoldingDetailServiceTest {
         assertTrue(holdingDetailResults.getAdditionalProperties().containsKey(holdingId2));
 
         verify(purchaseOrderLineService).getPoLinesByHoldingIds(holdingIds, requestContext);
-        verify(pieceStorageService).getPiecesByLineIdsByChunks(List.of(poLineId1, poLineId2), requestContext);
-        verify(inventoryItemManager).getItemsByHoldingId(eq(holdingId1), any(RequestContext.class));
-        verify(inventoryItemManager).getItemsByHoldingId(eq(holdingId2), any(RequestContext.class));
+        verify(pieceStorageService).getPiecesByHoldingIds(holdingIds, requestContext);
+        verify(inventoryItemManager).getItemsByHoldingIds(holdingIds, requestContext);
         vertxTestContext.completeNow();
       });
   }
@@ -257,13 +252,13 @@ public class HoldingDetailServiceTest {
       .withItemId(UUID.randomUUID().toString())
       .withReceivingTenantId(null);
 
-    var item = new JsonObject().put("id", UUID.randomUUID().toString());
+    var item = new JsonObject().put("id", UUID.randomUUID().toString()).put("holdingsRecordId", holdingId);
 
     when(purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(List.of(poLine)));
-    when(pieceStorageService.getPiecesByLineIdsByChunks(List.of(poLineId), requestContext))
+    when(pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(List.of(piece)));
-    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
+    when(inventoryItemManager.getItemsByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(List.of(item)));
 
     var future = holdingDetailService.postOrdersHoldingDetail(holdingIds, requestContext);
@@ -295,9 +290,9 @@ public class HoldingDetailServiceTest {
 
     when(purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(List.of(poLine)));
-    when(pieceStorageService.getPiecesByLineIdsByChunks(List.of(poLineId), requestContext))
+    when(pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(List.of(piece)));
-    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
+    when(inventoryItemManager.getItemsByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(Collections.emptyList()));
 
     var future = holdingDetailService.postOrdersHoldingDetail(holdingIds, requestContext);
@@ -317,307 +312,54 @@ public class HoldingDetailServiceTest {
       });
   }
 
-  //  @ParameterizedTest(name = "{0}")
-  //  @MethodSource("provideGroupingTestCases")
-  //  void testGroupPiecesByTenantIdAndHoldingId(String testName, List<Piece> pieces, int expectedTenantGroups,
-  //                                             int expectedHoldingGroups) {
-  //    var result = holdingDetailService.groupPiecesByTenantIdAndHoldingId(pieces);
-  //
-  //    assertNotNull(result);
-  //    assertEquals(expectedTenantGroups, result.size());
-  //
-  //    var totalHoldingGroups = result.values().stream()
-  //      .mapToInt(Map::size)
-  //      .sum();
-  //    assertEquals(expectedHoldingGroups, totalHoldingGroups);
-  //  }
-  //
-  //  static Stream<Arguments> provideGroupingTestCases() {
-  //    var holdingId1 = UUID.randomUUID().toString();
-  //    var holdingId2 = UUID.randomUUID().toString();
-  //    var tenant1 = "tenant-1";
-  //    var tenant2 = "tenant-2";
-  //
-  //    return Stream.of(
-  //      Arguments.of(
-  //        "Empty list",
-  //        Collections.emptyList(),
-  //        0, 0
-  //      ),
-  //      Arguments.of(
-  //        "Single piece with tenant and holding",
-  //        List.of(createPiece(holdingId1, tenant1)),
-  //        1, 1
-  //      ),
-  //      Arguments.of(
-  //        "Multiple pieces same tenant and holding",
-  //        List.of(
-  //          createPiece(holdingId1, tenant1),
-  //          createPiece(holdingId1, tenant1)
-  //        ),
-  //        1, 1
-  //      ),
-  //      Arguments.of(
-  //        "Multiple pieces same tenant different holdings",
-  //        List.of(
-  //          createPiece(holdingId1, tenant1),
-  //          createPiece(holdingId2, tenant1)
-  //        ),
-  //        1, 2
-  //      ),
-  //      Arguments.of(
-  //        "Multiple pieces different tenants same holding",
-  //        List.of(
-  //          createPiece(holdingId1, tenant1),
-  //          createPiece(holdingId1, tenant2)
-  //        ),
-  //        2, 2
-  //      ),
-  //      Arguments.of(
-  //        "Multiple pieces different tenants different holdings",
-  //        List.of(
-  //          createPiece(holdingId1, tenant1),
-  //          createPiece(holdingId2, tenant1),
-  //          createPiece(holdingId1, tenant2),
-  //          createPiece(holdingId2, tenant2)
-  //        ),
-  //        2, 4
-  //      ),
-  //      Arguments.of(
-  //        "Pieces with null tenant - converted to empty string",
-  //        List.of(
-  //          createPiece(holdingId1, null),
-  //          createPiece(holdingId1, null)
-  //        ),
-  //        1, 1
-  //      ),
-  //      Arguments.of(
-  //        "Mixed null and non-null tenants",
-  //        List.of(
-  //          createPiece(holdingId1, tenant1),
-  //          createPiece(holdingId1, null)
-  //        ),
-  //        2, 2
-  //      )
-  //    );
-  //  }
-
-  //  @Test
-  //  void testGroupPiecesByTenantIdAndHoldingIdWithNullList() {
-  //    var result = holdingDetailService.groupPiecesByTenantIdAndHoldingId(null);
-  //
-  //    assertNotNull(result);
-  //    assertTrue(result.isEmpty());
-  //  }
-  //
-  //  @Test
-  //  void testGroupPiecesByTenantIdAndHoldingIdFilterNullPieces() {
-  //    var pieces = new ArrayList<Piece>();
-  //    pieces.add(null);
-  //    pieces.add(createPiece(UUID.randomUUID().toString(), "tenant-1"));
-  //    pieces.add(null);
-  //
-  //    var result = holdingDetailService.groupPiecesByTenantIdAndHoldingId(pieces);
-  //
-  //    assertNotNull(result);
-  //    assertEquals(1, result.size());
-  //  }
-  //
-  //  @Test
-  //  void testGroupPiecesByTenantIdAndHoldingIdFilterNullHoldingId() {
-  //    var pieces = List.of(
-  //      createPiece(null, "tenant-1"),
-  //      createPiece(UUID.randomUUID().toString(), "tenant-1")
-  //    );
-  //
-  //    var result = holdingDetailService.groupPiecesByTenantIdAndHoldingId(pieces);
-  //
-  //    assertNotNull(result);
-  //    assertEquals(1, result.size());
-  //    assertEquals(1, result.get("tenant-1").size());
-  //  }
-  //
-  //  @Test
-  //  void testGroupPiecesByTenantIdAndHoldingIdNullTenantIdConversion() {
-  //    var holdingId = UUID.randomUUID().toString();
-  //    var pieces = List.of(createPiece(holdingId, null));
-  //
-  //    var result = holdingDetailService.groupPiecesByTenantIdAndHoldingId(pieces);
-  //
-  //    assertNotNull(result);
-  //    assertEquals(1, result.size());
-  //    assertTrue(result.containsKey(""));
-  //    assertEquals(1, result.get("").size());
-  //    assertTrue(result.get("").containsKey(holdingId));
-  //  }
-
-  //  @Test
-  //  void testGetHolderFuture(VertxTestContext vertxTestContext) {
-  //    var tenantId = "tenant-1";
-  //    var holdingId = UUID.randomUUID().toString();
-  //    var itemId = UUID.randomUUID().toString();
-  //    var poLineId = UUID.randomUUID().toString();
-  //
-  //    var poLinesDetails = List.of(
-  //      new org.folio.rest.jaxrs.model.PoLinesDetail()
-  //        .withId(poLineId)
-  //    );
-  //
-  //    var piecesDetail = List.of(
-  //      new org.folio.rest.jaxrs.model.PiecesDetail()
-  //        .withId(UUID.randomUUID().toString())
-  //        .withItemId(itemId)
-  //        .withTenantId(tenantId)
-  //    );
-  //
-  //    var item = new JsonObject()
-  //      .put("id", itemId)
-  //      .put("holdingsRecordId", holdingId);
-  //
-  //    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
-  //      .thenReturn(Future.succeededFuture(List.of(item)));
-  //
-  //    var future = holdingDetailService.getHolderFuture(tenantId, holdingId, poLinesDetails, piecesDetail, requestContext);
-  //
-  //    vertxTestContext.assertComplete(future)
-  //      .onComplete(result -> {
-  //        assertTrue(result.succeeded());
-  //        var holder = result.result();
-  //        assertNotNull(holder);
-  //        assertEquals(holdingId, holder.holdingId());
-  //        assertEquals(1, holder.poLines().size());
-  //        assertEquals(poLineId, holder.poLines().getFirst().getId());
-  //        assertEquals(1, holder.pieces().size());
-  //        assertEquals(1, holder.items().size());
-  //        assertEquals(itemId, holder.items().getFirst().getId());
-  //        assertEquals(tenantId, holder.items().getFirst().getTenantId());
-  //        vertxTestContext.completeNow();
-  //      });
-  //  }
-  //
-  //  @Test
-  //  void testGetHolderFutureWithEmptyTenantId(VertxTestContext vertxTestContext) {
-  //    var tenantId = "";
-  //    var holdingId = UUID.randomUUID().toString();
-  //    var poLinesDetails = Collections.<org.folio.rest.jaxrs.model.PoLinesDetail>emptyList();
-  //    var piecesDetail = Collections.<PiecesDetail>emptyList();
-  //
-  //    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
-  //      .thenReturn(Future.succeededFuture(Collections.emptyList()));
-  //
-  //    var future = holdingDetailService.getHolderFuture(tenantId, holdingId, poLinesDetails, piecesDetail, requestContext);
-  //
-  //    vertxTestContext.assertComplete(future)
-  //      .onComplete(result -> {
-  //        assertTrue(result.succeeded());
-  //        verify(inventoryItemManager).getItemsByHoldingId(eq(holdingId), any(RequestContext.class));
-  //        vertxTestContext.completeNow();
-  //      });
-  //  }
-  //
-  //  @Test
-  //  void testGetHolderFutureWithNullItemsList(VertxTestContext vertxTestContext) {
-  //    var tenantId = "tenant-1";
-  //    var holdingId = UUID.randomUUID().toString();
-  //    var poLinesDetails = List.of(
-  //      new org.folio.rest.jaxrs.model.PoLinesDetail()
-  //        .withId(UUID.randomUUID().toString())
-  //    );
-  //    var piecesDetail = List.of(
-  //      new org.folio.rest.jaxrs.model.PiecesDetail()
-  //        .withId(UUID.randomUUID().toString())
-  //        .withTenantId(tenantId)
-  //    );
-  //
-  //    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
-  //      .thenReturn(Future.succeededFuture(null));
-  //
-  //    var future = holdingDetailService.getHolderFuture(tenantId, holdingId, poLinesDetails, piecesDetail, requestContext);
-  //
-  //    vertxTestContext.assertComplete(future)
-  //      .onComplete(result -> {
-  //        assertTrue(result.succeeded());
-  //        var holder = result.result();
-  //        assertNotNull(holder);
-  //        assertEquals(holdingId, holder.holdingId());
-  //        assertEquals(1, holder.poLines().size());
-  //        assertEquals(1, holder.pieces().size());
-  //        assertEquals(0, holder.items().size()); // null items should return empty list
-  //        vertxTestContext.completeNow();
-  //      });
-  //  }
-  //
-  //  @Test
-  //  void testGetHolderFutureWithNullPieces(VertxTestContext vertxTestContext) {
-  //    var tenantId = "tenant-1";
-  //    var holdingId = UUID.randomUUID().toString();
-  //
-  //    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
-  //      .thenReturn(Future.succeededFuture(Collections.emptyList()));
-  //
-  //    var future = holdingDetailService.getHolderFuture(tenantId, holdingId, null, null, requestContext);
-  //
-  //    vertxTestContext.assertComplete(future)
-  //      .onComplete(result -> {
-  //        assertTrue(result.succeeded());
-  //        var holder = result.result();
-  //        assertNotNull(holder);
-  //        assertEquals(holdingId, holder.holdingId());
-  //        assertEquals(0, holder.poLines().size()); // null poLinesDetails should be empty list
-  //        assertEquals(0, holder.pieces().size()); // null piecesDetail should be empty list
-  //        assertEquals(0, holder.items().size());
-  //        vertxTestContext.completeNow();
-  //      });
-  //  }
-  //
-  //  @Test
-  //  void testGetHolderFutureFilterNullItems(VertxTestContext vertxTestContext) {
-  //    var tenantId = "tenant-1";
-  //    var holdingId = UUID.randomUUID().toString();
-  //    var poLinesDetails = Collections.<org.folio.rest.jaxrs.model.PoLinesDetail>emptyList();
-  //    var piecesDetail = Collections.<PiecesDetail>emptyList();
-  //
-  //    var items = new ArrayList<JsonObject>();
-  //    items.add(null);
-  //    items.add(new JsonObject().put("id", UUID.randomUUID().toString()));
-  //    items.add(null);
-  //
-  //    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
-  //      .thenReturn(Future.succeededFuture(items));
-  //
-  //    var future = holdingDetailService.getHolderFuture(tenantId, holdingId, poLinesDetails, piecesDetail, requestContext);
-  //
-  //    vertxTestContext.assertComplete(future)
-  //      .onComplete(result -> {
-  //        assertTrue(result.succeeded());
-  //        var holder = result.result();
-  //        assertEquals(1, holder.items().size());
-  //        vertxTestContext.completeNow();
-  //      });
-  //  }
-
-  @Test
-  void testPostOrdersHoldingDetailPieceStorageFailure(VertxTestContext vertxTestContext) {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("provideServiceFailureScenarios")
+  void testServiceFailureGracefulDegradation(String testName, boolean poLinesFail, boolean piecesFail, boolean itemsFail,
+                                               int expectedPoLines, int expectedPieces, int expectedItems,
+                                               VertxTestContext vertxTestContext) {
     var holdingId = UUID.randomUUID().toString();
     var holdingIds = List.of(holdingId);
     var poLineId = UUID.randomUUID().toString();
-    var errorMessage = "Storage service error";
-
     var poLine = createPoLine(poLineId, holdingId);
+    var piece = new Piece()
+      .withId(UUID.randomUUID().toString())
+      .withPoLineId(poLineId)
+      .withHoldingId(holdingId)
+      .withReceivingTenantId("tenant-1");
 
     when(purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext))
-      .thenReturn(Future.succeededFuture(List.of(poLine)));
-    when(pieceStorageService.getPiecesByLineIdsByChunks(List.of(poLineId), requestContext))
-      .thenReturn(Future.failedFuture(new RuntimeException(errorMessage)));
+      .thenReturn(poLinesFail ? Future.failedFuture(new RuntimeException("PoLine service error"))
+                              : Future.succeededFuture(List.of(poLine)));
+    when(pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext))
+      .thenReturn(piecesFail ? Future.failedFuture(new RuntimeException("Piece service error"))
+                             : Future.succeededFuture(List.of(piece)));
+    when(inventoryItemManager.getItemsByHoldingIds(holdingIds, requestContext))
+      .thenReturn(itemsFail ? Future.failedFuture(new RuntimeException("Inventory service error"))
+                            : Future.succeededFuture(Collections.emptyList()));
 
     var future = holdingDetailService.postOrdersHoldingDetail(holdingIds, requestContext);
 
-    vertxTestContext.assertFailure(future)
+    vertxTestContext.assertComplete(future)
       .onComplete(result -> {
-        assertTrue(result.failed());
-        assertTrue(result.cause().getMessage().contains(errorMessage));
+        assertTrue(result.succeeded(), "Should succeed with graceful degradation");
+        var holdingDetailResults = result.result();
+        assertNotNull(holdingDetailResults);
+        var property = holdingDetailResults.getAdditionalProperties().get(holdingId);
+        assertNotNull(property);
+        assertEquals(expectedPoLines, property.getPoLinesDetailCollection().getPoLinesDetail().size());
+        assertEquals(expectedPieces, property.getPiecesDetailCollection().getPiecesDetail().size());
+        assertEquals(expectedItems, property.getItemsDetailCollection().getItemsDetail().size());
         vertxTestContext.completeNow();
       });
+  }
+
+  static Stream<Arguments> provideServiceFailureScenarios() {
+    return Stream.of(
+      Arguments.of("All services fail", true, true, true, 0, 0, 0),
+      Arguments.of("Only pieces service fails", false, true, false, 1, 0, 0),
+      Arguments.of("Only inventory service fails", false, false, true, 1, 1, 0),
+      Arguments.of("PoLines and pieces fail", true, true, false, 0, 0, 0)
+    );
   }
 
   @Test
@@ -637,13 +379,13 @@ public class HoldingDetailServiceTest {
     // Create a list with a null item
     var items = new ArrayList<JsonObject>();
     items.add(null);
-    items.add(new JsonObject().put("id", UUID.randomUUID().toString()));
+    items.add(new JsonObject().put("id", UUID.randomUUID().toString()).put("holdingsRecordId", holdingId));
 
     when(purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(List.of(poLine)));
-    when(pieceStorageService.getPiecesByLineIdsByChunks(List.of(poLineId), requestContext))
+    when(pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(List.of(piece)));
-    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
+    when(inventoryItemManager.getItemsByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(items));
 
     var future = holdingDetailService.postOrdersHoldingDetail(holdingIds, requestContext);
@@ -675,8 +417,10 @@ public class HoldingDetailServiceTest {
 
     when(purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(List.of(poLine)));
-    when(pieceStorageService.getPiecesByLineIdsByChunks(List.of(poLineId), requestContext))
+    when(pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(List.of(piece)));
+    when(inventoryItemManager.getItemsByHoldingIds(holdingIds, requestContext))
+      .thenReturn(Future.succeededFuture(Collections.emptyList()));
 
     var future = holdingDetailService.postOrdersHoldingDetail(holdingIds, requestContext);
 
@@ -685,9 +429,12 @@ public class HoldingDetailServiceTest {
         assertTrue(result.succeeded());
         var holdingDetailResults = result.result();
         // Since piece has null holdingId, it gets filtered during grouping
-        // No holders are created, so we get empty results (because pieces exist, just all filtered)
-        assertEquals(0, holdingDetailResults.getAdditionalProperties().size());
-        verify(inventoryItemManager, never()).getItemsByHoldingId(anyString(), any());
+        // With new parallel execution, we still create results for all requested holdingIds
+        assertEquals(1, holdingDetailResults.getAdditionalProperties().size());
+        var property = holdingDetailResults.getAdditionalProperties().get(holdingId);
+        assertEquals(1, property.getPoLinesDetailCollection().getPoLinesDetail().size());
+        assertEquals(0, property.getPiecesDetailCollection().getPiecesDetail().size());
+        assertEquals(0, property.getItemsDetailCollection().getItemsDetail().size());
         vertxTestContext.completeNow();
       });
   }
@@ -708,168 +455,99 @@ public class HoldingDetailServiceTest {
 
     when(purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(List.of(poLine)));
-    when(pieceStorageService.getPiecesByLineIdsByChunks(List.of(poLineId), requestContext))
+    when(pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(List.of(piece)));
-    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
+    when(inventoryItemManager.getItemsByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.failedFuture(new RuntimeException(errorMessage)));
 
     var future = holdingDetailService.postOrdersHoldingDetail(holdingIds, requestContext);
 
-    vertxTestContext.assertFailure(future)
-      .onComplete(result -> {
-        assertTrue(result.failed());
-        assertNotNull(result.cause());
-        vertxTestContext.completeNow();
-      });
-  }
-
-  @Test
-  void testCreatePieceDetailWithMissingItemId(VertxTestContext vertxTestContext) {
-    var holdingId = UUID.randomUUID().toString();
-    var holdingIds = List.of(holdingId);
-    var poLineId = UUID.randomUUID().toString();
-
-    var poLine = createPoLine(poLineId, holdingId);
-    var piece1 = new Piece()
-      .withId(UUID.randomUUID().toString())
-      .withPoLineId(poLineId)
-      .withHoldingId(holdingId)
-      .withItemId(null)  // null itemId
-      .withReceivingTenantId("tenant-1");
-
-    var piece2 = new Piece()
-      .withId(UUID.randomUUID().toString())
-      .withPoLineId(poLineId)
-      .withHoldingId(holdingId)
-      .withItemId(UUID.randomUUID().toString())
-      .withReceivingTenantId("tenant-1");
-
-    when(purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext))
-      .thenReturn(Future.succeededFuture(List.of(poLine)));
-    when(pieceStorageService.getPiecesByLineIdsByChunks(List.of(poLineId), requestContext))
-      .thenReturn(Future.succeededFuture(List.of(piece1, piece2)));
-    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
-      .thenReturn(Future.succeededFuture(Collections.emptyList()));
-
-    var future = holdingDetailService.postOrdersHoldingDetail(holdingIds, requestContext);
-
+    // With parallel execution and error recovery, inventory failure should be handled gracefully
     vertxTestContext.assertComplete(future)
       .onComplete(result -> {
-        assertTrue(result.succeeded());
+        assertTrue(result.succeeded(), "Should succeed with graceful degradation");
         var holdingDetailResults = result.result();
-        assertTrue(holdingDetailResults.getAdditionalProperties().containsKey(holdingId));
+        assertNotNull(holdingDetailResults);
+        // Should have poLines and pieces, but no items
         var property = holdingDetailResults.getAdditionalProperties().get(holdingId);
-        assertEquals(2, property.getPiecesDetailCollection().getPiecesDetail().size());
-        // Verify both pieces are included even with null itemId
-        var piecesDetail = property.getPiecesDetailCollection().getPiecesDetail();
-        assertTrue(piecesDetail.stream().anyMatch(pd -> pd.getItemId() == null));
-        assertTrue(piecesDetail.stream().anyMatch(pd -> pd.getItemId() != null));
-        vertxTestContext.completeNow();
-      });
-  }
-
-  @Test
-  void testCreatePieceDetailWithMissingPieceId(VertxTestContext vertxTestContext) {
-    var holdingId = UUID.randomUUID().toString();
-    var holdingIds = List.of(holdingId);
-    var poLineId = UUID.randomUUID().toString();
-
-    var poLine = createPoLine(poLineId, holdingId);
-    var piece1 = new Piece()
-      .withId(null)  // null piece id
-      .withPoLineId(poLineId)
-      .withHoldingId(holdingId)
-      .withItemId(UUID.randomUUID().toString())
-      .withReceivingTenantId("tenant-1");
-
-    var piece2 = new Piece()
-      .withId(UUID.randomUUID().toString())
-      .withPoLineId(poLineId)
-      .withHoldingId(holdingId)
-      .withItemId(UUID.randomUUID().toString())
-      .withReceivingTenantId("tenant-1");
-
-    when(purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext))
-      .thenReturn(Future.succeededFuture(List.of(poLine)));
-    when(pieceStorageService.getPiecesByLineIdsByChunks(List.of(poLineId), requestContext))
-      .thenReturn(Future.succeededFuture(List.of(piece1, piece2)));
-    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
-      .thenReturn(Future.succeededFuture(Collections.emptyList()));
-
-    var future = holdingDetailService.postOrdersHoldingDetail(holdingIds, requestContext);
-
-    vertxTestContext.assertComplete(future)
-      .onComplete(result -> {
-        assertTrue(result.succeeded());
-        var holdingDetailResults = result.result();
-        assertTrue(holdingDetailResults.getAdditionalProperties().containsKey(holdingId));
-        var property = holdingDetailResults.getAdditionalProperties().get(holdingId);
-        assertEquals(2, property.getPiecesDetailCollection().getPiecesDetail().size());
-        // Verify both pieces are included even with null id
-        var piecesDetail = property.getPiecesDetailCollection().getPiecesDetail();
-        assertTrue(piecesDetail.stream().anyMatch(pd -> pd.getId() == null));
-        assertTrue(piecesDetail.stream().anyMatch(pd -> pd.getId() != null));
-        vertxTestContext.completeNow();
-      });
-  }
-
-  @Test
-  void testCreatePieceDetailWithMixedNullPieces(VertxTestContext vertxTestContext) {
-    var holdingId = UUID.randomUUID().toString();
-    var holdingIds = List.of(holdingId);
-    var poLineId = UUID.randomUUID().toString();
-
-    var poLine = createPoLine(poLineId, holdingId);
-    var validPiece = new Piece()
-      .withId(UUID.randomUUID().toString())
-      .withPoLineId(poLineId)
-      .withHoldingId(holdingId)
-      .withItemId(UUID.randomUUID().toString())
-      .withReceivingTenantId("tenant-1");
-
-    var pieces = new ArrayList<Piece>();
-    pieces.add(null);  // null piece
-    pieces.add(validPiece);
-    pieces.add(null);  // another null piece
-
-    when(purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext))
-      .thenReturn(Future.succeededFuture(List.of(poLine)));
-    when(pieceStorageService.getPiecesByLineIdsByChunks(List.of(poLineId), requestContext))
-      .thenReturn(Future.succeededFuture(pieces));
-    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
-      .thenReturn(Future.succeededFuture(Collections.emptyList()));
-
-    var future = holdingDetailService.postOrdersHoldingDetail(holdingIds, requestContext);
-
-    vertxTestContext.assertComplete(future)
-      .onComplete(result -> {
-        assertTrue(result.succeeded());
-        var holdingDetailResults = result.result();
-        assertTrue(holdingDetailResults.getAdditionalProperties().containsKey(holdingId));
-        var property = holdingDetailResults.getAdditionalProperties().get(holdingId);
-        // Only the valid piece should be included
+        assertNotNull(property);
+        assertEquals(1, property.getPoLinesDetailCollection().getPoLinesDetail().size());
         assertEquals(1, property.getPiecesDetailCollection().getPiecesDetail().size());
-        assertEquals(validPiece.getId(), property.getPiecesDetailCollection().getPiecesDetail().getFirst().getId());
+        assertEquals(0, property.getItemsDetailCollection().getItemsDetail().size());
         vertxTestContext.completeNow();
       });
   }
 
-  @Test
-  void testCreatePieceDetailWithAllNullPieces(VertxTestContext vertxTestContext) {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("providePieceNullScenarios")
+  void testPieceHandlingWithNulls(String testName, String scenarioType, int expectedPieceCount,
+                                    boolean expectNullId, boolean expectNonNullId, VertxTestContext vertxTestContext) {
     var holdingId = UUID.randomUUID().toString();
     var holdingIds = List.of(holdingId);
+    var poLineId = UUID.randomUUID().toString();
+    var poLine = createPoLine(poLineId, holdingId);
 
-    var poLine = createPoLine(UUID.randomUUID().toString(), holdingId);
-    // Create a list with only null pieces
-    var pieces = new ArrayList<Piece>();
-    pieces.add(null);
-    pieces.add(null);
-    pieces.add(null);
+    // Create pieces based on scenario type
+    var pieces = switch (scenarioType) {
+      case "NULL_ITEM_ID" -> {
+        var pieceWithNullItemId = new Piece()
+          .withId(UUID.randomUUID().toString())
+          .withPoLineId(poLineId)
+          .withHoldingId(holdingId)
+          .withItemId(null)
+          .withReceivingTenantId("tenant-1");
+        var pieceWithItemId = new Piece()
+          .withId(UUID.randomUUID().toString())
+          .withPoLineId(poLineId)
+          .withHoldingId(holdingId)
+          .withItemId(UUID.randomUUID().toString())
+          .withReceivingTenantId("tenant-1");
+        yield List.of(pieceWithNullItemId, pieceWithItemId);
+      }
+      case "NULL_PIECE_ID" -> {
+        var pieceWithNullId = new Piece()
+          .withId(null)
+          .withPoLineId(poLineId)
+          .withHoldingId(holdingId)
+          .withItemId(UUID.randomUUID().toString())
+          .withReceivingTenantId("tenant-1");
+        var pieceWithId = new Piece()
+          .withId(UUID.randomUUID().toString())
+          .withPoLineId(poLineId)
+          .withHoldingId(holdingId)
+          .withItemId(UUID.randomUUID().toString())
+          .withReceivingTenantId("tenant-1");
+        yield List.of(pieceWithNullId, pieceWithId);
+      }
+      case "MIXED_NULL" -> {
+        var validPiece = new Piece()
+          .withId(UUID.randomUUID().toString())
+          .withPoLineId(poLineId)
+          .withHoldingId(holdingId)
+          .withItemId(UUID.randomUUID().toString())
+          .withReceivingTenantId("tenant-1");
+        var mixedPieces = new ArrayList<Piece>();
+        mixedPieces.add(null);
+        mixedPieces.add(validPiece);
+        mixedPieces.add(null);
+        yield mixedPieces;
+      }
+      case "ALL_NULL" -> {
+        var allNullPieces = new ArrayList<Piece>();
+        allNullPieces.add(null);
+        allNullPieces.add(null);
+        allNullPieces.add(null);
+        yield allNullPieces;
+      }
+      default -> throw new IllegalArgumentException("Unknown scenario: " + scenarioType);
+    };
 
     when(purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(List.of(poLine)));
-    when(pieceStorageService.getPiecesByLineIdsByChunks(List.of(poLine.getId()), requestContext))
+    when(pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(pieces));
+    when(inventoryItemManager.getItemsByHoldingIds(holdingIds, requestContext))
+      .thenReturn(Future.succeededFuture(Collections.emptyList()));
 
     var future = holdingDetailService.postOrdersHoldingDetail(holdingIds, requestContext);
 
@@ -877,11 +555,148 @@ public class HoldingDetailServiceTest {
       .onComplete(result -> {
         assertTrue(result.succeeded());
         var holdingDetailResults = result.result();
-        // All pieces are null, after filtering we get empty grouping, so no holders created
-        assertEquals(0, holdingDetailResults.getAdditionalProperties().size());
-        verify(inventoryItemManager, never()).getItemsByHoldingId(anyString(), any());
+        assertTrue(holdingDetailResults.getAdditionalProperties().containsKey(holdingId));
+        var property = holdingDetailResults.getAdditionalProperties().get(holdingId);
+        assertEquals(expectedPieceCount, property.getPiecesDetailCollection().getPiecesDetail().size());
+
+        if (expectedPieceCount > 0) {
+          var piecesDetail = property.getPiecesDetailCollection().getPiecesDetail();
+          if (expectNullId) {
+            assertTrue(piecesDetail.stream().anyMatch(pd -> pd.getId() == null || pd.getItemId() == null));
+          }
+          if (expectNonNullId) {
+            assertTrue(piecesDetail.stream().anyMatch(pd -> pd.getId() != null || pd.getItemId() != null));
+          }
+        }
         vertxTestContext.completeNow();
       });
+  }
+
+  static Stream<Arguments> providePieceNullScenarios() {
+    return Stream.of(
+      Arguments.of("Pieces with null itemId", "NULL_ITEM_ID", 2, true, true),
+      Arguments.of("Pieces with null piece ID", "NULL_PIECE_ID", 2, true, true),
+      Arguments.of("Mixed null and valid pieces", "MIXED_NULL", 1, false, true),
+      Arguments.of("All null pieces", "ALL_NULL", 0, false, false)
+    );
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("providePoLineGroupingScenarios")
+  void testGroupedPoLinesByHoldingId(String testName, List<String> holdingIds, List<PoLine> poLines,
+                                       int expectedHoldingsWithPoLines, VertxTestContext vertxTestContext) {
+    when(purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext))
+      .thenReturn(Future.succeededFuture(poLines));
+    when(pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext))
+      .thenReturn(Future.succeededFuture(Collections.emptyList()));
+    when(inventoryItemManager.getItemsByHoldingIds(holdingIds, requestContext))
+      .thenReturn(Future.succeededFuture(Collections.emptyList()));
+
+    var future = holdingDetailService.postOrdersHoldingDetail(holdingIds, requestContext);
+
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        var holdingDetailResults = result.result();
+        assertNotNull(holdingDetailResults);
+
+        // Count how many holdingIds actually have poLines
+        var holdingsWithPoLines = holdingDetailResults.getAdditionalProperties().values().stream()
+          .filter(prop -> !prop.getPoLinesDetailCollection().getPoLinesDetail().isEmpty())
+          .count();
+        assertEquals(expectedHoldingsWithPoLines, holdingsWithPoLines);
+        vertxTestContext.completeNow();
+      });
+  }
+
+  static Stream<Arguments> providePoLineGroupingScenarios() {
+    var holdingId1 = UUID.randomUUID().toString();
+    var holdingId2 = UUID.randomUUID().toString();
+    var holdingId3 = UUID.randomUUID().toString();
+    var poLineId1 = UUID.randomUUID().toString();
+    var poLineId2 = UUID.randomUUID().toString();
+
+    // Create list with null poLine
+    var poLinesWithNull = new ArrayList<PoLine>();
+    poLinesWithNull.add(null);
+
+    // Create mixed list with null and valid poLines
+    var mixedPoLines = new ArrayList<PoLine>();
+    mixedPoLines.add(null);
+    mixedPoLines.add(createPoLine(poLineId1, holdingId1));
+    mixedPoLines.add(new PoLine().withId(poLineId2).withLocations(List.of(new Location().withHoldingId(null))));
+
+    return Stream.of(
+      Arguments.of("Empty poLines list", List.of(holdingId1), Collections.emptyList(), 0),
+
+      Arguments.of("Null poLine in list", List.of(holdingId1), poLinesWithNull, 0),
+
+      Arguments.of("PoLine with null locations",
+        List.of(holdingId1),
+        List.of(new PoLine().withId(poLineId1).withLocations(null)),
+        0),
+
+      Arguments.of("PoLine with empty locations",
+        List.of(holdingId1),
+        List.of(new PoLine().withId(poLineId1).withLocations(Collections.emptyList())),
+        0),
+
+      Arguments.of("Location with null holdingId",
+        List.of(holdingId1),
+        List.of(new PoLine().withId(poLineId1).withLocations(List.of(new Location().withHoldingId(null)))),
+        0),
+
+      Arguments.of("Location with holdingId not in request",
+        List.of(holdingId1),
+        List.of(new PoLine().withId(poLineId1).withLocations(List.of(new Location().withHoldingId(holdingId2)))),
+        0),
+
+      Arguments.of("Valid single poLine",
+        List.of(holdingId1),
+        List.of(createPoLine(poLineId1, holdingId1)),
+        1),
+
+      Arguments.of("Multiple poLines same holding",
+        List.of(holdingId1),
+        List.of(createPoLine(poLineId1, holdingId1), createPoLine(poLineId2, holdingId1)),
+        1),
+
+      Arguments.of("Multiple poLines different holdings",
+        List.of(holdingId1, holdingId2),
+        List.of(createPoLine(poLineId1, holdingId1), createPoLine(poLineId2, holdingId2)),
+        2),
+
+      Arguments.of("PoLine with multiple locations same holding",
+        List.of(holdingId1),
+        List.of(new PoLine().withId(poLineId1).withLocations(List.of(
+          new Location().withHoldingId(holdingId1),
+          new Location().withHoldingId(holdingId1)
+        ))),
+        1),
+
+      Arguments.of("PoLine with multiple locations different holdings",
+        List.of(holdingId1, holdingId2),
+        List.of(new PoLine().withId(poLineId1).withLocations(List.of(
+          new Location().withHoldingId(holdingId1),
+          new Location().withHoldingId(holdingId2)
+        ))),
+        2),
+
+      Arguments.of("Mixed: null poLine, valid poLine, poLine with null location",
+        List.of(holdingId1, holdingId2),
+        mixedPoLines,
+        1),
+
+      Arguments.of("PoLine with locations containing nulls and valid holdingId",
+        List.of(holdingId1, holdingId2),
+        List.of(new PoLine().withId(poLineId1).withLocations(List.of(
+          new Location().withHoldingId(null),
+          new Location().withHoldingId(holdingId1),
+          new Location().withHoldingId(holdingId3),  // not in requested holdingIds
+          new Location().withHoldingId(holdingId2)
+        ))),
+        2)
+    );
   }
 
   @Test
@@ -900,9 +715,9 @@ public class HoldingDetailServiceTest {
 
     when(purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(List.of(poLine)));
-    when(pieceStorageService.getPiecesByLineIdsByChunks(List.of(poLineId), requestContext))
+    when(pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(List.of(piece)));
-    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
+    when(inventoryItemManager.getItemsByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(Collections.emptyList()));
 
     var future = holdingDetailService.postOrdersHoldingDetail(holdingIds, requestContext);
@@ -946,9 +761,9 @@ public class HoldingDetailServiceTest {
 
     when(purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(List.of(poLine)));
-    when(pieceStorageService.getPiecesByLineIdsByChunks(List.of(poLineId), requestContext))
+    when(pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(pieces));
-    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
+    when(inventoryItemManager.getItemsByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(Collections.emptyList()));
 
     var future = holdingDetailService.postOrdersHoldingDetail(holdingIds, requestContext);
@@ -990,9 +805,9 @@ public class HoldingDetailServiceTest {
     // Need to setup expectations for both tenants
     when(purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(List.of(poLine)));
-    when(pieceStorageService.getPiecesByLineIdsByChunks(List.of(poLineId), requestContext))
+    when(pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(pieces));
-    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
+    when(inventoryItemManager.getItemsByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(Collections.emptyList()));
 
     var future = holdingDetailService.postOrdersHoldingDetail(holdingIds, requestContext);
@@ -1048,9 +863,9 @@ public class HoldingDetailServiceTest {
 
     when(purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(List.of(poLine1, poLine2, poLine3)));
-    when(pieceStorageService.getPiecesByLineIdsByChunks(List.of(poLineId1, poLineId2, poLineId3), requestContext))
+    when(pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(pieces));
-    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
+    when(inventoryItemManager.getItemsByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(Collections.emptyList()));
 
     var future = holdingDetailService.postOrdersHoldingDetail(holdingIds, requestContext);
@@ -1091,9 +906,9 @@ public class HoldingDetailServiceTest {
 
     when(purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(List.of(poLine)));
-    when(pieceStorageService.getPiecesByLineIdsByChunks(List.of(poLineId), requestContext))
+    when(pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(pieces));
-    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
+    when(inventoryItemManager.getItemsByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(Collections.emptyList()));
 
     var future = holdingDetailService.postOrdersHoldingDetail(holdingIds, requestContext);
@@ -1105,11 +920,10 @@ public class HoldingDetailServiceTest {
         assertTrue(additionalProps.containsKey(holdingId));
         var property = additionalProps.get(holdingId);
         var poLinesDetail = property.getPoLinesDetailCollection().getPoLinesDetail();
-        // PoLines are created from pieces using createPoLineDetailFromPieces
-        // 1 piece with null poLineId + 1 piece with poLineId = 2 PoLinesDetail (one null, one with id)
-        assertEquals(2, poLinesDetail.size());
-        assertTrue(poLinesDetail.stream().anyMatch(pl -> pl.getId() == null));
-        assertTrue(poLinesDetail.stream().anyMatch(pl -> poLineId.equals(pl.getId())));
+        // PoLinesDetail are created from poLines fetched, not from pieces
+        // We have 1 poLine, so 1 PoLinesDetail
+        assertEquals(1, poLinesDetail.size());
+        assertEquals(poLineId, poLinesDetail.getFirst().getId());
         // Both pieces should be included
         assertEquals(2, property.getPiecesDetailCollection().getPiecesDetail().size());
         vertxTestContext.completeNow();
@@ -1131,9 +945,9 @@ public class HoldingDetailServiceTest {
 
     when(purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(List.of(poLine)));
-    when(pieceStorageService.getPiecesByLineIdsByChunks(List.of(poLineId), requestContext))
+    when(pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(List.of(piece)));
-    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
+    when(inventoryItemManager.getItemsByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(Collections.emptyList()));
 
     var future = holdingDetailService.postOrdersHoldingDetail(holdingIds, requestContext);
@@ -1201,9 +1015,9 @@ public class HoldingDetailServiceTest {
 
     when(purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(List.of(poLine1, poLine2)));
-    when(pieceStorageService.getPiecesByLineIdsByChunks(List.of(poLineId1, poLineId2), requestContext))
+    when(pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(pieces));
-    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
+    when(inventoryItemManager.getItemsByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(Collections.emptyList()));
 
     var future = holdingDetailService.postOrdersHoldingDetail(holdingIds, requestContext);
@@ -1254,9 +1068,9 @@ public class HoldingDetailServiceTest {
 
     when(purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(List.of(poLine)));
-    when(pieceStorageService.getPiecesByLineIdsByChunks(List.of(poLineId), requestContext))
+    when(pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(pieces));
-    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
+    when(inventoryItemManager.getItemsByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(Collections.emptyList()));
 
     var future = holdingDetailService.postOrdersHoldingDetail(holdingIds, requestContext);
@@ -1268,10 +1082,10 @@ public class HoldingDetailServiceTest {
         assertTrue(additionalProps.containsKey(holdingId));
         var property = additionalProps.get(holdingId);
         var poLinesDetail = property.getPoLinesDetailCollection().getPoLinesDetail();
-        // PoLines created from pieces: 2 null poLineIds (distinct = 1) + 1 poLineId = 2 total
-        assertEquals(2, poLinesDetail.size());
-        assertEquals(1, poLinesDetail.stream().filter(pl -> pl.getId() == null).count());
-        assertEquals(1, poLinesDetail.stream().filter(pl -> poLineId.equals(pl.getId())).count());
+        // PoLinesDetail are created from poLines fetched, not from pieces
+        // We have 1 poLine, so 1 PoLinesDetail
+        assertEquals(1, poLinesDetail.size());
+        assertEquals(poLineId, poLinesDetail.getFirst().getId());
         // All 3 pieces should be included
         assertEquals(3, property.getPiecesDetailCollection().getPiecesDetail().size());
         vertxTestContext.completeNow();
@@ -1303,9 +1117,9 @@ public class HoldingDetailServiceTest {
 
     when(purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(List.of(poLine1, poLine2)));
-    when(pieceStorageService.getPiecesByLineIdsByChunks(List.of(poLineId1, poLineId2), requestContext))
+    when(pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(pieces));
-    when(inventoryItemManager.getItemsByHoldingId(eq(holdingId), any(RequestContext.class)))
+    when(inventoryItemManager.getItemsByHoldingIds(holdingIds, requestContext))
       .thenReturn(Future.succeededFuture(Collections.emptyList()));
 
     var future = holdingDetailService.postOrdersHoldingDetail(holdingIds, requestContext);
@@ -1320,14 +1134,6 @@ public class HoldingDetailServiceTest {
         vertxTestContext.completeNow();
       });
   }
-
-  // private static Piece createPiece(String holdingId, String tenantId) {
-  //   return new Piece()
-  //     .withId(UUID.randomUUID().toString())
-  //     .withHoldingId(holdingId)
-  //     .withItemId(UUID.randomUUID().toString())
-  //     .withReceivingTenantId(tenantId);
-  // }
 
   private static PoLine createPoLine(String poLineId, String holdingId) {
     return new PoLine()

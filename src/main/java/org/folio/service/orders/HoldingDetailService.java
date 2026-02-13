@@ -158,6 +158,9 @@ public class HoldingDetailService {
   }
 
   private Map<String, List<Piece>> groupPiecesByHoldingId(List<Piece> pieces) {
+    if (CollectionUtils.isEmpty(pieces)) {
+      return Collections.emptyMap();
+    }
     return pieces.stream()
       .filter(Objects::nonNull)
       .filter(piece -> Objects.nonNull(piece.getHoldingId()))
@@ -165,6 +168,9 @@ public class HoldingDetailService {
   }
 
   private Map<String, List<JsonObject>> groupItemsByHoldingId(List<JsonObject> items) {
+    if (CollectionUtils.isEmpty(items)) {
+      return Collections.emptyMap();
+    }
     return items.stream()
       .filter(Objects::nonNull)
       .filter(item -> Objects.nonNull(item.getString(ITEM_HOLDINGS_RECORD_ID)))
