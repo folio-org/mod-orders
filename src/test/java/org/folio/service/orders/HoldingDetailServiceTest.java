@@ -5,7 +5,6 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.map.CaseInsensitiveMap;
 import org.folio.CopilotGenerated;
 import org.folio.okapi.common.XOkapiHeaders;
@@ -49,7 +48,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@Slf4j
 @ExtendWith(VertxExtension.class)
 @CopilotGenerated(model = "Claude Sonnet 4.5")
 public class HoldingDetailServiceTest {
