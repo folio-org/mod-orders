@@ -83,6 +83,8 @@ public class HoldingDetailService {
       })
       .compose(aggregators -> {
         var holdingDetailResults = new HoldingDetailResults();
+
+        // Traverse aggregates and find if any contain necessary values by a holding id
         holdingIds.forEach(holdingId -> {
           // Accumulate data from all aggregators for this holdingId
           var allPoLinesDetails = new ArrayList<PoLinesDetail>();
@@ -139,6 +141,7 @@ public class HoldingDetailService {
             .withItemsDetailCollection(itemsDetailCollection);
           holdingDetailResults.withAdditionalProperty(holdingId, holdingDetailProperty);
         });
+
         return Future.succeededFuture(holdingDetailResults);
       })
       .recover(throwable -> {

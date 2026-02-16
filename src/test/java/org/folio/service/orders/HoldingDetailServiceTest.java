@@ -5,14 +5,13 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.map.CaseInsensitiveMap;
 import org.folio.CopilotGenerated;
 import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.ItemsDetail;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.PiecesDetail;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.models.consortium.ConsortiumConfiguration;
@@ -50,6 +49,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@Slf4j
 @ExtendWith(VertxExtension.class)
 @CopilotGenerated(model = "Claude Sonnet 4.5")
 public class HoldingDetailServiceTest {
@@ -1194,7 +1194,16 @@ public class HoldingDetailServiceTest {
     );
   }
 
+  // ===== Central Ordering / Consortium Tests =====
+  // IMPORTANT: Holdings are tenant-specific resources in FOLIO.
+  // In a consortium with multiple member tenants, each tenant has its own separate holdings.
+  // A holding ID in tenant A is a completely different resource than a holding ID in tenant B,
+  // even if they happen to have the same UUID value.
+  // Therefore, tests should use DIFFERENT holding IDs for DIFFERENT tenants to reflect reality.
+
   @Test
+  // Test that when central ordering is enabled and multiple tenants have data,
+  // each tenant's holdings are retrieved and returned separately in the results
   void testCentralOrderingEnabledWithMultipleTenants(VertxTestContext vertxTestContext) {
     var holdingId1 = UUID.randomUUID().toString();
     var holdingId2 = UUID.randomUUID().toString();
@@ -1309,9 +1318,13 @@ public class HoldingDetailServiceTest {
   }
 
   @Test
+  // Test that when multiple tenants have data for their respective holdings,
+  // the results are properly aggregated with each holding maintaining its tenant-specific data
   void testCentralOrderingWithMultipleTenantsAndOverlappingData(VertxTestContext vertxTestContext) {
-    var holdingId = UUID.randomUUID().toString();
-    var holdingIds = List.of(holdingId);
+    // Holdings are tenant-specific, so each tenant has its own holding IDs
+    var holdingId1 = UUID.randomUUID().toString(); // holding in tenant1
+    var holdingId2 = UUID.randomUUID().toString(); // holding in tenant2
+    var holdingIds = List.of(holdingId1, holdingId2);
     var consortiumId = UUID.randomUUID().toString();
     var centralTenantId = "central-tenant";
     var memberTenant1 = "member-tenant-1";
@@ -1329,38 +1342,39 @@ public class HoldingDetailServiceTest {
     when(consortiumUserTenantsRetriever.getUserTenants(consortiumId, centralTenantId, requestContext))
       .thenReturn(Future.succeededFuture(userTenants));
 
-    // Both tenants have data for the same holdingId
+    // Each tenant has data for their own holding
     var poLineId1 = UUID.randomUUID().toString();
     var poLineId2 = UUID.randomUUID().toString();
-    var poLine1 = createPoLine(poLineId1, holdingId);
-    var poLine2 = createPoLine(poLineId2, holdingId);
+    var poLine1 = createPoLine(poLineId1, holdingId1);
+    var poLine2 = createPoLine(poLineId2, holdingId2);
 
     var piece1 = new Piece()
       .withId(UUID.randomUUID().toString())
       .withPoLineId(poLineId1)
-      .withHoldingId(holdingId)
+      .withHoldingId(holdingId1)
       .withItemId(UUID.randomUUID().toString())
       .withReceivingTenantId(memberTenant1);
 
     var piece2 = new Piece()
       .withId(UUID.randomUUID().toString())
       .withPoLineId(poLineId2)
-      .withHoldingId(holdingId)
+      .withHoldingId(holdingId2)
       .withItemId(UUID.randomUUID().toString())
       .withReceivingTenantId(memberTenant2);
 
     var item1 = new JsonObject()
       .put("id", piece1.getItemId())
-      .put("holdingsRecordId", holdingId);
+      .put("holdingsRecordId", holdingId1);
 
     var item2 = new JsonObject()
       .put("id", piece2.getItemId())
-      .put("holdingsRecordId", holdingId);
+      .put("holdingsRecordId", holdingId2);
 
     when(purchaseOrderLineService.getPoLinesByHoldingIds(eq(holdingIds), any()))
       .thenAnswer(invocation -> {
         var ctx = (RequestContext) invocation.getArgument(1);
         var tenant = TenantTool.tenantId(ctx.getHeaders());
+        // Each tenant only returns data for their own holdings
         if (memberTenant1.equals(tenant)) {
           return Future.succeededFuture(List.of(poLine1));
         } else if (memberTenant2.equals(tenant)) {
@@ -1400,29 +1414,33 @@ public class HoldingDetailServiceTest {
         assertTrue(result.succeeded());
         var holdingDetailResults = result.result();
         assertNotNull(holdingDetailResults);
-        assertEquals(1, holdingDetailResults.getAdditionalProperties().size());
+        System.out.println(JsonObject.mapFrom(holdingDetailResults).encodePrettily());
 
-        var property = holdingDetailResults.getAdditionalProperties().get(holdingId);
-        assertNotNull(property);
+        // Should have 2 holdings, one from each tenant
+        assertEquals(2, holdingDetailResults.getAdditionalProperties().size());
+        assertTrue(holdingDetailResults.getAdditionalProperties().containsKey(holdingId1));
+        assertTrue(holdingDetailResults.getAdditionalProperties().containsKey(holdingId2));
+        System.out.println(JsonObject.mapFrom(holdingDetailResults).encodePrettily());
 
-        // Should have aggregated data from both tenants
-        assertEquals(2, property.getPoLinesDetailCollection().getPoLinesDetail().size());
-        assertEquals(2, property.getPiecesDetailCollection().getPiecesDetail().size());
-        assertEquals(2, property.getItemsDetailCollection().getItemsDetail().size());
+        // Verify holding1 has data from tenant1
+        var property1 = holdingDetailResults.getAdditionalProperties().get(holdingId1);
+        assertNotNull(property1);
+        assertEquals(1, property1.getPoLinesDetailCollection().getPoLinesDetail().size());
+        assertEquals(1, property1.getPiecesDetailCollection().getPiecesDetail().size());
+        assertEquals(1, property1.getItemsDetailCollection().getItemsDetail().size());
+        assertEquals(memberTenant1, property1.getPiecesDetailCollection().getPiecesDetail().getFirst().getTenantId());
+        assertEquals(memberTenant1, property1.getItemsDetailCollection().getItemsDetail().getFirst().getTenantId());
+        assertEquals(poLineId1, property1.getPoLinesDetailCollection().getPoLinesDetail().getFirst().getId());
 
-        // Verify both tenant IDs are present in pieces
-        var tenantIds = property.getPiecesDetailCollection().getPiecesDetail().stream()
-          .map(PiecesDetail::getTenantId)
-          .toList();
-        assertTrue(tenantIds.contains(memberTenant1));
-        assertTrue(tenantIds.contains(memberTenant2));
-
-        // Verify item tenant IDs are correctly mapped from pieces
-        var itemTenantIds = property.getItemsDetailCollection().getItemsDetail().stream()
-          .map(ItemsDetail::getTenantId)
-          .toList();
-        assertTrue(itemTenantIds.contains(memberTenant1));
-        assertTrue(itemTenantIds.contains(memberTenant2));
+        // Verify holding2 has data from tenant2
+        var property2 = holdingDetailResults.getAdditionalProperties().get(holdingId2);
+        assertNotNull(property2);
+        assertEquals(1, property2.getPoLinesDetailCollection().getPoLinesDetail().size());
+        assertEquals(1, property2.getPiecesDetailCollection().getPiecesDetail().size());
+        assertEquals(1, property2.getItemsDetailCollection().getItemsDetail().size());
+        assertEquals(memberTenant2, property2.getPiecesDetailCollection().getPiecesDetail().getFirst().getTenantId());
+        assertEquals(memberTenant2, property2.getItemsDetailCollection().getItemsDetail().getFirst().getTenantId());
+        assertEquals(poLineId2, property2.getPoLinesDetailCollection().getPoLinesDetail().getFirst().getId());
 
         vertxTestContext.completeNow();
       });
@@ -1464,6 +1482,7 @@ public class HoldingDetailServiceTest {
         var holdingDetailResults = result.result();
         assertNotNull(holdingDetailResults);
         assertEquals(1, holdingDetailResults.getAdditionalProperties().size());
+        System.out.println(JsonObject.mapFrom(holdingDetailResults).encodePrettily());
 
         var property = holdingDetailResults.getAdditionalProperties().get(holdingId);
         assertEquals(1, property.getPoLinesDetailCollection().getPoLinesDetail().size());
@@ -1473,9 +1492,13 @@ public class HoldingDetailServiceTest {
   }
 
   @Test
+  // Test that when one tenant experiences service failures, we still get results from successful tenants
+  // This verifies graceful degradation in a consortium environment
   void testCentralOrderingWithPartialTenantFailure(VertxTestContext vertxTestContext) {
-    var holdingId = UUID.randomUUID().toString();
-    var holdingIds = List.of(holdingId);
+    // Each tenant has its own holdings since holdings are tenant-specific
+    var holdingId1 = UUID.randomUUID().toString(); // holding in tenant1
+    var holdingId2 = UUID.randomUUID().toString(); // holding in tenant2 (but will fail to retrieve)
+    var holdingIds = List.of(holdingId1, holdingId2);
     var consortiumId = UUID.randomUUID().toString();
     var centralTenantId = "central-tenant";
     var memberTenant1 = "member-tenant-1";
@@ -1492,14 +1515,14 @@ public class HoldingDetailServiceTest {
     when(consortiumUserTenantsRetriever.getUserTenants(consortiumId, centralTenantId, requestContext))
       .thenReturn(Future.succeededFuture(userTenants));
 
-    var poLine1 = createPoLine(UUID.randomUUID().toString(), holdingId);
+    var poLine1 = createPoLine(UUID.randomUUID().toString(), holdingId1);
     var piece1 = new Piece()
       .withId(UUID.randomUUID().toString())
       .withPoLineId(poLine1.getId())
-      .withHoldingId(holdingId)
+      .withHoldingId(holdingId1)
       .withReceivingTenantId(memberTenant1);
 
-    // Tenant 1 succeeds, Tenant 2 fails for poLines
+    // Tenant 1 succeeds with its holding, Tenant 2 fails for all services (simulating service outage)
     when(purchaseOrderLineService.getPoLinesByHoldingIds(eq(holdingIds), any()))
       .thenAnswer(invocation -> {
         var ctx = (RequestContext) invocation.getArgument(1);
@@ -1518,12 +1541,23 @@ public class HoldingDetailServiceTest {
         var tenant = TenantTool.tenantId(ctx.getHeaders());
         if (memberTenant1.equals(tenant)) {
           return Future.succeededFuture(List.of(piece1));
+        } else if (memberTenant2.equals(tenant)) {
+          return Future.failedFuture(new RuntimeException("Tenant 2 pieces service error"));
         }
         return Future.succeededFuture(Collections.emptyList());
       });
 
     when(inventoryItemManager.getItemsByHoldingIds(eq(holdingIds), any()))
-      .thenReturn(Future.succeededFuture(Collections.emptyList()));
+      .thenAnswer(invocation -> {
+        var ctx = (RequestContext) invocation.getArgument(1);
+        var tenant = TenantTool.tenantId(ctx.getHeaders());
+        if (memberTenant1.equals(tenant)) {
+          return Future.succeededFuture(Collections.emptyList());
+        } else if (memberTenant2.equals(tenant)) {
+          return Future.failedFuture(new RuntimeException("Tenant 2 items service error"));
+        }
+        return Future.succeededFuture(Collections.emptyList());
+      });
 
     var future = holdingDetailService.postOrdersHoldingDetail(holdingIds, requestContext);
 
@@ -1532,13 +1566,21 @@ public class HoldingDetailServiceTest {
         assertTrue(result.succeeded(), "Should succeed even with partial tenant failure due to graceful degradation");
         var holdingDetailResults = result.result();
         assertNotNull(holdingDetailResults);
+        System.out.println(JsonObject.mapFrom(holdingDetailResults).encodePrettily());
 
-        var property = holdingDetailResults.getAdditionalProperties().get(holdingId);
+        // Should have holding from tenant1 and tenant2, tenant2 data will consist of empty arrays
+        assertEquals(2, holdingDetailResults.getAdditionalProperties().size());
+        assertTrue(holdingDetailResults.getAdditionalProperties().containsKey(holdingId1));
+        assertTrue(holdingDetailResults.getAdditionalProperties().containsKey(holdingId2),
+          "Holding from failed tenant should not be present");
+
+        var property = holdingDetailResults.getAdditionalProperties().get(holdingId1);
         assertNotNull(property);
 
         // Should have data from tenant1 only, tenant2 failed gracefully
         assertEquals(1, property.getPoLinesDetailCollection().getPoLinesDetail().size());
         assertEquals(1, property.getPiecesDetailCollection().getPiecesDetail().size());
+        assertEquals(0, property.getItemsDetailCollection().getItemsDetail().size());
         assertEquals(memberTenant1, property.getPiecesDetailCollection().getPiecesDetail().getFirst().getTenantId());
 
         vertxTestContext.completeNow();
