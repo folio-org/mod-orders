@@ -1,6 +1,7 @@
 package org.folio.models;
 
 import io.vertx.core.json.JsonObject;
+import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -10,28 +11,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+@Data
 public class HoldingDetailAggregator {
 
   private String tenant;
   private Map<String, List<PoLine>> poLinesByHoldingId = new HashMap<>();
   private Map<String, List<Piece>> piecesByHoldingId = new HashMap<>();
   private Map<String, List<JsonObject>> itemsByHoldingId = new HashMap<>();
-
-  public String getTenant() {
-    return tenant;
-  }
-
-  public Map<String, List<PoLine>> getPoLinesByHoldingId() {
-    return poLinesByHoldingId;
-  }
-
-  public Map<String, List<Piece>> getPiecesByHoldingId() {
-    return piecesByHoldingId;
-  }
-
-  public Map<String, List<JsonObject>> getItemsByHoldingId() {
-    return itemsByHoldingId;
-  }
 
   public String getPieceTenantIdByItemId(String itemId) {
     if (Objects.isNull(itemId)) {
@@ -45,21 +31,5 @@ public class HoldingDetailAggregator {
       .filter(Objects::nonNull)
       .findFirst()
       .orElse(null);
-  }
-
-  public void setTenant(String tenant) {
-    this.tenant = tenant;
-  }
-
-  public void setPoLinesByHoldingId(Map<String, List<PoLine>> poLines) {
-    this.poLinesByHoldingId = Objects.requireNonNullElse(poLines, new HashMap<>());
-  }
-
-  public void setPiecesByHoldingId(Map<String, List<Piece>> pieces) {
-    this.piecesByHoldingId = Objects.requireNonNullElse(pieces, new HashMap<>());
-  }
-
-  public void setItemsByHoldingId(Map<String, List<JsonObject>> items) {
-    this.itemsByHoldingId = Objects.requireNonNullElse(items, new HashMap<>());
   }
 }

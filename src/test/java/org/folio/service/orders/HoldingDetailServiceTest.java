@@ -1412,13 +1412,11 @@ public class HoldingDetailServiceTest {
         assertTrue(result.succeeded());
         var holdingDetailResults = result.result();
         assertNotNull(holdingDetailResults);
-        System.out.println(JsonObject.mapFrom(holdingDetailResults).encodePrettily());
 
         // Should have 2 holdings, one from each tenant
         assertEquals(2, holdingDetailResults.getAdditionalProperties().size());
         assertTrue(holdingDetailResults.getAdditionalProperties().containsKey(holdingId1));
         assertTrue(holdingDetailResults.getAdditionalProperties().containsKey(holdingId2));
-        System.out.println(JsonObject.mapFrom(holdingDetailResults).encodePrettily());
 
         // Verify holding1 has data from tenant1
         var property1 = holdingDetailResults.getAdditionalProperties().get(holdingId1);
@@ -1480,7 +1478,6 @@ public class HoldingDetailServiceTest {
         var holdingDetailResults = result.result();
         assertNotNull(holdingDetailResults);
         assertEquals(1, holdingDetailResults.getAdditionalProperties().size());
-        System.out.println(JsonObject.mapFrom(holdingDetailResults).encodePrettily());
 
         var property = holdingDetailResults.getAdditionalProperties().get(holdingId);
         assertEquals(1, property.getPoLinesDetailCollection().getPoLinesDetail().size());
@@ -1564,7 +1561,6 @@ public class HoldingDetailServiceTest {
         assertTrue(result.succeeded(), "Should succeed even with partial tenant failure due to graceful degradation");
         var holdingDetailResults = result.result();
         assertNotNull(holdingDetailResults);
-        System.out.println(JsonObject.mapFrom(holdingDetailResults).encodePrettily());
 
         // Should have holding from tenant1 and tenant2, tenant2 data will consist of empty arrays
         assertEquals(2, holdingDetailResults.getAdditionalProperties().size());

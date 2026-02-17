@@ -38,7 +38,6 @@ import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTena
 import static org.folio.service.inventory.InventoryItemManager.ID;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_HOLDINGS_RECORD_ID;
 
-// TODO CI retrigger
 @Log4j2
 public class HoldingDetailService {
 
@@ -85,7 +84,6 @@ public class HoldingDetailService {
       .compose(aggregators -> {
         var holdingDetailResults = new HoldingDetailResults();
 
-        // Traverse aggregates and find if any contain necessary values by a holding id
         holdingIds.forEach(holdingId -> {
           // Accumulate data from all aggregators for this holdingId
           var allPoLinesDetails = new ArrayList<PoLinesDetail>();
@@ -208,7 +206,10 @@ public class HoldingDetailService {
           return Future.succeededFuture(Collections.emptyList());
         }
         var configuration = consortiumConfiguration.get();
-        return settingsRetriever.getSettingByKey(SettingKey.CENTRAL_ORDERING_ENABLED, requestContext)
+
+        // Always change to central tenant when it comes to checking if Central Ordering is enabled
+        var localRequestContext = createContextWithNewTenantId(requestContext,  configuration.centralTenantId());
+        return settingsRetriever.getSettingByKey(SettingKey.CENTRAL_ORDERING_ENABLED, localRequestContext)
           .compose(centralOrdering -> {
             var isEnabled = centralOrdering.map(Setting::getValue).orElse(FALSE);
             if (!TRUE.equalsIgnoreCase(isEnabled)) {
