@@ -1154,6 +1154,9 @@
             "orders.holding-detail.item.post"
           ],
           "modulePermissions": [
+            "orders-storage.settings.collection.get",
+            "consortia.user-tenants.collection.get",
+            "user-tenants.collection.get",
             "orders-storage.po-lines.collection.get",
             "orders-storage.pieces.collection.get",
             "inventory-storage.items.collection.get"
