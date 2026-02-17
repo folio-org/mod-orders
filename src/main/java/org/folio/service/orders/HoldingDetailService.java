@@ -38,6 +38,7 @@ import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTena
 import static org.folio.service.inventory.InventoryItemManager.ID;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_HOLDINGS_RECORD_ID;
 
+// TODO CI retrigger
 @Log4j2
 public class HoldingDetailService {
 
