@@ -14,12 +14,10 @@ import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.models.consortium.ConsortiumConfiguration;
-import org.folio.rest.acq.model.Setting;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.pieces.PieceStorageService;
-import org.folio.service.settings.SettingsRetriever;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,7 +41,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -55,7 +52,6 @@ public class HoldingDetailServiceTest {
   @InjectMocks private HoldingDetailService holdingDetailService;
   @Mock private ConsortiumConfigurationService consortiumConfigurationService;
   @Mock private ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever;
-  @Mock private SettingsRetriever settingsRetriever;
   @Mock private PurchaseOrderLineService purchaseOrderLineService;
   @Mock private PieceStorageService pieceStorageService;
   @Mock private InventoryItemManager inventoryItemManager;
@@ -1217,9 +1213,9 @@ public class HoldingDetailServiceTest {
     when(consortiumConfigurationService.getConsortiumConfiguration(requestContext))
       .thenReturn(Future.succeededFuture(java.util.Optional.of(consortiumConfig)));
 
-    // Setup central ordering setting
-    doReturn(Future.succeededFuture(java.util.Optional.of(new Setting().withValue("true"))))
-      .when(settingsRetriever).getSettingByKey(any(), any());
+    // Setup central ordering enabled
+    when(consortiumConfigurationService.isCentralOrderingEnabled(any()))
+      .thenReturn(Future.succeededFuture(true));
 
     // Setup user tenants retrieval
     when(consortiumUserTenantsRetriever.getUserTenants(consortiumId, centralTenantId, requestContext))
@@ -1334,8 +1330,8 @@ public class HoldingDetailServiceTest {
     when(consortiumConfigurationService.getConsortiumConfiguration(requestContext))
       .thenReturn(Future.succeededFuture(java.util.Optional.of(consortiumConfig)));
 
-    doReturn(Future.succeededFuture(java.util.Optional.of(new Setting().withValue("true"))))
-      .when(settingsRetriever).getSettingByKey(any(), any());
+    when(consortiumConfigurationService.isCentralOrderingEnabled(any()))
+      .thenReturn(Future.succeededFuture(true));
 
     when(consortiumUserTenantsRetriever.getUserTenants(consortiumId, centralTenantId, requestContext))
       .thenReturn(Future.succeededFuture(userTenants));
@@ -1455,8 +1451,8 @@ public class HoldingDetailServiceTest {
       .thenReturn(Future.succeededFuture(java.util.Optional.of(consortiumConfig)));
 
     // Central ordering is disabled or not set
-    when(settingsRetriever.getSettingByKey(any(), any()))
-      .thenReturn(Future.succeededFuture(java.util.Optional.empty()));
+    when(consortiumConfigurationService.isCentralOrderingEnabled(any()))
+      .thenReturn(Future.succeededFuture(false));
 
     // Should not call getUserTenants when central ordering is disabled
     when(consortiumUserTenantsRetriever.getUserTenants(any(), any(), any()))
@@ -1504,8 +1500,8 @@ public class HoldingDetailServiceTest {
     when(consortiumConfigurationService.getConsortiumConfiguration(requestContext))
       .thenReturn(Future.succeededFuture(java.util.Optional.of(consortiumConfig)));
 
-    doReturn(Future.succeededFuture(java.util.Optional.of(new Setting().withValue("true"))))
-      .when(settingsRetriever).getSettingByKey(any(), any());
+    when(consortiumConfigurationService.isCentralOrderingEnabled(any()))
+      .thenReturn(Future.succeededFuture(true));
 
     when(consortiumUserTenantsRetriever.getUserTenants(consortiumId, centralTenantId, requestContext))
       .thenReturn(Future.succeededFuture(userTenants));

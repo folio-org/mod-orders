@@ -5,7 +5,6 @@ import io.vertx.core.json.JsonObject;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.models.HoldingDetailAggregator;
-import org.folio.rest.acq.model.Setting;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.HoldingDetailResults;
 import org.folio.rest.jaxrs.model.HoldingDetailResultsProperty;
@@ -22,8 +21,6 @@ import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.pieces.PieceStorageService;
-import org.folio.service.settings.SettingsRetriever;
-import org.folio.service.settings.util.SettingKey;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -41,23 +38,19 @@ import static org.folio.service.inventory.InventoryItemManager.ITEM_HOLDINGS_REC
 @Log4j2
 public class HoldingDetailService {
 
-  private static final String TRUE = "true";
-  private static final String FALSE = "false";
   private final ConsortiumConfigurationService consortiumConfigurationService;
   private final ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever;
-  private final SettingsRetriever settingsRetriever;
   private final PurchaseOrderLineService purchaseOrderLineService;
   private final PieceStorageService pieceStorageService;
   private final InventoryItemManager inventoryItemManager;
 
   public HoldingDetailService(ConsortiumConfigurationService consortiumConfigurationService,
-                              ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever, SettingsRetriever settingsRetriever,
+                              ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever,
                               PurchaseOrderLineService purchaseOrderLineService,
                               PieceStorageService pieceStorageService,
                               InventoryItemManager inventoryItemManager) {
     this.consortiumConfigurationService = consortiumConfigurationService;
     this.consortiumUserTenantsRetriever = consortiumUserTenantsRetriever;
-    this.settingsRetriever = settingsRetriever;
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.pieceStorageService = pieceStorageService;
     this.inventoryItemManager = inventoryItemManager;
@@ -208,11 +201,10 @@ public class HoldingDetailService {
         var configuration = consortiumConfiguration.get();
 
         // Always change to central tenant when it comes to checking if Central Ordering is enabled
-        var localRequestContext = createContextWithNewTenantId(requestContext,  configuration.centralTenantId());
-        return settingsRetriever.getSettingByKey(SettingKey.CENTRAL_ORDERING_ENABLED, localRequestContext)
-          .compose(centralOrdering -> {
-            var isEnabled = centralOrdering.map(Setting::getValue).orElse(FALSE);
-            if (!TRUE.equalsIgnoreCase(isEnabled)) {
+        var localRequestContext = createContextWithNewTenantId(requestContext, configuration.centralTenantId());
+        return consortiumConfigurationService.isCentralOrderingEnabled(localRequestContext)
+          .compose(enabled -> {
+            if (Boolean.FALSE.equals(enabled)) {
               log.info("getUserTenantsIfNeeded:: Central ordering is disabled or not configured");
               return Future.succeededFuture(Collections.emptyList());
             }
