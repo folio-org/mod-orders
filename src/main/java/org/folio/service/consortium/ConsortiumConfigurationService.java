@@ -108,7 +108,7 @@ public class ConsortiumConfigurationService {
   public Future<Boolean> isCentralOrderingEnabled(RequestContext requestContext) {
     return settingsRetriever.getSettingByKey(SettingKey.CENTRAL_ORDERING_ENABLED, requestContext)
       .map(centralOrdering -> {
-        logger.info("isCentralOrderingEnabled:: central ordering enabled: {}", centralOrdering);
+        logger.debug("isCentralOrderingEnabled:: central ordering enabled: {}", centralOrdering);
         return centralOrdering.map(setting -> Boolean.parseBoolean(setting.getValue())).orElse(false);
       });
   }
