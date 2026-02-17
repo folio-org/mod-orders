@@ -159,7 +159,7 @@ public class HoldingDetailService {
     var poLinesFuture = purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext)
       .map(poLines -> {
         log.info("aggregateHoldingDetailByTenant:: Found {} poLines by holding ids={}", poLines.size(), holdingIds);
-        var poLinesByHoldingIds = groupedPoLinesByHoldingId(holdingIds, poLines);
+        var poLinesByHoldingIds = groupPoLinesByHoldingId(holdingIds, poLines);
         aggregator.setPoLinesByHoldingId(poLinesByHoldingIds);
         return null;
       })
@@ -225,7 +225,7 @@ public class HoldingDetailService {
       });
   }
 
-  private Map<String, List<PoLine>> groupedPoLinesByHoldingId(List<String> holdingIds, List<PoLine> poLines) {
+  private Map<String, List<PoLine>> groupPoLinesByHoldingId(List<String> holdingIds, List<PoLine> poLines) {
     if (CollectionUtils.isEmpty(poLines)) {
       return Collections.emptyMap();
     }
