@@ -201,8 +201,8 @@ public class HoldingDetailService {
         var configuration = consortiumConfiguration.get();
 
         // Always change to central tenant when it comes to checking if Central Ordering is enabled
-        var localRequestContext = createContextWithNewTenantId(requestContext, configuration.centralTenantId());
-        return consortiumConfigurationService.isCentralOrderingEnabled(localRequestContext)
+        var centralRequestContext = createContextWithNewTenantId(requestContext, configuration.centralTenantId());
+        return consortiumConfigurationService.isCentralOrderingEnabled(centralRequestContext)
           .compose(enabled -> {
             if (Boolean.FALSE.equals(enabled)) {
               log.info("getUserTenantsIfNeeded:: Central ordering is disabled or not configured");
