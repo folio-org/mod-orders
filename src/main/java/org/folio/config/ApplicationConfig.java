@@ -27,6 +27,7 @@ import org.folio.service.ReasonForClosureService;
 import org.folio.service.SuffixService;
 import org.folio.service.TagService;
 import org.folio.service.UserService;
+import org.folio.service.batch.BatchTrackingService;
 import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.caches.ExportConfigsCache;
 import org.folio.service.caches.InventoryCache;
@@ -849,9 +850,10 @@ public class ApplicationConfig {
                                                                              InventoryItemManager inventoryItemManager,
                                                                              InventoryHoldingManager inventoryHoldingManager,
                                                                              PieceStorageService pieceStorageService,
-                                                                             PurchaseOrderLineService purchaseOrderLineService) {
+                                                                             PurchaseOrderLineService purchaseOrderLineService,
+                                                                             BatchTrackingService batchTrackingService) {
     return new WithHoldingOrderLineUpdateInstanceStrategy(inventoryInstanceManager, inventoryItemManager,
-      inventoryHoldingManager, pieceStorageService, purchaseOrderLineService);
+      inventoryHoldingManager, pieceStorageService, purchaseOrderLineService, batchTrackingService);
   }
 
   @Bean
@@ -921,5 +923,10 @@ public class ApplicationConfig {
   OrderFiscalYearService orderFiscalYearService(TransactionService transactionService, FiscalYearService fiscalYearService,
     FundService fundService, PurchaseOrderStorageService purchaseOrderStorageService) {
     return new OrderFiscalYearService(transactionService, fiscalYearService, fundService, purchaseOrderStorageService);
+  }
+
+  @Bean
+  BatchTrackingService batchTrackingService(RestClient restClient) {
+    return new BatchTrackingService(restClient);
   }
 }

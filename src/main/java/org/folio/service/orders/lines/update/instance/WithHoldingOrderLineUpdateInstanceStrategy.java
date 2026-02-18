@@ -238,16 +238,10 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
 
   private Future<Void> updateItemsHolding(String holdingId, String newHoldingId, String poLineId, RequestContext requestContext) {
     return inventoryItemManager.getItemsByHoldingIdAndOrderLineId(holdingId, poLineId, requestContext)
-      .compose(items -> createItemBatchTrackingRecord(items, requestContext))
+      .compose(items -> batchTrackingService.createBatchTrackingRecord(UUID.randomUUID().toString(), items.size(), requestContext).map(items))
       .compose(items -> updateItemsInInventory(items, newHoldingId, requestContext))
       .onSuccess(v -> log.info("updateItemsHolding:: existing items for holdingId: {} have been updated with new holdingId: {}", holdingId, newHoldingId))
       .onFailure(e -> log.error("Failed to update items for holdingId: {} with new holdingId: {}", holdingId, newHoldingId, e));
-  }
-
-  private Future<List<JsonObject>> createItemBatchTrackingRecord(List<JsonObject> items, RequestContext requestContext) {
-    return CollectionUtils.isEmpty(items)
-      ? Future.succeededFuture(List.of())
-      : batchTrackingService.createBatchTrackingRecord(UUID.randomUUID().toString(), items.size(), requestContext).map(items);
   }
 
   private Future<Void> updateItemsInInventory(List<JsonObject> items, String newHoldingId, RequestContext requestContext) {

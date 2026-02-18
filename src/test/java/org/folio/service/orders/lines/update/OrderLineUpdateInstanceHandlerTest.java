@@ -33,6 +33,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
 import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.ProtectionService;
+import org.folio.service.batch.BatchTrackingService;
 import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.caches.InventoryCache;
 import org.folio.service.settings.CommonSettingsRetriever;
@@ -313,9 +314,10 @@ public class OrderLineUpdateInstanceHandlerTest {
                                                                                InventoryItemManager inventoryItemManager,
                                                                                InventoryHoldingManager inventoryHoldingManager,
                                                                                PieceStorageService pieceStorageService,
-                                                                               PurchaseOrderLineService purchaseOrderLineService) {
+                                                                               PurchaseOrderLineService purchaseOrderLineService,
+                                                                               BatchTrackingService batchTrackingService) {
       return new WithHoldingOrderLineUpdateInstanceStrategy(inventoryInstanceManager, inventoryItemManager,
-        inventoryHoldingManager, pieceStorageService, purchaseOrderLineService);
+        inventoryHoldingManager, pieceStorageService, purchaseOrderLineService, batchTrackingService);
     }
 
     @Bean
@@ -332,6 +334,11 @@ public class OrderLineUpdateInstanceHandlerTest {
     @Bean
     SettingsRetriever settingsRetriever(RestClient restClient) {
       return new SettingsRetriever(restClient);
+    }
+
+    @Bean
+    BatchTrackingService batchTrackingService(RestClient restClient) {
+      return new BatchTrackingService(restClient);
     }
   }
 }
