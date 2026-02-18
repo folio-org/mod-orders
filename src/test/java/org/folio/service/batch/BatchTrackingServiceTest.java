@@ -32,7 +32,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @CopilotGenerated(model = "Claude Opus 4.5")
 @ExtendWith({ VertxExtension.class, MockitoExtension.class })
-class BatchTrackingServiceTest {
+public class BatchTrackingServiceTest {
 
   private static final String BATCH_TRACKING_HEADER = "X-Batch-Tracking-Id";
 
