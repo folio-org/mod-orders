@@ -20,6 +20,7 @@ import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
 import org.folio.rest.tools.utils.TenantTool;
+import org.folio.service.batch.BatchTrackingService;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemManager;
@@ -33,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -56,15 +58,18 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
 
   private final PieceStorageService pieceStorageService;
   private final PurchaseOrderLineService purchaseOrderLineService;
+  private final BatchTrackingService batchTrackingService;
 
   public WithHoldingOrderLineUpdateInstanceStrategy(InventoryInstanceManager inventoryInstanceManager,
                                                     InventoryItemManager inventoryItemManager,
                                                     InventoryHoldingManager inventoryHoldingManager,
                                                     PieceStorageService pieceStorageService,
-                                                    PurchaseOrderLineService purchaseOrderLineService) {
+                                                    PurchaseOrderLineService purchaseOrderLineService,
+                                                    BatchTrackingService batchTrackingService) {
     super(inventoryInstanceManager, inventoryItemManager, inventoryHoldingManager);
     this.pieceStorageService = pieceStorageService;
     this.purchaseOrderLineService = purchaseOrderLineService;
+    this.batchTrackingService = batchTrackingService;
   }
 
   Future<Void> processHoldings(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
@@ -233,6 +238,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
 
   private Future<Void> updateItemsHolding(String holdingId, String newHoldingId, String poLineId, RequestContext requestContext) {
     return inventoryItemManager.getItemsByHoldingIdAndOrderLineId(holdingId, poLineId, requestContext)
+      .compose(items -> batchTrackingService.createBatchTrackingRecord(UUID.randomUUID().toString(), items.size(), requestContext).map(items))
       .compose(items -> updateItemsInInventory(items, newHoldingId, requestContext))
       .onSuccess(v -> log.info("updateItemsHolding:: existing items for holdingId: {} have been updated with new holdingId: {}", holdingId, newHoldingId))
       .onFailure(e -> log.error("Failed to update items for holdingId: {} with new holdingId: {}", holdingId, newHoldingId, e));

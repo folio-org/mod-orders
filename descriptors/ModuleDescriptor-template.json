@@ -326,6 +326,7 @@
             "orders-storage.po-lines.item.get",
             "orders-storage.po-lines.item.put",
             "orders-storage.pieces.collection.get",
+            "orders-storage.batch-tracking.item.post",
             "user-tenants.collection.get",
             "consortia.sharing-instances.item.post",
             "orders-storage.settings.collection.get",
@@ -1482,6 +1483,10 @@
     },
     {
       "id": "orders-storage.settings",
+      "version": "1.0"
+    },
+    {
+      "id": "orders-storage.batch-tracking",
       "version": "1.0"
     },
     {

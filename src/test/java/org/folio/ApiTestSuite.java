@@ -51,6 +51,7 @@ import org.folio.service.ReasonForClosureServiceTest;
 import org.folio.service.SuffixServiceTest;
 import org.folio.service.TagServiceTest;
 import org.folio.service.UserServiceTest;
+import org.folio.service.batch.BatchTrackingServiceTest;
 import org.folio.service.consortium.ConsortiumConfigurationServiceTest;
 import org.folio.service.consortium.SharingInstanceServiceTest;
 import org.folio.service.exchange.CacheableExchangeRateServiceTest;
@@ -594,5 +595,9 @@ public class ApiTestSuite {
 
   @Nested
   class EncumbranceUtilsNestest extends EncumbranceUtilsTest {
+  }
+
+  @Nested
+  class BatchTrackingServiceTestNested extends BatchTrackingServiceTest {
   }
 }

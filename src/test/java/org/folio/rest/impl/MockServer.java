@@ -60,6 +60,7 @@ import static org.folio.orders.utils.QueryUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITION_METHODS;
+import static org.folio.orders.utils.ResourcePathResolver.BATCH_TRACKING;
 import static org.folio.orders.utils.ResourcePathResolver.BUDGETS;
 import static org.folio.orders.utils.ResourcePathResolver.CONFIGURATION_ENTRIES;
 import static org.folio.orders.utils.ResourcePathResolver.CURRENT_BUDGET;
@@ -170,6 +171,7 @@ import org.folio.Organization;
 import org.folio.OrganizationCollection;
 import org.folio.helper.BaseHelper;
 import org.folio.rest.RestVerticle;
+import org.folio.rest.acq.model.BatchTracking;
 import org.folio.rest.acq.model.OrderInvoiceRelationshipCollection;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
@@ -626,6 +628,7 @@ public class MockServer {
     router.post(resourcesPath(TAGS)).handler(ctx -> handlePostGenericSubObj(ctx, TAGS));
     router.post(resourcesPath(DATA_EXPORT_SPRING_CREATE_JOB)).handler(ctx -> handlePostGenericSubObj(ctx, DATA_EXPORT_SPRING_CREATE_JOB));
     router.post(resourcesPath(DATA_EXPORT_SPRING_EXECUTE_JOB)).handler(ctx -> handlePostGenericSubObj(ctx, DATA_EXPORT_SPRING_EXECUTE_JOB));
+    router.post(resourcesPath(BATCH_TRACKING)).handler(ctx -> handlePostGenericSubObj(ctx, BATCH_TRACKING));
     // GET
     router.get(resourcePath(PURCHASE_ORDER_STORAGE)).handler(this::handleGetPurchaseOrderById);
     router.get(resourcesPath(PURCHASE_ORDER_STORAGE)).handler(this::handleGetPurchaseOrderByQuery);
@@ -2514,6 +2517,7 @@ public class MockServer {
       case SUFFIXES -> Suffix.class;
       case TAGS -> Tag.class;
       case DATA_EXPORT_SPRING_CREATE_JOB, DATA_EXPORT_SPRING_EXECUTE_JOB -> Object.class;
+      case BATCH_TRACKING -> BatchTracking.class;
       default -> {
         fail("The sub-object is unknown");
         yield null;
