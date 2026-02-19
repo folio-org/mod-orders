@@ -1486,6 +1486,10 @@
       "version": "1.0"
     },
     {
+      "id": "orders-storage.batch-tracking",
+      "version": "1.0"
+    },
+    {
       "id": "circulation",
       "version": "10.0 11.0 12.0 13.0 14.0"
     },
