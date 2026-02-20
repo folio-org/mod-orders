@@ -90,7 +90,7 @@ import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE
 import static org.folio.orders.utils.ResourcePathResolver.REASONS_FOR_CLOSURE;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
 import static org.folio.orders.utils.ResourcePathResolver.ROUTING_LISTS;
-import static org.folio.orders.utils.ResourcePathResolver.SETTINGS_ENTRIES;
+import static org.folio.orders.utils.ResourcePathResolver.LOCALE;
 import static org.folio.orders.utils.ResourcePathResolver.SUFFIXES;
 import static org.folio.orders.utils.ResourcePathResolver.TAGS;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
@@ -250,7 +250,7 @@ public class MockServer {
   public static final String BASE_MOCK_DATA_PATH = "mockdata/";
   private static final String CONTRIBUTOR_NAME_TYPES_PATH = BASE_MOCK_DATA_PATH + "contributorNameTypes/contributorPersonalNameType.json";
   public static final String CONFIG_MOCK_PATH = BASE_MOCK_DATA_PATH + "configurations.entries/%s.json";
-  public static final String SETTINGS_MOCK_PATH = BASE_MOCK_DATA_PATH + "settings.entries/%s.json";
+  public static final String LOCALE_MOCK_PATH = BASE_MOCK_DATA_PATH + "locale/locale.json";
   public static final String ORDER_SETTINGS_MOCK_PATH = BASE_MOCK_DATA_PATH + "order-settings/%s.json";
   public static final String EXPORT_CONFIG_MOCK_PATH = BASE_MOCK_DATA_PATH + "data-export-spring/export-config.json";
   public static final String LOAN_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "loanTypes/";
@@ -702,7 +702,7 @@ public class MockServer {
     router.get(resourcesPath(WRAPPER_PIECES_STORAGE) + "/:id").handler(ctx -> handleGetJsonResource(ctx, MOCK_DATA_WRAPPER_PIECES_BY_ID_JSON));
     router.get(resourcesPath(CONFIGURATION_ENTRIES)).handler(ctx -> handleConfigurationOrSettingResponse(CONFIG_MOCK_PATH, ctx));
     router.get(resourcesPath(ORDER_SETTINGS)).handler(ctx -> handleConfigurationOrSettingResponse(ORDER_SETTINGS_MOCK_PATH, ctx));
-    router.get(resourcesPath(SETTINGS_ENTRIES)).handler(this::handleSettingResponse);
+    router.get(resourcesPath(LOCALE)).handler(ctx -> handleGetJsonResource(ctx, LOCALE_MOCK_PATH));
     router.get(resourcesPath(DATA_EXPORT_SPRING_CONFIGURATIONS)).handler(this::handleExportConfigsResponse);
     // PUT
     router.put(resourcePath(PURCHASE_ORDER_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER_STORAGE));
@@ -1665,15 +1665,6 @@ public class MockServer {
         var mockData = getMockData(String.format(mockPath, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10.getValue()));
         serverResponse(ctx, 200, APPLICATION_JSON, mockData);
       }
-    } catch (IOException e) {
-      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
-    }
-  }
-
-  private void handleSettingResponse(RoutingContext ctx) {
-    try {
-      var mockData = getMockData(SETTINGS_MOCK_PATH.formatted(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10.getValue()));
-      serverResponse(ctx, 200, APPLICATION_JSON, mockData);
     } catch (IOException e) {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     }
