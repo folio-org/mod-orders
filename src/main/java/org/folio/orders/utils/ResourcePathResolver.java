@@ -22,6 +22,7 @@ public class ResourcePathResolver {
   public static final String ACQUISITIONS_UNITS = "acquisitionsUnits";
   public static final String ACQUISITION_METHODS = "acquisitionMethods";
   public static final String ACQUISITIONS_MEMBERSHIPS = "acquisitionsMemberships";
+  public static final String BATCH_TRACKING = "batchTracking";
   public static final String PURCHASE_ORDER_STORAGE = "purchaseOrder";
   public static final String PIECES_STORAGE = "pieces";
   public static final String PIECES_STORAGE_BATCH = "pieces-batch";
@@ -73,6 +74,7 @@ public class ResourcePathResolver {
     apis.put(ACQUISITIONS_UNITS, "/acquisitions-units-storage/units");
     apis.put(ACQUISITION_METHODS, "/orders-storage/acquisition-methods");
     apis.put(ACQUISITIONS_MEMBERSHIPS, "/acquisitions-units-storage/memberships");
+    apis.put(BATCH_TRACKING, "/orders-storage/batch-tracking");
     apis.put(PO_LINES_STORAGE, "/orders-storage/po-lines");
     apis.put(PO_LINES_BATCH_STORAGE, "/orders-storage/po-lines-batch");
     apis.put(PO_LINES_BUSINESS, "/orders/order-lines");
