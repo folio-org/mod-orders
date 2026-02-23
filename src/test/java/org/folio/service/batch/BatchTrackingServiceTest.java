@@ -21,20 +21,15 @@ import org.folio.rest.acq.model.BatchTracking;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @CopilotGenerated(model = "Claude Opus 4.5")
 @ExtendWith({ VertxExtension.class, MockitoExtension.class })
 public class BatchTrackingServiceTest {
-
-  private static final String BATCH_TRACKING_HEADER = "X-Batch-Tracking-Id";
 
   @InjectMocks
   private BatchTrackingService batchTrackingService;
@@ -44,14 +39,12 @@ public class BatchTrackingServiceTest {
   private RequestContext requestContext;
 
   @Test
-  void shouldCreateBatchTrackingRecordAndPopulateHeader(VertxTestContext vertxTestContext) {
+  void shouldCreateBatchTrackingRecord(VertxTestContext vertxTestContext) {
     // Given
     String batchId = UUID.randomUUID().toString();
     int totalRecords = 10;
-    Map<String, String> headers = new HashMap<>();
     BatchTracking createdBatchTracking = new BatchTracking().withId(batchId).withTotalRecords(totalRecords);
 
-    when(requestContext.getHeaders()).thenReturn(headers);
     doReturn(succeededFuture(createdBatchTracking))
       .when(restClient).post(any(RequestEntry.class), any(BatchTracking.class), eq(BatchTracking.class), eq(requestContext));
 
@@ -62,7 +55,6 @@ public class BatchTrackingServiceTest {
     vertxTestContext.assertComplete(future)
       .onComplete(result -> {
         assertTrue(result.succeeded());
-        assertEquals(batchId, headers.get(BATCH_TRACKING_HEADER));
         vertxTestContext.completeNow();
       });
   }
