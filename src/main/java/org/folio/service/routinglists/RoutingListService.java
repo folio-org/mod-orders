@@ -141,13 +141,13 @@ public class RoutingListService {
 
   private Future<String> getAddressTypeId(RequestContext requestContext) {
     var requestEntry = new RequestEntry(ORDER_SETTINGS_ENDPOINT)
-      .withQuery("key=" + ROUTING_USER_ADDRESS_TYPE_ID);
+      .withQuery("key==" + ROUTING_USER_ADDRESS_TYPE_ID);
     return restClient.get(requestEntry, SettingCollection.class, requestContext)
       .map(settingCollection -> {
         var settings = settingCollection.getSettings();
         if (ObjectUtils.isEmpty(settings) || StringUtils.isBlank(settings.getFirst().getValue())) {
-          logger.error("getAddressTypeId:: Setting is not found with key={}", ROUTING_USER_ADDRESS_TYPE_ID);
-          throw new ResourceNotFoundException(String.format("Setting is not found with key=%s", ROUTING_USER_ADDRESS_TYPE_ID));
+          logger.error("getAddressTypeId:: Setting is not found with key=={}", ROUTING_USER_ADDRESS_TYPE_ID);
+          throw new ResourceNotFoundException(String.format("Setting is not found with key==%s", ROUTING_USER_ADDRESS_TYPE_ID));
         }
         return settings.getFirst().getValue();
       });
