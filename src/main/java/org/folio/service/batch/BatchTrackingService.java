@@ -15,7 +15,6 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 @AllArgsConstructor
 public class BatchTrackingService {
 
-  private static final String BATCH_TRACKING_HEADER = "X-Batch-Tracking-Id";
   private static final String BATCH_TRACKING_ENDPOINT = resourcesPath(BATCH_TRACKING);
 
   protected final RestClient restClient;
@@ -24,7 +23,6 @@ public class BatchTrackingService {
     var batchTracking = new BatchTracking().withId(id).withTotalRecords(totalRecords);
     var requestEntry = new RequestEntry(BATCH_TRACKING_ENDPOINT);
     return restClient.post(requestEntry, batchTracking, BatchTracking.class, requestContext)
-      .map(tracking -> requestContext.getHeaders().put(BATCH_TRACKING_HEADER, tracking.getId())) // Add the batch tracking ID to the request headers for downstream services to use.
       .onFailure(t -> log.error("Failed to create batch tracking record for batchId: {}", batchTracking.getId(), t))
       .recover(t -> Future.succeededFuture()) // In case of failure, we return a succeeded future to avoid failing the entire batch process.
       .mapEmpty();
