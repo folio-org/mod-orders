@@ -8,9 +8,6 @@ import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 
-import java.util.HashMap;
-
-import static org.folio.orders.utils.FutureUtils.asFuture;
 import static org.folio.orders.utils.ResourcePathResolver.BATCH_TRACKING;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
