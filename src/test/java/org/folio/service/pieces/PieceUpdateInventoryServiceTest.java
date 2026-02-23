@@ -10,6 +10,8 @@ import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.service.inventory.InventoryHoldingManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.inventory.InventoryHoldingManager.ID;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -20,15 +22,19 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import org.folio.ApiTestSuite;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryItemManager;
+import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.titles.TitlesService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -55,6 +61,8 @@ public class PieceUpdateInventoryServiceTest {
   private InventoryHoldingManager inventoryHoldingManager;
   @Autowired
   private  PieceStorageService pieceStorageService;
+  @Autowired
+  private PurchaseOrderLineService purchaseOrderLineService;
   @Mock
   private Map<String, String> okapiHeadersMock;
 
@@ -111,7 +119,7 @@ public class PieceUpdateInventoryServiceTest {
 
 
   @Test
-  void shouldDeleteHoldingIfHoldingIdIsProvidedAndFoundInDBAndNoPiecesAndItems() {
+  void shouldDeleteHoldingIfHoldingIdIsProvidedAndFoundInDBAndNoPiecesAndItemsAndNoOtherPoLines() {
     String holdingId = UUID.randomUUID().toString();
     JsonObject holding = new JsonObject();
     holding.put(ID, holding);
@@ -119,6 +127,7 @@ public class PieceUpdateInventoryServiceTest {
     doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByHoldingId(holdingId, requestContext);
     doReturn(succeededFuture(holding)).when(inventoryHoldingManager).getHoldingById(holdingId, true, requestContext);
     doReturn(succeededFuture(new ArrayList<>())).when(inventoryItemManager).getItemsByHoldingId(holdingId, requestContext);
+    doReturn(succeededFuture(Collections.emptyList())).when(purchaseOrderLineService).getPoLinesByHoldingIds(List.of(holdingId), requestContext);
 
     pieceUpdateInventoryService.deleteHoldingConnectedToPiece(piece, requestContext);
 
@@ -137,6 +146,7 @@ public class PieceUpdateInventoryServiceTest {
     doReturn(succeededFuture(List.of(piece, piece2))).when(pieceStorageService).getPiecesByHoldingId(holdingId, requestContext);
     doReturn(succeededFuture(holding)).when(inventoryHoldingManager).getHoldingById(holdingId, true, requestContext);
     doReturn(succeededFuture(new ArrayList<>())).when(inventoryItemManager).getItemsByHoldingId(holdingId, requestContext);
+    doReturn(succeededFuture(Collections.emptyList())).when(purchaseOrderLineService).getPoLinesByHoldingIds(List.of(holdingId), requestContext);
 
     pieceUpdateInventoryService.deleteHoldingConnectedToPiece(piece, requestContext).result();
 
@@ -158,6 +168,52 @@ public class PieceUpdateInventoryServiceTest {
     pieceUpdateInventoryService.deleteHoldingConnectedToPiece(piece, requestContext).result();
 
     verify(inventoryHoldingManager, times(0)).deleteHoldingById(holdingId , true, requestContext);
+  }
+
+  @Test
+  void shouldNotDeleteHoldingIfOtherPoLinesReferenceIt() {
+    String holdingId = UUID.randomUUID().toString();
+    String poLineId = UUID.randomUUID().toString();
+    String otherPoLineId = UUID.randomUUID().toString();
+    JsonObject holding = new JsonObject();
+    holding.put(ID, holdingId);
+    Piece piece = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId).withPoLineId(poLineId);
+
+    doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByHoldingId(holdingId, requestContext);
+    doReturn(succeededFuture(holding)).when(inventoryHoldingManager).getHoldingById(holdingId, true, requestContext);
+    doReturn(succeededFuture(new ArrayList<>())).when(inventoryItemManager).getItemsByHoldingId(holdingId, requestContext);
+
+    PoLine otherPoLine = new PoLine().withId(otherPoLineId)
+      .withLocations(List.of(new Location().withHoldingId(holdingId)));
+    doReturn(succeededFuture(List.of(otherPoLine))).when(purchaseOrderLineService).getPoLinesByHoldingIds(List.of(holdingId), requestContext);
+
+    pieceUpdateInventoryService.deleteHoldingConnectedToPiece(piece, requestContext).result();
+
+    verify(inventoryHoldingManager, times(0)).deleteHoldingById(holdingId, true, requestContext);
+  }
+
+  @Test
+  void shouldDeleteHoldingIfOnlyProcessedPoLinesReferenceIt() {
+    String holdingId = UUID.randomUUID().toString();
+    String poLineId = UUID.randomUUID().toString();
+    JsonObject holding = new JsonObject();
+    holding.put(ID, holdingId);
+    holding.put(HOLDING_PERMANENT_LOCATION_ID, UUID.randomUUID().toString());
+    Piece piece = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId).withPoLineId(poLineId);
+
+    doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByHoldingId(holdingId, requestContext);
+    doReturn(succeededFuture(holding)).when(inventoryHoldingManager).getHoldingById(holdingId, true, requestContext);
+    doReturn(succeededFuture(new ArrayList<>())).when(inventoryItemManager).getItemsByHoldingId(holdingId, requestContext);
+    doReturn(succeededFuture(null)).when(inventoryHoldingManager).deleteHoldingById(holdingId, true, requestContext);
+
+    PoLine currentPoLine = new PoLine().withId(poLineId)
+      .withLocations(List.of(new Location().withHoldingId(holdingId)));
+    doReturn(succeededFuture(List.of(currentPoLine))).when(purchaseOrderLineService).getPoLinesByHoldingIds(List.of(holdingId), requestContext);
+
+    pieceUpdateInventoryService.deleteHoldingsConnectedToPieces(
+      PieceUtil.groupPiecesByHoldings(List.of(piece)), Set.of(poLineId), requestContext).result();
+
+    verify(inventoryHoldingManager, times(1)).deleteHoldingById(holdingId, true, requestContext);
   }
 
 
@@ -183,10 +239,16 @@ public class PieceUpdateInventoryServiceTest {
     }
 
     @Bean
+    PurchaseOrderLineService purchaseOrderLineService() {
+      return mock(PurchaseOrderLineService.class);
+    }
+
+    @Bean
     PieceUpdateInventoryService pieceUpdateInventoryService(InventoryItemManager inventoryItemManager,
                                                             InventoryHoldingManager inventoryHoldingManager,
-                                                            PieceStorageService pieceStorageService) {
-      return spy(new PieceUpdateInventoryService(inventoryItemManager, inventoryHoldingManager, pieceStorageService));
+                                                            PieceStorageService pieceStorageService,
+                                                            PurchaseOrderLineService purchaseOrderLineService) {
+      return spy(new PieceUpdateInventoryService(inventoryItemManager, inventoryHoldingManager, pieceStorageService, purchaseOrderLineService));
     }
   }
 }

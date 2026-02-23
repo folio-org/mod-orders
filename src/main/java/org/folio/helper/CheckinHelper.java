@@ -213,9 +213,10 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
 
   protected Future<Map<String, List<Piece>>> processInventory(Map<String, List<Piece>> piecesGroupedByPoLine, PiecesHolder holder, boolean deleteHoldings, RequestContext requestContext) {
     Map<Pair<String, String>, Set<String>> piecesGroupedByHoldings = PieceUtil.groupPiecesByHoldings(StreamUtils.flatten(piecesGroupedByPoLine.values()));
+    Set<String> poLineIdsBeingProcessed = piecesGroupedByPoLine.keySet();
     return updateInventoryItemsAndHoldings(piecesGroupedByPoLine, holder, requestContext)
       .compose(pieces -> deleteHoldings
-        ? pieceUpdateInventoryService.deleteHoldingsConnectedToPieces(piecesGroupedByHoldings, requestContext).map(pieces)
+        ? pieceUpdateInventoryService.deleteHoldingsConnectedToPieces(piecesGroupedByHoldings, poLineIdsBeingProcessed, requestContext).map(pieces)
         : Future.succeededFuture(pieces));
   }
 
