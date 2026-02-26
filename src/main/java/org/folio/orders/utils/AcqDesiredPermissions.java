@@ -4,10 +4,10 @@ import java.util.Arrays;
 import java.util.List;
 
 public enum AcqDesiredPermissions {
-  ASSIGN("orders.acquisitions-units-assignments.assign"),
-  MANAGE("orders.acquisitions-units-assignments.manage"),
-  TITLES_ASSIGN("titles.acquisitions-units-assignments.assign"),
-  TITLES_MANAGE("titles.acquisitions-units-assignments.manage"),
+  ASSIGN("orders.acquisitions-units-assignments.create.execute"),
+  MANAGE("orders.acquisitions-units-assignments.manage.execute"),
+  TITLES_ASSIGN("titles.acquisitions-units-assignments.create.execute"),
+  TITLES_MANAGE("titles.acquisitions-units-assignments.manage.execute"),
   BYPASS_ACQ_UNITS("orders.acquisition-units.bypass.execute");
 
   private final String permission;

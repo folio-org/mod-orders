@@ -13,9 +13,9 @@ This is the Orders business logic module.
 
 ### Additional Permissions Required
  * In case an acquisition unit has to be assigned to the Order it is required that user should have 
-   `orders.acquisitions-units-assignments.assign` to create a purchase order
+   `orders.acquisitions-units-assignments.create.execute` to create a purchase order
  * In case an acquisition unit has to be modified(added/deleted) in the order, the user should have
-   `orders.acquisitions-units-assignments.manage` to update a purchase Order
+   `orders.acquisitions-units-assignments.manage.execute` to update a purchase Order
  * If the setting "isApprovalRequired" is set to true,an order approval is required to `OPEN` an order and the user should have
    `orders.item.approve` permissions to `approve` an order
 

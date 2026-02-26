@@ -29,7 +29,7 @@
             "orders.item.post"
           ],
           "permissionsDesired": [
-            "orders.acquisitions-units-assignments.assign",
+            "orders.acquisitions-units-assignments.create.execute",
             "orders.item.approve"
           ],
           "modulePermissions": [
@@ -83,7 +83,7 @@
             "orders.item.put"
           ],
           "permissionsDesired": [
-            "orders.acquisitions-units-assignments.manage",
+            "orders.acquisitions-units-assignments.manage.execute",
             "orders.item.approve",
             "orders.item.unopen",
             "orders.item.reopen"
@@ -905,7 +905,7 @@
           "methods": ["POST"],
           "pathPattern": "/orders/titles",
           "permissionsRequired": ["orders.titles.item.post"],
-          "permissionsDesired": ["titles.acquisitions-units-assignments.assign"],
+          "permissionsDesired": ["titles.acquisitions-units-assignments.create.execute"],
           "modulePermissions": [
             "orders-storage.titles.collection.get",
             "orders-storage.titles.item.post",
@@ -934,7 +934,7 @@
           "methods": ["PUT"],
           "pathPattern": "/orders/titles/{id}",
           "permissionsRequired": ["orders.titles.item.put"],
-          "permissionsDesired": ["titles.acquisitions-units-assignments.manage"],
+          "permissionsDesired": ["titles.acquisitions-units-assignments.manage.execute"],
           "modulePermissions": [
             "orders-storage.titles.item.get",
             "orders-storage.titles.item.put",
@@ -1873,41 +1873,45 @@
       "replaces": ["orders.bypass-acquisition-units"]
     },
     {
-      "permissionName": "orders.acquisitions-units-assignments.assign",
+      "permissionName": "orders.acquisitions-units-assignments.create.execute",
       "displayName": "Acquisitions unit assignment - create unit assignment",
-      "description": "Assign new order to acquisitions units"
+      "description": "Assign new order to acquisitions units",
+      "replaces": ["orders.acquisitions-units-assignments.assign"]
     },
     {
-      "permissionName": "orders.acquisitions-units-assignments.manage",
+      "permissionName": "orders.acquisitions-units-assignments.manage.execute",
       "displayName": "Acquisitions units assignment - manage unit assignments",
-      "description": "Manage unit assignments during orders update"
+      "description": "Manage unit assignments during orders update",
+      "replaces": ["orders.acquisitions-units-assignments.manage.execute"]
     },
     {
       "permissionName": "orders.acquisitions-units-assignments.all",
       "displayName": "All order acquisitions-unit-assignments permissions",
       "description": "All permissions for the acquisitions-unit-assignments",
       "subPermissions": [
-        "orders.acquisitions-units-assignments.assign",
-        "orders.acquisitions-units-assignments.manage"
+        "orders.acquisitions-units-assignments.create.execute",
+        "orders.acquisitions-units-assignments.manage.execute"
       ]
     },
     {
-      "permissionName": "titles.acquisitions-units-assignments.assign",
+      "permissionName": "titles.acquisitions-units-assignments.create.execute",
       "displayName": "Acquisitions units assignment - create title unit assignments",
-      "description": "Assign new title to acquisition units"
+      "description": "Assign new title to acquisition units",
+      "replaces": ["titles.acquisitions-units-assignments.assign"]
     },
     {
-      "permissionName": "titles.acquisitions-units-assignments.manage",
+      "permissionName": "titles.acquisitions-units-assignments.manage.execute",
       "displayName": "Acquisitions units assignment - manage title unit assignments",
-      "description": "Manage acq unit assignments during title update"
+      "description": "Manage acq unit assignments during title update",
+      "replaces": ["titles.acquisitions-units-assignments.manage"]
     },
     {
       "permissionName": "titles.acquisitions-units-assignments.all",
       "displayName": "All titles acquisitions-unit-assignments permissions",
       "description": "All permissions for the title acquisitions-unit-assignments",
       "subPermissions": [
-        "titles.acquisitions-units-assignments.assign",
-        "titles.acquisitions-units-assignments.manage"
+        "titles.acquisitions-units-assignments.create.execute",
+        "titles.acquisitions-units-assignments.manage.execute"
       ]
     },
     {
