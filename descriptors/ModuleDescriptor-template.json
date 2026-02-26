@@ -1882,7 +1882,7 @@
       "permissionName": "orders.acquisitions-units-assignments.manage.execute",
       "displayName": "Acquisitions units assignment - manage unit assignments",
       "description": "Manage unit assignments during orders update",
-      "replaces": ["orders.acquisitions-units-assignments.manage.execute"]
+      "replaces": ["orders.acquisitions-units-assignments.manage"]
     },
     {
       "permissionName": "orders.acquisitions-units-assignments.all",
