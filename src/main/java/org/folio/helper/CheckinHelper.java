@@ -33,7 +33,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.groupingBy;
@@ -211,12 +211,22 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     return promise.future();
   }
 
-  protected Future<Map<String, List<Piece>>> processInventory(Map<String, List<Piece>> piecesGroupedByPoLine, PiecesHolder holder, boolean deleteHoldings, RequestContext requestContext) {
-    Map<Pair<String, String>, Set<String>> piecesGroupedByHoldings = PieceUtil.groupPiecesByHoldings(StreamUtils.flatten(piecesGroupedByPoLine.values()));
+  protected Future<Map<String, List<Piece>>> processInventory(Map<String, List<Piece>> piecesGroupedByPoLine, PiecesHolder holder,
+                                                              boolean deleteHoldings, RequestContext requestContext) {
+    var piecesGroupedByHoldings = PieceUtil.groupPiecesByHoldings(StreamUtils.flatten(piecesGroupedByPoLine.values()));
     return updateInventoryItemsAndHoldings(piecesGroupedByPoLine, holder, requestContext)
-      .compose(pieces -> deleteHoldings
-        ? pieceUpdateInventoryService.deleteHoldingsConnectedToPieces(piecesGroupedByHoldings, requestContext).map(pieces)
-        : Future.succeededFuture(pieces));
+      .compose(pieces -> {
+        var poLinesToSkip = pieces.entrySet().stream()
+          .flatMap(entry -> entry.getValue().stream())
+          .map(Piece::getPoLineId)
+          .collect(Collectors.toSet());
+        var processedHoldingIds = holder.getProcessedHoldingIds();
+        if (deleteHoldings) {
+          return pieceUpdateInventoryService.deleteHoldingsConnectedToPieces(piecesGroupedByHoldings, processedHoldingIds, poLinesToSkip, requestContext)
+            .map(pieces);
+        }
+        return Future.succeededFuture(pieces);
+      });
   }
 
   private void updatePieceWithCheckinInfo(Piece piece) {
@@ -348,5 +358,4 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   private boolean isOnOrderPieceStatus(CheckInPiece checkinPiece) {
     return checkinPiece.getItemStatus() == CheckInPiece.ItemStatus.ON_ORDER;
   }
-
 }

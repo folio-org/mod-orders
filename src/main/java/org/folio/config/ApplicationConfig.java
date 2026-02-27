@@ -621,8 +621,9 @@ public class ApplicationConfig {
   @Bean
   PieceUpdateInventoryService pieceUpdateInventoryService(InventoryItemManager inventoryItemManager,
                                                           InventoryHoldingManager inventoryHoldingManager,
-                                                          PieceStorageService pieceStorageService) {
-    return new PieceUpdateInventoryService(inventoryItemManager, inventoryHoldingManager, pieceStorageService);
+                                                          PieceStorageService pieceStorageService,
+                                                          PurchaseOrderLineService purchaseOrderLineService) {
+    return new PieceUpdateInventoryService(inventoryItemManager, inventoryHoldingManager, pieceStorageService, purchaseOrderLineService);
   }
 
   @Bean
