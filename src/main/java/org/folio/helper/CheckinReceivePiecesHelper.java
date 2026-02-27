@@ -9,6 +9,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.folio.models.HoldingUpdateResult;
 import org.folio.models.PoLineLocationsPair;
 import org.folio.models.pieces.PieceUpdateHolder;
 import org.folio.models.pieces.PiecesHolder;
@@ -527,9 +528,9 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
    * @return {@link Future} which holds map with PO line id as key
    * and list of corresponding pieces as value
    */
-  protected Future<Map<String, List<Piece>>> updateInventoryItemsAndHoldings(Map<String, List<Piece>> piecesGroupedByPoLine,
-                                                                             PiecesHolder holder,
-                                                                             RequestContext requestContext) {
+  protected Future<HoldingUpdateResult> updateInventoryItemsAndHoldings(Map<String, List<Piece>> piecesGroupedByPoLine,
+                                                                        PiecesHolder holder,
+                                                                        RequestContext requestContext) {
     Map<String, Piece> piecesByItemId = StreamEx.ofValues(piecesGroupedByPoLine)
       .flatMap(List::stream)
       .filter(piece -> StringUtils.isNotEmpty(piece.getItemId()))
@@ -538,7 +539,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     List<String> poLineIds = new ArrayList<>(piecesGroupedByPoLine.keySet());
 
     return getPoLineAndTitleById(poLineIds, requestContext)
-      .compose(poLineAndTitleById -> processHoldingsUpdate(piecesGroupedByPoLine, poLineAndTitleById, requestContext)
+      .compose(poLineAndTitleById -> processHoldingsUpdate(piecesGroupedByPoLine, holder, poLineAndTitleById, requestContext)
         .compose(voidResult -> recreateItemRecords(piecesGroupedByPoLine, holder, requestContext))
         .compose(voidResult -> getItemRecords(piecesGroupedByPoLine, piecesByItemId, requestContext))
         .compose(items -> processItemsUpdate(piecesGroupedByPoLine, holder, piecesByItemId, items, poLineAndTitleById, requestContext))
@@ -618,6 +619,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   }
 
   private Future<Void> processHoldingsUpdate(Map<String, List<Piece>> piecesGroupedByPoLine,
+                                             PiecesHolder holder,
                                              PoLineAndTitleById poLinesAndTitlesById,
                                              RequestContext requestContext) {
     List<Future<Boolean>> futuresForHoldingsUpdates = new ArrayList<>();
@@ -641,7 +643,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
         logger.info("processHoldingsUpdate:: Updating piece holding, pieceId: {}, itemId: {}, locationId: {}, holdingId: {}, updateHoldingRequired: {}",
           piece.getId(), piece.getItemId(), getLocationId(piece), getHoldingId(piece), updateRequired);
         if (updateRequired) {
-          futuresForHoldingsUpdates.add(createHoldingsForChangedLocations(piece, title.getInstanceId(), requestContext));
+          futuresForHoldingsUpdates.add(createHoldingsForChangedLocations(piece, title.getInstanceId(), holder, requestContext));
         }
       });
 
@@ -657,7 +659,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       .mapEmpty();
   }
 
-  private Future<Boolean> createHoldingsForChangedLocations(Piece piece, String instanceId, RequestContext requestContext) {
+  private Future<Boolean> createHoldingsForChangedLocations(Piece piece, String instanceId, PiecesHolder holder, RequestContext requestContext) {
     if (!ifHoldingNotProcessed(piece.getId()) || isRevertToOnOrder(piece)) {
       return Future.succeededFuture(true);
     }
@@ -677,6 +679,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
           logger.info("createHoldingsForChangedLocations:: Saving newly created or found holding, pieceId: {}, itemId: {}, locationId: {}, old holdingId: {}, new holdingId: {}",
             piece.getId(), piece.getItemId(), piece.getLocationId(), piece.getHoldingId(), createdHoldingId);
           piece.withLocationId(null).setHoldingId(createdHoldingId);
+          holder.getProcessedHoldingIds().add(createdHoldingId);
         }
         return Future.succeededFuture(true);
       })
@@ -763,16 +766,15 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     }
   }
 
-  private Future<Map<String, List<Piece>>> processItemsUpdate(Map<String, List<Piece>> piecesGroupedByPoLine,
-                                                              PiecesHolder holder,
-                                                              Map<String, Piece> piecesByItemId,
-                                                              List<JsonObject> items,
-                                                              PoLineAndTitleById poLinesAndTitlesById,
-                                                              RequestContext requestContext) {
+  private Future<HoldingUpdateResult> processItemsUpdate(Map<String, List<Piece>> piecesGroupedByPoLine,
+                                                         PiecesHolder holder,
+                                                         Map<String, Piece> piecesByItemId,
+                                                         List<JsonObject> items,
+                                                         PoLineAndTitleById poLinesAndTitlesById,
+                                                         RequestContext requestContext) {
     List<Future<Boolean>> futuresForItemsUpdates = new ArrayList<>();
-
     if (piecesByItemId.isEmpty()) {
-      return Future.succeededFuture(piecesGroupedByPoLine);
+      return Future.succeededFuture(new HoldingUpdateResult(piecesGroupedByPoLine, holder.getProcessedHoldingIds()));
     }
 
     for (JsonObject item : items) {
@@ -800,7 +802,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
         long successQty = results.stream().filter(result -> result).count();
         logger.debug("{} out of {} inventory item(s) successfully updated", successQty, results.size());
       }
-      return piecesGroupedByPoLine;
+      return new HoldingUpdateResult(piecesGroupedByPoLine, holder.getProcessedHoldingIds());
     });
   }
 

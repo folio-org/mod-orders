@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -19,6 +20,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryItemManager;
+import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 
 import io.vertx.core.Future;
@@ -33,6 +35,7 @@ public class PieceUpdateInventoryService {
   private final InventoryItemManager inventoryItemManager;
   private final InventoryHoldingManager inventoryHoldingManager;
   private final PieceStorageService pieceStorageService;
+  private final PurchaseOrderLineService purchaseOrderLineService;
 
   /**
    * Return id of created  Item
@@ -55,56 +58,106 @@ public class PieceUpdateInventoryService {
   }
 
   public Future<Pair<String, String>> deleteHoldingConnectedToPiece(Piece piece, RequestContext requestContext) {
-    return deleteHoldingsConnectedToPieces(Optional.ofNullable(piece).map(List::of).orElseGet(List::of), requestContext)
-      .compose(result -> Optional.ofNullable(result).map(List::getFirst).map(Future::succeededFuture).orElseGet(Future::succeededFuture));
+    var pieces = Optional.ofNullable(piece)
+      .map(List::of)
+      .orElseGet(List::of);
+    return deleteHoldingsConnectedToPieces(pieces, requestContext)
+      .compose(result -> Optional.ofNullable(result)
+        .map(List::getFirst)
+        .map(Future::succeededFuture)
+        .orElseGet(Future::succeededFuture));
   }
 
   public Future<List<Pair<String, String>>> deleteHoldingsConnectedToPieces(List<Piece> pieces, RequestContext requestContext) {
-   return deleteHoldingsConnectedToPieces(PieceUtil.groupPiecesByHoldings(pieces), requestContext);
+    var poLinesToSkip = pieces.stream()
+      .map(Piece::getPoLineId)
+      .collect(Collectors.toSet());
+    var holdingIdsToPieces = PieceUtil.groupPiecesByHoldings(pieces);
+    return deleteHoldingsConnectedToPieces(holdingIdsToPieces, poLinesToSkip, Set.of(), requestContext);
   }
 
-  public Future<List<Pair<String, String>>> deleteHoldingsConnectedToPieces(Map<Pair<String, String>, Set<String>> holdingIdsToPieces, RequestContext requestContext) {
+  public Future<List<Pair<String, String>>> deleteHoldingsConnectedToPieces(Map<Pair<String, String>,
+                                                                            Set<String>> holdingIdsToPieces,
+                                                                            Set<String> processedHoldingIds,
+                                                                            Set<String> poLinesToSkip, RequestContext requestContext) {
+    log.info("deleteHoldingsConnectedToPieces:: Excluding processed holdingIds={}", processedHoldingIds);
+
     var futures = holdingIdsToPieces.entrySet().stream()
+      .filter(entry -> !processedHoldingIds.contains(entry.getKey().getKey()))
       .map(entry -> {
         var holdingId = entry.getKey().getKey();
         var receivingTenantId = entry.getKey().getValue();
-        var pieceIds = entry.getValue();
+        var pieceIdsToSkip = entry.getValue();
         var locationContext = createContextWithNewTenantId(requestContext, receivingTenantId);
         return inventoryHoldingManager.getHoldingById(holdingId, true, locationContext)
-          .compose(holding -> getUpdatePossibleForHolding(holding, holdingId, pieceIds, locationContext, requestContext))
-          .compose(isUpdatePossibleVsHolding -> deleteHoldingIfPossible(isUpdatePossibleVsHolding, holdingId, locationContext));
+          .compose(holding -> getHoldingLinkedData(holding, holdingId, poLinesToSkip, pieceIdsToSkip, locationContext))
+          .compose(deletableHoldings -> deleteHoldingIfPossible(deletableHoldings, holdingId, locationContext));
       }).toList();
     return collectResultsOnSuccess(futures);
   }
 
-  private Future<Pair<Boolean, JsonObject>> getUpdatePossibleForHolding(JsonObject holding, String holdingId, Set<String> pieceIds,
-                                                                        RequestContext locationContext, RequestContext requestContext) {
+  private Future<Pair<Boolean, JsonObject>> getHoldingLinkedData(JsonObject holding, String holdingId, Set<String> poLinesToSkip,
+                                                                 Set<String> pieceIdsToSkip, RequestContext locationContext) {
     if (holding == null || holding.isEmpty()) {
       return Future.succeededFuture(Pair.of(false, new JsonObject()));
     }
-    return pieceStorageService.getPiecesByHoldingId(holdingId, requestContext)
-      .compose(pieces -> inventoryItemManager.getItemsByHoldingId(holdingId, locationContext)
-        .map(items -> CollectionUtils.isEmpty(filterPiecesToProcess(pieceIds, pieces)) && CollectionUtils.isEmpty(items)
-          ? Pair.of(true, holding)
-          : Pair.of(false, new JsonObject()))
-      );
+
+    var poLinesFuture = purchaseOrderLineService.getPoLinesByHoldingIds(List.of(holdingId), locationContext);
+    var piecesFuture = pieceStorageService.getPiecesByHoldingId(holdingId, locationContext);
+    var itemsFuture = inventoryItemManager.getItemsByHoldingId(holdingId, locationContext);
+    return Future.all(poLinesFuture, piecesFuture, itemsFuture)
+      .map(linkedData -> {
+        var linkedPoLines = linkedData.<List<PoLine>>resultAt(0);
+        var linkedPieces = linkedData.<List<Piece>>resultAt(1);
+        var linkedItems = linkedData.<List<JsonObject>>resultAt(2);
+
+        var itemIdsToSkip = linkedPieces.stream()
+          .filter(piece -> pieceIdsToSkip.contains(piece.getId()))
+          .map(Piece::getItemId)
+          .collect(Collectors.toSet());
+
+        var filteredPoLines = excludePoLinesToSkip(poLinesToSkip, linkedPoLines);
+        var filteredPieces = excludePiecesToSkip(pieceIdsToSkip, linkedPieces);
+        var filteredItems = excludeItemsToSkip(itemIdsToSkip, linkedItems);
+
+        var isDeletable = CollectionUtils.isEmpty(filteredPoLines)
+          && CollectionUtils.isEmpty(filteredPieces)
+          && CollectionUtils.isEmpty(linkedItems);
+
+        log.info("getUpdatePossibleForHolding:: holdingId={}, filteredPoLines={}, filteredPieces={}, filteredItems={}, isDeletable={}",
+          holdingId, filteredPoLines.size(), filteredPieces.size(), filteredItems.size(), isDeletable);
+
+        return isDeletable ? Pair.of(true, holding) : Pair.of(false, new JsonObject());
+      });
   }
 
-  private Future<Pair<String, String>> deleteHoldingIfPossible(Pair<Boolean, JsonObject> isUpdatePossibleVsHolding,
+  private Future<Pair<String, String>> deleteHoldingIfPossible(Pair<Boolean, JsonObject> deletableHoldings,
                                                                String holdingId, RequestContext locationContext) {
-    var isUpdatePossible = isUpdatePossibleVsHolding.getKey();
-    var holding = isUpdatePossibleVsHolding.getValue();
-    if (isUpdatePossible && !holding.isEmpty()) {
+    var isDeletable = deletableHoldings.getKey();
+    var holding = deletableHoldings.getValue();
+    log.info("deleteHoldingIfPossible:: isDeletable={}, holdingId={}", isDeletable, holdingId);
+    if (isDeletable && !holding.isEmpty()) {
       return inventoryHoldingManager.deleteHoldingById(holdingId, true, locationContext)
         .map(v -> Pair.of(holdingId, holding.getString(HOLDING_PERMANENT_LOCATION_ID)));
     }
     return Future.succeededFuture();
   }
 
-  private List<Piece> filterPiecesToProcess(Set<String> pieceIdsToSkip, List<Piece> pieces) {
+  private List<PoLine> excludePoLinesToSkip(Set<String> poLinesIdsToSkip, List<PoLine> poLines) {
+    return poLines.stream()
+      .filter(poLine -> !poLinesIdsToSkip.contains(poLine.getId()))
+      .toList();
+  }
+
+  private List<Piece> excludePiecesToSkip(Set<String> pieceIdsToSkip, List<Piece> pieces) {
     return pieces.stream()
       .filter(piece -> !pieceIdsToSkip.contains(piece.getId()))
       .toList();
   }
 
+  private List<JsonObject> excludeItemsToSkip(Set<String> itemIdsToSkip, List<JsonObject> items) {
+    return items.stream()
+      .filter(item -> !itemIdsToSkip.contains(item.getString("id")))
+      .toList();
+  }
 }

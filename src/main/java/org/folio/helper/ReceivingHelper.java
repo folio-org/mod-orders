@@ -8,6 +8,7 @@ import java.util.EnumSet;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.folio.models.HoldingUpdateResult;
 import org.folio.models.pieces.PiecesHolder;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.rest.core.RestClient;
@@ -80,7 +81,8 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
         return filterMissingLocations(piecesFromStorage, requestContext);
       })
       // 4. Update items in the Inventory if required
-      .compose(pieces -> updateInventoryItemsAndHoldings(pieces, holder, requestContext))
+      .compose(pieces -> updateInventoryItemsAndHoldings(pieces, holder, requestContext)
+        .map(HoldingUpdateResult::pieces))
       // 5. Update piece records with receiving details which do not have associated item
       .map(this::updatePieceRecordsWithoutItems)
       // 6. Update received piece records in the storage

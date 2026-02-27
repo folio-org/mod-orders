@@ -9,13 +9,16 @@ import org.folio.rest.jaxrs.model.Piece;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class PiecesHolder {
   private Pair<CompositePurchaseOrder, PoLine> purchaseOrderPoLinePair;
   private Map<String, List<Piece>> piecesFromStorage;
   private Map<String, List<PiecePoLineDto>> itemsToRecreate;
+  private Set<String> processedHoldingIds = new HashSet<String>();
 
   public static class PiecePoLineDto {
     private final String poLineId;
@@ -71,6 +74,10 @@ public class PiecesHolder {
 
   public Map<String, List<PiecePoLineDto>> getItemsToRecreate() {
     return this.itemsToRecreate;
+  }
+
+  public Set<String> getProcessedHoldingIds() {
+    return processedHoldingIds;
   }
 
   public PiecesHolder withPurchaseOrderPoLinePair(Pair<CompositePurchaseOrder, PoLine> purchaseOrderPoLinePair) {
