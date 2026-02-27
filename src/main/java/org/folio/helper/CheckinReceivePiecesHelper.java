@@ -9,7 +9,6 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.folio.models.HoldingUpdateResult;
 import org.folio.models.PoLineLocationsPair;
 import org.folio.models.pieces.PieceUpdateHolder;
 import org.folio.models.pieces.PiecesHolder;
@@ -528,7 +527,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
    * @return {@link Future} which holds map with PO line id as key
    * and list of corresponding pieces as value
    */
-  protected Future<HoldingUpdateResult> updateInventoryItemsAndHoldings(Map<String, List<Piece>> piecesGroupedByPoLine,
+  protected Future<Map<String, List<Piece>>> updateInventoryItemsAndHoldings(Map<String, List<Piece>> piecesGroupedByPoLine,
                                                                         PiecesHolder holder,
                                                                         RequestContext requestContext) {
     Map<String, Piece> piecesByItemId = StreamEx.ofValues(piecesGroupedByPoLine)
@@ -766,15 +765,15 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     }
   }
 
-  private Future<HoldingUpdateResult> processItemsUpdate(Map<String, List<Piece>> piecesGroupedByPoLine,
-                                                         PiecesHolder holder,
-                                                         Map<String, Piece> piecesByItemId,
-                                                         List<JsonObject> items,
-                                                         PoLineAndTitleById poLinesAndTitlesById,
-                                                         RequestContext requestContext) {
+  private Future<Map<String, List<Piece>>> processItemsUpdate(Map<String, List<Piece>> piecesGroupedByPoLine,
+                                                              PiecesHolder holder,
+                                                              Map<String, Piece> piecesByItemId,
+                                                              List<JsonObject> items,
+                                                              PoLineAndTitleById poLinesAndTitlesById,
+                                                              RequestContext requestContext) {
     List<Future<Boolean>> futuresForItemsUpdates = new ArrayList<>();
     if (piecesByItemId.isEmpty()) {
-      return Future.succeededFuture(new HoldingUpdateResult(piecesGroupedByPoLine, holder.getProcessedHoldingIds()));
+      return Future.succeededFuture(piecesGroupedByPoLine);
     }
 
     for (JsonObject item : items) {
@@ -802,7 +801,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
         long successQty = results.stream().filter(result -> result).count();
         logger.debug("{} out of {} inventory item(s) successfully updated", successQty, results.size());
       }
-      return new HoldingUpdateResult(piecesGroupedByPoLine, holder.getProcessedHoldingIds());
+      return piecesGroupedByPoLine;
     });
   }
 
@@ -1000,5 +999,4 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     itemResult.setProcessingStatus(status);
     result.getReceivingItemResults().add(itemResult);
   }
-
 }

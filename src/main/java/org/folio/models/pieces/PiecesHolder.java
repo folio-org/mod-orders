@@ -15,10 +15,11 @@ import java.util.Map;
 import java.util.Set;
 
 public class PiecesHolder {
+
   private Pair<CompositePurchaseOrder, PoLine> purchaseOrderPoLinePair;
   private Map<String, List<Piece>> piecesFromStorage;
   private Map<String, List<PiecePoLineDto>> itemsToRecreate;
-  private Set<String> processedHoldingIds = new HashSet<String>();
+  private final Set<String> processedHoldingIds = new HashSet<>();
 
   public static class PiecePoLineDto {
     private final String poLineId;

@@ -211,19 +211,21 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     return promise.future();
   }
 
-  protected Future<Map<String, List<Piece>>> processInventory(Map<String, List<Piece>> piecesGroupedByPoLine, PiecesHolder holder, boolean deleteHoldings, RequestContext requestContext) {
+  protected Future<Map<String, List<Piece>>> processInventory(Map<String, List<Piece>> piecesGroupedByPoLine, PiecesHolder holder,
+                                                              boolean deleteHoldings, RequestContext requestContext) {
     var piecesGroupedByHoldings = PieceUtil.groupPiecesByHoldings(StreamUtils.flatten(piecesGroupedByPoLine.values()));
     return updateInventoryItemsAndHoldings(piecesGroupedByPoLine, holder, requestContext)
-      .compose(holdingUpdateResult -> {
-        var pieces = holdingUpdateResult.pieces();
+      .compose(pieces -> {
         var poLinesToSkip = pieces.entrySet().stream()
           .flatMap(entry -> entry.getValue().stream())
           .map(Piece::getPoLineId)
           .collect(Collectors.toSet());
-        var processedHoldingIds = holdingUpdateResult.processedHoldingIds();
-        return deleteHoldings
-          ? pieceUpdateInventoryService.deleteHoldingsConnectedToPieces(piecesGroupedByHoldings, processedHoldingIds, poLinesToSkip, requestContext).map(pieces)
-          : Future.succeededFuture(pieces);
+        var processedHoldingIds = holder.getProcessedHoldingIds();
+        if (deleteHoldings) {
+          return pieceUpdateInventoryService.deleteHoldingsConnectedToPieces(piecesGroupedByHoldings, processedHoldingIds, poLinesToSkip, requestContext)
+            .map(pieces);
+        }
+        return Future.succeededFuture(pieces);
       });
   }
 
@@ -356,5 +358,4 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   private boolean isOnOrderPieceStatus(CheckInPiece checkinPiece) {
     return checkinPiece.getItemStatus() == CheckInPiece.ItemStatus.ON_ORDER;
   }
-
 }

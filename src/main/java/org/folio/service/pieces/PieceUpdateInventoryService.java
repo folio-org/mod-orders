@@ -3,6 +3,7 @@ package org.folio.service.pieces;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
 import static org.folio.service.inventory.InventoryHoldingManager.HOLDING_PERMANENT_LOCATION_ID;
+import static org.folio.service.inventory.InventoryHoldingManager.ID;
 
 import java.util.List;
 import java.util.Map;
@@ -90,20 +91,22 @@ public class PieceUpdateInventoryService {
         var pieceIdsToSkip = entry.getValue();
         var locationContext = createContextWithNewTenantId(requestContext, receivingTenantId);
         return inventoryHoldingManager.getHoldingById(holdingId, true, locationContext)
-          .compose(holding -> getHoldingLinkedData(holding, holdingId, poLinesToSkip, pieceIdsToSkip, locationContext))
+          .compose(holding -> getHoldingLinkedData(holding, holdingId, poLinesToSkip, pieceIdsToSkip, requestContext, locationContext))
           .compose(deletableHoldings -> deleteHoldingIfPossible(deletableHoldings, holdingId, locationContext));
       }).toList();
     return collectResultsOnSuccess(futures);
   }
 
   private Future<Pair<Boolean, JsonObject>> getHoldingLinkedData(JsonObject holding, String holdingId, Set<String> poLinesToSkip,
-                                                                 Set<String> pieceIdsToSkip, RequestContext locationContext) {
+                                                                 Set<String> pieceIdsToSkip, RequestContext requestContext, RequestContext locationContext) {
     if (holding == null || holding.isEmpty()) {
       return Future.succeededFuture(Pair.of(false, new JsonObject()));
     }
 
-    var poLinesFuture = purchaseOrderLineService.getPoLinesByHoldingIds(List.of(holdingId), locationContext);
-    var piecesFuture = pieceStorageService.getPiecesByHoldingId(holdingId, locationContext);
+    // With ECS look up in central tenant
+    var poLinesFuture = purchaseOrderLineService.getPoLinesByHoldingIds(List.of(holdingId), requestContext);
+    var piecesFuture = pieceStorageService.getPiecesByHoldingId(holdingId, requestContext);
+    // With ECS look up in member tenants
     var itemsFuture = inventoryItemManager.getItemsByHoldingId(holdingId, locationContext);
     return Future.all(poLinesFuture, piecesFuture, itemsFuture)
       .map(linkedData -> {
@@ -116,6 +119,7 @@ public class PieceUpdateInventoryService {
           .map(Piece::getItemId)
           .collect(Collectors.toSet());
 
+        // Excludes linked entities that are not affected
         var filteredPoLines = excludePoLinesToSkip(poLinesToSkip, linkedPoLines);
         var filteredPieces = excludePiecesToSkip(pieceIdsToSkip, linkedPieces);
         var filteredItems = excludeItemsToSkip(itemIdsToSkip, linkedItems);
@@ -144,20 +148,24 @@ public class PieceUpdateInventoryService {
   }
 
   private List<PoLine> excludePoLinesToSkip(Set<String> poLinesIdsToSkip, List<PoLine> poLines) {
+
     return poLines.stream()
+      .peek(poLine -> log.info("excludePoLinesToSkip:: PoLine id before exclusion={}", poLine.getId()))
       .filter(poLine -> !poLinesIdsToSkip.contains(poLine.getId()))
       .toList();
   }
 
   private List<Piece> excludePiecesToSkip(Set<String> pieceIdsToSkip, List<Piece> pieces) {
     return pieces.stream()
+      .peek(piece -> log.info("excludePiecesToSkip:: Piece id before exclusion={}", piece.getId()))
       .filter(piece -> !pieceIdsToSkip.contains(piece.getId()))
       .toList();
   }
 
   private List<JsonObject> excludeItemsToSkip(Set<String> itemIdsToSkip, List<JsonObject> items) {
     return items.stream()
-      .filter(item -> !itemIdsToSkip.contains(item.getString("id")))
+      .peek(item -> log.info("excludeItemsToSkip:: Item id before exclusion={}", item.getString(ID)))
+      .filter(item -> !itemIdsToSkip.contains(item.getString(ID)))
       .toList();
   }
 }
