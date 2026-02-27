@@ -148,21 +148,24 @@ public class PieceUpdateInventoryService {
   }
 
   private List<PoLine> excludePoLines(List<PoLine> poLines, Set<String> excludePoLinesIds) {
-    log.info("excludePoLines:: PoLines before exclusion={}, ids to exclude={}", poLines, excludePoLinesIds);
+    log.info("excludePoLines:: PoLines before exclusion={}, ids to exclude={}",
+      poLines.stream().map(PoLine::getId).toList(), excludePoLinesIds);
     return poLines.stream()
       .filter(poLine -> !excludePoLinesIds.contains(poLine.getId()))
       .toList();
   }
 
   private List<Piece> excludePieces(List<Piece> pieces, Set<String> excludePieceIds) {
-    log.info("excludePieces:: Pieces before exclusion={}, ids to exclude={}", pieces, excludePieceIds);
+    log.info("excludePieces:: Pieces before exclusion={}, ids to exclude={}",
+      pieces.stream().map(Piece::getId).toList(), excludePieceIds);
     return pieces.stream()
       .filter(piece -> !excludePieceIds.contains(piece.getId()))
       .toList();
   }
 
   private List<JsonObject> excludeItems(List<JsonObject> items, Set<String> excludeItemIds) {
-    log.info("excludeItems:: Items before exclusion={}, ids to exclude={}", items, excludeItemIds);
+    log.info("excludeItems:: Items before exclusion={}, ids to exclude={}",
+      items.stream().map(i -> i.getString(ID)).toList(), excludeItemIds);
     return items.stream()
       .filter(item -> !excludeItemIds.contains(item.getString(ID)))
       .toList();
