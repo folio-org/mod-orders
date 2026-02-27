@@ -120,9 +120,9 @@ public class PieceUpdateInventoryService {
           .collect(Collectors.toSet());
 
         // Excludes linked entities that are not affected
-        var filteredPoLines = excludePoLinesToSkip(poLinesToSkip, linkedPoLines);
-        var filteredPieces = excludePiecesToSkip(pieceIdsToSkip, linkedPieces);
-        var filteredItems = excludeItemsToSkip(itemIdsToSkip, linkedItems);
+        var filteredPoLines = excludePoLines(linkedPoLines, poLinesToSkip);
+        var filteredPieces = excludePieces(linkedPieces, pieceIdsToSkip);
+        var filteredItems = excludeItems(linkedItems, itemIdsToSkip);
 
         var isDeletable = CollectionUtils.isEmpty(filteredPoLines)
           && CollectionUtils.isEmpty(filteredPieces)
@@ -140,31 +140,30 @@ public class PieceUpdateInventoryService {
     var isDeletable = deletableHoldings.getKey();
     var holding = deletableHoldings.getValue();
     log.info("deleteHoldingIfPossible:: isDeletable={}, holdingId={}", isDeletable, holdingId);
-    if (isDeletable && !holding.isEmpty()) {
+    if (Boolean.TRUE.equals(isDeletable) && !holding.isEmpty()) {
       return inventoryHoldingManager.deleteHoldingById(holdingId, true, locationContext)
         .map(v -> Pair.of(holdingId, holding.getString(HOLDING_PERMANENT_LOCATION_ID)));
     }
     return Future.succeededFuture();
   }
 
-  private List<PoLine> excludePoLinesToSkip(Set<String> poLinesIdsToSkip, List<PoLine> poLines) {
-
+  private List<PoLine> excludePoLines(List<PoLine> poLines, Set<String> poLinesIdsToSkip) {
+    log.info("excludePoLines:: PoLines before exclusion={}, ids to exclude={}", poLines, poLinesIdsToSkip);
     return poLines.stream()
-      .peek(poLine -> log.info("excludePoLinesToSkip:: PoLine id before exclusion={}", poLine.getId()))
       .filter(poLine -> !poLinesIdsToSkip.contains(poLine.getId()))
       .toList();
   }
 
-  private List<Piece> excludePiecesToSkip(Set<String> pieceIdsToSkip, List<Piece> pieces) {
+  private List<Piece> excludePieces(List<Piece> pieces, Set<String> pieceIdsToSkip) {
+    log.info("excludePieces:: Pieces before exclusion={}, ids to exclude={}", pieces, pieceIdsToSkip);
     return pieces.stream()
-      .peek(piece -> log.info("excludePiecesToSkip:: Piece id before exclusion={}", piece.getId()))
       .filter(piece -> !pieceIdsToSkip.contains(piece.getId()))
       .toList();
   }
 
-  private List<JsonObject> excludeItemsToSkip(Set<String> itemIdsToSkip, List<JsonObject> items) {
+  private List<JsonObject> excludeItems(List<JsonObject> items, Set<String> itemIdsToSkip) {
+    log.info("excludeItems:: Items before exclusion={}, ids to exclude={}", items, itemIdsToSkip);
     return items.stream()
-      .peek(item -> log.info("excludeItemsToSkip:: Item id before exclusion={}", item.getString(ID)))
       .filter(item -> !itemIdsToSkip.contains(item.getString(ID)))
       .toList();
   }
