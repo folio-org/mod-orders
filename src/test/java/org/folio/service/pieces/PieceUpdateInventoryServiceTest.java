@@ -29,6 +29,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryItemManager;
+import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.titles.TitlesService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -185,8 +186,9 @@ public class PieceUpdateInventoryServiceTest {
     @Bean
     PieceUpdateInventoryService pieceUpdateInventoryService(InventoryItemManager inventoryItemManager,
                                                             InventoryHoldingManager inventoryHoldingManager,
-                                                            PieceStorageService pieceStorageService) {
-      return spy(new PieceUpdateInventoryService(inventoryItemManager, inventoryHoldingManager, pieceStorageService));
+                                                            PieceStorageService pieceStorageService,
+                                                            PurchaseOrderLineService purchaseOrderLineService) {
+      return spy(new PieceUpdateInventoryService(inventoryItemManager, inventoryHoldingManager, pieceStorageService, purchaseOrderLineService));
     }
   }
 }
