@@ -180,7 +180,7 @@ public class OrderValidationService {
    * This validation is used for both the PUT endpoint and data import.
    */
   public Future<Void> validateOrderForUpdate(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage,
-      boolean deleteHoldings, RequestContext requestContext) {
+      RequestContext requestContext) {
     logger.info("validateOrderForUpdate :: orderId: {}", compPO.getId());
     return validateAcqUnitsOnUpdate(compPO, poFromStorage, requestContext)
       .compose(ok -> prefixService.validatePrefixAvailability(compPO.getPoNumberPrefix(), requestContext))

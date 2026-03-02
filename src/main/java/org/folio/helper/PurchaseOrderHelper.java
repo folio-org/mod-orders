@@ -226,7 +226,7 @@ public class PurchaseOrderHelper {
         CompositePurchaseOrder clonedPoFromStorage = JsonObject.mapFrom(poFromStorage).mapTo(CompositePurchaseOrder.class);
         boolean isTransitionToOpen = isTransitionToOpen(poFromStorage, compPO);
         return validateUserUnaffiliatedPoLineLocations(clonedPoFromStorage.getPoLines(), requestContext)
-          .compose(v -> orderValidationService.validateOrderForUpdate(compPO, poFromStorage, deleteHoldings, requestContext))
+          .compose(v -> orderValidationService.validateOrderForUpdate(compPO, poFromStorage, requestContext))
           .compose(ok -> {
             if (isTransitionToPending(poFromStorage, compPO)) {
               return unOpenCompositeOrderManager.process(compPO, poFromStorage, deleteHoldings, requestContext);
