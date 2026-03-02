@@ -11,6 +11,7 @@ import static org.folio.orders.utils.OrderStatusTransitionUtil.isOrderClosing;
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isOrderReopening;
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToClosed;
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToOpen;
+import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToPending;
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToReopen;
 import static org.folio.orders.utils.POProtectedFields.getFieldNames;
 import static org.folio.orders.utils.PermissionsUtil.*;
@@ -67,9 +68,9 @@ import org.folio.service.orders.OrderValidationService;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
-import org.folio.service.orders.flows.update.open.OpenCompositeOrderFlowValidator;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderManager;
 import org.folio.service.orders.flows.update.reopen.ReOpenCompositeOrderManager;
+import org.folio.service.orders.flows.update.unopen.UnOpenCompositeOrderManager;
 import org.folio.service.titles.TitlesService;
 
 import io.vertx.core.Future;
@@ -92,13 +93,13 @@ public class PurchaseOrderHelper {
   private final ProtectionService protectionService;
   private final InventoryItemStatusSyncService itemStatusSyncService;
   private final OpenCompositeOrderManager openCompositeOrderManager;
-  private final OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator;
   private final PurchaseOrderStorageService purchaseOrderStorageService;
   private final CommonSettingsCache commonSettingsCache;
   private final PoNumberHelper poNumberHelper;
   private final ReOpenCompositeOrderManager reOpenCompositeOrderManager;
   private final OrderValidationService orderValidationService;
   private final PoLineValidationService poLineValidationService;
+  private final UnOpenCompositeOrderManager unOpenCompositeOrderManager;
 
   public PurchaseOrderHelper(PurchaseOrderLineHelper purchaseOrderLineHelper,
                              CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService, EncumbranceService encumbranceService,
@@ -109,9 +110,8 @@ public class PurchaseOrderHelper {
                              ProtectionService protectionService, InventoryItemStatusSyncService itemStatusSyncService,
                              OpenCompositeOrderManager openCompositeOrderManager, PurchaseOrderStorageService purchaseOrderStorageService,
                              CommonSettingsCache commonSettingsCache, PoNumberHelper poNumberHelper,
-                             OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
                              ReOpenCompositeOrderManager reOpenCompositeOrderManager, OrderValidationService orderValidationService,
-                             PoLineValidationService poLineValidationService) {
+                             PoLineValidationService poLineValidationService, UnOpenCompositeOrderManager unOpenCompositeOrderManager) {
     this.purchaseOrderLineHelper = purchaseOrderLineHelper;
     this.orderLinesSummaryPopulateService = orderLinesSummaryPopulateService;
     this.encumbranceService = encumbranceService;
@@ -127,10 +127,10 @@ public class PurchaseOrderHelper {
     this.purchaseOrderStorageService = purchaseOrderStorageService;
     this.commonSettingsCache = commonSettingsCache;
     this.poNumberHelper = poNumberHelper;
-    this.openCompositeOrderFlowValidator = openCompositeOrderFlowValidator;
     this.reOpenCompositeOrderManager = reOpenCompositeOrderManager;
     this.orderValidationService = orderValidationService;
     this.poLineValidationService = poLineValidationService;
+    this.unOpenCompositeOrderManager = unOpenCompositeOrderManager;
   }
 
   /**
@@ -227,6 +227,12 @@ public class PurchaseOrderHelper {
         boolean isTransitionToOpen = isTransitionToOpen(poFromStorage, compPO);
         return validateUserUnaffiliatedPoLineLocations(clonedPoFromStorage.getPoLines(), requestContext)
           .compose(v -> orderValidationService.validateOrderForUpdate(compPO, poFromStorage, deleteHoldings, requestContext))
+          .compose(ok -> {
+            if (isTransitionToPending(poFromStorage, compPO)) {
+              return unOpenCompositeOrderManager.process(compPO, poFromStorage, deleteHoldings, requestContext);
+            }
+            return Future.succeededFuture();
+          })
           .compose(v -> {
             if (isTransitionToOpen && CollectionUtils.isEmpty(compPO.getPoLines())) {
               compPO.setPoLines(clonedPoFromStorage.getPoLines());
