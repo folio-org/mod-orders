@@ -16,7 +16,6 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +28,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryItemManager;
+import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.titles.TitlesService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -54,7 +54,9 @@ public class PieceUpdateInventoryServiceTest {
   @Autowired
   private InventoryHoldingManager inventoryHoldingManager;
   @Autowired
-  private  PieceStorageService pieceStorageService;
+  private PieceStorageService pieceStorageService;
+  @Autowired
+  private PurchaseOrderLineService purchaseOrderLineService;
   @Mock
   private Map<String, String> okapiHeadersMock;
 
@@ -99,7 +101,7 @@ public class PieceUpdateInventoryServiceTest {
   }
 
   @Test
-  void shouldNotDeleteHoldingIfHoldingIdIsNotNullButNotFoundInTheDB() throws ExecutionException, InterruptedException {
+  void shouldNotDeleteHoldingIfHoldingIdIsNotNullButNotFoundInTheDB() {
     String holdingId = UUID.randomUUID().toString();
     Piece piece = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId);
     doReturn(succeededFuture(null)).when(inventoryHoldingManager).getHoldingById(piece.getHoldingId() , true, requestContext);
@@ -114,50 +116,54 @@ public class PieceUpdateInventoryServiceTest {
   void shouldDeleteHoldingIfHoldingIdIsProvidedAndFoundInDBAndNoPiecesAndItems() {
     String holdingId = UUID.randomUUID().toString();
     JsonObject holding = new JsonObject();
-    holding.put(ID, holding);
-    Piece piece = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId);
+    holding.put(ID, holdingId);
+    holding.put(HOLDING_PERMANENT_LOCATION_ID, UUID.randomUUID().toString());
+    Piece piece = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId).withPoLineId(UUID.randomUUID().toString());
+    doReturn(succeededFuture(holding)).when(inventoryHoldingManager).getHoldingById(holdingId, true, requestContext);
+    doReturn(succeededFuture(Collections.emptyList())).when(purchaseOrderLineService).getPoLinesByHoldingIds(List.of(holdingId), requestContext);
     doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByHoldingId(holdingId, requestContext);
-    doReturn(succeededFuture(holding)).when(inventoryHoldingManager).getHoldingById(holdingId, true, requestContext);
-    doReturn(succeededFuture(new ArrayList<>())).when(inventoryItemManager).getItemsByHoldingId(holdingId, requestContext);
-
-    pieceUpdateInventoryService.deleteHoldingConnectedToPiece(piece, requestContext);
-
-    verify(inventoryHoldingManager, times(1)).deleteHoldingById(holdingId , true, requestContext);
-  }
-
-  @Test
-  void shouldNoDeleteHoldingIfHoldingIdIsProvidedAndFoundInDBAndPiecesExistAndNoItems() throws ExecutionException, InterruptedException {
-    String holdingId = UUID.randomUUID().toString();
-    String locationId = UUID.randomUUID().toString();
-    JsonObject holding = new JsonObject();
-    holding.put(ID, holding);
-    holding.put(HOLDING_PERMANENT_LOCATION_ID, locationId);
-    Piece piece = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId);
-    Piece piece2 = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId);
-    doReturn(succeededFuture(List.of(piece, piece2))).when(pieceStorageService).getPiecesByHoldingId(holdingId, requestContext);
-    doReturn(succeededFuture(holding)).when(inventoryHoldingManager).getHoldingById(holdingId, true, requestContext);
-    doReturn(succeededFuture(new ArrayList<>())).when(inventoryItemManager).getItemsByHoldingId(holdingId, requestContext);
+    doReturn(succeededFuture(Collections.emptyList())).when(inventoryItemManager).getItemsByHoldingId(holdingId, requestContext);
+    doReturn(succeededFuture(null)).when(inventoryHoldingManager).deleteHoldingById(holdingId, true, requestContext);
 
     pieceUpdateInventoryService.deleteHoldingConnectedToPiece(piece, requestContext).result();
 
-    verify(inventoryHoldingManager, times(0)).deleteHoldingById(holdingId , true, requestContext);
+    verify(inventoryHoldingManager, times(1)).deleteHoldingById(holdingId, true, requestContext);
   }
 
   @Test
-  void shouldNoDeleteHoldingIfHoldingIdIsProvidedAndFoundInDBAndNoPiecesAndItemsExist()
-    throws ExecutionException, InterruptedException {
+  void shouldNoDeleteHoldingIfHoldingIdIsProvidedAndFoundInDBAndPiecesExistAndNoItems() {
+    String holdingId = UUID.randomUUID().toString();
+    String locationId = UUID.randomUUID().toString();
+    JsonObject holding = new JsonObject();
+    holding.put(ID, holdingId);
+    holding.put(HOLDING_PERMANENT_LOCATION_ID, locationId);
+    Piece piece = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId).withPoLineId(UUID.randomUUID().toString());
+    Piece piece2 = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId);
+    doReturn(succeededFuture(holding)).when(inventoryHoldingManager).getHoldingById(holdingId, true, requestContext);
+    doReturn(succeededFuture(Collections.emptyList())).when(purchaseOrderLineService).getPoLinesByHoldingIds(List.of(holdingId), requestContext);
+    doReturn(succeededFuture(List.of(piece, piece2))).when(pieceStorageService).getPiecesByHoldingId(holdingId, requestContext);
+    doReturn(succeededFuture(Collections.emptyList())).when(inventoryItemManager).getItemsByHoldingId(holdingId, requestContext);
+
+    pieceUpdateInventoryService.deleteHoldingConnectedToPiece(piece, requestContext).result();
+
+    verify(inventoryHoldingManager, times(0)).deleteHoldingById(holdingId, true, requestContext);
+  }
+
+  @Test
+  void shouldNoDeleteHoldingIfHoldingIdIsProvidedAndFoundInDBAndNoPiecesAndItemsExist() {
     String holdingId = UUID.randomUUID().toString();
     JsonObject holding = new JsonObject();
-    holding.put(ID, holding);
+    holding.put(ID, holdingId);
     JsonObject item = new JsonObject().put(ID, UUID.randomUUID().toString());
-    Piece piece = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId);
-    doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByHoldingId(holdingId, requestContext);
+    Piece piece = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId).withPoLineId(UUID.randomUUID().toString());
     doReturn(succeededFuture(holding)).when(inventoryHoldingManager).getHoldingById(holdingId, true, requestContext);
+    doReturn(succeededFuture(Collections.emptyList())).when(purchaseOrderLineService).getPoLinesByHoldingIds(List.of(holdingId), requestContext);
+    doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByHoldingId(holdingId, requestContext);
     doReturn(succeededFuture(List.of(item))).when(inventoryItemManager).getItemsByHoldingId(holdingId, requestContext);
 
     pieceUpdateInventoryService.deleteHoldingConnectedToPiece(piece, requestContext).result();
 
-    verify(inventoryHoldingManager, times(0)).deleteHoldingById(holdingId , true, requestContext);
+    verify(inventoryHoldingManager, times(0)).deleteHoldingById(holdingId, true, requestContext);
   }
 
 
@@ -183,10 +189,16 @@ public class PieceUpdateInventoryServiceTest {
     }
 
     @Bean
+    PurchaseOrderLineService purchaseOrderLineService() {
+      return mock(PurchaseOrderLineService.class);
+    }
+
+    @Bean
     PieceUpdateInventoryService pieceUpdateInventoryService(InventoryItemManager inventoryItemManager,
                                                             InventoryHoldingManager inventoryHoldingManager,
-                                                            PieceStorageService pieceStorageService) {
-      return spy(new PieceUpdateInventoryService(inventoryItemManager, inventoryHoldingManager, pieceStorageService));
+                                                            PieceStorageService pieceStorageService,
+                                                            PurchaseOrderLineService purchaseOrderLineService) {
+      return spy(new PieceUpdateInventoryService(inventoryItemManager, inventoryHoldingManager, pieceStorageService, purchaseOrderLineService));
     }
   }
 }
