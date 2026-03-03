@@ -17,6 +17,7 @@ import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -99,6 +100,48 @@ public class UnOpenCompositeOrderManager {
 
   }
 
+  public Future<Void> rollbackInventory(CompositePurchaseOrder compPO, RequestContext requestContext) {
+    return processPoLines(compPO.getPoLines(), poLine -> processInventory(poLine, true, requestContext));
+  }
+
+  public Future<Void> checkRequests(CompositePurchaseOrder compPO, RequestContext requestContext) {
+    List<PoLine> poLines = compPO.getPoLines().stream()
+      .filter(poLine -> !Boolean.TRUE.equals(poLine.getIsPackage()))
+      .toList();
+    HashMap<String, List<String>> tenantIdToPoLineIds = createTenantIdToPoLineIdsMap(poLines);
+    List<Future<Void>> futures = tenantIdToPoLineIds.keySet().stream()
+      .map(tenantId -> {
+        List<String> poLineIds = tenantIdToPoLineIds.get(tenantId);
+        RequestContext tenantRequestContext = createContextWithNewTenantId(requestContext, tenantId);
+        return inventoryItemManager.getItemsByPoLineIdsAndStatus(poLineIds, ItemStatus.ON_ORDER.value(), tenantRequestContext)
+          .compose(onOrderItems -> {
+            if (CollectionUtils.isEmpty(onOrderItems)) {
+              return Future.succeededFuture();
+            }
+            List<String> itemIds = onOrderItems.stream().map(item -> item.getString(ID)).toList();
+            return checkRequestsForItems(itemIds, tenantRequestContext);
+          });
+        })
+      .toList();
+    return HelperUtils.executeAllFailFast(futures);
+  }
+
+  private HashMap<String, List<String>> createTenantIdToPoLineIdsMap(List<PoLine> poLines) {
+    HashMap<String, List<String>> tenantIdToPoLineIds = new HashMap<>();
+    poLines.forEach(poLine -> {
+      List<String> tenantIds = PoLineCommonUtil.getTenantsFromLocations(poLine);
+      tenantIds.forEach(tenantId -> {
+        List<String> poLineIds = tenantIdToPoLineIds.get(tenantId);
+        if (poLineIds == null) {
+          poLineIds = new ArrayList<>();
+        }
+        poLineIds.add(poLine.getId());
+        tenantIdToPoLineIds.put(tenantId, poLineIds);
+      });
+    });
+    return tenantIdToPoLineIds;
+  }
+
   private Future<CompositePurchaseOrder> updateAndGetOrderWithLines(CompositePurchaseOrder compPO, RequestContext requestContext) {
     if (CollectionUtils.isNotEmpty(compPO.getPoLines())) {
       return Future.succeededFuture(compPO);
@@ -119,10 +162,6 @@ public class UnOpenCompositeOrderManager {
 
   private Future<Void> updatePoLinesSummary(List<PoLine> poLines, RequestContext requestContext) {
     return processPoLines(poLines, poLine -> purchaseOrderLineService.saveOrderLine(poLine, requestContext));
-  }
-
-  public Future<Void> rollbackInventory(CompositePurchaseOrder compPO, RequestContext requestContext) {
-    return processPoLines(compPO.getPoLines(), poLine -> processInventory(poLine, true, requestContext));
   }
 
   private Future<Void> processInventory(List<PoLine> poLines, boolean deleteHoldings, RequestContext requestContext) {
@@ -366,7 +405,6 @@ public class UnOpenCompositeOrderManager {
       .compose(poLine -> purchaseOrderStorageService.getPurchaseOrderById(poLine.getPurchaseOrderId(), requestContext)
         .map(purchaseOrder -> holder.withOrderInformation(purchaseOrder, poLine)))
       .compose(aHolder -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(), DELETE, requestContext))
-      .compose(vVoid -> canDeletePieceWithItem(holder.getPieceToDelete(), requestContext))
       .compose(aVoid -> pieceStorageService.deletePiece(pieceId, requestContext))
       .compose(aVoid -> deletePieceConnectedItem(holder.getPieceToDelete(), itemContext));
   }
@@ -390,9 +428,9 @@ public class UnOpenCompositeOrderManager {
       });
   }
 
-  private Future<Void> canDeletePieceWithItem(Piece piece, RequestContext requestContext) {
-    return circulationRequestsRetriever.getNumberOfRequestsByItemId(piece.getItemId(), requestContext)
-      .compose(numOfRequests -> numOfRequests != null && numOfRequests > 0
+  private Future<Void> checkRequestsForItems(List<String> itemIds, RequestContext requestContext) {
+    return circulationRequestsRetriever.getNumbersOfRequestsByItemIds(itemIds, requestContext)
+      .compose(idsAndCounts -> idsAndCounts.values().stream().anyMatch(count -> count > 0)
         ? Future.failedFuture(new HttpException(422, ErrorCodes.REQUEST_FOUND.toError()))
         : Future.succeededFuture());
   }

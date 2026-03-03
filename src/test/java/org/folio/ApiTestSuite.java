@@ -96,6 +96,7 @@ import org.folio.service.orders.flows.update.open.OpenCompositeOrderInventorySer
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderManagerTest;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderPieceServiceTest;
 import org.folio.service.orders.flows.update.reopen.ReOpenCompositeOrderManagerTest;
+import org.folio.service.orders.flows.update.unopen.UnOpenCompositeOrderManagerTest;
 import org.folio.service.orders.lines.update.OrderLineUpdateInstanceHandlerTest;
 import org.folio.service.orders.lines.update.instance.WithHoldingOrderLineUpdateInstanceStrategyTest;
 import org.folio.service.orders.lines.update.instance.WithoutHoldingOrderLineUpdateInstanceStrategyTest;
@@ -495,6 +496,10 @@ public class ApiTestSuite {
 
   @Nested
   class ReOpenCompositeOrderManagerTestNested extends ReOpenCompositeOrderManagerTest {
+  }
+
+  @Nested
+  class UnOpenCompositeOrderManagerTestNested extends UnOpenCompositeOrderManagerTest {
   }
 
   @Nested
