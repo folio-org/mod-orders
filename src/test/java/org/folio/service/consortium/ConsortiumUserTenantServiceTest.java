@@ -28,7 +28,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @CopilotGenerated(model = "Claude Sonnet 4.5")
-class ConsortiumUserTenantServiceTest {
+public class ConsortiumUserTenantServiceTest {
 
   @InjectMocks private ConsortiumUserTenantService service;
   @Mock private ConsortiumConfigurationService consortiumConfigurationService;
