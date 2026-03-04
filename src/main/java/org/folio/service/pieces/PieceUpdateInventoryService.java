@@ -15,6 +15,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import io.vertx.core.CompositeFuture;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections4.CollectionUtils;
@@ -111,33 +112,7 @@ public class PieceUpdateInventoryService {
     }
 
     return consortiumUserTenantService.getUserTenantsIfNeeded(requestContext)
-      .compose(userTenants -> {
-        var poLineFutures = new ArrayList<Future<List<PoLine>>>();
-        var pieceFutures = new ArrayList<Future<List<Piece>>>();
-        if (CollectionUtils.isNotEmpty(userTenants)) {
-          userTenants.forEach(tenantId -> {
-            log.info("getHoldingLinkedData:: Searching for linked poLines and pieces across tenants in tenant={} by holding id={}",
-              tenantId, holdingId);
-            // Search for other extraneous PoLines and Pieces that may be linked with to the holdingId
-            var memberRequestContext = createContextWithNewTenantId(requestContext, tenantId);
-            poLineFutures.add(purchaseOrderLineService.getPoLinesByHoldingIds(List.of(holdingId), memberRequestContext));
-            pieceFutures.add(pieceStorageService.getPiecesByHoldingId(holdingId, memberRequestContext));
-          });
-        } else {
-          var tenantId = TenantTool.tenantId(requestContext.getHeaders());
-          log.info("getHoldingLinkedData:: Searching for linked poLines and pieces in tenant={} by holding id={}",
-            tenantId, holdingId);
-          poLineFutures.add(purchaseOrderLineService.getPoLinesByHoldingIds(List.of(holdingId), requestContext));
-          pieceFutures.add(pieceStorageService.getPiecesByHoldingId(holdingId, requestContext));
-        }
-        // Unwrap futures by flattening the list of futures
-        var combinedPoLineFutures = unwrap(poLineFutures);
-        var combinedPieceFutures = unwrap(pieceFutures);
-        // Search for all Items by a holdingId using the receivingTenantId on the Piece
-        var itemsFuture = inventoryItemManager.getItemsByHoldingId(holdingId, locationContext);
-
-        return Future.all(combinedPoLineFutures, combinedPieceFutures, itemsFuture);
-      })
+      .compose(userTenants -> prepareLinkedDataFutures(holdingId, requestContext, locationContext, userTenants))
       .compose(linkedData -> {
         var linkedPoLines = linkedData.<List<PoLine>>resultAt(0);
         var linkedPieces = linkedData.<List<Piece>>resultAt(1);
@@ -149,7 +124,7 @@ public class PieceUpdateInventoryService {
           .filter(Objects::nonNull)
           .collect(Collectors.toSet());
 
-        // Excludes linked entities that are not affected
+        // Excludes linked data entities that are not affected
         var filteredPoLines = excludePoLines(linkedPoLines, poLinesToSkip);
         var filteredPieces = excludePieces(linkedPieces, pieceIdsToSkip);
         var filteredItems = excludeItems(linkedItems, excludeItemIds);
@@ -164,6 +139,34 @@ public class PieceUpdateInventoryService {
         return asFuture(() ->
           isDeletable ? Pair.of(true, holding) : Pair.of(false, new JsonObject()));
       });
+  }
+
+  private CompositeFuture prepareLinkedDataFutures(String holdingId, RequestContext requestContext, RequestContext locationContext, List<String> userTenants) {
+    var poLineFutures = new ArrayList<Future<List<PoLine>>>();
+    var pieceFutures = new ArrayList<Future<List<Piece>>>();
+    if (CollectionUtils.isNotEmpty(userTenants)) {
+      userTenants.forEach(tenantId -> {
+        log.info("getHoldingLinkedData:: Searching for linked poLines and pieces across tenants in tenant={} by holding id={}",
+          tenantId, holdingId);
+        // Search for other extraneous PoLines and Pieces that may be linked with the holdingId
+        var memberRequestContext = createContextWithNewTenantId(requestContext, tenantId);
+        poLineFutures.add(purchaseOrderLineService.getPoLinesByHoldingIds(List.of(holdingId), memberRequestContext));
+        pieceFutures.add(pieceStorageService.getPiecesByHoldingId(holdingId, memberRequestContext));
+      });
+    } else {
+      var tenantId = TenantTool.tenantId(requestContext.getHeaders());
+      log.info("getHoldingLinkedData:: Searching for linked poLines and pieces in tenant={} by holding id={}",
+        tenantId, holdingId);
+      poLineFutures.add(purchaseOrderLineService.getPoLinesByHoldingIds(List.of(holdingId), requestContext));
+      pieceFutures.add(pieceStorageService.getPiecesByHoldingId(holdingId, requestContext));
+    }
+    // Unwrap futures by flattening the list of futures
+    var combinedPoLineFutures = unwrap(poLineFutures);
+    var combinedPieceFutures = unwrap(pieceFutures);
+    // Search for all Items by a holdingId using the receivingTenantId on the Piece
+    var itemsFuture = inventoryItemManager.getItemsByHoldingId(holdingId, locationContext);
+
+    return Future.all(combinedPoLineFutures, combinedPieceFutures, itemsFuture);
   }
 
   private Future<Pair<String, String>> deleteHoldingIfPossible(Pair<Boolean, JsonObject> deletableHoldings,

@@ -3,10 +3,12 @@ package org.folio.service.consortium;
 import io.vertx.core.Future;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang.BooleanUtils;
 import org.folio.rest.core.models.RequestContext;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
 
@@ -29,7 +31,7 @@ public class ConsortiumUserTenantService {
         var centralRequestContext = createContextWithNewTenantId(requestContext, configuration.centralTenantId());
         return consortiumConfigurationService.isCentralOrderingEnabled(centralRequestContext)
           .compose(enabled -> {
-            if (Boolean.FALSE.equals(enabled)) {
+            if (Objects.isNull(enabled) || BooleanUtils.isFalse(enabled)) {
               log.info("getUserTenantsIfNeeded:: Central ordering is disabled or not configured");
               return Future.succeededFuture(Collections.emptyList());
             }
