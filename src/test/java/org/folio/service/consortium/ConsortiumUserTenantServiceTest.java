@@ -4,15 +4,14 @@ import io.vertx.core.Future;
 import org.folio.CopilotGenerated;
 import org.folio.models.consortium.ConsortiumConfiguration;
 import org.folio.rest.core.models.RequestContext;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
@@ -27,6 +26,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 @CopilotGenerated(model = "Claude Sonnet 4.5")
 public class ConsortiumUserTenantServiceTest {
 
@@ -34,17 +34,6 @@ public class ConsortiumUserTenantServiceTest {
   @Mock private ConsortiumConfigurationService consortiumConfigurationService;
   @Mock private ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever;
   @Mock private RequestContext requestContext;
-  private AutoCloseable mocks;
-
-  @BeforeEach
-  void setUp() {
-    mocks = MockitoAnnotations.openMocks(this);
-  }
-
-  @AfterEach
-  void tearDown() throws Exception {
-    mocks.close();
-  }
 
   @Test
   void shouldReturnEmptyListWhenConsortiumConfigurationIsEmpty() {
@@ -90,8 +79,10 @@ public class ConsortiumUserTenantServiceTest {
       .thenReturn(Future.succeededFuture(Optional.of(config)));
     when(consortiumConfigurationService.isCentralOrderingEnabled(any()))
       .thenReturn(Future.succeededFuture(enabled));
-    when(consortiumUserTenantsRetriever.getUserTenants(consortiumId, centralTenantId, requestContext))
-      .thenReturn(Future.succeededFuture(userTenants));
+    if (shouldCallRetriever) {
+      when(consortiumUserTenantsRetriever.getUserTenants(consortiumId, centralTenantId, requestContext))
+        .thenReturn(Future.succeededFuture(userTenants));
+    }
 
     var result = service.getUserTenantsIfNeeded(requestContext).result();
 

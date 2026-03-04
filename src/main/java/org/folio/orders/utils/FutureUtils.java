@@ -1,15 +1,15 @@
 package org.folio.orders.utils;
 
 import io.vertx.core.Future;
+import lombok.experimental.UtilityClass;
 
 import java.util.List;
 import java.util.concurrent.Callable;
 
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 
+@UtilityClass
 public class FutureUtils {
-
-  private FutureUtils() {}
 
   public static Future<Void> asFuture(Runnable runnable) {
     return asFuture(() -> {
