@@ -31,6 +31,7 @@ import org.folio.service.batch.BatchTrackingService;
 import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.caches.ExportConfigsCache;
 import org.folio.service.caches.InventoryCache;
+import org.folio.service.consortium.ConsortiumUserTenantService;
 import org.folio.service.dataexport.ExportConfigsRetriever;
 import org.folio.service.orders.HoldingDetailService;
 import org.folio.service.settings.CommonSettingsRetriever;
@@ -426,13 +427,11 @@ public class ApplicationConfig {
   }
 
   @Bean
-  HoldingDetailService holdingsDetailService(ConsortiumConfigurationService consortiumConfigurationService,
-                                             ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever,
+  HoldingDetailService holdingsDetailService(ConsortiumUserTenantService consortiumUserTenantService,
                                              PurchaseOrderLineService purchaseOrderLineService,
                                              PieceStorageService pieceStorageService,
                                              InventoryItemManager inventoryItemManager) {
-    return new HoldingDetailService(consortiumConfigurationService, consortiumUserTenantsRetriever,
-                                    purchaseOrderLineService, pieceStorageService, inventoryItemManager);
+    return new HoldingDetailService(consortiumUserTenantService, purchaseOrderLineService, pieceStorageService, inventoryItemManager);
   }
 
   @Bean
@@ -619,11 +618,20 @@ public class ApplicationConfig {
   }
 
   @Bean
-  PieceUpdateInventoryService pieceUpdateInventoryService(InventoryItemManager inventoryItemManager,
+  ConsortiumUserTenantService consortiumUserTenantService(ConsortiumConfigurationService consortiumConfigurationService,
+                                                          ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever) {
+    return new ConsortiumUserTenantService(consortiumConfigurationService, consortiumUserTenantsRetriever);
+  }
+
+  @Bean
+  PieceUpdateInventoryService pieceUpdateInventoryService(ConsortiumUserTenantService consortiumUserTenantService,
+                                                          InventoryItemManager inventoryItemManager,
                                                           InventoryHoldingManager inventoryHoldingManager,
                                                           PieceStorageService pieceStorageService,
                                                           PurchaseOrderLineService purchaseOrderLineService) {
-    return new PieceUpdateInventoryService(inventoryItemManager, inventoryHoldingManager, pieceStorageService, purchaseOrderLineService);
+    return new PieceUpdateInventoryService(consortiumUserTenantService,
+                                           inventoryItemManager, inventoryHoldingManager,
+                                           pieceStorageService, purchaseOrderLineService);
   }
 
   @Bean

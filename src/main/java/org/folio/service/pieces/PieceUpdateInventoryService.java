@@ -1,16 +1,21 @@
 package org.folio.service.pieces;
 
+import static org.folio.orders.utils.FutureUtils.asFuture;
+import static org.folio.orders.utils.FutureUtils.unwrap;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
 import static org.folio.service.inventory.InventoryHoldingManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.inventory.InventoryHoldingManager.ID;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import io.vertx.core.CompositeFuture;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections4.CollectionUtils;
@@ -19,6 +24,8 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.tools.utils.TenantTool;
+import org.folio.service.consortium.ConsortiumUserTenantService;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.PurchaseOrderLineService;
@@ -33,6 +40,7 @@ public class PieceUpdateInventoryService {
 
   private static final int ITEM_QUANTITY = 1;
 
+  private final ConsortiumUserTenantService consortiumUserTenantService;
   private final InventoryItemManager inventoryItemManager;
   private final InventoryHoldingManager inventoryHoldingManager;
   private final PieceStorageService pieceStorageService;
@@ -99,17 +107,13 @@ public class PieceUpdateInventoryService {
 
   private Future<Pair<Boolean, JsonObject>> getHoldingLinkedData(JsonObject holding, String holdingId, Set<String> poLinesToSkip,
                                                                  Set<String> pieceIdsToSkip, RequestContext requestContext, RequestContext locationContext) {
-    if (holding == null || holding.isEmpty()) {
+    if (Objects.isNull(holding) || holding.isEmpty()) {
       return Future.succeededFuture(Pair.of(false, new JsonObject()));
     }
 
-    // With ECS look up in central tenant
-    var poLinesFuture = purchaseOrderLineService.getPoLinesByHoldingIds(List.of(holdingId), requestContext);
-    var piecesFuture = pieceStorageService.getPiecesByHoldingId(holdingId, requestContext);
-    // With ECS look up in member tenants
-    var itemsFuture = inventoryItemManager.getItemsByHoldingId(holdingId, locationContext);
-    return Future.all(poLinesFuture, piecesFuture, itemsFuture)
-      .map(linkedData -> {
+    return consortiumUserTenantService.getUserTenantsIfNeeded(requestContext)
+      .compose(userTenants -> prepareLinkedDataFutures(holdingId, requestContext, locationContext, userTenants))
+      .compose(linkedData -> {
         var linkedPoLines = linkedData.<List<PoLine>>resultAt(0);
         var linkedPieces = linkedData.<List<Piece>>resultAt(1);
         var linkedItems = linkedData.<List<JsonObject>>resultAt(2);
@@ -117,9 +121,10 @@ public class PieceUpdateInventoryService {
         var excludeItemIds = linkedPieces.stream()
           .filter(piece -> pieceIdsToSkip.contains(piece.getId()))
           .map(Piece::getItemId)
+          .filter(Objects::nonNull)
           .collect(Collectors.toSet());
 
-        // Excludes linked entities that are not affected
+        // Excludes linked data entities that are not affected
         var filteredPoLines = excludePoLines(linkedPoLines, poLinesToSkip);
         var filteredPieces = excludePieces(linkedPieces, pieceIdsToSkip);
         var filteredItems = excludeItems(linkedItems, excludeItemIds);
@@ -131,8 +136,37 @@ public class PieceUpdateInventoryService {
         log.info("getUpdatePossibleForHolding:: holdingId={}, filteredPoLines={}, filteredPieces={}, filteredItems={}, isDeletable={}",
           holdingId, filteredPoLines.size(), filteredPieces.size(), filteredItems.size(), isDeletable);
 
-        return isDeletable ? Pair.of(true, holding) : Pair.of(false, new JsonObject());
+        return asFuture(() ->
+          isDeletable ? Pair.of(true, holding) : Pair.of(false, new JsonObject()));
       });
+  }
+
+  private CompositeFuture prepareLinkedDataFutures(String holdingId, RequestContext requestContext, RequestContext locationContext, List<String> userTenants) {
+    var poLineFutures = new ArrayList<Future<List<PoLine>>>();
+    var pieceFutures = new ArrayList<Future<List<Piece>>>();
+    if (CollectionUtils.isNotEmpty(userTenants)) {
+      userTenants.forEach(tenantId -> {
+        log.info("getHoldingLinkedData:: Searching for linked poLines and pieces across tenants in tenant={} by holding id={}",
+          tenantId, holdingId);
+        // Search for other extraneous PoLines and Pieces that may be linked with the holdingId
+        var memberRequestContext = createContextWithNewTenantId(requestContext, tenantId);
+        poLineFutures.add(purchaseOrderLineService.getPoLinesByHoldingIds(List.of(holdingId), memberRequestContext));
+        pieceFutures.add(pieceStorageService.getPiecesByHoldingId(holdingId, memberRequestContext));
+      });
+    } else {
+      var tenantId = TenantTool.tenantId(requestContext.getHeaders());
+      log.info("getHoldingLinkedData:: Searching for linked poLines and pieces in tenant={} by holding id={}",
+        tenantId, holdingId);
+      poLineFutures.add(purchaseOrderLineService.getPoLinesByHoldingIds(List.of(holdingId), requestContext));
+      pieceFutures.add(pieceStorageService.getPiecesByHoldingId(holdingId, requestContext));
+    }
+    // Unwrap futures by flattening the list of futures
+    var combinedPoLineFutures = unwrap(poLineFutures);
+    var combinedPieceFutures = unwrap(pieceFutures);
+    // Search for all Items by a holdingId using the receivingTenantId on the Piece
+    var itemsFuture = inventoryItemManager.getItemsByHoldingId(holdingId, locationContext);
+
+    return Future.all(combinedPoLineFutures, combinedPieceFutures, itemsFuture);
   }
 
   private Future<Pair<String, String>> deleteHoldingIfPossible(Pair<Boolean, JsonObject> deletableHoldings,

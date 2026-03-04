@@ -53,6 +53,7 @@ import org.folio.service.TagServiceTest;
 import org.folio.service.UserServiceTest;
 import org.folio.service.batch.BatchTrackingServiceTest;
 import org.folio.service.consortium.ConsortiumConfigurationServiceTest;
+import org.folio.service.consortium.ConsortiumUserTenantServiceTest;
 import org.folio.service.consortium.SharingInstanceServiceTest;
 import org.folio.service.exchange.CacheableExchangeRateServiceTest;
 import org.folio.service.exchange.ManualCurrencyConversionTest;
@@ -604,5 +605,9 @@ public class ApiTestSuite {
 
   @Nested
   class BatchTrackingServiceTestNested extends BatchTrackingServiceTest {
+  }
+
+  @Nested
+  class ConsortiumUserTenantServiceTestNested extends ConsortiumUserTenantServiceTest {
   }
 }

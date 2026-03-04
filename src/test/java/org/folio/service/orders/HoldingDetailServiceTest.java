@@ -13,9 +13,7 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.tools.utils.TenantTool;
-import org.folio.models.consortium.ConsortiumConfiguration;
-import org.folio.service.consortium.ConsortiumConfigurationService;
-import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
+import org.folio.service.consortium.ConsortiumUserTenantService;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.pieces.PieceStorageService;
 import org.junit.jupiter.api.AfterEach;
@@ -50,8 +48,7 @@ import static org.mockito.Mockito.when;
 public class HoldingDetailServiceTest {
 
   @InjectMocks private HoldingDetailService holdingDetailService;
-  @Mock private ConsortiumConfigurationService consortiumConfigurationService;
-  @Mock private ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever;
+  @Mock private ConsortiumUserTenantService consortiumUserTenantService;
   @Mock private PurchaseOrderLineService purchaseOrderLineService;
   @Mock private PieceStorageService pieceStorageService;
   @Mock private InventoryItemManager inventoryItemManager;
@@ -68,10 +65,9 @@ public class HoldingDetailServiceTest {
     when(requestContext.getHeaders()).thenReturn(okapiHeaders);
     when(requestContext.getContext()).thenReturn(vertxContext);
 
-    // Setup default behavior for consortium and settings mocks to return empty results
-    // This ensures existing tests continue to work without modification (non-consortium mode)
-    when(consortiumConfigurationService.getConsortiumConfiguration(any()))
-      .thenReturn(Future.succeededFuture(java.util.Optional.empty()));
+    // Default: non-consortium mode — getUserTenantsIfNeeded returns empty list
+    when(consortiumUserTenantService.getUserTenantsIfNeeded(any()))
+      .thenReturn(Future.succeededFuture(Collections.emptyList()));
   }
 
   @AfterEach
@@ -1202,23 +1198,11 @@ public class HoldingDetailServiceTest {
     var holdingId1 = UUID.randomUUID().toString();
     var holdingId2 = UUID.randomUUID().toString();
     var holdingIds = List.of(holdingId1, holdingId2);
-    var consortiumId = UUID.randomUUID().toString();
-    var centralTenantId = "central-tenant";
     var memberTenant1 = "member-tenant-1";
     var memberTenant2 = "member-tenant-2";
     var userTenants = List.of(memberTenant1, memberTenant2);
 
-    // Setup consortium configuration
-    var consortiumConfig = new ConsortiumConfiguration(centralTenantId, consortiumId);
-    when(consortiumConfigurationService.getConsortiumConfiguration(requestContext))
-      .thenReturn(Future.succeededFuture(java.util.Optional.of(consortiumConfig)));
-
-    // Setup central ordering enabled
-    when(consortiumConfigurationService.isCentralOrderingEnabled(any()))
-      .thenReturn(Future.succeededFuture(true));
-
-    // Setup user tenants retrieval
-    when(consortiumUserTenantsRetriever.getUserTenants(consortiumId, centralTenantId, requestContext))
+    when(consortiumUserTenantService.getUserTenantsIfNeeded(requestContext))
       .thenReturn(Future.succeededFuture(userTenants));
 
     // Create test data for member-tenant-1
@@ -1319,21 +1303,11 @@ public class HoldingDetailServiceTest {
     var holdingId1 = UUID.randomUUID().toString(); // holding in tenant1
     var holdingId2 = UUID.randomUUID().toString(); // holding in tenant2
     var holdingIds = List.of(holdingId1, holdingId2);
-    var consortiumId = UUID.randomUUID().toString();
-    var centralTenantId = "central-tenant";
     var memberTenant1 = "member-tenant-1";
     var memberTenant2 = "member-tenant-2";
     var userTenants = List.of(memberTenant1, memberTenant2);
 
-    // Setup consortium configuration
-    var consortiumConfig = new ConsortiumConfiguration(centralTenantId, consortiumId);
-    when(consortiumConfigurationService.getConsortiumConfiguration(requestContext))
-      .thenReturn(Future.succeededFuture(java.util.Optional.of(consortiumConfig)));
-
-    when(consortiumConfigurationService.isCentralOrderingEnabled(any()))
-      .thenReturn(Future.succeededFuture(true));
-
-    when(consortiumUserTenantsRetriever.getUserTenants(consortiumId, centralTenantId, requestContext))
+    when(consortiumUserTenantService.getUserTenantsIfNeeded(requestContext))
       .thenReturn(Future.succeededFuture(userTenants));
 
     // Each tenant has data for their own holding
@@ -1442,20 +1416,9 @@ public class HoldingDetailServiceTest {
   void testCentralOrderingDisabled(VertxTestContext vertxTestContext) {
     var holdingId = UUID.randomUUID().toString();
     var holdingIds = List.of(holdingId);
-    var consortiumId = UUID.randomUUID().toString();
-    var centralTenantId = "central-tenant";
 
-    // Consortium exists but central ordering is disabled
-    var consortiumConfig = new ConsortiumConfiguration(centralTenantId, consortiumId);
-    when(consortiumConfigurationService.getConsortiumConfiguration(requestContext))
-      .thenReturn(Future.succeededFuture(java.util.Optional.of(consortiumConfig)));
-
-    // Central ordering is disabled or not set
-    when(consortiumConfigurationService.isCentralOrderingEnabled(any()))
-      .thenReturn(Future.succeededFuture(false));
-
-    // Should not call getUserTenants when central ordering is disabled
-    when(consortiumUserTenantsRetriever.getUserTenants(any(), any(), any()))
+    // Central ordering disabled — service returns empty tenant list
+    when(consortiumUserTenantService.getUserTenantsIfNeeded(requestContext))
       .thenReturn(Future.succeededFuture(Collections.emptyList()));
 
     var poLine = createPoLine(UUID.randomUUID().toString(), holdingId);
@@ -1490,20 +1453,11 @@ public class HoldingDetailServiceTest {
     var holdingId1 = UUID.randomUUID().toString(); // holding in tenant1
     var holdingId2 = UUID.randomUUID().toString(); // holding in tenant2 (but will fail to retrieve)
     var holdingIds = List.of(holdingId1, holdingId2);
-    var consortiumId = UUID.randomUUID().toString();
-    var centralTenantId = "central-tenant";
     var memberTenant1 = "member-tenant-1";
     var memberTenant2 = "member-tenant-2";
     var userTenants = List.of(memberTenant1, memberTenant2);
 
-    var consortiumConfig = new ConsortiumConfiguration(centralTenantId, consortiumId);
-    when(consortiumConfigurationService.getConsortiumConfiguration(requestContext))
-      .thenReturn(Future.succeededFuture(java.util.Optional.of(consortiumConfig)));
-
-    when(consortiumConfigurationService.isCentralOrderingEnabled(any()))
-      .thenReturn(Future.succeededFuture(true));
-
-    when(consortiumUserTenantsRetriever.getUserTenants(consortiumId, centralTenantId, requestContext))
+    when(consortiumUserTenantService.getUserTenantsIfNeeded(requestContext))
       .thenReturn(Future.succeededFuture(userTenants));
 
     var poLine1 = createPoLine(UUID.randomUUID().toString(), holdingId1);
