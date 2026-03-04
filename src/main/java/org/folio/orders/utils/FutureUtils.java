@@ -2,7 +2,6 @@ package org.folio.orders.utils;
 
 import io.vertx.core.Future;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 
@@ -28,7 +27,7 @@ public class FutureUtils {
   }
 
 
- public static <T> Future<List<T>> unwrap(ArrayList<Future<List<T>>> pieceFutures) {
+ public static <T> Future<List<T>> unwrap(List<Future<List<T>>> pieceFutures) {
     return collectResultsOnSuccess(pieceFutures)
       .map(lists -> lists.stream()
         .flatMap(List::stream)
