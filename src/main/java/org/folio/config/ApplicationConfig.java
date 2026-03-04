@@ -619,11 +619,15 @@ public class ApplicationConfig {
   }
 
   @Bean
-  PieceUpdateInventoryService pieceUpdateInventoryService(InventoryItemManager inventoryItemManager,
+  PieceUpdateInventoryService pieceUpdateInventoryService(ConsortiumConfigurationService consortiumConfigurationService,
+                                                          ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever,
+                                                          InventoryItemManager inventoryItemManager,
                                                           InventoryHoldingManager inventoryHoldingManager,
                                                           PieceStorageService pieceStorageService,
                                                           PurchaseOrderLineService purchaseOrderLineService) {
-    return new PieceUpdateInventoryService(inventoryItemManager, inventoryHoldingManager, pieceStorageService, purchaseOrderLineService);
+    return new PieceUpdateInventoryService(consortiumConfigurationService, consortiumUserTenantsRetriever,
+                                           inventoryItemManager, inventoryHoldingManager,
+                                           pieceStorageService, purchaseOrderLineService);
   }
 
   @Bean

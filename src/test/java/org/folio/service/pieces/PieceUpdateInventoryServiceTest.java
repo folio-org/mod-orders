@@ -10,6 +10,7 @@ import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.service.inventory.InventoryHoldingManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.inventory.InventoryHoldingManager.ID;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -19,6 +20,7 @@ import static org.mockito.Mockito.verify;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -26,10 +28,11 @@ import java.util.concurrent.TimeoutException;
 import org.folio.ApiTestSuite;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.service.consortium.ConsortiumConfigurationService;
+import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.PurchaseOrderLineService;
-import org.folio.service.titles.TitlesService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -47,6 +50,8 @@ import io.vertx.core.json.JsonObject;
 @ExtendWith(MockitoExtension.class)
 public class PieceUpdateInventoryServiceTest {
 
+  @Autowired
+  private ConsortiumConfigurationService consortiumConfigurationService;
   @Autowired
   private PieceUpdateInventoryService pieceUpdateInventoryService;
   @Autowired
@@ -119,6 +124,7 @@ public class PieceUpdateInventoryServiceTest {
     holding.put(ID, holdingId);
     holding.put(HOLDING_PERMANENT_LOCATION_ID, UUID.randomUUID().toString());
     Piece piece = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId).withPoLineId(UUID.randomUUID().toString());
+    doReturn(succeededFuture(Optional.empty())).when(consortiumConfigurationService).getConsortiumConfiguration(any());
     doReturn(succeededFuture(holding)).when(inventoryHoldingManager).getHoldingById(holdingId, true, requestContext);
     doReturn(succeededFuture(Collections.emptyList())).when(purchaseOrderLineService).getPoLinesByHoldingIds(List.of(holdingId), requestContext);
     doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByHoldingId(holdingId, requestContext);
@@ -139,6 +145,7 @@ public class PieceUpdateInventoryServiceTest {
     holding.put(HOLDING_PERMANENT_LOCATION_ID, locationId);
     Piece piece = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId).withPoLineId(UUID.randomUUID().toString());
     Piece piece2 = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId);
+    doReturn(succeededFuture(Optional.empty())).when(consortiumConfigurationService).getConsortiumConfiguration(any());
     doReturn(succeededFuture(holding)).when(inventoryHoldingManager).getHoldingById(holdingId, true, requestContext);
     doReturn(succeededFuture(Collections.emptyList())).when(purchaseOrderLineService).getPoLinesByHoldingIds(List.of(holdingId), requestContext);
     doReturn(succeededFuture(List.of(piece, piece2))).when(pieceStorageService).getPiecesByHoldingId(holdingId, requestContext);
@@ -156,6 +163,7 @@ public class PieceUpdateInventoryServiceTest {
     holding.put(ID, holdingId);
     JsonObject item = new JsonObject().put(ID, UUID.randomUUID().toString());
     Piece piece = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId).withPoLineId(UUID.randomUUID().toString());
+    doReturn(succeededFuture(Optional.empty())).when(consortiumConfigurationService).getConsortiumConfiguration(any());
     doReturn(succeededFuture(holding)).when(inventoryHoldingManager).getHoldingById(holdingId, true, requestContext);
     doReturn(succeededFuture(Collections.emptyList())).when(purchaseOrderLineService).getPoLinesByHoldingIds(List.of(holdingId), requestContext);
     doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByHoldingId(holdingId, requestContext);
@@ -169,8 +177,13 @@ public class PieceUpdateInventoryServiceTest {
 
   private static class ContextConfiguration {
     @Bean
-    TitlesService titlesService() {
-      return mock(TitlesService.class);
+    ConsortiumConfigurationService consortiumConfigurationService() {
+      return mock(ConsortiumConfigurationService.class);
+    }
+
+    @Bean
+    ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever() {
+      return mock(ConsortiumUserTenantsRetriever.class);
     }
 
     @Bean
@@ -194,11 +207,15 @@ public class PieceUpdateInventoryServiceTest {
     }
 
     @Bean
-    PieceUpdateInventoryService pieceUpdateInventoryService(InventoryItemManager inventoryItemManager,
+    PieceUpdateInventoryService pieceUpdateInventoryService(ConsortiumConfigurationService consortiumConfigurationService,
+                                                            ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever,
+                                                            InventoryItemManager inventoryItemManager,
                                                             InventoryHoldingManager inventoryHoldingManager,
                                                             PieceStorageService pieceStorageService,
                                                             PurchaseOrderLineService purchaseOrderLineService) {
-      return spy(new PieceUpdateInventoryService(inventoryItemManager, inventoryHoldingManager, pieceStorageService, purchaseOrderLineService));
+      return spy(new PieceUpdateInventoryService(consortiumConfigurationService, consortiumUserTenantsRetriever,
+                                                 inventoryItemManager, inventoryHoldingManager,
+                                                 pieceStorageService, purchaseOrderLineService));
     }
   }
 }
