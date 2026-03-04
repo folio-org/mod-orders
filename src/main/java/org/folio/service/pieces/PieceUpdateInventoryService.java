@@ -8,7 +8,6 @@ import static org.folio.service.inventory.InventoryHoldingManager.HOLDING_PERMAN
 import static org.folio.service.inventory.InventoryHoldingManager.ID;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -25,8 +24,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.tools.utils.TenantTool;
-import org.folio.service.consortium.ConsortiumConfigurationService;
-import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
+import org.folio.service.consortium.ConsortiumUserTenantService;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.PurchaseOrderLineService;
@@ -41,8 +39,7 @@ public class PieceUpdateInventoryService {
 
   private static final int ITEM_QUANTITY = 1;
 
-  private final ConsortiumConfigurationService consortiumConfigurationService;
-  private final ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever;
+  private final ConsortiumUserTenantService consortiumUserTenantService;
   private final InventoryItemManager inventoryItemManager;
   private final InventoryHoldingManager inventoryHoldingManager;
   private final PieceStorageService pieceStorageService;
@@ -113,7 +110,7 @@ public class PieceUpdateInventoryService {
       return Future.succeededFuture(Pair.of(false, new JsonObject()));
     }
 
-    return getUserTenantsIfNeeded(requestContext)
+    return consortiumUserTenantService.getUserTenantsIfNeeded(requestContext)
       .compose(userTenants -> {
         var poLineFutures = new ArrayList<Future<List<PoLine>>>();
         var pieceFutures = new ArrayList<Future<List<Piece>>>();
@@ -168,32 +165,6 @@ public class PieceUpdateInventoryService {
           isDeletable ? Pair.of(true, holding) : Pair.of(false, new JsonObject()));
       });
   }
-
-  protected Future<List<String>> getUserTenantsIfNeeded(RequestContext requestContext) {
-    return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
-      .compose(consortiumConfiguration -> {
-        if (consortiumConfiguration.isEmpty()) {
-          return Future.succeededFuture(Collections.emptyList());
-        }
-        var configuration = consortiumConfiguration.get();
-
-        // Always change to central tenant when it comes to checking if Central Ordering is enabled
-        var centralRequestContext = createContextWithNewTenantId(requestContext, configuration.centralTenantId());
-        return consortiumConfigurationService.isCentralOrderingEnabled(centralRequestContext)
-          .compose(enabled -> {
-            if (Boolean.FALSE.equals(enabled)) {
-              log.info("getUserTenantsIfNeeded:: Central ordering is disabled or not configured");
-              return Future.succeededFuture(Collections.emptyList());
-            }
-            return consortiumUserTenantsRetriever.getUserTenants(configuration.consortiumId(), configuration.centralTenantId(), requestContext);
-          });
-      })
-      .recover(throwable -> {
-        log.warn("getUserTenantsIfNeeded:: Failed to retrieve user tenants, falling back to current tenant only", throwable);
-        return Future.succeededFuture(Collections.emptyList());
-      });
-  }
-
 
   private Future<Pair<String, String>> deleteHoldingIfPossible(Pair<Boolean, JsonObject> deletableHoldings,
                                                                String holdingId, RequestContext locationContext) {

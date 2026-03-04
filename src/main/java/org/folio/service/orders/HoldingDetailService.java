@@ -2,6 +2,7 @@ package org.folio.service.orders;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.models.HoldingDetailAggregator;
@@ -17,8 +18,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLinesDetail;
 import org.folio.rest.jaxrs.model.PoLinesDetailCollection;
 import org.folio.rest.tools.utils.TenantTool;
-import org.folio.service.consortium.ConsortiumConfigurationService;
-import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
+import org.folio.service.consortium.ConsortiumUserTenantService;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.pieces.PieceStorageService;
 
@@ -36,32 +36,20 @@ import static org.folio.service.inventory.InventoryItemManager.ID;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_HOLDINGS_RECORD_ID;
 
 @Log4j2
+@RequiredArgsConstructor
 public class HoldingDetailService {
 
-  private final ConsortiumConfigurationService consortiumConfigurationService;
-  private final ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever;
+  private final ConsortiumUserTenantService consortiumUserTenantService;
   private final PurchaseOrderLineService purchaseOrderLineService;
   private final PieceStorageService pieceStorageService;
   private final InventoryItemManager inventoryItemManager;
-
-  public HoldingDetailService(ConsortiumConfigurationService consortiumConfigurationService,
-                              ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever,
-                              PurchaseOrderLineService purchaseOrderLineService,
-                              PieceStorageService pieceStorageService,
-                              InventoryItemManager inventoryItemManager) {
-    this.consortiumConfigurationService = consortiumConfigurationService;
-    this.consortiumUserTenantsRetriever = consortiumUserTenantsRetriever;
-    this.purchaseOrderLineService = purchaseOrderLineService;
-    this.pieceStorageService = pieceStorageService;
-    this.inventoryItemManager = inventoryItemManager;
-  }
 
   public Future<HoldingDetailResults> postOrdersHoldingDetail(List<String> holdingIds, RequestContext requestContext) {
     if (CollectionUtils.isEmpty(holdingIds)) {
       log.info("postOrdersHoldingDetail:: No holding ids were passed");
       return Future.succeededFuture(new HoldingDetailResults());
     }
-    return getUserTenantsIfNeeded(requestContext)
+    return consortiumUserTenantService.getUserTenantsIfNeeded(requestContext)
       .compose(userTenants -> {
         var aggregatorFutures = new ArrayList<Future<HoldingDetailAggregator>>();
         if (CollectionUtils.isNotEmpty(userTenants)) {
@@ -190,31 +178,6 @@ public class HoldingDetailService {
 
     return Future.all(poLinesFuture, piecesFuture, itemsFuture)
       .map(v -> aggregator);
-  }
-
-  protected Future<List<String>> getUserTenantsIfNeeded(RequestContext requestContext) {
-    return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
-      .compose(consortiumConfiguration -> {
-        if (consortiumConfiguration.isEmpty()) {
-          return Future.succeededFuture(Collections.emptyList());
-        }
-        var configuration = consortiumConfiguration.get();
-
-        // Always change to central tenant when it comes to checking if Central Ordering is enabled
-        var centralRequestContext = createContextWithNewTenantId(requestContext, configuration.centralTenantId());
-        return consortiumConfigurationService.isCentralOrderingEnabled(centralRequestContext)
-          .compose(enabled -> {
-            if (Boolean.FALSE.equals(enabled)) {
-              log.info("getUserTenantsIfNeeded:: Central ordering is disabled or not configured");
-              return Future.succeededFuture(Collections.emptyList());
-            }
-            return consortiumUserTenantsRetriever.getUserTenants(configuration.consortiumId(), configuration.centralTenantId(), requestContext);
-          });
-      })
-      .recover(throwable -> {
-        log.warn("getUserTenantsIfNeeded:: Failed to retrieve user tenants, falling back to current tenant only", throwable);
-        return Future.succeededFuture(Collections.emptyList());
-      });
   }
 
   private Map<String, List<PoLine>> groupPoLinesByHoldingId(List<String> holdingIds, List<PoLine> poLines) {
