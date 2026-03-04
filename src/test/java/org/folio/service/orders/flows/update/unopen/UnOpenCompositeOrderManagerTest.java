@@ -9,6 +9,7 @@ import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyList;
@@ -30,11 +31,13 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import org.folio.ApiTestSuite;
 import org.folio.models.ItemStatus;
 import org.folio.orders.utils.ProtectedOperationType;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -99,6 +102,7 @@ public class UnOpenCompositeOrderManagerTest {
   private OpenToPendingEncumbranceStrategy openToPendingEncumbranceStrategy;
   @Mock
   private Map<String, String> okapiHeadersMock;
+  private AutoCloseable mockitoMocks;
   private Context ctxMock;
   private RequestContext requestContext;
 
@@ -123,15 +127,16 @@ public class UnOpenCompositeOrderManagerTest {
 
   @BeforeEach
   void beforeEach() {
-    MockitoAnnotations.openMocks(this);
+    mockitoMocks = MockitoAnnotations.openMocks(this);
     autowireDependencies(this);
     requestContext = new RequestContext(ctxMock, okapiHeadersMock);
   }
 
   @AfterEach
-  void resetMocks() {
+  void resetMocks() throws Exception {
     clearServiceInteractions();
     reset(encumbranceWorkflowStrategyFactory, pieceStorageService, inventoryItemManager, inventoryHoldingManager);
+    mockitoMocks.close();
   }
 
   @Test
@@ -365,7 +370,7 @@ public class UnOpenCompositeOrderManagerTest {
     verify(inventoryItemManager, never()).deleteItems(anyList(), anyBoolean(), any(RequestContext.class));
   }
 
-  private void prepareInitialSetup(CompositePurchaseOrder order, CompositePurchaseOrder orderFromStorage, PoLine poLine) {
+  private void prepareInitialSetup(CompositePurchaseOrder order, CompositePurchaseOrder orderFromStorage, PoLine poLine, long numberOfRequests) {
     doReturn(openToPendingEncumbranceStrategy).when(encumbranceWorkflowStrategyFactory).getStrategy(eq(OrderWorkflowType.OPEN_TO_PENDING));
     doReturn(succeededFuture(null)).when(openToPendingEncumbranceStrategy).processEncumbrances(eq(order), eq(orderFromStorage), any());
     JsonObject item = getItem();
@@ -383,7 +388,8 @@ public class UnOpenCompositeOrderManagerTest {
     PurchaseOrder simpleOrder = new PurchaseOrder().withId(order.getId());
     doReturn(succeededFuture(simpleOrder)).when(purchaseOrderStorageService).getPurchaseOrderById(order.getId(), requestContext);
     doReturn(succeededFuture()).when(protectionService).isOperationRestricted(anyList(), any(ProtectedOperationType.class), any());
-    doReturn(succeededFuture(0)).when(circulationRequestsRetriever).getNumberOfRequestsByItemId(ITEM_ID, requestContext);
+    doReturn(succeededFuture(Map.of(ITEM_ID, numberOfRequests)))
+      .when(circulationRequestsRetriever).getNumbersOfRequestsByItemIds(List.of(ITEM_ID), requestContext);
     doReturn(succeededFuture()).when(pieceStorageService).deletePiece(PIECE_ID, requestContext);
     doReturn(succeededFuture()).when(inventoryItemManager).deleteItem(piece.getItemId(), true, requestContext);
     doReturn(succeededFuture(Collections.emptyList())).when(inventoryItemManager).getItemsByHoldingId(eq(HOLDING_ID), RequestContextMatcher.matchCentralTenant());
@@ -392,6 +398,10 @@ public class UnOpenCompositeOrderManagerTest {
     doReturn(Map.of("folio_shared", succeededFuture(List.of(holding)))).when(inventoryHoldingManager).getHoldingsByLocationTenants(poLine, requestContext);
     doReturn(succeededFuture(Collections.emptyList())).when(purchaseOrderLineService).getPoLinesByHoldingIds(anyList(), any(RequestContext.class));
     doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByHoldingIds(anyList(), any(RequestContext.class));
+  }
+
+  private void prepareInitialSetup(CompositePurchaseOrder order, CompositePurchaseOrder orderFromStorage, PoLine poLine) {
+    prepareInitialSetup(order, orderFromStorage, poLine, 0);
   }
 
   private JsonObject getItem() {
@@ -508,6 +518,21 @@ public class UnOpenCompositeOrderManagerTest {
 
     future.toCompletionStage().toCompletableFuture().get();
     verify(inventoryHoldingManager, never()).deleteHoldingById(anyString(), anyBoolean(), any(RequestContext.class));
+  }
+
+  @Test
+  void testErrorWhenItemHasRequest() {
+    //given
+    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+    CompositePurchaseOrder orderFromStorage = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+    PoLine poLine = getPoLine(order);
+    prepareInitialSetup(order, orderFromStorage, poLine, 1);
+    //When
+    Future<Void> future = unOpenCompositeOrderManager.checkRequests(order, requestContext);
+    //Then
+    assertTrue(future.failed());
+    HttpException exception = (HttpException) future.cause();
+    assertEquals(422, exception.getCode());
   }
 
   /**

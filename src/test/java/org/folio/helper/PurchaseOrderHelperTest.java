@@ -196,7 +196,7 @@ public class PurchaseOrderHelperTest {
       .when(purchaseOrderLineService).populateOrderLines(any(CompositePurchaseOrder.class), eq(requestContext));
     doReturn(succeededFuture(null))
       .when(orderValidationService).validateOrderForUpdate(any(CompositePurchaseOrder.class), any(CompositePurchaseOrder.class),
-        eq(deleteHoldings), eq(requestContext));
+        eq(requestContext));
     doReturn(succeededFuture(null))
       .when(purchaseOrderLineHelper).updatePoLines(any(CompositePurchaseOrder.class), any(CompositePurchaseOrder.class),
         eq(requestContext));
@@ -244,7 +244,7 @@ public class PurchaseOrderHelperTest {
     // Then
     assertTrue(future.failed());
 
-    verify(orderValidationService, times(0)).validateOrderForUpdate(any(), any(), anyBoolean(), any());
+    verify(orderValidationService, times(0)).validateOrderForUpdate(any(), any(), any());
   }
 
   @Test

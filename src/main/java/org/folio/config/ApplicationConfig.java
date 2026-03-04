@@ -750,14 +750,15 @@ public class ApplicationConfig {
                                           ProtectionService protectionService, InventoryItemStatusSyncService itemStatusSyncService,
                                           OpenCompositeOrderManager openCompositeOrderManager, PurchaseOrderStorageService purchaseOrderStorageService,
                                           CommonSettingsCache commonSettingsCache, PoNumberHelper poNumberHelper,
-                                          OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator, ReOpenCompositeOrderManager reOpenCompositeOrderManager,
-                                          OrderValidationService orderValidationService, PoLineValidationService poLineValidationService) {
+                                          ReOpenCompositeOrderManager reOpenCompositeOrderManager,
+                                          OrderValidationService orderValidationService, PoLineValidationService poLineValidationService,
+                                          UnOpenCompositeOrderManager unOpenCompositeOrderManager) {
     return new PurchaseOrderHelper(purchaseOrderLineHelper, orderLinesSummaryPopulateService, encumbranceService,
       combinedPopulateService, encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, tagService,
       purchaseOrderLineService, titlesService, protectionService, itemStatusSyncService,
       openCompositeOrderManager, purchaseOrderStorageService, commonSettingsCache,
-      poNumberHelper, openCompositeOrderFlowValidator, reOpenCompositeOrderManager,
-      orderValidationService, poLineValidationService);
+      poNumberHelper, reOpenCompositeOrderManager,
+      orderValidationService, poLineValidationService, unOpenCompositeOrderManager);
   }
 
   @Bean
