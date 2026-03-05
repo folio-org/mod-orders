@@ -62,9 +62,8 @@ public final class PoLineCommonUtil {
     return poNumber + DASH_SEPARATOR + sequence;
   }
 
-  public static List<PoLine> sortPoLinesByPoLineNumber(List<PoLine> poLines) {
+  public static void sortPoLinesByPoLineNumber(List<PoLine> poLines) {
     poLines.sort(PoLineCommonUtil::comparePoLinesByPoLineNumber);
-    return poLines;
   }
 
   private static int comparePoLinesByPoLineNumber(PoLine poLine1, PoLine poLine2) {
