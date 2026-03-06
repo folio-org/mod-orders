@@ -91,21 +91,26 @@ public class UnOpenCompositeOrderManager {
   }
 
   public Future<Void> process(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, boolean deleteHoldings, RequestContext requestContext) {
-    return updateAndGetOrderWithLines(compPO, requestContext)
-      .map(aVoid -> encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.OPEN_TO_PENDING))
-      .compose(strategy -> strategy.processEncumbrances(compPO, poFromStorage, requestContext))
+    if (CollectionUtils.isEmpty(compPO.getPoLines())) {
+      compPO.setPoLines(poFromStorage.getPoLines());
+    }
+    var strategy = encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.OPEN_TO_PENDING);
+    return strategy.processEncumbrances(compPO, poFromStorage, requestContext)
       .compose(ok -> processInventory(compPO.getPoLines(), deleteHoldings, requestContext))
       .compose(ok -> asFuture(() -> compPO.getPoLines().forEach(this::makePoLinePending)))
       .compose(ok -> updatePoLinesSummary(compPO.getPoLines(), requestContext));
-
   }
 
   public Future<Void> rollbackInventory(CompositePurchaseOrder compPO, RequestContext requestContext) {
     return processPoLines(compPO.getPoLines(), poLine -> processInventory(poLine, true, requestContext));
   }
 
-  public Future<Void> checkRequests(CompositePurchaseOrder compPO, RequestContext requestContext) {
-    List<PoLine> poLines = compPO.getPoLines().stream()
+  public Future<Void> checkRequests(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
+    List<PoLine> poLines = compPO.getPoLines();
+    if (CollectionUtils.isEmpty(poLines)) {
+      poLines = poFromStorage.getPoLines();
+    }
+    poLines = poLines.stream()
       .filter(poLine -> !Boolean.TRUE.equals(poLine.getIsPackage()))
       .toList();
     HashMap<String, List<String>> tenantIdToPoLineIds = createTenantIdToPoLineIdsMap(poLines);
@@ -140,15 +145,6 @@ public class UnOpenCompositeOrderManager {
       });
     });
     return tenantIdToPoLineIds;
-  }
-
-  private Future<CompositePurchaseOrder> updateAndGetOrderWithLines(CompositePurchaseOrder compPO, RequestContext requestContext) {
-    if (CollectionUtils.isNotEmpty(compPO.getPoLines())) {
-      return Future.succeededFuture(compPO);
-    }
-    return purchaseOrderLineService.getPoLinesByOrderId(compPO.getId(), requestContext)
-      .map(poLines -> compPO.withPoLines(PoLineCommonUtil.sortPoLinesByPoLineNumber(poLines)))
-      .map(v -> compPO);
   }
 
   private void makePoLinePending(PoLine poLine) {

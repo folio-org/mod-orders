@@ -196,7 +196,7 @@ public class OrderValidationService {
       .compose(ok -> {
         if (isTransitionToPending(poFromStorage, compPO)) {
           checkOrderUnopenPermissions(requestContext);
-          return unOpenCompositeOrderManager.checkRequests(compPO, requestContext);
+          return unOpenCompositeOrderManager.checkRequests(compPO, poFromStorage, requestContext);
         }
         return Future.succeededFuture();
       });
