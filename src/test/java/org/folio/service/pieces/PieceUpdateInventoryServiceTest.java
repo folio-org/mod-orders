@@ -217,9 +217,6 @@ public class PieceUpdateInventoryServiceTest {
 
     // Tenant 2: has 1 poLine and 2 pieces
     String poLineId1Tenant2 = UUID.randomUUID().toString();
-    PoLine poLine1Tenant2 = new PoLine()
-      .withId(poLineId1Tenant2)
-      .withLocations(List.of(new Location().withHoldingId(holdingId)));
     Piece piece1Tenant2 = new Piece()
       .withId(UUID.randomUUID().toString())
       .withHoldingId(holdingId)
@@ -231,9 +228,6 @@ public class PieceUpdateInventoryServiceTest {
 
     // Tenant 3: has 1 poLine and 1 piece
     String poLineId1Tenant3 = UUID.randomUUID().toString();
-    PoLine poLine1Tenant3 = new PoLine()
-      .withId(poLineId1Tenant3)
-      .withLocations(List.of(new Location().withHoldingId(holdingId)));
     Piece piece1Tenant3 = new Piece()
       .withId(UUID.randomUUID().toString())
       .withHoldingId(holdingId)
