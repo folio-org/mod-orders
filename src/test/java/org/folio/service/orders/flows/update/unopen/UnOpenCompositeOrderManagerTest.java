@@ -528,7 +528,7 @@ public class UnOpenCompositeOrderManagerTest {
     PoLine poLine = getPoLine(order);
     prepareInitialSetup(order, orderFromStorage, poLine, 1);
     //When
-    Future<Void> future = unOpenCompositeOrderManager.checkRequests(order, requestContext);
+    Future<Void> future = unOpenCompositeOrderManager.checkRequests(order, orderFromStorage, requestContext);
     //Then
     assertTrue(future.failed());
     HttpException exception = (HttpException) future.cause();
