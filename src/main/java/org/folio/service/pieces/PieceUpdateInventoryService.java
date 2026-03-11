@@ -188,7 +188,6 @@ public class PieceUpdateInventoryService {
       poLines.stream().map(PoLine::getId).toList(), excludePoLinesIds);
     // Perform filtering only if the PoLine is synchronized
     return poLines.stream()
-      .peek(poLine -> log.info("excludePoLines:: PoLine id={}, checkInItems={}", poLine.getId(), poLine.getCheckinItems()))
       .filter(poLine -> poLine.getCheckinItems() || (!poLine.getCheckinItems() && !excludePoLinesIds.contains(poLine.getId())))
       .toList();
   }
