@@ -19,6 +19,7 @@ public class PiecesHolder {
   private Pair<CompositePurchaseOrder, PoLine> purchaseOrderPoLinePair;
   private Map<String, List<Piece>> piecesFromStorage;
   private Map<String, List<PiecePoLineDto>> itemsToRecreate;
+  private Map<Pair<String, String>, Set<String>> piecesByHoldingIds;
   private final Set<String> processedHoldingIds = new HashSet<>();
 
   public static class PiecePoLineDto {
@@ -77,6 +78,10 @@ public class PiecesHolder {
     return this.itemsToRecreate;
   }
 
+  public Map<Pair<String, String>, Set<String>> getPiecesByHoldingIds() {
+    return piecesByHoldingIds;
+  }
+
   public Set<String> getProcessedHoldingIds() {
     return processedHoldingIds;
   }
@@ -103,6 +108,11 @@ public class PiecesHolder {
 
   public PiecesHolder withItemsToRecreate(Map<String, List<PiecePoLineDto>> itemsToRecreate) {
     this.itemsToRecreate = itemsToRecreate;
+    return this;
+  }
+
+  public PiecesHolder withPiecesByHoldingIds(Map<Pair<String, String>, Set<String>> piecesByHoldingIds) {
+    this.piecesByHoldingIds = piecesByHoldingIds;
     return this;
   }
 }

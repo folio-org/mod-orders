@@ -88,7 +88,7 @@ public abstract class DiAbstractRestTest {
   private static final String JOB_EXECUTION_ID_HEADER = "jobExecutionId";
   private static final String RECORDS_PROCESSED_TABLE = "processed_records";
 
-  public static KafkaContainer kafkaContainer = TestConfig.getKafkaContainer().withStartupAttempts(20);
+  public static KafkaContainer kafkaContainer = TestConfig.createKafkaContainer().withStartupAttempts(20);
   protected static KafkaProducer<String, String> kafkaProducer;
 
   @Rule

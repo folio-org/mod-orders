@@ -117,8 +117,8 @@ public class CancelledJobExecutionConsumerVerticleTest {
   private KafkaConfig getKafkaConfig() {
     return KafkaConfig.builder()
       .envId(KAFKA_ENV)
-      .kafkaHost(TestConfig.kafkaContainer.getHost())
-      .kafkaPort(TestConfig.kafkaContainer.getFirstMappedPort().toString())
+      .kafkaHost(TestConfig.getKafkaContainer().getHost())
+      .kafkaPort(TestConfig.getKafkaContainer().getFirstMappedPort().toString())
       .build();
   }
 
@@ -160,7 +160,7 @@ public class CancelledJobExecutionConsumerVerticleTest {
 
   private KafkaProducer<String, String> createKafkaProducer() {
     Properties producerProperties = new Properties();
-    producerProperties.setProperty(BOOTSTRAP_SERVERS_CONFIG, TestConfig.kafkaContainer.getBootstrapServers());
+    producerProperties.setProperty(BOOTSTRAP_SERVERS_CONFIG, TestConfig.getKafkaContainer().getBootstrapServers());
     producerProperties.setProperty(KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
     producerProperties.setProperty(VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
     return new KafkaProducer<>(producerProperties);

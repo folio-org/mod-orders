@@ -38,7 +38,7 @@ public final class TestConfig {
 
   private static MockServer mockServer;
   public static final DockerImageName KAFKA_IMAGE_NAME = DockerImageName.parse("apache/kafka-native:3.8.0");
-  public static final KafkaContainer kafkaContainer = getKafkaContainer();
+  private static KafkaContainer kafkaContainer;
   public static final Vertx vertx = Vertx.vertx();
 
   private TestConfig() {}
@@ -54,9 +54,11 @@ public final class TestConfig {
 
     final DeploymentOptions opt = new DeploymentOptions().setConfig(conf);
     Promise<String> deploymentComplete = Promise.promise();
-    System.setProperty(KAFKA_HOST, kafkaContainer.getHost());
-    System.setProperty(KAFKA_PORT, kafkaContainer.getFirstMappedPort() + "");
-    System.setProperty(KAFKA_ENV, KAFKA_ENV_VALUE);
+    if (kafkaContainer != null) {
+      System.setProperty(KAFKA_HOST, kafkaContainer.getHost());
+      System.setProperty(KAFKA_PORT, kafkaContainer.getFirstMappedPort() + "");
+      System.setProperty(KAFKA_ENV, KAFKA_ENV_VALUE);
+    }
 
     vertx.deployVerticle(RestVerticle.class.getName(), opt).onComplete(res -> {
       if(res.succeeded()) {
@@ -66,7 +68,7 @@ public final class TestConfig {
         deploymentComplete.fail(res.cause());
       }
     });
-    deploymentComplete.future().toCompletionStage().toCompletableFuture().get(60, TimeUnit.SECONDS);
+    deploymentComplete.future().toCompletionStage().toCompletableFuture().get(120, TimeUnit.SECONDS);
   }
 
   public static void initSpringContext(Class<?> defaultConfiguration) {
@@ -81,9 +83,17 @@ public final class TestConfig {
     return vertx;
   }
 
+  public static KafkaContainer getKafkaContainer() {
+    return kafkaContainer;
+  }
+
   public static void clearVertxContext() {
-    Context context = getFirstContextFromVertx(vertx);
-    context.remove("springContext");
+    try {
+      Context context = getFirstContextFromVertx(vertx);
+      context.remove("springContext");
+    } catch (IllegalStateException e) {
+      // Spring context was never created, ignore
+    }
   }
 
   public static void startMockServer() throws InterruptedException, ExecutionException, TimeoutException {
@@ -92,6 +102,9 @@ public final class TestConfig {
   }
 
   public static void startKafkaMockServer() {
+    if (kafkaContainer == null) {
+      kafkaContainer = createKafkaContainer();
+    }
     kafkaContainer.start();
   }
 
@@ -106,7 +119,9 @@ public final class TestConfig {
   }
 
   public static void closeKafkaMockServer() {
-    kafkaContainer.stop();
+    if (kafkaContainer != null) {
+      kafkaContainer.stop();
+    }
   }
 
   public static void closeVertx() {
@@ -119,7 +134,7 @@ public final class TestConfig {
 
   // Suppress "use try-with-resource" suggestion because in both places it is closed correctly in a deferred fashion
   @SuppressWarnings("resource")
-  public static KafkaContainer getKafkaContainer() {
+  public static KafkaContainer createKafkaContainer() {
     return new KafkaContainer(KAFKA_IMAGE_NAME)
       .withStartupAttempts(20);
   }

@@ -39,6 +39,7 @@ import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
+import static org.folio.orders.utils.FutureUtils.asFuture;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 
 public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
@@ -76,15 +77,29 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       // 2. Get piece records from storage
       .compose(voidResult -> createItemsWithPieceUpdate(checkinCollection, holder, requestContext))
       // 3. Filter locationId
-      .compose(piecesByPoLineIds -> filterMissingLocations(piecesByPoLineIds, requestContext))
-      // 4. Update items in the Inventory if required and delete abandoned holdings if deleteHoldings flag is set to true
-      .compose(pieces -> processInventory(pieces, holder, deleteHoldings, requestContext))
+      .compose(piecesGroupedByPoLine -> filterMissingLocations(piecesGroupedByPoLine, requestContext))
+      // 4. Update items in the Inventory if required
+      .compose(piecesGroupedByPoLine -> processInventory(piecesGroupedByPoLine, holder, requestContext))
       // 5. Update piece records with checkIn details which do not have an associated item
       .map(this::updatePieceRecordsWithoutItems)
       // 6. Update received piece records in the storage
       .compose(piecesGroupedByPoLine -> storeUpdatedPieceRecords(piecesGroupedByPoLine, requestContext))
       // 7. Update PO Line status
       .compose(piecesGroupedByPoLine -> updateOrderAndPoLinesStatus(holder.getPiecesFromStorage(), piecesGroupedByPoLine, checkinCollection, requestContext))
+      // 8. Delete abandoned holdings
+      .compose(piecesGroupedByPoLine -> {
+        var pieceByHoldingIds = holder.getPiecesByHoldingIds();
+        var processedHoldingIds = holder.getProcessedHoldingIds();
+        var poLinesToSkip = piecesGroupedByPoLine.entrySet().stream()
+          .flatMap(entry -> entry.getValue().stream())
+          .map(Piece::getPoLineId)
+          .collect(Collectors.toSet());
+        if (deleteHoldings) {
+          return pieceUpdateInventoryService.deleteHoldingsConnectedToPieces(pieceByHoldingIds, processedHoldingIds, poLinesToSkip, requestContext)
+            .map(piecesGroupedByPoLine);
+        }
+        return asFuture(() -> piecesGroupedByPoLine);
+      })
       // 8. Return results to the client
       .map(piecesGroupedByPoLine -> prepareResponseBody(checkinCollection, piecesGroupedByPoLine));
   }
@@ -212,21 +227,10 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   }
 
   protected Future<Map<String, List<Piece>>> processInventory(Map<String, List<Piece>> piecesGroupedByPoLine, PiecesHolder holder,
-                                                              boolean deleteHoldings, RequestContext requestContext) {
-    var piecesGroupedByHoldings = PieceUtil.groupPiecesByHoldings(StreamUtils.flatten(piecesGroupedByPoLine.values()));
-    return updateInventoryItemsAndHoldings(piecesGroupedByPoLine, holder, requestContext)
-      .compose(pieces -> {
-        var poLinesToSkip = pieces.entrySet().stream()
-          .flatMap(entry -> entry.getValue().stream())
-          .map(Piece::getPoLineId)
-          .collect(Collectors.toSet());
-        var processedHoldingIds = holder.getProcessedHoldingIds();
-        if (deleteHoldings) {
-          return pieceUpdateInventoryService.deleteHoldingsConnectedToPieces(piecesGroupedByHoldings, processedHoldingIds, poLinesToSkip, requestContext)
-            .map(pieces);
-        }
-        return Future.succeededFuture(pieces);
-      });
+                                                              RequestContext requestContext) {
+    var piecesByHoldingIds = PieceUtil.groupPiecesByHoldings(StreamUtils.flatten(piecesGroupedByPoLine.values()));
+    holder.withPiecesByHoldingIds(piecesByHoldingIds);
+    return updateInventoryItemsAndHoldings(piecesGroupedByPoLine, holder, requestContext);
   }
 
   private void updatePieceWithCheckinInfo(Piece piece) {

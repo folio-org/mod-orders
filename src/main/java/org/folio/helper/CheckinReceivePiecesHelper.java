@@ -528,8 +528,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
    * and list of corresponding pieces as value
    */
   protected Future<Map<String, List<Piece>>> updateInventoryItemsAndHoldings(Map<String, List<Piece>> piecesGroupedByPoLine,
-                                                                        PiecesHolder holder,
-                                                                        RequestContext requestContext) {
+                                                                             PiecesHolder holder,
+                                                                             RequestContext requestContext) {
     Map<String, Piece> piecesByItemId = StreamEx.ofValues(piecesGroupedByPoLine)
       .flatMap(List::stream)
       .filter(piece -> StringUtils.isNotEmpty(piece.getItemId()))
