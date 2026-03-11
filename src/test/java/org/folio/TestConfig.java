@@ -97,8 +97,10 @@ public final class TestConfig {
   }
 
   public static void startMockServer() throws InterruptedException, ExecutionException, TimeoutException {
-    mockServer = new MockServer(mockPort);
-    mockServer.start();
+    if (mockServer == null) {
+      mockServer = new MockServer(mockPort);
+      mockServer.start();
+    }
   }
 
   public static void startKafkaMockServer() {
@@ -115,7 +117,10 @@ public final class TestConfig {
   }
 
   public static void closeMockServer() {
-    mockServer.close();
+    if (mockServer != null) {
+      mockServer.close();
+      mockServer = null;
+    }
   }
 
   public static void closeKafkaMockServer() {
