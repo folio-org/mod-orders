@@ -88,7 +88,7 @@ public abstract class DiAbstractRestTest {
   private static final String JOB_EXECUTION_ID_HEADER = "jobExecutionId";
   private static final String RECORDS_PROCESSED_TABLE = "processed_records";
 
-  public static KafkaContainer kafkaContainer = TestConfig.createKafkaContainer().withStartupAttempts(20);
+  public static KafkaContainer kafkaContainer = TestConfig.getKafkaContainer().withStartupAttempts(20);
   protected static KafkaProducer<String, String> kafkaProducer;
 
   @Rule
@@ -160,31 +160,19 @@ public abstract class DiAbstractRestTest {
 
     TenantClient tenantClient = new TenantClient(okapiUrl, TENANT_ID, TOKEN);
     vertx.deployVerticle(RestVerticle.class.getName(), options)
-      .onComplete(res -> {
-        if (res.succeeded()) {
-          postTenant(context, async, tenantClient);
-        } else {
-          context.fail("Failed to deploy verticle: " + res.cause().getMessage());
-          async.complete();
-        }
-      });
+      .onComplete(res -> postTenant(context, async, tenantClient));
   }
 
   protected static void postTenant(TestContext context, Async async, TenantClient tenantClient) {
     TenantAttributes tenantAttributes = new TenantAttributes();
     tenantClient.postTenant(tenantAttributes).onComplete(res2 -> {
-      if (res2.succeeded()) {
-        if (res2.result().statusCode() == 201) {
-          tenantClient.getTenantByOperationId(res2.result().bodyAsJson(TenantJob.class).getId(), 60000, context.asyncAssertSuccess(res3 -> {
-            context.assertTrue(res3.bodyAsJson(TenantJob.class).getComplete());
-            async.complete();
-          }));
-        } else {
-          context.fail("Failed to make post tenant. Received status code " + res2.result().statusCode() + ": " + res2.result().bodyAsString());
+      if (res2.result().statusCode() == 201) {
+        tenantClient.getTenantByOperationId(res2.result().bodyAsJson(TenantJob.class).getId(), 60000, context.asyncAssertSuccess(res3 -> {
+          context.assertTrue(res3.bodyAsJson(TenantJob.class).getComplete());
           async.complete();
-        }
+        }));
       } else {
-        context.fail("Failed to post tenant: " + res2.cause().getMessage());
+        context.assertEquals("Failed to make post tenant. Received status code 400", res2.result().bodyAsString());
         async.complete();
       }
     });

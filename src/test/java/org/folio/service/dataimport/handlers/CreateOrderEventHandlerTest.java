@@ -25,6 +25,7 @@ import org.folio.orders.utils.AcqDesiredPermissions;
 import org.folio.processing.events.EventManager;
 import org.folio.rest.RestConstants;
 import org.folio.rest.RestVerticle;
+import org.folio.rest.client.TenantClient;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.impl.MockServer;
@@ -76,6 +77,7 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.DataImportEventTypes.DI_PENDING_ORDER_CREATED;
+import static org.folio.TestConfig.closeMockServer;
 import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
 import static org.folio.orders.utils.HelperUtils.KEY_NAME;
 import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
@@ -114,6 +116,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   private static final String ID_FIELD = "id";
   private static final String JOB_PROFILE_SNAPSHOTS_MOCK = "jobProfileSnapshots";
   private static final String ORGANIZATIONS_MOCK = "organizations";
+  private static final String TENANT_APPROVAL_REQUIRED = "test_diku_limit_1";
   private static final String OKAPI_URL = "http://localhost:" + TestConfig.mockPort;
   private static final String PO_LINE_ORDER_ID_KEY = "purchaseOrderId";
   private static final String SYSTEM_USER_ENABLED = "SYSTEM_USER_ENABLED";
@@ -196,14 +199,17 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   private JsonObject jobExecutionJson;
 
   @BeforeClass
-  public static void setupClass() throws ExecutionException, InterruptedException, TimeoutException {
+  public static void setupClass(final TestContext testContext) throws ExecutionException, InterruptedException, TimeoutException {
     System.setProperty("orders.cache.configuration-entries.expiration.time.seconds", "0");
     TestConfig.startMockServer();
+    String okapiUrl = "http://localhost:" + port;
+    TenantClient tenantClient = new TenantClient(okapiUrl, TENANT_APPROVAL_REQUIRED, TOKEN);
+    postTenant(testContext, testContext.async(), tenantClient);
   }
 
   @AfterClass
-  public static void tearDownClass() {
-    TestConfig.closeMockServer();
+  public static void after() {
+    closeMockServer();
   }
 
   @Before
@@ -367,7 +373,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst())
       .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-      .withTenant(TENANT_ID)
+      .withTenant(TENANT_APPROVAL_REQUIRED)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
       .withContext(new HashMap<>() {{
@@ -382,7 +388,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     // then
     String topicToObserve = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_VALUE, getDefaultNameSpace(),
-      TENANT_ID, DI_COMPLETED.value());
+      TENANT_APPROVAL_REQUIRED, DI_COMPLETED.value());
     var value = observeTopic(topicToObserve);
     Event obtainedEvent = Json.decodeValue(value, Event.class);
     DataImportEventPayload eventPayload = Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
@@ -538,7 +544,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-      .withTenant(TENANT_ID)
+      .withTenant(TENANT_APPROVAL_REQUIRED)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
       .withContext(new HashMap<>() {{
@@ -554,7 +560,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     // then
     String topicToObserve = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_VALUE, getDefaultNameSpace(),
-      TENANT_ID, DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value());
+      TENANT_APPROVAL_REQUIRED, DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value());
     var value = observeTopic(topicToObserve);
     Event obtainedEvent = Json.decodeValue(value, Event.class);
     DataImportEventPayload eventPayload = Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
@@ -577,7 +583,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-      .withTenant(TENANT_ID)
+      .withTenant(TENANT_APPROVAL_REQUIRED)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
       .withContext(new HashMap<>() {{
@@ -591,7 +597,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     send(request);
 
     // then
-    String topicToObserve = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_VALUE, getDefaultNameSpace(), TENANT_ID, DI_COMPLETED.value());
+    String topicToObserve = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_VALUE, getDefaultNameSpace(), TENANT_APPROVAL_REQUIRED, DI_COMPLETED.value());
     var value = observeTopic(topicToObserve);
     Event obtainedEvent = Json.decodeValue(value, Event.class);
     DataImportEventPayload eventPayload = Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
@@ -645,7 +651,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
-      .withTenant(TENANT_ID)
+      .withTenant(TENANT_APPROVAL_REQUIRED)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
       .withContext(new HashMap<>() {{
@@ -659,7 +665,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     send(request);
 
     // then
-    String topicToObserve = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_VALUE, getDefaultNameSpace(), TENANT_ID, DI_COMPLETED.value());
+    String topicToObserve = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_VALUE, getDefaultNameSpace(), TENANT_APPROVAL_REQUIRED, DI_COMPLETED.value());
     var value = observeTopic(topicToObserve);
     Event obtainedEvent = Json.decodeValue(value, Event.class);
     DataImportEventPayload eventPayload = Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
@@ -677,7 +683,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
-      .withTenant(TENANT_ID)
+      .withTenant(TENANT_APPROVAL_REQUIRED)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
       .withContext(new HashMap<>() {{
@@ -692,7 +698,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     send(request);
 
     // then
-    String topicToObserve = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_VALUE, getDefaultNameSpace(), TENANT_ID,
+    String topicToObserve = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_VALUE, getDefaultNameSpace(), TENANT_APPROVAL_REQUIRED,
       DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value());
     var value = observeTopic(topicToObserve);
     Event obtainedEvent = Json.decodeValue(value, Event.class);
