@@ -100,7 +100,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
         }
         return asFuture(() -> piecesGroupedByPoLine);
       })
-      // 8. Return results to the client
+      // 9. Return results to the client
       .map(piecesGroupedByPoLine -> prepareResponseBody(checkinCollection, piecesGroupedByPoLine));
   }
 
