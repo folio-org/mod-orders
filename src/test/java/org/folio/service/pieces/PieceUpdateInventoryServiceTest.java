@@ -1,6 +1,7 @@
 package org.folio.service.pieces;
 
 import static io.vertx.core.Future.succeededFuture;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.clearVertxContext;
@@ -21,9 +22,11 @@ import static org.mockito.Mockito.verify;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Stream;
 
 import org.folio.ApiTestSuite;
 import org.folio.rest.core.models.RequestContext;
@@ -40,6 +43,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -211,9 +217,6 @@ public class PieceUpdateInventoryServiceTest {
 
     // Tenant 2: has 1 poLine and 2 pieces
     String poLineId1Tenant2 = UUID.randomUUID().toString();
-    PoLine poLine1Tenant2 = new PoLine()
-      .withId(poLineId1Tenant2)
-      .withLocations(List.of(new Location().withHoldingId(holdingId)));
     Piece piece1Tenant2 = new Piece()
       .withId(UUID.randomUUID().toString())
       .withHoldingId(holdingId)
@@ -225,9 +228,6 @@ public class PieceUpdateInventoryServiceTest {
 
     // Tenant 3: has 1 poLine and 1 piece
     String poLineId1Tenant3 = UUID.randomUUID().toString();
-    PoLine poLine1Tenant3 = new PoLine()
-      .withId(poLineId1Tenant3)
-      .withLocations(List.of(new Location().withHoldingId(holdingId)));
     Piece piece1Tenant3 = new Piece()
       .withId(UUID.randomUUID().toString())
       .withHoldingId(holdingId)
@@ -307,6 +307,41 @@ public class PieceUpdateInventoryServiceTest {
     // Verify that the service queried both tenants (lines 119-125 executed for each tenant)
     verify(purchaseOrderLineService, times(2)).getPoLinesByHoldingIds(eq(List.of(holdingId)), any());
     verify(pieceStorageService, times(2)).getPiecesByHoldingId(eq(holdingId), any());
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("excludePoLinesTestCases")
+  @SuppressWarnings("unchecked")
+  void testExcludePoLines(String testName, List<PoLine> input, Set<String> excludeIds, List<String> expectedIds) {
+    try {
+      var method = PieceUpdateInventoryService.class.getDeclaredMethod("excludePoLines", List.class, Set.class);
+      method.setAccessible(true);
+      List<PoLine> result = (List<PoLine>) method.invoke(pieceUpdateInventoryService, input, excludeIds);
+      assertEquals(expectedIds, result.stream().map(PoLine::getId).toList());
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to invoke excludePoLines", e);
+    }
+  }
+
+  static Stream<Arguments> excludePoLinesTestCases() {
+    return Stream.of(
+      Arguments.of("checkinItems=true kept even in excludeIds",
+        List.of(new PoLine().withId("id1").withCheckinItems(true)), Set.of("id1"), List.of("id1")),
+      Arguments.of("checkinItems=false kept when NOT in excludeIds",
+        List.of(new PoLine().withId("id1").withCheckinItems(false)), Set.of("id2"), List.of("id1")),
+      Arguments.of("checkinItems=false filtered when in excludeIds",
+        List.of(new PoLine().withId("id1").withCheckinItems(false)), Set.of("id1"), List.of()),
+      Arguments.of("Mixed scenario: checkinItems logic + excludeIds",
+        List.of(
+          new PoLine().withId("id1").withCheckinItems(true),
+          new PoLine().withId("id2").withCheckinItems(false),
+          new PoLine().withId("id3").withCheckinItems(false),
+          new PoLine().withId("id4").withCheckinItems(true)
+        ), Set.of("id3", "id4"), List.of("id1", "id2", "id4")),
+      Arguments.of("All checkinItems=false in excludeIds filtered",
+        List.of(new PoLine().withId("id1").withCheckinItems(false), new PoLine().withId("id2").withCheckinItems(false)),
+        Set.of("id1", "id2"), List.of())
+    );
   }
 
 
