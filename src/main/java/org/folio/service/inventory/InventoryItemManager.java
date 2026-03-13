@@ -64,7 +64,6 @@ public class InventoryItemManager {
   public static final String ITEM_MATERIAL_TYPE = "materialType";
   public static final String ITEM_PERMANENT_LOAN_TYPE_ID = "permanentLoanTypeId";
   public static final String ITEM_PURCHASE_ORDER_LINE_IDENTIFIER = "purchaseOrderLineIdentifier";
-  public static final String ITEM_EFFECTIVE_LOCATION = "effectiveLocation";
   public static final String ITEM_ENUMERATION = "enumeration";
   public static final String ITEM_CHRONOLOGY = "chronology";
   public static final String ITEM_DISCOVERY_SUPPRESS = "discoverySuppress";
@@ -162,10 +161,11 @@ public class InventoryItemManager {
     return restClient.delete(requestEntry, skipNotFoundException, requestContext);
   }
 
-  public Future<List<Void>> deleteItems(List<String> itemIds, boolean skipNotFoundException, RequestContext requestContext) {
+  public Future<Void> deleteItems(List<String> itemIds, boolean skipNotFoundException, RequestContext requestContext) {
     List<Future<Void>> futures = new ArrayList<>(itemIds.size());
     itemIds.forEach(itemId -> futures.add(deleteItem(itemId, skipNotFoundException, requestContext)));
-    return collectResultsOnSuccess(futures);
+    return collectResultsOnSuccess(futures)
+      .mapEmpty();
   }
 
   /**

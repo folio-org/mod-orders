@@ -595,11 +595,9 @@ public class ApplicationConfig {
                                                           InventoryItemManager inventoryItemManager,
                                                           InventoryHoldingManager inventoryHoldingManager,
                                                           PieceStorageService pieceStorageService,
-                                                          PurchaseOrderStorageService purchaseOrderStorageService,
-                                                          ProtectionService protectionService,
                                                           CirculationRequestsRetriever circulationRequestsRetriever) {
     return new UnOpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory, inventoryItemManager,
-      inventoryHoldingManager, pieceStorageService, purchaseOrderStorageService, protectionService, circulationRequestsRetriever);
+      inventoryHoldingManager, pieceStorageService, circulationRequestsRetriever);
   }
 
   @Bean
