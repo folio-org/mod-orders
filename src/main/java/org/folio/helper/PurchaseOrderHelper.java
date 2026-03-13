@@ -224,6 +224,9 @@ public class PurchaseOrderHelper {
       .compose(poFromStorage -> purchaseOrderLineService.populateOrderLines(poFromStorage, requestContext))
       .compose(poFromStorage -> {
         CompositePurchaseOrder clonedPoFromStorage = JsonObject.mapFrom(poFromStorage).mapTo(CompositePurchaseOrder.class);
+        if (Objects.nonNull(poFromStorage.getDateOrdered()) && Objects.isNull(compPO.getDateOrdered())) {
+          compPO.setDateOrdered(poFromStorage.getDateOrdered());
+        }
         boolean isTransitionToOpen = isTransitionToOpen(poFromStorage, compPO);
         return validateUserUnaffiliatedPoLineLocations(clonedPoFromStorage.getPoLines(), requestContext)
           .compose(v -> orderValidationService.validateOrderForUpdate(compPO, poFromStorage, requestContext))

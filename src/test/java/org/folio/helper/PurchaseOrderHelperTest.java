@@ -5,13 +5,16 @@ import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestUtils.getMinimalContentCompositePoLine;
 import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
 import static org.folio.TestUtils.getMockData;
+import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.CLOSED;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
+import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -24,7 +27,9 @@ import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -56,6 +61,12 @@ import org.folio.service.orders.OrderValidationService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderManager;
+import org.folio.service.orders.flows.update.reopen.ReOpenCompositeOrderManager;
+import org.folio.service.orders.flows.update.unopen.UnOpenCompositeOrderManager;
+import org.folio.service.ProtectionService;
+import org.folio.service.titles.TitlesService;
+import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
+import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -107,6 +118,16 @@ public class PurchaseOrderHelperTest {
   OrderValidationService orderValidationService;
   @Mock
   PoLineValidationService poLineValidationService;
+  @Mock
+  ReOpenCompositeOrderManager reOpenCompositeOrderManager;
+  @Mock
+  UnOpenCompositeOrderManager unOpenCompositeOrderManager;
+  @Mock
+  ProtectionService protectionService;
+  @Mock
+  TitlesService titlesService;
+  @Mock
+  EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
 
   @BeforeEach
   void beforeEach() {
@@ -214,6 +235,8 @@ public class PurchaseOrderHelperTest {
 
     // Then
     assertTrue(future.succeeded());
+    // dateOrdered should remain null for pending order
+    assertNull(compPO.getDateOrdered());
   }
 
   @Test
@@ -286,6 +309,195 @@ public class PurchaseOrderHelperTest {
       });
   }
 
+  @Test
+  @DisplayName("Test PUT order transition to OPEN sets dateOrdered")
+  void testPutOrderTransitionToOpenSetsDateOrdered() throws IOException {
+    // Given
+    JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
+    CompositePurchaseOrder compPO = order.mapTo(CompositePurchaseOrder.class);
+    prepareOrderForPostRequest(compPO);
+    compPO.setId(UUID.randomUUID().toString());
+    compPO.setWorkflowStatus(OPEN);
+    compPO.getPoLines().forEach(line -> line.withId(UUID.randomUUID().toString()));
+
+    CompositePurchaseOrder poFromStorage = JsonObject.mapFrom(compPO).mapTo(CompositePurchaseOrder.class);
+    poFromStorage.setWorkflowStatus(PENDING);
+    poFromStorage.setDateOrdered(null);
+    poFromStorage.setPoLines(compPO.getPoLines());
+
+    boolean deleteHoldings = false;
+    JsonObject tenantConfig = new JsonObject();
+
+    doReturn(succeededFuture(List.of()))
+      .when(orderValidationService).validateOrderForPut(eq(compPO.getId()), any(CompositePurchaseOrder.class), eq(requestContext));
+    doReturn(succeededFuture(JsonObject.mapFrom(poFromStorage)))
+      .when(purchaseOrderStorageService).getPurchaseOrderByIdAsJson(eq(compPO.getId()), eq(requestContext));
+    doReturn(succeededFuture(poFromStorage))
+      .when(purchaseOrderLineService).populateOrderLines(any(CompositePurchaseOrder.class), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(orderValidationService).validateOrderForUpdate(any(CompositePurchaseOrder.class), any(CompositePurchaseOrder.class),
+        eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(poLineValidationService).validatePurchaseOrderHasPoLines(any());
+    doReturn(succeededFuture(null))
+      .when(poLineValidationService).validateUserUnaffiliatedLocations(anyString(), any(), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(purchaseOrderLineHelper).updatePoLines(any(CompositePurchaseOrder.class), any(CompositePurchaseOrder.class),
+        eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(orderValidationService).checkOrderApprovalRequired(any(CompositePurchaseOrder.class), eq(requestContext));
+    doReturn(succeededFuture(tenantConfig))
+      .when(commonSettingsCache).loadSettings(eq(requestContext));
+    // Mock OpenCompositeOrderManager to set dateOrdered (mimicking what the real implementation does)
+    doAnswer((Answer<Future<Void>>) invocation -> {
+      CompositePurchaseOrder po = invocation.getArgument(0);
+      po.setDateOrdered(new Date());
+      return succeededFuture(null);
+    }).when(openCompositeOrderManager).process(any(CompositePurchaseOrder.class), any(CompositePurchaseOrder.class), eq(tenantConfig),
+        eq(requestContext));
+    doReturn(succeededFuture(compPO.getPoLines()))
+      .when(purchaseOrderLineService).getPoLinesByOrderId(eq(compPO.getId()), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(itemStatusSyncService).updateItemStatusesInInventory(anyList(), any(ItemStatus.class), any(ItemStatus.class), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(purchaseOrderStorageService).saveOrder(any(PurchaseOrder.class), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(encumbranceService).updateEncumbrancesOrderStatusAndReleaseIfClosed(any(CompositePurchaseOrder.class), eq(requestContext));
+
+    // When
+    Future<Void> future = purchaseOrderHelper.putCompositeOrderById(compPO.getId(), deleteHoldings, compPO, requestContext);
+
+    // Then
+    assertTrue(future.succeeded());
+    // dateOrdered should be set when opening the order
+    assertNotNull(compPO.getDateOrdered(), "dateOrdered should be set when transitioning to OPEN");
+  }
+
+  @Test
+  @DisplayName("Test PUT order transition to CLOSED preserves dateOrdered")
+  void testPutOrderTransitionToClosedPreservesDateOrdered() throws IOException {
+    // Given
+    JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
+    CompositePurchaseOrder compPO = order.mapTo(CompositePurchaseOrder.class);
+    prepareOrderForPostRequest(compPO);
+    compPO.setId(UUID.randomUUID().toString());
+    compPO.setWorkflowStatus(CLOSED);
+    compPO.setCloseReason(new org.folio.rest.jaxrs.model.CloseReason().withReason("Complete"));
+    compPO.getPoLines().forEach(line -> line.withId(UUID.randomUUID().toString()));
+
+    Date originalDateOrdered = new Date();
+    CompositePurchaseOrder poFromStorage = JsonObject.mapFrom(compPO).mapTo(CompositePurchaseOrder.class);
+    poFromStorage.setWorkflowStatus(OPEN);
+    poFromStorage.setDateOrdered(originalDateOrdered);
+    poFromStorage.setPoLines(compPO.getPoLines());
+
+    boolean deleteHoldings = false;
+
+    // Mock EncumbranceWorkflowStrategy for closing
+    EncumbranceWorkflowStrategy mockStrategy = mock(EncumbranceWorkflowStrategy.class);
+    doReturn(succeededFuture(null))
+      .when(mockStrategy).processEncumbrances(any(CompositePurchaseOrder.class), any(CompositePurchaseOrder.class), eq(requestContext));
+    doReturn(mockStrategy)
+      .when(encumbranceWorkflowStrategyFactory).getStrategy(any());
+
+    doReturn(succeededFuture(List.of()))
+      .when(orderValidationService).validateOrderForPut(eq(compPO.getId()), any(CompositePurchaseOrder.class), eq(requestContext));
+    doReturn(succeededFuture(JsonObject.mapFrom(poFromStorage)))
+      .when(purchaseOrderStorageService).getPurchaseOrderByIdAsJson(eq(compPO.getId()), eq(requestContext));
+    doReturn(succeededFuture(poFromStorage))
+      .when(purchaseOrderLineService).populateOrderLines(any(CompositePurchaseOrder.class), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(orderValidationService).validateOrderForUpdate(any(CompositePurchaseOrder.class), any(CompositePurchaseOrder.class),
+        eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(poLineValidationService).validateUserUnaffiliatedLocations(anyString(), any(), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(purchaseOrderLineHelper).updatePoLines(any(CompositePurchaseOrder.class), any(CompositePurchaseOrder.class),
+        eq(requestContext));
+    doReturn(succeededFuture(compPO.getPoLines()))
+      .when(purchaseOrderLineService).getPoLinesByOrderId(eq(compPO.getId()), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(itemStatusSyncService).updateItemStatusesInInventory(anyList(), any(ItemStatus.class), any(ItemStatus.class), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(purchaseOrderStorageService).saveOrder(any(PurchaseOrder.class), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(encumbranceService).updateEncumbrancesOrderStatusAndReleaseIfClosed(any(CompositePurchaseOrder.class), eq(requestContext));
+
+    // When
+    Future<Void> future = purchaseOrderHelper.putCompositeOrderById(compPO.getId(), deleteHoldings, compPO, requestContext);
+
+    // Then
+    assertTrue(future.succeeded());
+    // dateOrdered should be preserved from storage when closing the order
+    assertEquals(originalDateOrdered, compPO.getDateOrdered(), "dateOrdered should be preserved when transitioning to CLOSED");
+  }
+
+  @Test
+  @DisplayName("Test PUT order transition to REOPEN preserves original dateOrdered")
+  void testPutOrderTransitionToReopenPreservesDateOrdered() throws IOException {
+    // Given
+    JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
+    CompositePurchaseOrder compPO = order.mapTo(CompositePurchaseOrder.class);
+    prepareOrderForPostRequest(compPO);
+    compPO.setId(UUID.randomUUID().toString());
+    compPO.setWorkflowStatus(OPEN);
+    compPO.getPoLines().forEach(line -> line.withId(UUID.randomUUID().toString()));
+
+    Date originalDateOrdered = new Date();
+    CompositePurchaseOrder poFromStorage = JsonObject.mapFrom(compPO).mapTo(CompositePurchaseOrder.class);
+    poFromStorage.setWorkflowStatus(CLOSED);
+    poFromStorage.setDateOrdered(originalDateOrdered);
+    poFromStorage.setPoLines(compPO.getPoLines());
+
+    boolean deleteHoldings = false;
+
+    // Mock request context headers to include reopen permissions
+    Map<String, String> headers = new java.util.HashMap<>();
+    headers.put("X-Okapi-Permissions", "[\"orders.item.reopen\"]");
+    doReturn(headers).when(requestContext).getHeaders();
+
+    // Mock EncumbranceWorkflowStrategy for reopening
+    EncumbranceWorkflowStrategy mockStrategy = mock(EncumbranceWorkflowStrategy.class);
+    doReturn(succeededFuture(null))
+      .when(mockStrategy).processEncumbrances(any(CompositePurchaseOrder.class), any(CompositePurchaseOrder.class), eq(requestContext));
+    doReturn(mockStrategy)
+      .when(encumbranceWorkflowStrategyFactory).getStrategy(any());
+
+    doReturn(succeededFuture(List.of()))
+      .when(orderValidationService).validateOrderForPut(eq(compPO.getId()), any(CompositePurchaseOrder.class), eq(requestContext));
+    doReturn(succeededFuture(JsonObject.mapFrom(poFromStorage)))
+      .when(purchaseOrderStorageService).getPurchaseOrderByIdAsJson(eq(compPO.getId()), eq(requestContext));
+    doReturn(succeededFuture(poFromStorage))
+      .when(purchaseOrderLineService).populateOrderLines(any(CompositePurchaseOrder.class), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(orderValidationService).validateOrderForUpdate(any(CompositePurchaseOrder.class), any(CompositePurchaseOrder.class),
+        eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(poLineValidationService).validateUserUnaffiliatedLocations(anyString(), any(), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(reOpenCompositeOrderManager).process(any(CompositePurchaseOrder.class), any(CompositePurchaseOrder.class),
+        eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(purchaseOrderLineHelper).updatePoLines(any(CompositePurchaseOrder.class), any(CompositePurchaseOrder.class),
+        eq(requestContext));
+    doReturn(succeededFuture(compPO.getPoLines()))
+      .when(purchaseOrderLineService).getPoLinesByOrderId(eq(compPO.getId()), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(itemStatusSyncService).updateItemStatusesInInventory(anyList(), any(ItemStatus.class), any(ItemStatus.class), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(purchaseOrderStorageService).saveOrder(any(PurchaseOrder.class), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(encumbranceService).updateEncumbrancesOrderStatusAndReleaseIfClosed(any(CompositePurchaseOrder.class), eq(requestContext));
+
+    // When
+    Future<Void> future = purchaseOrderHelper.putCompositeOrderById(compPO.getId(), deleteHoldings, compPO, requestContext);
+
+    // Then
+    assertTrue(future.succeeded());
+    // dateOrdered should be preserved from storage when reopening the order
+    assertEquals(originalDateOrdered, compPO.getDateOrdered(), "dateOrdered should be preserved when reopening order from CLOSED to OPEN");
+  }
+
   private void prepareOrderForPostRequest(CompositePurchaseOrder reqData) {
     reqData.setDateOrdered(null);
     removeAllEncumbranceLinks(reqData);
@@ -296,5 +508,4 @@ public class PurchaseOrderHelperTest {
       poLine.getFundDistribution().forEach(fundDistribution -> fundDistribution.setEncumbrance(null))
     );
   }
-
 }
