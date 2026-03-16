@@ -15,12 +15,12 @@ import java.util.UUID;
 
 import org.folio.AcquisitionMethod;
 import org.folio.AcquisitionsUnit;
-import org.folio.ContributorNameType;
+import org.folio.rest.jaxrs.model.ContributorNameType;
 import org.folio.ExpenseClass;
 import org.folio.Fund;
-import org.folio.IdentifierType;
-import org.folio.Location;
-import org.folio.Mtype;
+import org.folio.rest.jaxrs.model.IdentifierType;
+import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.MaterialType;
 import org.folio.Organization;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.core.RestClient;
@@ -117,8 +117,8 @@ public class CacheTest {
     String acqUnitsQueryParam = "&query=" + encodeQuery("isDeleted==false");
     String uuid = UUID.randomUUID().toString();
     Organization organization = new Organization().withId(uuid);
-    Location location = new Location().withId(uuid);
-    Mtype materialType = new Mtype().withId(uuid);
+    Location location = new Location().withLocationId(uuid);
+    MaterialType materialType = new MaterialType().withId(uuid);
     IdentifierType identifierType = new IdentifierType().withId(uuid);
     ContributorNameType contributorNameType = new ContributorNameType().withId(uuid);
     Fund fund = new Fund().withId(uuid);
@@ -225,7 +225,7 @@ public class CacheTest {
           context.assertEquals(1, result.getTenantConfigurationAddresses().size());
 
           result.getOrganizations().forEach(org -> context.assertEquals(uuid, org.getId()));
-          result.getLocations().forEach(loc -> context.assertEquals(uuid, loc.getId()));
+          result.getLocations().forEach(loc -> context.assertEquals(uuid, loc.getLocationId()));
           result.getMaterialTypes().forEach(mt -> context.assertEquals(uuid, mt.getId()));
           result.getIdentifierTypes().forEach(it -> context.assertEquals(uuid, it.getId()));
           result.getContributorNameTypes().forEach(cnt -> context.assertEquals(uuid, cnt.getId()));

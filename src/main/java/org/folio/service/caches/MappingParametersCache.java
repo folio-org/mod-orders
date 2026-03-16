@@ -12,18 +12,18 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.AcquisitionMethod;
 import org.folio.AcquisitionsUnit;
-import org.folio.ContributorNameType;
-import org.folio.Contributornametypes;
+import org.folio.rest.jaxrs.model.ContributorNameType;
+import org.folio.rest.jaxrs.model.ContributorNameTypes;
 import org.folio.ExpenseClass;
 import org.folio.ExpenseClassCollection;
 import org.folio.Fund;
 import org.folio.FundCollection;
-import org.folio.IdentifierType;
-import org.folio.Identifiertypes;
-import org.folio.Location;
-import org.folio.Locations;
-import org.folio.Materialtypes;
-import org.folio.Mtype;
+import org.folio.rest.jaxrs.model.IdentifierType;
+import org.folio.rest.jaxrs.model.IdentifierTypes;
+import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Locations;
+import org.folio.rest.jaxrs.model.MaterialTypes;
+import org.folio.rest.jaxrs.model.MaterialType;
 import org.folio.Organization;
 import org.folio.OrganizationCollection;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
@@ -204,10 +204,10 @@ public class MappingParametersCache {
     return organizationCollectionFutures;
   }
 
-  private Future<List<Mtype>> getMaterialTypes(OkapiConnectionParams params) {
+  private Future<List<MaterialType>> getMaterialTypes(OkapiConnectionParams params) {
     String materialTypesUrl = "/material-types?limit=" + settingsLimit;
     return loadData(params, materialTypesUrl, MATERIALS_TYPES_RESPONSE_PARAM,
-      response -> response.mapTo(Materialtypes.class).getMtypes(), "MaterialTypes");
+      response -> response.mapTo(MaterialTypes.class).getMtypes(), "MaterialTypes");
   }
 
   private Future<List<Location>> getLocations(OkapiConnectionParams params) {
@@ -219,7 +219,7 @@ public class MappingParametersCache {
   private Future<List<ContributorNameType>> getContributorNameTypes(OkapiConnectionParams params) {
     String contributorNameTypesUrl = "/contributor-name-types?limit=" + settingsLimit;
     return loadData(params, contributorNameTypesUrl, CONTRIBUTOR_NAME_TYPES_RESPONSE_PARAM,
-      response -> response.mapTo(Contributornametypes.class).getContributorNameTypes(), "ContributorNameTypes");
+      response -> response.mapTo(ContributorNameTypes.class).getContributorNameTypes(), "ContributorNameTypes");
   }
 
   private Future<List<Fund>> getFunds(OkapiConnectionParams params) {
@@ -237,7 +237,7 @@ public class MappingParametersCache {
   private Future<List<IdentifierType>> getIdentifierTypes(OkapiConnectionParams params) {
     String identifierTypesUrl = "/identifier-types?limit=" + settingsLimit;
     return loadData(params, identifierTypesUrl, IDENTIFIER_TYPES_RESPONSE_PARAM,
-      response -> response.mapTo(Identifiertypes.class).getIdentifierTypes(), "IdentifierTypes");
+      response -> response.mapTo(IdentifierTypes.class).getIdentifierTypes(), "IdentifierTypes");
   }
 
   private Future<List<AcquisitionsUnit>> getAcquisitionsUnits(OkapiConnectionParams params) {
