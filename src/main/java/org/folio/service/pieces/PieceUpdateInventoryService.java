@@ -82,7 +82,7 @@ public class PieceUpdateInventoryService {
       .map(Piece::getPoLineId)
       .collect(Collectors.toSet());
     var holdingIdsToPieces = PieceUtil.groupPiecesByHoldings(pieces);
-    return deleteHoldingsConnectedToPieces(holdingIdsToPieces, poLinesToSkip, Set.of(), requestContext);
+    return deleteHoldingsConnectedToPieces(holdingIdsToPieces, Set.of(), poLinesToSkip, requestContext);
   }
 
   public Future<List<Pair<String, String>>> deleteHoldingsConnectedToPieces(Map<Pair<String, String>, Set<String>> pieceByHoldingIds,
