@@ -13,10 +13,10 @@ import java.util.List;
 import java.util.UUID;
 
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.RoutingList;
 import org.folio.rest.jaxrs.model.RoutingListCollection;
+import org.folio.rest.jaxrs.model.acq.Location;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

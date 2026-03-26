@@ -11,8 +11,8 @@ import org.folio.models.ItemStatus;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.acq.Location;
 
 import java.time.Instant;
 import java.util.ArrayList;

@@ -1,7 +1,7 @@
 package org.folio.models;
 
-import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.acq.Location;
 
 import java.util.List;
 
