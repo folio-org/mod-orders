@@ -4,24 +4,25 @@ import static org.folio.orders.utils.FutureUtils.asFuture;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
 import static org.folio.orders.utils.StreamUtils.map;
-import static org.folio.service.inventory.InventoryHoldingManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.inventory.InventoryItemManager.ID;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.folio.models.ItemStatus;
+import org.folio.models.HoldingDataExclusionConfig;
+import org.folio.models.HoldingDataExclusionMode;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.exceptions.ErrorCodes;
@@ -32,6 +33,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.CirculationRequestsRetriever;
+import org.folio.service.HoldingDeletionService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryItemManager;
@@ -43,6 +45,7 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 @Log4j2
+@RequiredArgsConstructor
 public class UnOpenCompositeOrderManager {
 
   private static final EnumSet<PoLine.PaymentStatus> SUPPORTED_PAYMENT_STATUSES =
@@ -56,20 +59,7 @@ public class UnOpenCompositeOrderManager {
   private final InventoryHoldingManager inventoryHoldingManager;
   private final PieceStorageService pieceStorageService;
   private final CirculationRequestsRetriever circulationRequestsRetriever;
-
-  public UnOpenCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
-                                     EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
-                                     InventoryItemManager inventoryItemManager,
-                                     InventoryHoldingManager inventoryHoldingManager,
-                                     PieceStorageService pieceStorageService,
-                                     CirculationRequestsRetriever circulationRequestsRetriever) {
-    this.purchaseOrderLineService = purchaseOrderLineService;
-    this.encumbranceWorkflowStrategyFactory = encumbranceWorkflowStrategyFactory;
-    this.inventoryItemManager = inventoryItemManager;
-    this.inventoryHoldingManager = inventoryHoldingManager;
-    this.pieceStorageService = pieceStorageService;
-    this.circulationRequestsRetriever = circulationRequestsRetriever;
-  }
+  private final HoldingDeletionService holdingDeletionService;
 
   public Future<Void> process(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, boolean deleteHoldings, RequestContext requestContext) {
     if (CollectionUtils.isEmpty(compPO.getPoLines())) {
@@ -77,8 +67,8 @@ public class UnOpenCompositeOrderManager {
     }
     var strategy = encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.OPEN_TO_PENDING);
     return strategy.processEncumbrances(compPO, poFromStorage, requestContext)
-      .compose(ok -> processInventory(compPO.getPoLines(), deleteHoldings, requestContext))
       .compose(ok -> asFuture(() -> compPO.getPoLines().forEach(this::makePoLinePending)))
+      .compose(ok -> processInventory(compPO.getPoLines(), deleteHoldings, requestContext))
       .compose(ok -> updatePoLinesSummary(compPO.getPoLines(), requestContext))
       .onSuccess(v -> log.info("Unopen order: done processing inventory for po id: {}", compPO.getId()))
       .onFailure(t -> log.error("Unopen order: failed to process inventory for po id: {}", compPO.getId(), t));
@@ -241,40 +231,54 @@ public class UnOpenCompositeOrderManager {
   }
 
   private Future<Void> deleteHoldingsAndUpdatePoLineLocations(PoLine poLine, RequestContext requestContext) {
-    var futuresOfHoldingIdLocationIdPairs = inventoryHoldingManager.getHoldingsByLocationTenants(poLine, requestContext)
-      .entrySet().stream().map(entry -> entry.getValue()
-        .compose(holdings -> deleteHoldingsInOneTenant(poLine, entry.getKey(), holdings, requestContext)))
-      .toList();
-    return Future.all(futuresOfHoldingIdLocationIdPairs).map(ar -> {
-      var holdingIdLocationIdPairs = futuresOfHoldingIdLocationIdPairs.stream()
-        .map(Future::result)
-        .flatMap(List::stream)
-        .toList();
-      updateLocations(poLine, holdingIdLocationIdPairs);
-      return null;
-    })
-    .onSuccess(v -> log.info("deleteHoldingsAndUpdatePoLineLocations:: successfully deleted holdings for po line id: {}", poLine.getId()))
-    .onFailure(t -> log.error("deleteHoldingsAndUpdatePoLineLocations:: failed to delete holdings for po line id: {}", poLine.getId(), t))
-    .mapEmpty();
+    log.info("deleteHoldingsAndUpdatePoLineLocations:: PoLine id: {}, payment status={}, receipt status={}",
+      poLine.getId(), poLine.getPaymentStatus(), poLine.getReceiptStatus());
+     var futuresOfHoldingIdLocationIdPairs = inventoryHoldingManager.getHoldingsByLocationTenants(poLine, requestContext)
+       .entrySet().stream()
+       .map(entry -> entry.getValue()
+         .compose(holdings -> deleteHoldingsCheckLinkedData(poLine, entry, holdings, requestContext)))
+       .toList();
+    return Future.all(futuresOfHoldingIdLocationIdPairs)
+      .map(ar -> {
+        var holdingIdLocationIdPairs = futuresOfHoldingIdLocationIdPairs.stream()
+          .map(Future::result)
+          .flatMap(List::stream)
+          .toList();
+        updateLocations(poLine, holdingIdLocationIdPairs);
+        return null;
+      })
+      .onSuccess(v -> log.info("deleteHoldingsAndUpdatePoLineLocations:: successfully deleted holdings for po line id: {}", poLine.getId()))
+      .onFailure(t -> log.error("deleteHoldingsAndUpdatePoLineLocations:: failed to delete holdings for po line id: {}", poLine.getId(), t))
+      .mapEmpty();
   }
 
-  private Future<List<Pair<String, String>>> deleteHoldingsInOneTenant(PoLine poLine, String tenantId, List<JsonObject> holdings,
-      RequestContext requestContext) {
-    if (CollectionUtils.isEmpty(holdings)) {
-      return Future.succeededFuture(List.of());
+  private Future<List<Pair<String, String>>> deleteHoldingsCheckLinkedData(PoLine poLine, Map.Entry<String, Future<List<JsonObject>>> entry,
+                                                                           List<JsonObject> holdings, RequestContext requestContext) {
+    var futures = new ArrayList<Future<Pair<String, String>>>();
+    for (var holding : holdings) {
+      var locationContext = createContextWithNewTenantId(requestContext, entry.getKey());
+      var exclusionConfig = new HoldingDataExclusionConfig(HoldingDataExclusionMode.PURCHASE_ORDER_UNOPEN, Set.of(poLine.getId()), isPending(poLine));
+      var future = holdingDeletionService.getHoldingLinkedData(holding, exclusionConfig, requestContext, locationContext)
+        .compose(deletableHoldings -> holdingDeletionService.deleteHoldingIfPossible(deletableHoldings, locationContext));
+      futures.add(future);
     }
-    var holdingIds = holdings.stream().map(holding -> holding.getString(ID)).toList();
-    return getDeletableHoldings(poLine, holdingIds, requestContext)
-      .map(deletableHoldings -> holdings.stream()
-        .filter(holding -> StringUtils.isNotBlank(holding.getString(ID)))
-        .filter(holding -> deletableHoldings.contains(holding.getString(ID)))
-        .map(holding -> {
-          String holdingId = holding.getString(ID);
-          String permanentLocationId = holding.getString(HOLDING_PERMANENT_LOCATION_ID);
-          return deleteHolding(holdingId, permanentLocationId, createContextWithNewTenantId(requestContext, tenantId));
-        }).toList())
-      .compose(HelperUtils::collectResultsOnSuccess)
+    return collectResultsOnSuccess(futures)
       .map(this::filterHoldingAndLocationPairs);
+  }
+
+  private Set<String> isPending(PoLine poLine) {
+    return poLine.getPaymentStatus() == PoLine.PaymentStatus.PENDING &&
+      poLine.getReceiptStatus() == PoLine.ReceiptStatus.PENDING ? Set.of(poLine.getId()) : Set.of();
+  }
+
+  private List<Pair<String, String>> filterHoldingAndLocationPairs(List<Pair<String, String>> holdingAndLocationPairs) {
+    var validPairs = holdingAndLocationPairs.stream()
+      .filter(pair -> Objects.nonNull(pair) && Objects.nonNull(pair.getKey()))
+      .toList();
+    if (log.isDebugEnabled()) {
+      log.debug("Holdings were removed: {}", map(validPairs, Pair::getKey));
+    }
+    return validPairs;
   }
 
   private void updateLocations(PoLine poLine, List<Pair<String, String>> deletedHoldingVsLocationIds) {
@@ -291,47 +295,4 @@ public class UnOpenCompositeOrderManager {
         .forEach(location -> location.withHoldingId(null).withLocationId(locationId));
     });
   }
-
-  private Future<List<String>> getDeletableHoldings(PoLine storagePoLine, List<String> holdingIds, RequestContext requestContext) {
-    var poLinesHoldingIds = purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext)
-      .map(poLines -> poLines.stream()
-        .filter(poLine -> !Objects.equals(poLine.getId(), storagePoLine.getId()))
-        .flatMap(poLine -> StreamEx.of(poLine.getLocations()).map(Location::getHoldingId).nonNull().distinct())
-        .toList());
-    var piecesHoldingIds = pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext)
-      .map(pieces -> StreamEx.of(pieces)
-        .filter(piece -> !Objects.equals(piece.getPoLineId(), storagePoLine.getId()))
-        .map(Piece::getHoldingId)
-        .nonNull().distinct()
-        .toList());
-    return collectResultsOnSuccess(List.of(poLinesHoldingIds, piecesHoldingIds))
-      .map(results -> results.stream().flatMap(Collection::stream).toList())
-      .map(usedHoldingIds -> holdingIds.stream()
-        .filter(id -> !usedHoldingIds.contains(id))
-        .toList());
-  }
-
-  private Future<Pair<String, String>> deleteHolding(String holdingId, String locationId, RequestContext requestContext) {
-    return inventoryItemManager.getItemsByHoldingId(holdingId, requestContext)
-      .compose(items -> {
-        if (items.isEmpty()) {
-          log.info("deleteHolding:: Deleting holdings, holdingId: {}", holdingId);
-          return inventoryHoldingManager.deleteHoldingById(holdingId, true, requestContext)
-            .map(v -> Pair.of(holdingId, locationId));
-        }
-        log.info("deleteHolding:: Cannot delete holdings with items, holdingId: {}, items: {}", holdingId, items.size());
-        return Future.succeededFuture();
-      });
-  }
-
-  private List<Pair<String, String>> filterHoldingAndLocationPairs(List<Pair<String, String>> holdingAndLocationPairs) {
-    var validPairs = holdingAndLocationPairs.stream()
-      .filter(pair -> Objects.nonNull(pair) && Objects.nonNull(pair.getKey()))
-      .toList();
-    if (log.isDebugEnabled()) {
-      log.debug("Holdings were removed: {}", map(validPairs, Pair::getKey));
-    }
-    return validPairs;
-  }
-
 }

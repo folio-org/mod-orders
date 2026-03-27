@@ -29,10 +29,13 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 
 import org.folio.ApiTestSuite;
+import org.folio.models.HoldingDataExclusionConfig;
+import org.folio.models.HoldingDataExclusionMode;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.service.HoldingDeletionService;
 import org.folio.service.consortium.ConsortiumUserTenantService;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryItemManager;
@@ -61,6 +64,8 @@ public class PieceUpdateInventoryServiceTest {
   private ConsortiumUserTenantService consortiumUserTenantService;
   @Autowired
   private PieceUpdateInventoryService pieceUpdateInventoryService;
+  @Autowired
+  private HoldingDeletionService holdingDeletionService;
   @Autowired
   private InventoryItemManager inventoryItemManager;
   @Autowired
@@ -314,9 +319,10 @@ public class PieceUpdateInventoryServiceTest {
   @SuppressWarnings("unchecked")
   void testExcludePoLines(String testName, List<PoLine> input, Set<String> excludeIds, List<String> expectedIds) {
     try {
-      var method = PieceUpdateInventoryService.class.getDeclaredMethod("excludePoLines", List.class, Set.class);
+      var method = HoldingDeletionService.class.getDeclaredMethod("excludePoLines", List.class, HoldingDataExclusionConfig.class);
       method.setAccessible(true);
-      List<PoLine> result = (List<PoLine>) method.invoke(pieceUpdateInventoryService, input, excludeIds);
+      var exclusionConfig = new HoldingDataExclusionConfig(HoldingDataExclusionMode.PIECE_RECEIVING, excludeIds, Set.of());
+      List<PoLine> result = (List<PoLine>) method.invoke(holdingDeletionService, input, exclusionConfig);
       assertEquals(expectedIds, result.stream().map(PoLine::getId).toList());
     } catch (Exception e) {
       throw new RuntimeException("Failed to invoke excludePoLines", e);
@@ -372,14 +378,20 @@ public class PieceUpdateInventoryServiceTest {
     }
 
     @Bean
-    PieceUpdateInventoryService pieceUpdateInventoryService(ConsortiumUserTenantService consortiumUserTenantService,
+    HoldingDeletionService holdingDeletionService(ConsortiumUserTenantService consortiumUserTenantService,
+                                                  InventoryHoldingManager inventoryHoldingManager,
+                                                  InventoryItemManager inventoryItemManager,
+                                                  PieceStorageService pieceStorageService,
+                                                  PurchaseOrderLineService purchaseOrderLineService) {
+      return spy(new HoldingDeletionService(consortiumUserTenantService, inventoryHoldingManager,
+        inventoryItemManager, pieceStorageService, purchaseOrderLineService));
+    }
+
+    @Bean
+    PieceUpdateInventoryService pieceUpdateInventoryService(InventoryHoldingManager inventoryHoldingManager,
                                                             InventoryItemManager inventoryItemManager,
-                                                            InventoryHoldingManager inventoryHoldingManager,
-                                                            PieceStorageService pieceStorageService,
-                                                            PurchaseOrderLineService purchaseOrderLineService) {
-      return spy(new PieceUpdateInventoryService(consortiumUserTenantService,
-                                                 inventoryItemManager, inventoryHoldingManager,
-                                                 pieceStorageService, purchaseOrderLineService));
+                                                            HoldingDeletionService holdingDeletionService) {
+      return spy(new PieceUpdateInventoryService(inventoryHoldingManager, inventoryItemManager, holdingDeletionService));
     }
   }
 }
