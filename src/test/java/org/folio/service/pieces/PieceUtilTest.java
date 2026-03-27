@@ -5,7 +5,7 @@ import org.folio.models.pieces.PieceBatchStatusUpdateHolder;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.acq.Location;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;

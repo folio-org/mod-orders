@@ -8,7 +8,7 @@ import org.folio.rest.acq.model.Setting;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
-import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.acq.Location;
 import org.folio.service.settings.SettingsRetriever;
 import org.folio.service.settings.util.SettingKey;
 import org.junit.jupiter.api.AfterEach;

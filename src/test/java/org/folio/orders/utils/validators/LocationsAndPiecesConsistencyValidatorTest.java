@@ -13,9 +13,9 @@ import java.util.UUID;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceCollection;
+import org.folio.rest.jaxrs.model.acq.Location;
 import org.junit.jupiter.api.Test;
 
 public class LocationsAndPiecesConsistencyValidatorTest {

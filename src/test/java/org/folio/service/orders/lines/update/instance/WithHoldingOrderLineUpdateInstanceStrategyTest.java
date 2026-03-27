@@ -12,6 +12,7 @@ import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
@@ -25,6 +26,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.folio.TestConstants;
 import org.folio.models.ItemStatus;
 import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
@@ -32,13 +34,14 @@ import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
+import org.folio.rest.jaxrs.model.acq.Location;
+import org.folio.service.HoldingDeletionService;
 import org.folio.service.batch.BatchTrackingService;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryInstanceManager;
@@ -78,6 +81,8 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
   private PurchaseOrderLineService purchaseOrderLineService;
   @Mock
   private BatchTrackingService batchTrackingService;
+  @Mock
+  private HoldingDeletionService holdingDeletionService;
   @Mock
   private RequestContext requestContext;
   private AutoCloseable mockitoMocks;
@@ -420,12 +425,31 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     when(inventoryItemManager.getItemsByHoldingIdAndOrderLineId(eq(holdingIds.get(0)), eq(orderLineId), any(RequestContext.class))).thenReturn(succeededFuture(List.of(items.get(0))));
     when(inventoryItemManager.getItemsByHoldingIdAndOrderLineId(eq(holdingIds.get(1)), eq(orderLineId), any(RequestContext.class))).thenReturn(succeededFuture(List.of(items.get(1))));
     when(inventoryItemManager.getItemsByHoldingIdAndOrderLineId(eq(usedHoldingId), eq(orderLineId), any(RequestContext.class))).thenReturn(succeededFuture(List.of()));
-    when(inventoryHoldingManager.deleteHoldingById(eq(holdingIds.get(0)), eq(true), any(RequestContext.class))).thenReturn(succeededFuture(null));
-    when(inventoryHoldingManager.deleteHoldingById(eq(holdingIds.get(1)), eq(true), any(RequestContext.class))).thenReturn(succeededFuture(null));
+    when(inventoryHoldingManager.getHoldingById(eq(holdingIds.get(0)), eq(true), any(RequestContext.class))).thenReturn(succeededFuture(holdings.get(0).put("permanentLocationId", UUID.randomUUID().toString())));
+    when(inventoryHoldingManager.getHoldingById(eq(holdingIds.get(1)), eq(true), any(RequestContext.class))).thenReturn(succeededFuture(holdings.get(1).put("permanentLocationId", UUID.randomUUID().toString())));
+    when(inventoryHoldingManager.getHoldingById(eq(usedHoldingId), eq(true), any(RequestContext.class))).thenReturn(succeededFuture(holdings.get(2).put("permanentLocationId", UUID.randomUUID().toString())));
     when(inventoryItemManager.batchUpdatePartialItems(any(), eq(requestContext))).thenReturn(succeededFuture(null));
     when(pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext)).thenReturn(succeededFuture(List.of(new Piece().withHoldingId(usedHoldingId))));
     when(purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext)).thenReturn(succeededFuture(List.of(new PoLine().withLocations(List.of(new Location().withHoldingId(usedHoldingId))))));
     when(batchTrackingService.createBatchTrackingRecord(anyString(), anyInt(), eq(requestContext))).thenReturn(succeededFuture());
+    // Mock HoldingDeletionService methods
+    when(holdingDeletionService.getHoldingLinkedData(any(), any(), any(), any())).thenAnswer(invocation -> {
+      JsonObject holding = invocation.getArgument(0);
+      String holdingId = holding.getString("id");
+      // Return deletable for holdings that are not used
+      boolean isDeletable = !holdingId.equals(usedHoldingId);
+      return succeededFuture(Pair.of(isDeletable, isDeletable ? holding : new JsonObject()));
+    });
+    when(holdingDeletionService.deleteHoldingIfPossible(any(), any())).thenAnswer(invocation -> {
+      Pair<Boolean, JsonObject> deletableHoldings = invocation.getArgument(0);
+      if (deletableHoldings.getKey() && !deletableHoldings.getValue().isEmpty()) {
+        JsonObject holding = deletableHoldings.getValue();
+        String holdingId = holding.getString("id");
+        String permanentLocationId = holding.getString("permanentLocationId");
+        return succeededFuture(Pair.of(holdingId, permanentLocationId));
+      }
+      return succeededFuture(null);
+    });
 
     var future = withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext);
 
@@ -434,9 +458,12 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
       verify(inventoryHoldingManager, times(1)).getOrCreateHoldingRecordByInstanceAndLocation(instanceId, locations.get(0), requestContext);
       verify(inventoryHoldingManager, times(1)).getOrCreateHoldingRecordByInstanceAndLocation(instanceId, locations.get(1), requestContext);
       verify(inventoryHoldingManager, times(1)).getOrCreateHoldingRecordByInstanceAndLocation(instanceId, locations.get(2), requestContext);
-      verify(inventoryHoldingManager, times(1)).deleteHoldingById(eq(holdingIds.get(0)), eq(true), any(RequestContext.class));
-      verify(inventoryHoldingManager, times(1)).deleteHoldingById(eq(holdingIds.get(1)), eq(true), any(RequestContext.class));
-      verify(inventoryHoldingManager, times(0)).deleteHoldingById(eq(usedHoldingId), eq(true), any(RequestContext.class));
+      // Verify HoldingDeletionService methods are called (3 holdings total)
+      verify(holdingDeletionService, times(3)).getHoldingLinkedData(any(), any(), any(), any());
+      // Only 2 holdings should be deleted (the ones that are not used)
+      verify(holdingDeletionService, times(2)).deleteHoldingIfPossible(argThat(Pair::getKey), any());
+      // The used holding should not be deleted
+      verify(holdingDeletionService, times(1)).deleteHoldingIfPossible(argThat(pair -> !pair.getKey()), any());
       verify(inventoryItemManager, times(3)).getItemsByHoldingIdAndOrderLineId(anyString(), anyString(), any(RequestContext.class));
       verify(inventoryItemManager, times(3)).batchUpdatePartialItems(any(), any(RequestContext.class));
       vertxTestContext.completeNow();

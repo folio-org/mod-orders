@@ -26,16 +26,18 @@ import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CreateInventoryType;
 import org.folio.rest.jaxrs.model.Eresource;
-import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
+import org.folio.rest.jaxrs.model.acq.Location;
 import org.folio.service.AcquisitionsUnitsService;
+import org.folio.service.HoldingDeletionService;
 import org.folio.service.ProtectionService;
 import org.folio.service.batch.BatchTrackingService;
 import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.caches.InventoryCache;
+import org.folio.service.consortium.ConsortiumUserTenantService;
 import org.folio.service.settings.CommonSettingsRetriever;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
@@ -47,6 +49,7 @@ import org.folio.service.inventory.InventoryService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.orders.lines.update.instance.WithHoldingOrderLineUpdateInstanceStrategy;
+import org.folio.service.orders.lines.update.instance.WithoutHoldingOrderLineUpdateInstanceStrategy;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.settings.SettingsRetriever;
 import org.junit.jupiter.api.AfterAll;
@@ -314,10 +317,10 @@ public class OrderLineUpdateInstanceHandlerTest {
                                                                                InventoryItemManager inventoryItemManager,
                                                                                InventoryHoldingManager inventoryHoldingManager,
                                                                                PieceStorageService pieceStorageService,
-                                                                               PurchaseOrderLineService purchaseOrderLineService,
-                                                                               BatchTrackingService batchTrackingService) {
+                                                                               BatchTrackingService batchTrackingService,
+                                                                               HoldingDeletionService holdingDeletionService) {
       return new WithHoldingOrderLineUpdateInstanceStrategy(inventoryInstanceManager, inventoryItemManager,
-        inventoryHoldingManager, pieceStorageService, purchaseOrderLineService, batchTrackingService);
+        inventoryHoldingManager, pieceStorageService, batchTrackingService, holdingDeletionService);
     }
 
     @Bean
@@ -339,6 +342,30 @@ public class OrderLineUpdateInstanceHandlerTest {
     @Bean
     BatchTrackingService batchTrackingService(RestClient restClient) {
       return new BatchTrackingService(restClient);
+    }
+
+    @Bean
+    ConsortiumUserTenantService consortiumUserTenantService(ConsortiumConfigurationService consortiumConfigurationService,
+                                                           ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever) {
+      return new ConsortiumUserTenantService(consortiumConfigurationService, consortiumUserTenantsRetriever);
+    }
+
+    @Bean
+    HoldingDeletionService holdingDeletionService(ConsortiumUserTenantService consortiumUserTenantService,
+                                                  InventoryHoldingManager inventoryHoldingManager,
+                                                  InventoryItemManager inventoryItemManager,
+                                                  PieceStorageService pieceStorageService,
+                                                  PurchaseOrderLineService purchaseOrderLineService) {
+      return new HoldingDeletionService(consortiumUserTenantService,
+        inventoryHoldingManager, inventoryItemManager,
+        pieceStorageService, purchaseOrderLineService);
+    }
+
+    @Bean
+    OrderLineUpdateInstanceStrategy withoutHoldingOrderLineUpdateInstanceStrategy(InventoryInstanceManager inventoryInstanceManager,
+                                                                                  InventoryItemManager inventoryItemManager,
+                                                                                  InventoryHoldingManager inventoryHoldingManager) {
+      return new WithoutHoldingOrderLineUpdateInstanceStrategy(inventoryInstanceManager, inventoryItemManager, inventoryHoldingManager);
     }
   }
 }

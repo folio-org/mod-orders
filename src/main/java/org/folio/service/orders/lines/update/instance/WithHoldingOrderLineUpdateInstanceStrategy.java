@@ -8,6 +8,8 @@ import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.folio.models.HoldingDataExclusionConfig;
+import org.folio.models.HoldingDataExclusionMode;
 import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
 import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.acq.model.StoragePatchOrderLineRequest;
@@ -15,26 +17,25 @@ import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
+import org.folio.rest.jaxrs.model.acq.Location;
 import org.folio.rest.tools.utils.TenantTool;
+import org.folio.service.HoldingDeletionService;
 import org.folio.service.batch.BatchTrackingService;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemManager;
-import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.pieces.PieceStorageService;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -42,6 +43,7 @@ import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.FutureUtils.asFuture;
 import static org.folio.orders.utils.HelperUtils.chainCall;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
 import static org.folio.service.inventory.InventoryItemManager.ID;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_HOLDINGS_RECORD_ID;
 import static org.folio.service.pieces.PieceUtil.getPiecesLocations;
@@ -57,19 +59,19 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
   private static final String ORIGINAL_ERROR = "originalError";
 
   private final PieceStorageService pieceStorageService;
-  private final PurchaseOrderLineService purchaseOrderLineService;
   private final BatchTrackingService batchTrackingService;
+  private final HoldingDeletionService holdingDeletionService;
 
   public WithHoldingOrderLineUpdateInstanceStrategy(InventoryInstanceManager inventoryInstanceManager,
                                                     InventoryItemManager inventoryItemManager,
                                                     InventoryHoldingManager inventoryHoldingManager,
                                                     PieceStorageService pieceStorageService,
-                                                    PurchaseOrderLineService purchaseOrderLineService,
-                                                    BatchTrackingService batchTrackingService) {
+                                                    BatchTrackingService batchTrackingService,
+                                                    HoldingDeletionService holdingDeletionService) {
     super(inventoryInstanceManager, inventoryItemManager, inventoryHoldingManager);
     this.pieceStorageService = pieceStorageService;
-    this.purchaseOrderLineService = purchaseOrderLineService;
     this.batchTrackingService = batchTrackingService;
+    this.holdingDeletionService = holdingDeletionService;
   }
 
   Future<Void> processHoldings(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
@@ -90,7 +92,6 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
       default -> Future.succeededFuture();
     };
   }
-
 
   private Future<Void> moveHoldings(OrderLineUpdateInstanceHolder holder, String newInstanceId, RequestContext requestContext) {
     PoLine poLine = holder.getStoragePoLine();
@@ -275,29 +276,35 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
     if (BooleanUtils.isNotTrue(holder.getPatchOrderLineRequest().getReplaceInstanceRef().getDeleteAbandonedHoldings())) {
       return Future.succeededFuture();
     }
-    return getDeletableHoldings(holder, requestContext)
-      .compose(deletableHoldings -> deleteAbandonedHoldings(deletableHoldings, requestContext))
-      .compose(deletedHoldings -> asFuture(() -> holder.getDeletedHoldingIds().addAll(deletedHoldings)))
+
+    var uniqueLocations = StreamEx.of(holder.getProcessedLocations()).nonNull().distinct().toList();
+    var futures = new ArrayList<Future<Void>>();
+    for (var location : uniqueLocations) {
+      var holdingId = location.getHoldingId();
+      var locationContext = createContextWithNewTenantId(requestContext, location.getTenantId());
+      var exclusionConfig = new HoldingDataExclusionConfig(HoldingDataExclusionMode.PO_LINE_CHANGE_INSTANCE, Set.of(holder.getStoragePoLine().getId()), Set.of());
+      var future = inventoryHoldingManager.getHoldingById(holdingId, true, locationContext)
+        .compose(holding -> holdingDeletionService.getHoldingLinkedData(holding, exclusionConfig, requestContext, locationContext)
+          .compose(deletableHoldings -> holdingDeletionService.deleteHoldingIfPossible(deletableHoldings, locationContext).map(deletableHoldings))
+          .compose(deletableHoldings -> asFuture(() -> {
+            var deletedHoldings = getDeletedHoldings(deletableHoldings);
+            holder.getDeletedHoldingIds().addAll(deletedHoldings);
+          }))
+        );
+      futures.add(future);
+    }
+    return collectResultsOnSuccess(futures)
       .mapEmpty();
   }
 
-  private Future<List<Location>> getDeletableHoldings(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
-    var holdingIds = StreamEx.of(holder.getProcessedLocations()).map(Location::getHoldingId).nonNull().distinct().toList();
-    var poLinesHoldingIds = purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext)
-      .map(poLines -> poLines.stream()
-        .filter(poLine -> !Objects.equals(poLine.getId(), holder.getStoragePoLine().getId()))
-        .flatMap(poLine -> StreamEx.of(poLine.getLocations()).map(Location::getHoldingId).nonNull().distinct())
-        .toList());
-    var piecesHoldingIds = pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext)
-      .map(pieces -> StreamEx.of(pieces)
-        .filter(piece -> !Objects.equals(piece.getPoLineId(), holder.getStoragePoLine().getId()))
-        .map(Piece::getHoldingId)
-        .nonNull().distinct()
-        .toList());
-    return collectResultsOnSuccess(List.of(poLinesHoldingIds, piecesHoldingIds))
-      .map(results -> results.stream().flatMap(Collection::stream).toList())
-      .map(usedHoldingIds -> holder.getProcessedLocations().stream()
-        .filter(location -> !usedHoldingIds.contains(location.getHoldingId()))
-        .toList());
+  private List<String> getDeletedHoldings(Pair<Boolean, JsonObject> deletableHoldings) {
+    var isDeletable = deletableHoldings.getKey();
+    var holding = deletableHoldings.getValue();
+    var holdingId = holding.getString(InventoryHoldingManager.ID);
+    var deletedHoldings = new ArrayList<String>();
+    if (Boolean.TRUE.equals(isDeletable) && !holding.isEmpty()) {
+      deletedHoldings.add(holdingId);
+    }
+    return deletedHoldings;
   }
 }
