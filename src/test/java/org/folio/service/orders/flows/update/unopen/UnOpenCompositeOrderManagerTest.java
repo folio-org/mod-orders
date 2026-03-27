@@ -435,7 +435,7 @@ public class UnOpenCompositeOrderManagerTest {
     poLine.setId(UUID.randomUUID().toString());
     poLine.setCheckinItems(false); // Synchronized workflow
 
-    var location = new org.folio.rest.jaxrs.model.Location()
+    var location = new org.folio.rest.jaxrs.model.acq.Location()
       .withLocationId("locationId")
       .withQuantity(1)
       .withQuantityPhysical(1);
@@ -476,7 +476,7 @@ public class UnOpenCompositeOrderManagerTest {
     poLine.setId(UUID.randomUUID().toString());
     poLine.setCheckinItems(false);
 
-    var location = new org.folio.rest.jaxrs.model.Location()
+    var location = new org.folio.rest.jaxrs.model.acq.Location()
       .withLocationId("locationId")
       .withQuantity(1)
       .withQuantityPhysical(1);
@@ -503,7 +503,7 @@ public class UnOpenCompositeOrderManagerTest {
     poLine.setId(UUID.randomUUID().toString());
     poLine.setCheckinItems(false);
 
-    var location = new org.folio.rest.jaxrs.model.Location()
+    var location = new org.folio.rest.jaxrs.model.acq.Location()
       .withLocationId("locationId")
       .withQuantity(1)
       .withQuantityPhysical(1);

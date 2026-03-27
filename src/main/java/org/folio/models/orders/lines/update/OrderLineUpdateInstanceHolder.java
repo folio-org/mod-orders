@@ -12,9 +12,9 @@ import org.folio.rest.acq.model.StoragePatchOrderLineRequest;
 import org.folio.rest.acq.model.StoragePatchOrderLineRequest.PatchOrderLineOperationType;
 import org.folio.rest.acq.model.StorageReplaceOrderLineHoldingRefs;
 import org.folio.rest.acq.model.StorageReplaceOrderLineInstanceRef;
-import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.acq.Location;
 
 @Getter
 public class OrderLineUpdateInstanceHolder {

@@ -43,7 +43,6 @@ import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -51,6 +50,7 @@ import org.folio.rest.jaxrs.model.ReceivedItem;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
 import org.folio.rest.jaxrs.model.ToBeReceived;
+import org.folio.rest.jaxrs.model.acq.Location;
 
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;

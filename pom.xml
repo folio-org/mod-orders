@@ -738,6 +738,22 @@
         <version>${maven-antrun-plugin.version}</version>
         <executions>
           <execution>
+            <id>move-jaxrs-from-jsonschema2pojo</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <move todir="${generated_sources_dir}/raml-jaxrs" failonerror="false" overwrite="true">
+                  <fileset dir="${jsonschema2pojo_output_dir}" erroronmissingdir="false">
+                    <include name="org/folio/rest/jaxrs/**" />
+                  </fileset>
+                </move>
+              </target>
+            </configuration>
+          </execution>
+          <execution>
             <phase>prepare-package</phase>
             <configuration>
               <target>

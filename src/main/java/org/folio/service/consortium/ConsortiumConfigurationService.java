@@ -12,7 +12,7 @@ import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
-import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.acq.Location;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.settings.SettingsRetriever;
 import org.folio.service.settings.util.SettingKey;
