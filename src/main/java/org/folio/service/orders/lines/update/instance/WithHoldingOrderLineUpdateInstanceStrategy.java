@@ -27,7 +27,6 @@ import org.folio.service.batch.BatchTrackingService;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemManager;
-import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.pieces.PieceStorageService;
 
 import java.util.ArrayList;
@@ -67,7 +66,6 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
                                                     InventoryItemManager inventoryItemManager,
                                                     InventoryHoldingManager inventoryHoldingManager,
                                                     PieceStorageService pieceStorageService,
-                                                    PurchaseOrderLineService purchaseOrderLineService,
                                                     BatchTrackingService batchTrackingService,
                                                     HoldingDeletionService holdingDeletionService) {
     super(inventoryInstanceManager, inventoryItemManager, inventoryHoldingManager);

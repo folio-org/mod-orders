@@ -256,10 +256,8 @@ public class UnOpenCompositeOrderManager {
                                                                            List<JsonObject> holdings, RequestContext requestContext) {
     var futures = new ArrayList<Future<Pair<String, String>>>();
     for (var holding : holdings) {
-      var pendingPoLineIds = isPending(poLine);
-      var excludePoLineIds = Set.of(poLine.getId());
       var locationContext = createContextWithNewTenantId(requestContext, entry.getKey());
-      var exclusionConfig = new HoldingDataExclusionConfig(HoldingDataExclusionMode.PURCHASE_ORDER_UNOPEN, excludePoLineIds, pendingPoLineIds);
+      var exclusionConfig = new HoldingDataExclusionConfig(HoldingDataExclusionMode.PURCHASE_ORDER_UNOPEN, Set.of(poLine.getId()), isPending(poLine));
       var future = holdingDeletionService.getHoldingLinkedData(holding, exclusionConfig, requestContext, locationContext)
         .compose(deletableHoldings -> holdingDeletionService.deleteHoldingIfPossible(deletableHoldings, locationContext));
       futures.add(future);

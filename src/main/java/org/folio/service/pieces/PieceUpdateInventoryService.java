@@ -85,9 +85,8 @@ public class PieceUpdateInventoryService {
       .filter(entry -> !processedHoldingIds.contains(entry.getKey().getKey()))
       .map(entry -> {
         var holdingId = entry.getKey().getKey();
-        var excludePieceIds = entry.getValue();
         var locationContext = createContextWithNewTenantId(requestContext, entry.getKey().getValue());
-        var exclusionConfig = new HoldingDataExclusionConfig(HoldingDataExclusionMode.PIECE_RECEIVING, excludePoLineIds, excludePieceIds);
+        var exclusionConfig = new HoldingDataExclusionConfig(HoldingDataExclusionMode.PIECE_RECEIVING, excludePoLineIds, Set.of(), entry.getValue());
         return inventoryHoldingManager.getHoldingById(holdingId, true, locationContext)
           .compose(holding -> holdingDeletionService.getHoldingLinkedData(holding, exclusionConfig, requestContext, locationContext))
           .compose(deletableHoldings -> holdingDeletionService.deleteHoldingIfPossible(deletableHoldings, locationContext));

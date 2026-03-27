@@ -868,11 +868,10 @@ public class ApplicationConfig {
                                                                              InventoryItemManager inventoryItemManager,
                                                                              InventoryHoldingManager inventoryHoldingManager,
                                                                              PieceStorageService pieceStorageService,
-                                                                             PurchaseOrderLineService purchaseOrderLineService,
                                                                              BatchTrackingService batchTrackingService,
                                                                              HoldingDeletionService holdingDeletionService) {
     return new WithHoldingOrderLineUpdateInstanceStrategy(inventoryInstanceManager, inventoryItemManager,
-      inventoryHoldingManager, pieceStorageService, purchaseOrderLineService, batchTrackingService, holdingDeletionService);
+      inventoryHoldingManager, pieceStorageService, batchTrackingService, holdingDeletionService);
   }
 
   @Bean
