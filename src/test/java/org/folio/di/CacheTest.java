@@ -15,12 +15,12 @@ import java.util.UUID;
 
 import org.folio.AcquisitionMethod;
 import org.folio.AcquisitionsUnit;
-import org.folio.ContributorNameType;
+import org.folio.rest.jaxrs.model.ContributorNameType;
 import org.folio.ExpenseClass;
 import org.folio.Fund;
-import org.folio.IdentifierType;
-import org.folio.Location;
-import org.folio.Mtype;
+import org.folio.rest.jaxrs.model.IdentifierType;
+import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.MaterialType;
 import org.folio.Organization;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.core.RestClient;
@@ -118,7 +118,7 @@ public class CacheTest {
     String uuid = UUID.randomUUID().toString();
     Organization organization = new Organization().withId(uuid);
     Location location = new Location().withId(uuid);
-    Mtype materialType = new Mtype().withId(uuid);
+    MaterialType materialType = new MaterialType().withId(uuid);
     IdentifierType identifierType = new IdentifierType().withId(uuid);
     ContributorNameType contributorNameType = new ContributorNameType().withId(uuid);
     Fund fund = new Fund().withId(uuid);
