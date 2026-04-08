@@ -55,8 +55,11 @@ public class InventoryRollbackServiceTest {
     when(restClient.delete(any(RequestEntry.class), eq(requestContext)))
       .thenReturn(Future.succeededFuture(null));
 
+    Set<String> createdInstanceIds = new HashSet<>();
+    createdInstanceIds.add("instanceId123");
+
     // When
-    Future<Void> future = inventoryRollbackService.deleteOrphanedInstanceIfNeeded(poLine, new HashSet<>(), requestContext);
+    Future<Void> future = inventoryRollbackService.deleteOrphanedInstanceIfNeeded(poLine, createdInstanceIds, requestContext);
 
     // Then
     future.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
@@ -74,8 +77,11 @@ public class InventoryRollbackServiceTest {
     when(restClient.getAsJsonObject(any(RequestEntry.class), eq(requestContext)))
       .thenReturn(Future.succeededFuture(holdingsResponse));
 
+    Set<String> createdInstanceIds = new HashSet<>();
+    createdInstanceIds.add("instanceId123");
+
     // When
-    Future<Void> future = inventoryRollbackService.deleteOrphanedInstanceIfNeeded(poLine, new HashSet<>(), requestContext);
+    Future<Void> future = inventoryRollbackService.deleteOrphanedInstanceIfNeeded(poLine, createdInstanceIds, requestContext);
 
     // Then
     future.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
@@ -200,8 +206,11 @@ public class InventoryRollbackServiceTest {
     when(restClient.delete(any(RequestEntry.class), eq(requestContext)))
       .thenReturn(Future.failedFuture(new RuntimeException("Delete failed")));
 
+    Set<String> createdInstanceIds = new HashSet<>();
+    createdInstanceIds.add("instanceId123");
+
     // When
-    Future<Void> future = inventoryRollbackService.deleteOrphanedInstanceIfNeeded(poLine, new HashSet<>(), requestContext);
+    Future<Void> future = inventoryRollbackService.deleteOrphanedInstanceIfNeeded(poLine, createdInstanceIds, requestContext);
 
     // Then - should succeed despite deletion failure (graceful recovery)
     future.onComplete(testContext.succeeding(result -> testContext.verify(() -> {

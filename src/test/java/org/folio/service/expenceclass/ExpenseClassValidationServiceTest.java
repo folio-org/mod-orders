@@ -2,7 +2,7 @@ package org.folio.service.expenceclass;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestUtils.getMockAsJson;
-import static org.folio.rest.impl.PurchaseOrderLinesApiTest.COMP_PO_LINES_MOCK_DATA_PATH;
+import static org.folio.rest.impl.PurchaseOrderLinesApiIT.COMP_PO_LINES_MOCK_DATA_PATH;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
