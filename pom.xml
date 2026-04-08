@@ -887,13 +887,6 @@
         <configuration>
           <argLine>@{argLine} -Xmx1024m -Duser.language=en -Duser.region=US</argLine>
           <excludedGroups>integration</excludedGroups>
-          <excludes>
-            <exclude>org/folio/rest/impl/**Test.class</exclude>
-          </excludes>
-          <includes>
-            <include>org/folio/ApiTestSuite.java</include>
-            <include>org/folio/DataImportTestSuite.java</include>
-          </includes>
         </configuration>
         <!--org.apache.maven.surefire.junitplatform.JUnitPlatformProvider configured to run Junit5 and Junit4 tests-->
         <dependencies>
