@@ -102,7 +102,9 @@ public final class TestConfig {
   }
 
   public static void closeMockServer() {
-    mockServer.close();
+    if (mockServer != null) {
+      mockServer.close();
+    }
   }
 
   public static void closeKafkaMockServer() {

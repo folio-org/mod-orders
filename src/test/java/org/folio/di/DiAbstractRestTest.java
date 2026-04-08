@@ -143,11 +143,25 @@ public abstract class DiAbstractRestTest {
   public static void tearDownClass(final TestContext context) {
     Async async = context.async();
     EventManager.clearEventHandlers();
-    vertx.close().onComplete(context.asyncAssertSuccess(res -> {
-      kafkaContainer.stop();
-      kafkaProducer.close();
+    if (vertx != null) {
+      vertx.close().onComplete(context.asyncAssertSuccess(res -> {
+        if (kafkaContainer != null) {
+          kafkaContainer.stop();
+        }
+        if (kafkaProducer != null) {
+          kafkaProducer.close();
+        }
+        async.complete();
+      }));
+    } else {
+      if (kafkaContainer != null) {
+        kafkaContainer.stop();
+      }
+      if (kafkaProducer != null) {
+        kafkaProducer.close();
+      }
       async.complete();
-    }));
+    }
   }
 
   private static void deployVerticle(TestContext context) {
