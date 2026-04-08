@@ -12,8 +12,10 @@ import org.folio.verticle.CancelledJobExecutionConsumerVerticleTest;
 import org.folio.verticle.consumers.DataImportKafkaHandlerTest;
 import org.junit.platform.suite.api.SelectClasses;
 import org.junit.platform.suite.api.Suite;
+import org.junit.jupiter.api.Tag;
 
 @Suite
+@Tag("integration")
 @SelectClasses(value = {
   CacheTest.class,
   InventoryCacheTest.class,

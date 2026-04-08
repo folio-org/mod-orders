@@ -124,7 +124,9 @@ import org.folio.utils.iterators.FutureIteratorTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Tag;
 
+@Tag("integration")
 public class ApiTestSuite {
 
   @BeforeAll

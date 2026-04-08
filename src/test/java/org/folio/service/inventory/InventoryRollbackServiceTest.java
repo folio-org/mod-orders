@@ -56,7 +56,7 @@ public class InventoryRollbackServiceTest {
       .thenReturn(Future.succeededFuture(null));
 
     // When
-    Future<Void> future = inventoryRollbackService.deleteOrphanedInstanceIfNeeded(poLine, new HashSet<>(), requestContext);
+    Future<Void> future = inventoryRollbackService.deleteOrphanedInstanceIfNeeded(poLine, Set.of("instanceId123"), requestContext);
 
     // Then
     future.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
@@ -75,7 +75,7 @@ public class InventoryRollbackServiceTest {
       .thenReturn(Future.succeededFuture(holdingsResponse));
 
     // When
-    Future<Void> future = inventoryRollbackService.deleteOrphanedInstanceIfNeeded(poLine, new HashSet<>(), requestContext);
+    Future<Void> future = inventoryRollbackService.deleteOrphanedInstanceIfNeeded(poLine, Set.of("instanceId123"), requestContext);
 
     // Then
     future.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
@@ -201,7 +201,7 @@ public class InventoryRollbackServiceTest {
       .thenReturn(Future.failedFuture(new RuntimeException("Delete failed")));
 
     // When
-    Future<Void> future = inventoryRollbackService.deleteOrphanedInstanceIfNeeded(poLine, new HashSet<>(), requestContext);
+    Future<Void> future = inventoryRollbackService.deleteOrphanedInstanceIfNeeded(poLine, Set.of("instanceId123"), requestContext);
 
     // Then - should succeed despite deletion failure (graceful recovery)
     future.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
