@@ -39,7 +39,7 @@ import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_INSTANCE_STATUS;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_INSTANCE_TYPE;
-import static org.folio.rest.impl.PurchaseOrderLinesApiTest.COMP_PO_LINES_MOCK_DATA_PATH;
+import static org.folio.rest.impl.PurchaseOrderLinesApiIT.COMP_PO_LINES_MOCK_DATA_PATH;
 import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_STATUSES;
 import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_TYPES;
 import static org.junit.jupiter.api.Assertions.assertEquals;

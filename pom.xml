@@ -93,6 +93,7 @@
     <maven-surefire-plugin.version>3.5.5</maven-surefire-plugin.version>
     <copy-rename-maven-plugin.version>1.0.1</copy-rename-maven-plugin.version>
     <maven-failsafe-plugin.version>3.5.5</maven-failsafe-plugin.version>
+    <maven-jacoco-plugin.version>0.8.12</maven-jacoco-plugin.version>
 
     <!--Test dependencies-->
     <junit-jupiter.version>6.0.3</junit-jupiter.version>
@@ -859,18 +860,35 @@
       </plugin>
 
       <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>${maven-jacoco-plugin.version}</version>
+        <executions>
+          <execution>
+            <id>prepare-agent</id>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>report</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>report</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>${maven-surefire-plugin.version}</version>
         <configuration>
           <argLine>@{argLine} -Xmx1024m -Duser.language=en -Duser.region=US</argLine>
           <excludes>
-            <exclude>org/folio/rest/impl/**Test.class</exclude>
+            <exclude>**/*IT.java</exclude>
           </excludes>
-          <includes>
-            <include>org/folio/ApiTestSuite.java</include>
-            <include>org/folio/DataImportTestSuite.java</include>
-          </includes>
         </configuration>
         <!--org.apache.maven.surefire.junitplatform.JUnitPlatformProvider configured to run Junit5 and Junit4 tests-->
         <dependencies>
@@ -886,6 +904,20 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-failsafe-plugin</artifactId>
         <version>${maven-failsafe-plugin.version}</version>
+        <configuration>
+          <argLine>@{argLine} -Xmx1024m -Duser.language=en -Duser.region=US</argLine>
+          <includes>
+            <include>org/folio/ApiTestSuiteIT.java</include>
+            <include>org/folio/DataImportTestSuiteIT.java</include>
+          </includes>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.maven.surefire</groupId>
+            <artifactId>surefire-junit-platform</artifactId>
+            <version>${maven-surefire-plugin.version}</version>
+          </dependency>
+        </dependencies>
         <executions>
           <execution>
             <goals>
