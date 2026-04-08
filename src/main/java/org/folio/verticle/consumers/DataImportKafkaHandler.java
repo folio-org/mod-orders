@@ -40,11 +40,11 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
 
   private static final Logger LOGGER = LogManager.getLogger();
 
+  static final String USER_ID_KEY = "userId";
   private static final String PROFILE_SNAPSHOT_NOT_FOUND_MSG = "JobProfileSnapshot was not found by id '%s'";
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
   private static final String JOB_PROFILE_SNAPSHOT_ID_KEY = "JOB_PROFILE_SNAPSHOT_ID";
-  private static final String USER_ID_KEY = "userId";
 
   private final Vertx vertx;
   private final JobProfileSnapshotCache profileSnapshotCache;
