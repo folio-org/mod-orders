@@ -44,6 +44,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
   private static final String JOB_PROFILE_SNAPSHOT_ID_KEY = "JOB_PROFILE_SNAPSHOT_ID";
+  private static final String USER_ID_KEY = "userId";
 
   private final Vertx vertx;
   private final JobProfileSnapshotCache profileSnapshotCache;
@@ -113,6 +114,8 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
       } else if (RestVerticle.OKAPI_USERID_HEADER.equalsIgnoreCase(header.key())) {
         String userId = header.value().toString();
         eventPayload.getContext().put(RestVerticle.OKAPI_USERID_HEADER, userId);
+        // put userId into the context to ensure that it is populated in the result event headers by di-core-library
+        eventPayload.getContext().put(USER_ID_KEY, userId);
       } else if (RestVerticle.OKAPI_REQUESTID_HEADER.equalsIgnoreCase(header.key())) {
         String requestId = header.value().toString();
         eventPayload.getContext().put(RestVerticle.OKAPI_REQUESTID_HEADER, requestId);
