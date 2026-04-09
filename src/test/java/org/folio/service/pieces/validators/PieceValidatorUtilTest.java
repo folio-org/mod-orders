@@ -21,6 +21,8 @@ import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
 import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 @CopilotGenerated(partiallyGenerated = true)
 public class PieceValidatorUtilTest {
@@ -170,5 +172,101 @@ public class PieceValidatorUtilTest {
     PoLine poLine = new PoLine().withCheckinItems(false);
     List<Error> errorList = PieceValidatorUtil.validatePieceRelatedOrder(order, poLine);
     assertEquals(0, errorList.size());
+  }
+
+    @Test
+  void testIsLocationRequiredWhenElectronicAndCreateInventoryIsHoldingItemShouldReturnTrue() {
+    // TestMate-3ee5c4b05b44b0478d995b251d624b1f
+    // Given
+    Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
+    PoLine poLine = new PoLine().withEresource(eresource);
+    // When
+    boolean isLocationRequired = PieceValidatorUtil.isLocationRequired(Piece.Format.ELECTRONIC, poLine);
+    // Then
+    assertTrue(isLocationRequired);
+  }
+
+    @Test
+  void testIsLocationRequiredWhenElectronicAndCreateInventoryIsHoldingShouldReturnTrue() {
+    // TestMate-5e776d521c90447c4670b8acd09d8c63
+    // Given
+    Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
+    PoLine poLine = new PoLine().withEresource(eresource);
+    // When
+    boolean isLocationRequired = PieceValidatorUtil.isLocationRequired(Piece.Format.ELECTRONIC, poLine);
+    // Then
+    assertTrue(isLocationRequired);
+  }
+
+    @Test
+  void testIsLocationRequiredWhenElectronicAndCreateInventoryIsInstanceShouldReturnFalse() {
+    // TestMate-72de1f63343d930e731bec2a686e87bd
+    // Given
+    Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE);
+    PoLine poLine = new PoLine().withEresource(eresource);
+    // When
+    boolean isLocationRequired = PieceValidatorUtil.isLocationRequired(Piece.Format.ELECTRONIC, poLine);
+    // Then
+    assertFalse(isLocationRequired);
+  }
+
+    @Test
+  void testIsLocationRequiredWhenElectronicAndCreateInventoryIsNoneShouldReturnFalse() {
+    // TestMate-1f4a25597574012801e7916f512f8ed4
+    // Given
+    Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.NONE);
+    PoLine poLine = new PoLine().withEresource(eresource);
+    // When
+    boolean isLocationRequired = PieceValidatorUtil.isLocationRequired(Piece.Format.ELECTRONIC, poLine);
+    // Then
+    assertFalse(isLocationRequired);
+  }
+
+    @Test
+  void testIsLocationRequiredWhenPhysicalAndCreateInventoryIsHoldingItemShouldReturnTrue() {
+    // TestMate-8469d3eb0e4c41abc1b1393f67938efe
+    // Given
+    Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM);
+    PoLine poLine = new PoLine().withPhysical(physical);
+    // When
+    boolean isLocationRequired = PieceValidatorUtil.isLocationRequired(Piece.Format.PHYSICAL, poLine);
+    // Then
+    assertTrue(isLocationRequired);
+  }
+
+    @Test
+  void testIsLocationRequiredWhenPhysicalAndCreateInventoryIsHoldingShouldReturnTrue() {
+    // TestMate-8e84f41eeb08e8b5edb239aefae293b3
+    // Given
+    Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING);
+    PoLine poLine = new PoLine().withPhysical(physical);
+    // When
+    boolean isLocationRequired = PieceValidatorUtil.isLocationRequired(Piece.Format.PHYSICAL, poLine);
+    // Then
+    assertTrue(isLocationRequired);
+  }
+
+    @Test
+  void testIsLocationRequiredWhenPhysicalAndCreateInventoryIsInstanceShouldReturnFalse() {
+    // TestMate-d3d97ce03f510b5155e55b6d2cc73453
+    // Given
+    Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE);
+    PoLine poLine = new PoLine().withPhysical(physical);
+    // When
+    boolean isLocationRequired = PieceValidatorUtil.isLocationRequired(Piece.Format.PHYSICAL, poLine);
+    // Then
+    assertFalse(isLocationRequired);
+  }
+
+    @Test
+  void testIsLocationRequiredWhenPhysicalAndCreateInventoryIsNoneShouldReturnFalse() {
+    // TestMate-06face1ff76938ed8fa883f7f5f645c3
+    // Given
+    Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.NONE);
+    PoLine poLine = new PoLine().withPhysical(physical);
+    // When
+    boolean isLocationRequired = PieceValidatorUtil.isLocationRequired(Piece.Format.PHYSICAL, poLine);
+    // Then
+    assertFalse(isLocationRequired);
   }
 }
