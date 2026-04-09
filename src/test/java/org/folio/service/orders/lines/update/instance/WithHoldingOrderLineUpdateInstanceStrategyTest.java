@@ -63,6 +63,8 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.folio.rest.acq.model.StoragePatchOrderLineRequest;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ExtendWith(VertxExtension.class)
 public class WithHoldingOrderLineUpdateInstanceStrategyTest {
@@ -985,4 +987,31 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     // then
     verify(inventoryItemManager, times(1)).batchUpdatePartialItems(any(), eq(requestContext));
   }
+
+    @Test
+    void testProcessHoldingsShouldHandleDefaultOperation() {
+        // TestMate-808808932f48a9c2165752d5dd75f422
+        // Given
+        String lineId = UUID.randomUUID().toString();
+        String newInstanceId = UUID.randomUUID().toString();
+        PoLine poLine = new PoLine().withId(lineId);
+        ReplaceInstanceRef replaceInstanceRef = new ReplaceInstanceRef()
+            .withNewInstanceId(newInstanceId)
+            .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.NONE);
+        PatchOrderLineRequest patchOrderLineRequest = new PatchOrderLineRequest()
+            .withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
+            .withReplaceInstanceRef(replaceInstanceRef);
+        OrderLineUpdateInstanceHolder holder = new OrderLineUpdateInstanceHolder()
+            .withStoragePoLine(poLine)
+            .withPathOrderLineRequest(patchOrderLineRequest);
+        // When
+        Future<Void> result = withHoldingOrderLineUpdateInstanceStrategy.processHoldings(holder, requestContext);
+        // Then
+        assertTrue(result.succeeded());
+        verify(inventoryHoldingManager, never()).updateInstanceForHoldingRecords(any(), any(), any());
+        verify(inventoryHoldingManager, never()).getOrCreateHoldingRecordByInstanceAndLocation(any(), any(), any());
+        verify(inventoryHoldingManager, never()).createHolding(any(), any(), any());
+        verify(pieceStorageService, never()).getPiecesByPoLineId(any(), any());
+        verify(holdingDeletionService, never()).deleteHoldingIfPossible(any(), any());
+    }
 }
