@@ -54,6 +54,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import org.folio.models.EncumbranceConversionHolder;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.not;
+import static org.mockito.Mockito.times;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 
 @ExtendWith(VertxExtension.class)
 public class FinanceHoldersBuilderTest {
@@ -325,5 +332,138 @@ public class FinanceHoldersBuilderTest {
 
     assertThat(holders, Matchers.is(empty()));
     verify(fundService, never()).getAllFunds(anyCollection(), any());
+  }
+
+    @Test
+  void getExchangeRatesPerCurrencyHolderWhenFyCurrencyIsEmptyShouldReturnSucceededFuture(VertxTestContext vertxTestContext) {
+    // TestMate-5f60d93b40ce71fb380f5a1f84952ff6
+    // Given
+    holder1.withCurrency(null);
+    holder2.withCurrency(null);
+    holder3.withCurrency(null);
+    List<EncumbranceRelationsHolder> holders = List.of(holder1, holder2, holder3);
+    // When
+    var future = financeHoldersBuilder.getExchangeRatesPerCurrencyHolder(holders, requestContext);
+    // Then
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertNull(result.result());
+        verify(cacheableExchangeRateService, never()).getExchangeRate(any(), any(), any(), any());
+        vertxTestContext.completeNow();
+      });
+  }
+
+    @Test
+void getExchangeRatesPerCurrencyHolderShouldFilterHoldersWithoutPoLine(VertxTestContext vertxTestContext) {
+  // TestMate-20cc380ebef9130ee7cde4a55db7f5e4
+  // Given
+  String fyCurrency = "USD";
+  String poLineCurrency = "EUR";
+  PoLine poLine = new PoLine()
+    .withId(UUID.randomUUID().toString())
+    .withCost(new Cost().withCurrency(poLineCurrency));
+  EncumbranceRelationsHolder validHolder = new EncumbranceRelationsHolder()
+    .withPoLine(poLine)
+    .withCurrency(fyCurrency);
+  EncumbranceRelationsHolder invalidHolder = new EncumbranceRelationsHolder()
+    .withPoLine(null)
+    .withCurrency(fyCurrency);
+  List<EncumbranceRelationsHolder> holders = List.of(validHolder, invalidHolder);
+  ExchangeRate exchangeRate = mock(ExchangeRate.class);
+  when(exchangeRate.getExchangeRate()).thenReturn(1.1);
+  when(exchangeRate.getOperationMode()).thenReturn(ExchangeRate.OperationMode.MULTIPLY);
+  when(cacheableExchangeRateService.getExchangeRate(eq(poLineCurrency), eq(fyCurrency), any(), eq(requestContext)))
+    .thenReturn(Future.succeededFuture(exchangeRate));
+  when(requestContext.getContext()).thenReturn(Vertx.vertx().getOrCreateContext());
+  // When
+  var future = financeHoldersBuilder.getExchangeRatesPerCurrencyHolder(holders, requestContext);
+  // Then
+  vertxTestContext.assertComplete(future)
+    .onComplete(result -> {
+      List<EncumbranceConversionHolder> conversionHolders = result.result();
+      assertThat(conversionHolders, hasSize(1));
+      EncumbranceConversionHolder conversionHolder = conversionHolders.get(0);
+      assertThat(conversionHolder.getEncumbranceRelationsHolders(), contains(validHolder));
+      assertThat(conversionHolder.getEncumbranceRelationsHolders(), not(contains(invalidHolder)));
+      verify(cacheableExchangeRateService, times(1))
+        .getExchangeRate(eq(poLineCurrency), eq(fyCurrency), any(), eq(requestContext));
+      vertxTestContext.completeNow();
+    });
+}
+
+    @Test
+  void getExchangeRatesPerCurrencyHolderShouldUseFirstFixedExchangeRateInGroup(VertxTestContext vertxTestContext) {
+    // TestMate-54751633f61175cd64d1780fcf51d2d9
+    // Given
+    String fyCurrency = "GBP";
+    String poLineCurrency = "USD";
+    double firstFixedRate = 1.1d;
+    double secondFixedRate = 1.5d;
+    PoLine poLine1 = new PoLine()
+      .withId(UUID.randomUUID().toString())
+      .withCost(new Cost()
+        .withCurrency(poLineCurrency)
+        .withExchangeRate(firstFixedRate));
+    EncumbranceRelationsHolder holder1 = new EncumbranceRelationsHolder()
+      .withPoLine(poLine1)
+      .withCurrency(fyCurrency);
+    PoLine poLine2 = new PoLine()
+      .withId(UUID.randomUUID().toString())
+      .withCost(new Cost()
+        .withCurrency(poLineCurrency)
+        .withExchangeRate(secondFixedRate));
+    EncumbranceRelationsHolder holder2 = new EncumbranceRelationsHolder()
+      .withPoLine(poLine2)
+      .withCurrency(fyCurrency);
+    List<EncumbranceRelationsHolder> holders = List.of(holder1, holder2);
+    ExchangeRate exchangeRate = mock(ExchangeRate.class);
+    when(exchangeRate.getExchangeRate()).thenReturn(firstFixedRate);
+    when(exchangeRate.getOperationMode()).thenReturn(ExchangeRate.OperationMode.MULTIPLY);
+    when(cacheableExchangeRateService.getExchangeRate(eq(poLineCurrency), eq(fyCurrency), eq(firstFixedRate), eq(requestContext)))
+      .thenReturn(Future.succeededFuture(exchangeRate));
+    when(requestContext.getContext()).thenReturn(Vertx.vertx().getOrCreateContext());
+    // When
+    var future = financeHoldersBuilder.getExchangeRatesPerCurrencyHolder(holders, requestContext);
+    // Then
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        List<EncumbranceConversionHolder> conversionHolders = result.result();
+        assertThat(conversionHolders, hasSize(1));
+        EncumbranceConversionHolder conversionHolder = conversionHolders.get(0);
+        assertThat(conversionHolder.getEncumbranceRelationsHolders(), containsInAnyOrder(holder1, holder2));
+        verify(cacheableExchangeRateService, times(1))
+          .getExchangeRate(eq(poLineCurrency), eq(fyCurrency), eq(firstFixedRate), eq(requestContext));
+        vertxTestContext.completeNow();
+      });
+  }
+
+    @Test
+  void getExchangeRatesPerCurrencyHolderWhenExchangeRateFailsShouldPropagateError(VertxTestContext vertxTestContext) {
+    // TestMate-d187b81d1f59631bdfbdd0232096c68b
+    // Given
+    String fyCurrency = "USD";
+    String poLineCurrency = "JPY";
+    String errorMessage = "Rate API Error";
+    RuntimeException expectedException = new RuntimeException(errorMessage);
+    PoLine poLine = new PoLine()
+      .withCost(new Cost().withCurrency(poLineCurrency));
+    EncumbranceRelationsHolder holder = new EncumbranceRelationsHolder()
+      .withPoLine(poLine)
+      .withCurrency(fyCurrency);
+    List<EncumbranceRelationsHolder> holders = List.of(holder);
+    when(requestContext.getContext()).thenReturn(Vertx.vertx().getOrCreateContext());
+    when(cacheableExchangeRateService.getExchangeRate(eq(poLineCurrency), eq(fyCurrency), any(), eq(requestContext)))
+      .thenReturn(Future.failedFuture(expectedException));
+    // When
+    var future = financeHoldersBuilder.getExchangeRatesPerCurrencyHolder(holders, requestContext);
+    // Then
+    vertxTestContext.assertFailure(future)
+      .onComplete(result -> {
+        Throwable cause = result.cause();
+        assertTrue(cause instanceof RuntimeException);
+        assertEquals(errorMessage, cause.getMessage());
+        verify(cacheableExchangeRateService).getExchangeRate(eq(poLineCurrency), eq(fyCurrency), any(), eq(requestContext));
+        vertxTestContext.completeNow();
+      });
   }
 }
