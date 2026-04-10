@@ -76,7 +76,7 @@
     <!--Folio dependencies properties-->
     <folio-module-descriptor-validator.version>1.0.0</folio-module-descriptor-validator.version>
     <mod-configuration-client.version>5.12.1</mod-configuration-client.version>
-    <folio-di-support.version>4.0.0-SNAPSHOT</folio-di-support.version>
+    <folio-di-support.version>4.0.0</folio-di-support.version>
     <mod-di-converter-storage-client.version>2.4.3</mod-di-converter-storage-client.version>
     <data-import-processing-core.version>5.0.0-SNAPSHOT</data-import-processing-core.version>
     <folio-kafka-wrapper.version>4.0.0-SNAPSHOT</folio-kafka-wrapper.version>
