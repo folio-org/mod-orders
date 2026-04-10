@@ -1,47 +1,46 @@
 package org.folio.service.exchange;
 
-import org.folio.CopilotGenerated;
-import org.folio.rest.core.exceptions.HttpException;
-import org.javamoney.moneta.spi.DefaultNumberValue;
-import org.junit.jupiter.api.Test;
-
-import javax.money.convert.ConversionQueryBuilder;
-
 import static org.folio.service.exchange.CustomExchangeRateProvider.RATE_KEY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import javax.money.convert.ConversionQueryBuilder;
+import org.folio.CopilotGenerated;
+import org.folio.rest.core.exceptions.HttpException;
+import org.javamoney.moneta.spi.DefaultNumberValue;
+import org.junit.jupiter.api.Test;
+
 @CopilotGenerated(partiallyGenerated = true, model = "o3-mini")
 public class CustomExchangeRateProviderTest {
 
   @Test
   public void testShouldReturnExchangeRateFromRateProvider() {
-    var query = ConversionQueryBuilder.of()
-      .setBaseCurrency("USD")
-      .setTermCurrency("EUR")
-      .set(RATE_KEY, 2d)
-      .build();
+    var query =
+        ConversionQueryBuilder.of()
+            .setBaseCurrency("USD")
+            .setTermCurrency("EUR")
+            .set(RATE_KEY, 2d)
+            .build();
 
     var exchangeRate = new CustomExchangeRateProvider().getExchangeRate(query);
 
     assertEquals("USD", exchangeRate.getBaseCurrency().getCurrencyCode());
     assertEquals("EUR", exchangeRate.getCurrency().getCurrencyCode());
-    assertEquals(new DefaultNumberValue(2d).doubleValue(), exchangeRate.getFactor().doubleValue(), 0);
+    assertEquals(
+        new DefaultNumberValue(2d).doubleValue(), exchangeRate.getFactor().doubleValue(), 0);
   }
 
   @Test
   void testShouldThrowExceptionWhenRateNotProvided() {
-    var query = ConversionQueryBuilder.of()
-      .setBaseCurrency("USD")
-      .setTermCurrency("EUR")
-      .build();
+    var query = ConversionQueryBuilder.of().setBaseCurrency("USD").setTermCurrency("EUR").build();
     var provider = new CustomExchangeRateProvider();
     var exception = assertThrows(HttpException.class, () -> provider.getExchangeRate(query));
 
-    assertTrue(exception.getMessage().contains("Rate must be provided"),
-      "Exception message should mention that the rate is required");
+    assertTrue(
+        exception.getMessage().contains("Rate must be provided"),
+        "Exception message should mention that the rate is required");
   }
 
   @Test
@@ -54,11 +53,12 @@ public class CustomExchangeRateProviderTest {
 
   @Test
   void testGetCurrencyConversionReturnsConversion() {
-    var query = ConversionQueryBuilder.of()
-      .setBaseCurrency("USD")
-      .setTermCurrency("EUR")
-      .set(RATE_KEY, 2d)
-      .build();
+    var query =
+        ConversionQueryBuilder.of()
+            .setBaseCurrency("USD")
+            .setTermCurrency("EUR")
+            .set(RATE_KEY, 2d)
+            .build();
     var provider = new CustomExchangeRateProvider();
     var conversion = provider.getCurrencyConversion(query);
 
@@ -67,11 +67,12 @@ public class CustomExchangeRateProviderTest {
 
   @Test
   void testGetExchangeRateReturnsValidExchangeRate() {
-    var query = ConversionQueryBuilder.of()
-      .setBaseCurrency("USD")
-      .setTermCurrency("EUR")
-      .set(RATE_KEY, 1.5d)
-      .build();
+    var query =
+        ConversionQueryBuilder.of()
+            .setBaseCurrency("USD")
+            .setTermCurrency("EUR")
+            .set(RATE_KEY, 1.5d)
+            .build();
     var provider = new CustomExchangeRateProvider();
     var exchangeRate = provider.getExchangeRate(query);
 
@@ -85,11 +86,12 @@ public class CustomExchangeRateProviderTest {
 
   @Test
   void testCurrencyConversionConversionContext() {
-    var query = ConversionQueryBuilder.of()
-      .setBaseCurrency("USD")
-      .setTermCurrency("JPY")
-      .set(RATE_KEY, 110d)
-      .build();
+    var query =
+        ConversionQueryBuilder.of()
+            .setBaseCurrency("USD")
+            .setTermCurrency("JPY")
+            .set(RATE_KEY, 110d)
+            .build();
     var provider = new CustomExchangeRateProvider();
     var conversion = provider.getCurrencyConversion(query);
 

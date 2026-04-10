@@ -18,12 +18,12 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
 import static org.hamcrest.core.IsEqual.equalTo;
 
+import io.restassured.http.Header;
+import io.restassured.http.Headers;
+import io.vertx.core.json.JsonArray;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-
-import io.restassured.http.Header;
-import io.vertx.core.json.JsonArray;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuiteIT;
@@ -36,8 +36,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
-
-import io.restassured.http.Headers;
 
 public class LinesProtectionIT extends ProtectedEntityTestBase {
 
@@ -67,13 +65,21 @@ public class LinesProtectionIT extends ProtectedEntityTestBase {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = { "CREATE", "UPDATE", "DELETE", "READ" })
+  @ValueSource(strings = {"CREATE", "UPDATE", "DELETE", "READ"})
   void testOperationWithNonExistedUnits(ProtectedOperations operation) {
-    logger.info("=== Test corresponding order contains non-existent units - expecting of call only to Units API ===");
+    logger.info(
+        "=== Test corresponding order contains non-existent units - expecting of call only to Units API ===");
 
     final Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID);
-    Errors errors = operation.process(LINES_PATH, encodePrettily(preparePoLine(NON_EXISTENT_UNITS, PENDING)),
-      headers, APPLICATION_JSON, HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt()).as(Errors.class);
+    Errors errors =
+        operation
+            .process(
+                LINES_PATH,
+                encodePrettily(preparePoLine(NON_EXISTENT_UNITS, PENDING)),
+                headers,
+                APPLICATION_JSON,
+                HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt())
+            .as(Errors.class);
 
     assertThat(errors.getErrors(), hasSize(1));
     assertThat(errors.getErrors().get(0).getCode(), equalTo(ORDER_UNITS_NOT_FOUND.getCode()));
@@ -82,69 +88,81 @@ public class LinesProtectionIT extends ProtectedEntityTestBase {
   }
 
   @ParameterizedTest
-  @CsvSource({
-    "CREATE,1,0",
-    "UPDATE,1,0",
-    "DELETE,1,0",
-    "READ,2,1"
-  })
-  void testOperationWithAllowedUnits(ProtectedOperations operation, int numOfUnitRqs, int numOfMembershipRqs) {
-    logger.info("=== Test corresponding order has units allowed operation - expecting of call only to Units API ===");
+  @CsvSource({"CREATE,1,0", "UPDATE,1,0", "DELETE,1,0", "READ,2,1"})
+  void testOperationWithAllowedUnits(
+      ProtectedOperations operation, int numOfUnitRqs, int numOfMembershipRqs) {
+    logger.info(
+        "=== Test corresponding order has units allowed operation - expecting of call only to Units API ===");
 
     final Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID);
-    operation.process(LINES_PATH, encodePrettily(preparePoLine(NOT_PROTECTED_UNITS, PENDING)), headers, operation.getContentType(), operation.getCode());
+    operation.process(
+        LINES_PATH,
+        encodePrettily(preparePoLine(NOT_PROTECTED_UNITS, PENDING)),
+        headers,
+        operation.getContentType(),
+        operation.getCode());
 
-    validateNumberOfRequests(numOfUnitRqs, numOfMembershipRqs );
+    validateNumberOfRequests(numOfUnitRqs, numOfMembershipRqs);
   }
 
   @ParameterizedTest
-  @CsvSource({
-    "CREATE,1,0",
-    "UPDATE,1,0",
-    "DELETE,1,0",
-    "READ,2,1"
-  })
+  @CsvSource({"CREATE,1,0", "UPDATE,1,0", "DELETE,1,0", "READ,2,1"})
   void testWithRestrictedUnitsAndAllowedUser(ProtectedOperations operation, int numOfUnitRqs) {
-    logger.info("=== Test corresponding order has units, units protect operation, user is member of order's units - expecting of calls to Units, Memberships APIs and allowance of operation ===");
+    logger.info(
+        "=== Test corresponding order has units, units protect operation, user is member of order's units - expecting of calls to Units, Memberships APIs and allowance of operation ===");
 
-    operation.process(LINES_PATH, encodePrettily(preparePoLine(PROTECTED_UNITS, PENDING)),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_WITH_UNITS_ASSIGNED_TO_ORDER), operation.getContentType(), operation.getCode());
+    operation.process(
+        LINES_PATH,
+        encodePrettily(preparePoLine(PROTECTED_UNITS, PENDING)),
+        prepareHeaders(
+            EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_WITH_UNITS_ASSIGNED_TO_ORDER),
+        operation.getContentType(),
+        operation.getCode());
 
     validateNumberOfRequests(numOfUnitRqs, numOfUnitRqs);
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {
-    "CREATE",
-    "UPDATE",
-    "DELETE",
-    "READ"
-  })
+  @ValueSource(strings = {"CREATE", "UPDATE", "DELETE", "READ"})
   void testWithProtectedUnitsAndForbiddenUser(ProtectedOperations operation) {
-    logger.info("=== Test corresponding order has units, units protect operation, user isn't member of order's units - expecting of calls to Units, Memberships APIs and restriction of operation ===");
+    logger.info(
+        "=== Test corresponding order has units, units protect operation, user isn't member of order's units - expecting of calls to Units, Memberships APIs and restriction of operation ===");
 
-    final Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_WITH_UNITS_NOT_ASSIGNED_TO_ORDER);
-    Errors errors = operation.process(LINES_PATH, encodePrettily(preparePoLine(PROTECTED_UNITS, PENDING)),
-      headers, APPLICATION_JSON, HttpStatus.HTTP_FORBIDDEN.toInt()).as(Errors.class);
+    final Headers headers =
+        prepareHeaders(
+            EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_WITH_UNITS_NOT_ASSIGNED_TO_ORDER);
+    Errors errors =
+        operation
+            .process(
+                LINES_PATH,
+                encodePrettily(preparePoLine(PROTECTED_UNITS, PENDING)),
+                headers,
+                APPLICATION_JSON,
+                HttpStatus.HTTP_FORBIDDEN.toInt())
+            .as(Errors.class);
     assertThat(errors.getErrors(), hasSize(1));
-    assertThat(errors.getErrors().get(0).getCode(), equalTo(USER_NOT_A_MEMBER_OF_THE_ACQ.getCode()));
+    assertThat(
+        errors.getErrors().get(0).getCode(), equalTo(USER_NOT_A_MEMBER_OF_THE_ACQ.getCode()));
 
     validateNumberOfRequests(1, 1);
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {
-    "UPDATE",
-    "READ"
-  })
+  @ValueSource(strings = {"UPDATE", "READ"})
   void testBypassAcqUnitChecks(ProtectedOperations operation) {
-    Header permissionHeader = new Header(OKAPI_HEADER_PERMISSIONS,
-      new JsonArray(List.of(BYPASS_ACQ_UNITS.getPermission())).encode());
-    Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, permissionHeader, X_OKAPI_USER_ID);
-    operation.process(LINES_PATH, encodePrettily(preparePoLine(PROTECTED_UNITS, PENDING)),
-      headers, operation.getContentType(), operation.getCode());
+    Header permissionHeader =
+        new Header(
+            OKAPI_HEADER_PERMISSIONS,
+            new JsonArray(List.of(BYPASS_ACQ_UNITS.getPermission())).encode());
+    Headers headers =
+        prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, permissionHeader, X_OKAPI_USER_ID);
+    operation.process(
+        LINES_PATH,
+        encodePrettily(preparePoLine(PROTECTED_UNITS, PENDING)),
+        headers,
+        operation.getContentType(),
+        operation.getCode());
 
     validateNumberOfRequests(0, 0);
   }
-
 }

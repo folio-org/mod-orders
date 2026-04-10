@@ -33,14 +33,17 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 
+import io.restassured.http.Header;
+import io.restassured.http.Headers;
+import io.restassured.response.Response;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonObject;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-
 import javax.ws.rs.core.HttpHeaders;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuiteIT;
@@ -55,12 +58,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-
-import io.restassured.http.Header;
-import io.restassured.http.Headers;
-import io.restassured.response.Response;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.JsonObject;
 
 public class OrderTemplateIT {
 
@@ -96,12 +93,18 @@ public class OrderTemplateIT {
   @Test
   void testPostOrderTemplateSuccess() {
     logger.info("=== Test POST Order Template - success case ===");
-    OrderTemplate entity = new OrderTemplate()
-      .withId(UUID.randomUUID().toString())
-      .withTemplateName("Testing order template");
+    OrderTemplate entity =
+        new OrderTemplate()
+            .withId(UUID.randomUUID().toString())
+            .withTemplateName("Testing order template");
     String body = JsonObject.mapFrom(entity).encode();
-    Response response = verifyPostResponse(ORDER_TEMPLATES_ENDPOINT, body, prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10),
-      APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt());
+    Response response =
+        verifyPostResponse(
+            ORDER_TEMPLATES_ENDPOINT,
+            body,
+            prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10),
+            APPLICATION_JSON,
+            HttpStatus.HTTP_CREATED.toInt());
     final OrderTemplate template = response.as(OrderTemplate.class);
     assertThat(template.getId(), not(is(emptyOrNullString())));
     assertThat(response.header(HttpHeaders.LOCATION), containsString(template.getId()));
@@ -110,17 +113,28 @@ public class OrderTemplateIT {
   @Test
   void testPostOrderTemplateAlreadyExists() {
     logger.info("=== Test POST Order Template - failed case ===");
-    OrderTemplate entity = new OrderTemplate()
-      .withId(ID_FOR_TEMPLATE_NAME_ALREADY_EXISTS)
-      .withTemplateName("Testing order template");
+    OrderTemplate entity =
+        new OrderTemplate()
+            .withId(ID_FOR_TEMPLATE_NAME_ALREADY_EXISTS)
+            .withTemplateName("Testing order template");
     String body = JsonObject.mapFrom(entity).encode();
 
-    Errors errors = verifyPostResponse(ORDER_TEMPLATES_ENDPOINT, body, prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10),
-      APPLICATION_JSON, HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt()).as(Errors.class);
+    Errors errors =
+        verifyPostResponse(
+                ORDER_TEMPLATES_ENDPOINT,
+                body,
+                prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10),
+                APPLICATION_JSON,
+                HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt())
+            .as(Errors.class);
 
     assertThat(errors.getErrors(), IsCollectionWithSize.hasSize(1));
-    assertThat(errors.getErrors().get(0).getCode(), IsEqual.equalTo(TEMPLATE_NAME_ALREADY_EXISTS.getCode()));
-    assertThat(errors.getErrors().get(0).getMessage(), IsEqual.equalTo(TEMPLATE_NAME_ALREADY_EXISTS.getDescription()));
+    assertThat(
+        errors.getErrors().get(0).getCode(),
+        IsEqual.equalTo(TEMPLATE_NAME_ALREADY_EXISTS.getCode()));
+    assertThat(
+        errors.getErrors().get(0).getMessage(),
+        IsEqual.equalTo(TEMPLATE_NAME_ALREADY_EXISTS.getDescription()));
   }
 
   @Test
@@ -149,8 +163,11 @@ public class OrderTemplateIT {
   @Test
   void testGetOrderTemplatesNoQuery() throws IOException {
     logger.info("=== Test Get Order Templates - With empty query ===");
-    OrderTemplateCollection expected = new JsonObject(getMockData(ORDER_TEMPLATES_COLLECTION)).mapTo(OrderTemplateCollection.class);
-    final OrderTemplateCollection templates = verifySuccessGet(ORDER_TEMPLATES_ENDPOINT, OrderTemplateCollection.class);
+    OrderTemplateCollection expected =
+        new JsonObject(getMockData(ORDER_TEMPLATES_COLLECTION))
+            .mapTo(OrderTemplateCollection.class);
+    final OrderTemplateCollection templates =
+        verifySuccessGet(ORDER_TEMPLATES_ENDPOINT, OrderTemplateCollection.class);
     assertThat(templates.getOrderTemplates(), hasSize(expected.getTotalRecords()));
     assertThat(templates.getTotalRecords(), is(expected.getOrderTemplates().size()));
   }
@@ -194,17 +211,30 @@ public class OrderTemplateIT {
   void testPutOrderTemplateNotFound() {
     logger.info("=== Test PUT Order Template - not found ===");
     String url = String.format("%s/%s", ORDER_TEMPLATES_ENDPOINT, ID_DOES_NOT_EXIST);
-    verifyPut(url, JsonObject.mapFrom(new OrderTemplate().withTemplateName("Some template name")), APPLICATION_JSON, HttpStatus.HTTP_NOT_FOUND.toInt());
+    verifyPut(
+        url,
+        JsonObject.mapFrom(new OrderTemplate().withTemplateName("Some template name")),
+        APPLICATION_JSON,
+        HttpStatus.HTTP_NOT_FOUND.toInt());
   }
 
   @Test
   void testPutOrderTemplateIdMismatch() {
     logger.info("=== Test PUT Order Template - different ids in path and body ===");
     String url = String.format("%s/%s", ORDER_TEMPLATES_ENDPOINT, UUID.randomUUID().toString());
-    OrderTemplate template = new OrderTemplate().withTemplateName("Some name").withId(UUID.randomUUID().toString());
-    Errors errors = verifyPut(url, JsonObject.mapFrom(template), APPLICATION_JSON, HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt()).as(Errors.class);
+    OrderTemplate template =
+        new OrderTemplate().withTemplateName("Some name").withId(UUID.randomUUID().toString());
+    Errors errors =
+        verifyPut(
+                url,
+                JsonObject.mapFrom(template),
+                APPLICATION_JSON,
+                HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt())
+            .as(Errors.class);
     assertThat(errors.getErrors(), hasSize(1));
-    assertThat(errors.getErrors().get(0).getCode(), equalTo(MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.getCode()));
+    assertThat(
+        errors.getErrors().get(0).getCode(),
+        equalTo(MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.getCode()));
   }
 
   @Test
@@ -219,7 +249,16 @@ public class OrderTemplateIT {
   void testPostOrderTemplateServerError() {
     logger.info("=== Test POST Order Template - Server Error ===");
     String body = JsonObject.mapFrom(new OrderTemplate().withTemplateName("Some name")).encode();
-    Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, new Header(X_ECHO_STATUS, String.valueOf(HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt())));
-    verifyPostResponse(ORDER_TEMPLATES_ENDPOINT, body, headers, APPLICATION_JSON, HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt());
+    Headers headers =
+        prepareHeaders(
+            EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10,
+            new Header(
+                X_ECHO_STATUS, String.valueOf(HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt())));
+    verifyPostResponse(
+        ORDER_TEMPLATES_ENDPOINT,
+        body,
+        headers,
+        APPLICATION_JSON,
+        HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt());
   }
 }

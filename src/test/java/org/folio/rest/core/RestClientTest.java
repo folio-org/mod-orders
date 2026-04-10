@@ -5,31 +5,27 @@ import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 
+import io.restassured.http.Header;
+import io.vertx.core.Context;
+import io.vertx.ext.web.client.WebClient;
 import java.util.HashMap;
 import java.util.Map;
-
-import io.vertx.core.Context;
 import org.folio.rest.core.models.RequestContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import io.restassured.http.Header;
-import io.vertx.ext.web.client.WebClient;
-
 public class RestClientTest {
   public static final Header X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, "invoiceimpltest");
 
-  @Mock
-  private Context ctxMock;
-  @Mock
-  private WebClient httpClient;
+  @Mock private Context ctxMock;
+  @Mock private WebClient httpClient;
 
   private Map<String, String> okapiHeaders;
   private RequestContext requestContext;
 
   @BeforeEach
-  public void initMocks(){
+  public void initMocks() {
     MockitoAnnotations.openMocks(this);
     okapiHeaders = new HashMap<>();
     okapiHeaders.put(OKAPI_URL, "http://localhost:" + 8081);
@@ -38,7 +34,4 @@ public class RestClientTest {
     okapiHeaders.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
     requestContext = new RequestContext(ctxMock, okapiHeaders);
   }
-
 }
-
-

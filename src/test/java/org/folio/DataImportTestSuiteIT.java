@@ -14,17 +14,17 @@ import org.junit.platform.suite.api.SelectClasses;
 import org.junit.platform.suite.api.Suite;
 
 @Suite
-@SelectClasses(value = {
-  CacheIT.class,
-  InventoryCacheTest.class,
-  JobExecutionTotalRecordsCacheTest.class,
-  CancelledJobsIdsCacheTest.class,
-  OrderIdStorageServiceImplIT.class,
-  CreateOrderEventHandlerIT.class,
-  OrderPostProcessingEventHandlerIT.class,
-  VertxFutureRepeaterTest.class,
-  CancelledJobExecutionConsumerVerticleIT.class,
-  DataImportKafkaHandlerTest.class,
-})
-public class DataImportTestSuiteIT {
-}
+@SelectClasses(
+    value = {
+      CacheIT.class,
+      InventoryCacheTest.class,
+      JobExecutionTotalRecordsCacheTest.class,
+      CancelledJobsIdsCacheTest.class,
+      OrderIdStorageServiceImplIT.class,
+      CreateOrderEventHandlerIT.class,
+      OrderPostProcessingEventHandlerIT.class,
+      VertxFutureRepeaterTest.class,
+      CancelledJobExecutionConsumerVerticleIT.class,
+      DataImportKafkaHandlerTest.class,
+    })
+public class DataImportTestSuiteIT {}

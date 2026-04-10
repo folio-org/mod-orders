@@ -17,20 +17,21 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import io.vertx.core.Context;
+import io.vertx.junit5.VertxExtension;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-
 import org.folio.ApiTestSuiteIT;
 import org.folio.models.pieces.PieceCreationHolder;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.acq.Location;
 import org.folio.service.inventory.InventoryHoldingManager;
@@ -50,32 +51,22 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
-import io.vertx.core.Context;
-import io.vertx.junit5.VertxExtension;
-
-
 @ExtendWith(VertxExtension.class)
 public class PieceCreateFlowInventoryManagerIT {
-  @Autowired
-  PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager;
-  @Autowired
-  TitlesService titlesService;
-  @Autowired
-  PieceUpdateInventoryService pieceUpdateInventoryService;
-  @Autowired
-  InventoryInstanceManager inventoryInstanceManager;
-  @Autowired
-  PieceStorageService pieceStorageService;
+  @Autowired PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager;
+  @Autowired TitlesService titlesService;
+  @Autowired PieceUpdateInventoryService pieceUpdateInventoryService;
+  @Autowired InventoryInstanceManager inventoryInstanceManager;
+  @Autowired PieceStorageService pieceStorageService;
 
   private final Context ctx = getFirstContextFromVertx(getVertx());
-  @Mock
-  private Map<String, String> okapiHeadersMock;
+  @Mock private Map<String, String> okapiHeadersMock;
 
   private RequestContext requestContext;
   private static boolean runningOnOwn;
 
   @BeforeEach
-  void initMocks(){
+  void initMocks() {
     MockitoAnnotations.openMocks(this);
     autowireDependencies(this);
     requestContext = new RequestContext(ctx, okapiHeadersMock);
@@ -115,36 +106,74 @@ public class PieceCreateFlowInventoryManagerIT {
     String instanceId = UUID.randomUUID().toString();
 
     Title title = new Title().withId(titleId).withPoLineId(lineId).withInstanceId(instanceId);
-    Piece piece = new Piece().withId(pieceId).withTitleId(titleId).withPoLineId(lineId).withHoldingId(holdingId).withFormat(Piece.Format.ELECTRONIC);
-    Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
-    Cost cost = new Cost().withQuantityElectronic(1)
-      .withListUnitPrice(1d).withExchangeRate(1d).withCurrency("USD")
-      .withPoLineEstimatedPrice(1d);
+    Piece piece =
+        new Piece()
+            .withId(pieceId)
+            .withTitleId(titleId)
+            .withPoLineId(lineId)
+            .withHoldingId(holdingId)
+            .withFormat(Piece.Format.ELECTRONIC);
+    Location loc =
+        new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
+    Cost cost =
+        new Cost()
+            .withQuantityElectronic(1)
+            .withListUnitPrice(1d)
+            .withExchangeRate(1d)
+            .withCurrency("USD")
+            .withPoLineEstimatedPrice(1d);
 
-    PoLine poLine = new PoLine().withIsPackage(true).withPurchaseOrderId(orderId)
-                                    .withOrderFormat(ELECTRONIC_RESOURCE).withId(lineId)
-                                    .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM))
-                                    .withLocations(List.of(loc)).withCost(cost);
-    CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(orderId).withPoLines(List.of(poLine));
+    PoLine poLine =
+        new PoLine()
+            .withIsPackage(true)
+            .withPurchaseOrderId(orderId)
+            .withOrderFormat(ELECTRONIC_RESOURCE)
+            .withId(lineId)
+            .withEresource(
+                new Eresource()
+                    .withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM))
+            .withLocations(List.of(loc))
+            .withCost(cost);
+    CompositePurchaseOrder compositePurchaseOrder =
+        new CompositePurchaseOrder().withId(orderId).withPoLines(List.of(poLine));
 
-    doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(pieceId, requestContext);
-    doReturn(succeededFuture(List.of(piece))).when(pieceStorageService).getPiecesByHoldingId(piece.getId(), requestContext);
-    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title.getId()), eq(requestContext), eq(requestContext));
-    doReturn(succeededFuture(itemId)).when(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(piece, compositePurchaseOrder, poLine, requestContext);
-    doReturn(succeededFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(piece, requestContext);
+    doReturn(succeededFuture(piece))
+        .when(pieceStorageService)
+        .getPieceById(pieceId, requestContext);
+    doReturn(succeededFuture(List.of(piece)))
+        .when(pieceStorageService)
+        .getPiecesByHoldingId(piece.getId(), requestContext);
+    doReturn(succeededFuture(instanceId))
+        .when(titlesService)
+        .updateTitleWithInstance(eq(title.getId()), eq(requestContext), eq(requestContext));
+    doReturn(succeededFuture(itemId))
+        .when(pieceUpdateInventoryService)
+        .manualPieceFlowCreateItemRecord(piece, compositePurchaseOrder, poLine, requestContext);
+    doReturn(succeededFuture(null))
+        .when(pieceUpdateInventoryService)
+        .deleteHoldingConnectedToPiece(piece, requestContext);
 
-    PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
+    PieceCreationHolder holder =
+        new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
     holder.withOrderInformation(compositePurchaseOrder);
     holder.withTitleInformation(title);
 
-    pieceCreateFlowInventoryManager.processInventory(holder.getPurchaseOrderToSave(), holder.getOriginPoLine(), holder.getPieceToCreate(),
-      holder.isCreateItem(), requestContext).result();
+    pieceCreateFlowInventoryManager
+        .processInventory(
+            holder.getPurchaseOrderToSave(),
+            holder.getOriginPoLine(),
+            holder.getPieceToCreate(),
+            holder.isCreateItem(),
+            requestContext)
+        .result();
 
     assertEquals(itemId, piece.getItemId());
     assertEquals(holdingId, piece.getHoldingId());
-    verify(titlesService).updateTitleWithInstance(piece.getTitleId(), requestContext, requestContext);
+    verify(titlesService)
+        .updateTitleWithInstance(piece.getTitleId(), requestContext, requestContext);
 
-    verify(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(piece, compositePurchaseOrder, poLine, requestContext);
+    verify(pieceUpdateInventoryService)
+        .manualPieceFlowCreateItemRecord(piece, compositePurchaseOrder, poLine, requestContext);
   }
 
   @Test
@@ -157,36 +186,65 @@ public class PieceCreateFlowInventoryManagerIT {
     String instanceId = UUID.randomUUID().toString();
 
     Title title = new Title().withId(titleId).withPoLineId(lineId).withInstanceId(instanceId);
-    Piece piece = new Piece().withId(pieceId).withTitleId(titleId).withPoLineId(lineId).withLocationId(locationId).withFormat(Piece.Format.ELECTRONIC);
-    Location loc = new Location().withLocationId(locationId).withQuantityElectronic(1).withQuantity(1);
-    Cost cost = new Cost().withQuantityElectronic(1)
-      .withListUnitPrice(1d).withExchangeRate(1d).withCurrency("USD")
-      .withPoLineEstimatedPrice(1d);
+    Piece piece =
+        new Piece()
+            .withId(pieceId)
+            .withTitleId(titleId)
+            .withPoLineId(lineId)
+            .withLocationId(locationId)
+            .withFormat(Piece.Format.ELECTRONIC);
+    Location loc =
+        new Location().withLocationId(locationId).withQuantityElectronic(1).withQuantity(1);
+    Cost cost =
+        new Cost()
+            .withQuantityElectronic(1)
+            .withListUnitPrice(1d)
+            .withExchangeRate(1d)
+            .withCurrency("USD")
+            .withPoLineEstimatedPrice(1d);
 
-    PoLine poLine = new PoLine().withIsPackage(true).withPurchaseOrderId(orderId)
-      .withOrderFormat(ELECTRONIC_RESOURCE).withId(lineId)
-      .withCheckinItems(false)
-      .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE))
-      .withLocations(List.of(loc)).withCost(cost);
-    CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(orderId).withPoLines(List.of(poLine));
-    doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(pieceId, requestContext);
-    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title.getId()), eq(requestContext), eq(requestContext));
+    PoLine poLine =
+        new PoLine()
+            .withIsPackage(true)
+            .withPurchaseOrderId(orderId)
+            .withOrderFormat(ELECTRONIC_RESOURCE)
+            .withId(lineId)
+            .withCheckinItems(false)
+            .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE))
+            .withLocations(List.of(loc))
+            .withCost(cost);
+    CompositePurchaseOrder compositePurchaseOrder =
+        new CompositePurchaseOrder().withId(orderId).withPoLines(List.of(poLine));
+    doReturn(succeededFuture(piece))
+        .when(pieceStorageService)
+        .getPieceById(pieceId, requestContext);
+    doReturn(succeededFuture(instanceId))
+        .when(titlesService)
+        .updateTitleWithInstance(eq(title.getId()), eq(requestContext), eq(requestContext));
 
-    PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
+    PieceCreationHolder holder =
+        new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
     holder.withOrderInformation(compositePurchaseOrder);
     holder.withTitleInformation(title);
 
-    pieceCreateFlowInventoryManager.processInventory(holder.getPurchaseOrderToSave(), holder.getOriginPoLine(), holder.getPieceToCreate(),
-      holder.isCreateItem(), requestContext).result();
+    pieceCreateFlowInventoryManager
+        .processInventory(
+            holder.getPurchaseOrderToSave(),
+            holder.getOriginPoLine(),
+            holder.getPieceToCreate(),
+            holder.isCreateItem(),
+            requestContext)
+        .result();
 
     assertNull(piece.getItemId());
     assertNull(piece.getHoldingId());
     assertEquals(locationId, piece.getLocationId());
-    verify(titlesService).updateTitleWithInstance(piece.getTitleId(), requestContext, requestContext);
+    verify(titlesService)
+        .updateTitleWithInstance(piece.getTitleId(), requestContext, requestContext);
 
-    verify(pieceUpdateInventoryService, times(0)).manualPieceFlowCreateItemRecord(piece, compositePurchaseOrder, poLine, requestContext);
+    verify(pieceUpdateInventoryService, times(0))
+        .manualPieceFlowCreateItemRecord(piece, compositePurchaseOrder, poLine, requestContext);
   }
-
 
   @Test
   void testShouldNotCreateHoldingPieceCreateForNonPackagePoLineWithCreateInventoryInstance() {
@@ -198,33 +256,63 @@ public class PieceCreateFlowInventoryManagerIT {
     String instanceId = UUID.randomUUID().toString();
 
     Title title = new Title().withId(titleId).withPoLineId(lineId).withInstanceId(instanceId);
-    Piece piece = new Piece().withId(pieceId).withTitleId(titleId).withPoLineId(lineId).withLocationId(locationId).withFormat(Piece.Format.ELECTRONIC);
-    Location loc = new Location().withLocationId(locationId).withQuantityElectronic(1).withQuantity(1);
-    Cost cost = new Cost().withQuantityElectronic(1)
-      .withListUnitPrice(1d).withExchangeRate(1d).withCurrency("USD")
-      .withPoLineEstimatedPrice(1d);
+    Piece piece =
+        new Piece()
+            .withId(pieceId)
+            .withTitleId(titleId)
+            .withPoLineId(lineId)
+            .withLocationId(locationId)
+            .withFormat(Piece.Format.ELECTRONIC);
+    Location loc =
+        new Location().withLocationId(locationId).withQuantityElectronic(1).withQuantity(1);
+    Cost cost =
+        new Cost()
+            .withQuantityElectronic(1)
+            .withListUnitPrice(1d)
+            .withExchangeRate(1d)
+            .withCurrency("USD")
+            .withPoLineEstimatedPrice(1d);
 
-    PoLine poLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId)
-      .withOrderFormat(ELECTRONIC_RESOURCE).withId(lineId)
-      .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE))
-      .withLocations(List.of(loc)).withCost(cost);
-    CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(orderId).withPoLines(List.of(poLine));
-    doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(pieceId, requestContext);
-    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title.getId()), eq(requestContext), eq(requestContext));
+    PoLine poLine =
+        new PoLine()
+            .withIsPackage(false)
+            .withPurchaseOrderId(orderId)
+            .withOrderFormat(ELECTRONIC_RESOURCE)
+            .withId(lineId)
+            .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE))
+            .withLocations(List.of(loc))
+            .withCost(cost);
+    CompositePurchaseOrder compositePurchaseOrder =
+        new CompositePurchaseOrder().withId(orderId).withPoLines(List.of(poLine));
+    doReturn(succeededFuture(piece))
+        .when(pieceStorageService)
+        .getPieceById(pieceId, requestContext);
+    doReturn(succeededFuture(instanceId))
+        .when(titlesService)
+        .updateTitleWithInstance(eq(title.getId()), eq(requestContext), eq(requestContext));
 
-    PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
+    PieceCreationHolder holder =
+        new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
     holder.withOrderInformation(compositePurchaseOrder);
     holder.withTitleInformation(title);
 
-    pieceCreateFlowInventoryManager.processInventory(holder.getPurchaseOrderToSave(), holder.getOriginPoLine(), holder.getPieceToCreate(),
-      holder.isCreateItem(), requestContext).result();
+    pieceCreateFlowInventoryManager
+        .processInventory(
+            holder.getPurchaseOrderToSave(),
+            holder.getOriginPoLine(),
+            holder.getPieceToCreate(),
+            holder.isCreateItem(),
+            requestContext)
+        .result();
 
     assertNull(piece.getItemId());
     assertNull(piece.getHoldingId());
     assertEquals(locationId, piece.getLocationId());
-    verify(titlesService).updateTitleWithInstance(piece.getTitleId(), requestContext, requestContext);
+    verify(titlesService)
+        .updateTitleWithInstance(piece.getTitleId(), requestContext, requestContext);
 
-    verify(pieceUpdateInventoryService, times(0)).manualPieceFlowCreateItemRecord(piece, compositePurchaseOrder, poLine, requestContext);
+    verify(pieceUpdateInventoryService, times(0))
+        .manualPieceFlowCreateItemRecord(piece, compositePurchaseOrder, poLine, requestContext);
   }
 
   private static class ContextConfiguration {
@@ -254,10 +342,12 @@ public class PieceCreateFlowInventoryManagerIT {
     }
 
     @Bean
-    PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager(TitlesService titlesService,
-                                                                    PieceUpdateInventoryService pieceUpdateInventoryService,
-                                                                    InventoryHoldingManager inventoryHoldingManager) {
-      return new PieceCreateFlowInventoryManager(titlesService, pieceUpdateInventoryService, inventoryHoldingManager);
+    PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager(
+        TitlesService titlesService,
+        PieceUpdateInventoryService pieceUpdateInventoryService,
+        InventoryHoldingManager inventoryHoldingManager) {
+      return new PieceCreateFlowInventoryManager(
+          titlesService, pieceUpdateInventoryService, inventoryHoldingManager);
     }
   }
 }

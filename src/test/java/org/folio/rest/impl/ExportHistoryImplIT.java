@@ -13,7 +13,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-
 import org.folio.ApiTestSuiteIT;
 import org.folio.config.ApplicationConfig;
 import org.folio.rest.jaxrs.model.ExportHistoryCollection;
@@ -48,16 +47,14 @@ public class ExportHistoryImplIT {
     }
   }
 
-
   @Test
-  void getExportHistorySuccessTest () {
-    var headers =  prepareHeaders(X_OKAPI_URL, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10);
-    final ExportHistoryCollection exportHistory = verifyGet(EXPORT_HISTORY_ENDPOINT, headers, APPLICATION_JSON, 200)
-      .as(ExportHistoryCollection.class);
+  void getExportHistorySuccessTest() {
+    var headers = prepareHeaders(X_OKAPI_URL, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10);
+    final ExportHistoryCollection exportHistory =
+        verifyGet(EXPORT_HISTORY_ENDPOINT, headers, APPLICATION_JSON, 200)
+            .as(ExportHistoryCollection.class);
 
     assertNotNull(exportHistory);
     assertEquals(2, exportHistory.getExportHistories().size());
   }
-
-
 }

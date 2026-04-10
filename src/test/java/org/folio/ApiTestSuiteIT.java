@@ -9,7 +9,6 @@ import static org.folio.TestConfig.startMockServer;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-
 import org.folio.helper.CheckinHelperIT;
 import org.folio.helper.PurchaseOrderHelperTest;
 import org.folio.helper.PurchaseOrderLineHelperTest;
@@ -56,8 +55,8 @@ import org.folio.service.consortium.ConsortiumConfigurationServiceTest;
 import org.folio.service.consortium.ConsortiumUserTenantServiceTest;
 import org.folio.service.consortium.SharingInstanceServiceTest;
 import org.folio.service.exchange.CacheableExchangeRateServiceTest;
-import org.folio.service.exchange.ManualCurrencyConversionTest;
 import org.folio.service.exchange.CustomExchangeRateProviderTest;
+import org.folio.service.exchange.ManualCurrencyConversionTest;
 import org.folio.service.expenceclass.ExpenseClassValidationServiceTest;
 import org.folio.service.finance.EncumbranceUtilsTest;
 import org.folio.service.finance.FinanceHoldersBuilderTest;
@@ -142,472 +141,361 @@ public class ApiTestSuiteIT {
   }
 
   @Nested
-  class AcquisitionsUnitsServiceTestNested extends AcquisitionsUnitsServiceIT {
-  }
+  class AcquisitionsUnitsServiceTestNested extends AcquisitionsUnitsServiceIT {}
 
   @Nested
-  class AcquisitionMethodAPITestNested extends AcquisitionMethodApiIT {
-  }
+  class AcquisitionMethodAPITestNested extends AcquisitionMethodApiIT {}
 
   @Nested
-  class PurchaseOrdersApiTestNested extends PurchaseOrdersApiIT {
-  }
+  class PurchaseOrdersApiTestNested extends PurchaseOrdersApiIT {}
 
   @Nested
-  class PurchaseOrderLinesApiTestNested extends PurchaseOrderLinesApiIT {
-  }
+  class PurchaseOrderLinesApiTestNested extends PurchaseOrderLinesApiIT {}
 
   @Nested
-  class CheckinReceivingApiTestNested extends CheckinReceivingApiIT {
-  }
+  class CheckinReceivingApiTestNested extends CheckinReceivingApiIT {}
 
   @Nested
-  class PieceApiTestNested extends PieceApiIT {
-  }
+  class PieceApiTestNested extends PieceApiIT {}
 
   @Nested
-  class ReceivingHistoryApiTestNested extends ReceivingHistoryApiIT {
-  }
+  class ReceivingHistoryApiTestNested extends ReceivingHistoryApiIT {}
 
   @Nested
-  class PoNumberApiTestNested extends PoNumberApiIT {
-  }
+  class PoNumberApiTestNested extends PoNumberApiIT {}
 
   @Nested
-  class ReceiveOrderStatusChangeHandlerTestNested extends ReceiveOrderStatusChangeHandlerIT {
-  }
+  class ReceiveOrderStatusChangeHandlerTestNested extends ReceiveOrderStatusChangeHandlerIT {}
 
   @Nested
-  class ReceiptStatusConsistencyTestNested extends ReceiptStatusConsistencyIT {
-  }
+  class ReceiptStatusConsistencyTestNested extends ReceiptStatusConsistencyIT {}
 
   @Nested
-  class OrdersProtectionTestNested extends OrdersProtectionIT {
-  }
+  class OrdersProtectionTestNested extends OrdersProtectionIT {}
 
   @Nested
-  class LinesProtectionTestNested extends LinesProtectionIT {
-  }
+  class LinesProtectionTestNested extends LinesProtectionIT {}
 
   @Nested
-  class PiecesProtectionTestNested extends PiecesProtectionIT {
-  }
+  class PiecesProtectionTestNested extends PiecesProtectionIT {}
 
   @Nested
-  class ReceivingCheckinProtectionTestNested extends ReceivingCheckinProtectionIT {
-  }
+  class ReceivingCheckinProtectionTestNested extends ReceivingCheckinProtectionIT {}
 
   @Nested
-  class OrderTemplateTestNested extends OrderTemplateIT {
-  }
+  class OrderTemplateTestNested extends OrderTemplateIT {}
 
   @Nested
-  class TitlesApiTestNested extends TitlesApiIT {
-  }
+  class TitlesApiTestNested extends TitlesApiIT {}
 
   @Nested
-  class RoutingListsApiTestNested extends RoutingListsApiIT {
-  }
+  class RoutingListsApiTestNested extends RoutingListsApiIT {}
 
   @Nested
-  class ConfigurationCrudTestNested extends ConfigurationCrudIT {
-  }
+  class ConfigurationCrudTestNested extends ConfigurationCrudIT {}
 
-
   @Nested
-  class CheckInOrderStatusChangeChangeHandlerTestNested extends CheckInOrderStatusChangeChangeHandlerIT {
-  }
-
+  class CheckInOrderStatusChangeChangeHandlerTestNested
+      extends CheckInOrderStatusChangeChangeHandlerIT {}
 
   @Nested
-  class SuffixServiceTestNested extends SuffixServiceTest {
-  }
+  class SuffixServiceTestNested extends SuffixServiceTest {}
 
   @Nested
-  class PrefixServiceTestNested extends PrefixServiceTest {
-  }
+  class PrefixServiceTestNested extends PrefixServiceTest {}
 
   @Nested
-  class SharingInstanceServiceTestNested extends SharingInstanceServiceTest {
-  }
+  class SharingInstanceServiceTestNested extends SharingInstanceServiceTest {}
 
   @Nested
-  class ConsortiumConfigurationServiceTestNested extends ConsortiumConfigurationServiceTest {
-  }
+  class ConsortiumConfigurationServiceTestNested extends ConsortiumConfigurationServiceTest {}
 
   @Nested
-  class ReasonForClosureServiceTestNested extends ReasonForClosureServiceTest {
-  }
+  class ReasonForClosureServiceTestNested extends ReasonForClosureServiceTest {}
 
   @Nested
-  class PieceServiceTestNested extends PieceServiceIT {
-  }
+  class PieceServiceTestNested extends PieceServiceIT {}
 
   @Nested
-  class PurchaseOrderHelperTestNested extends PurchaseOrderHelperTest {
-  }
+  class PurchaseOrderHelperTestNested extends PurchaseOrderHelperTest {}
 
   @Nested
-  class EncumbranceServiceTestNested extends EncumbranceServiceTest {
-  }
+  class EncumbranceServiceTestNested extends EncumbranceServiceTest {}
 
   @Nested
-  class PurchaseOrderLineHelperTestNested extends PurchaseOrderLineHelperTest {
-  }
+  class PurchaseOrderLineHelperTestNested extends PurchaseOrderLineHelperTest {}
 
   @Nested
-  class FundDistributionUtilsTestNested extends FundDistributionUtilsTest {
-  }
+  class FundDistributionUtilsTestNested extends FundDistributionUtilsTest {}
 
   @Nested
-  class StreamUtilsTestNested extends StreamUtilsTest {
-  }
+  class StreamUtilsTestNested extends StreamUtilsTest {}
 
   @Nested
-  class HelperUtilsTestNested extends HelperUtilsTest {
-  }
+  class HelperUtilsTestNested extends HelperUtilsTest {}
 
   @Nested
-  class QueryUtilsTestNested extends QueryUtilsTest {
-  }
+  class QueryUtilsTestNested extends QueryUtilsTest {}
 
   @Nested
-  class TransactionServiceTestNested extends TransactionServiceTest {
-  }
+  class TransactionServiceTestNested extends TransactionServiceTest {}
 
   @Nested
-  class CustomExchangeRateProviderTestNested extends CustomExchangeRateProviderTest {
-  }
+  class CustomExchangeRateProviderTestNested extends CustomExchangeRateProviderTest {}
 
   @Nested
-  class ManualCurrencyConversionTestNested extends ManualCurrencyConversionTest {
-  }
+  class ManualCurrencyConversionTestNested extends ManualCurrencyConversionTest {}
 
   @Nested
-  class RestClientTestNested extends RestClientTest {
-  }
+  class RestClientTestNested extends RestClientTest {}
 
   @Nested
-  class InventoryManagerTestNested extends InventoryManagerIT {
-  }
+  class InventoryManagerTestNested extends InventoryManagerIT {}
 
   @Nested
-  class InventoryUtilsTestNested extends InventoryUtilsTest {
-  }
+  class InventoryUtilsTestNested extends InventoryUtilsTest {}
 
   @Nested
-  class InventoryItemRequestServiceTestNested extends InventoryItemRequestServiceIT {
-  }
+  class InventoryItemRequestServiceTestNested extends InventoryItemRequestServiceIT {}
 
   @Nested
-  class InventoryItemSyncServiceTestNested extends InventoryItemStatusSyncServiceTest {
-  }
+  class InventoryItemSyncServiceTestNested extends InventoryItemStatusSyncServiceTest {}
 
   @Nested
-  class InventoryInstanceManagerTestNested extends InventoryInstanceManagerTest {
-  }
+  class InventoryInstanceManagerTestNested extends InventoryInstanceManagerTest {}
 
   @Nested
-  class PurchaseOrderLineServiceTestNested extends PurchaseOrderLineServiceTest {
-  }
+  class PurchaseOrderLineServiceTestNested extends PurchaseOrderLineServiceTest {}
 
   @Nested
-  class PurchaseOrderStorageServiceTestNested extends PurchaseOrderStorageServiceTest {
-  }
+  class PurchaseOrderStorageServiceTestNested extends PurchaseOrderStorageServiceTest {}
 
   @Nested
-  class FundServiceTestNested extends FundServiceTest {
-  }
+  class FundServiceTestNested extends FundServiceTest {}
 
   @Nested
-  class OrderRolloverServiceTestNested extends OrderRolloverServiceTest {
-  }
+  class OrderRolloverServiceTestNested extends OrderRolloverServiceTest {}
 
   @Nested
-  class PendingToOpenEncumbranceStrategyTestNested extends PendingToOpenEncumbranceStrategyTest {
-  }
+  class PendingToOpenEncumbranceStrategyTestNested extends PendingToOpenEncumbranceStrategyTest {}
 
   @Nested
-  class PendingToPendingEncumbranceStrategyTestNested extends PendingToPendingEncumbranceStrategyTest {
-  }
+  class PendingToPendingEncumbranceStrategyTestNested
+      extends PendingToPendingEncumbranceStrategyTest {}
 
   @Nested
-  class OpenToClosedEncumbranceStrategyTestNested extends OpenToClosedEncumbranceStrategyTest {
-  }
+  class OpenToClosedEncumbranceStrategyTestNested extends OpenToClosedEncumbranceStrategyTest {}
 
   @Nested
-  class OpenToPendingEncumbranceStrategyTestNested extends OpenToPendingEncumbranceStrategyIT {
-  }
+  class OpenToPendingEncumbranceStrategyTestNested extends OpenToPendingEncumbranceStrategyIT {}
 
   @Nested
-  class ReEncumbranceHoldersBuilderTestNested extends ReEncumbranceHoldersBuilderTest {
-  }
+  class ReEncumbranceHoldersBuilderTestNested extends ReEncumbranceHoldersBuilderTest {}
 
   @Nested
-  class OrderReEncumberServiceTestNested extends OrderReEncumberServiceTest {
-  }
+  class OrderReEncumberServiceTestNested extends OrderReEncumberServiceTest {}
 
   @Nested
-  class CompositeOrderTotalFieldsPopulateServiceTestNested extends CompositeOrderTotalFieldsPopulateServiceTest {
-  }
+  class CompositeOrderTotalFieldsPopulateServiceTestNested
+      extends CompositeOrderTotalFieldsPopulateServiceTest {}
 
   @Nested
-  class CombinedOrderDataPopulateServiceTestNested extends CombinedOrderDataPopulateServiceTest {
-  }
+  class CombinedOrderDataPopulateServiceTestNested extends CombinedOrderDataPopulateServiceTest {}
 
   @Nested
-  class CompositeOrderRetrieveHolderBuilderTestNested extends CompositeOrderRetrieveHolderBuilderTest {
-  }
+  class CompositeOrderRetrieveHolderBuilderTestNested
+      extends CompositeOrderRetrieveHolderBuilderTest {}
 
   @Nested
-  class EncumbranceRelationsHoldersBuilderTestNested extends EncumbranceRelationsHoldersBuilderTest {
-  }
+  class EncumbranceRelationsHoldersBuilderTestNested
+      extends EncumbranceRelationsHoldersBuilderTest {}
 
   @Nested
-  class FundsDistributionServiceTestNested extends FundsDistributionServiceTest {
-  }
+  class FundsDistributionServiceTestNested extends FundsDistributionServiceTest {}
 
   @Nested
-  class BudgetRestrictionServiceTestNested extends BudgetRestrictionServiceTest {
-  }
+  class BudgetRestrictionServiceTestNested extends BudgetRestrictionServiceTest {}
 
   @Nested
-  class HoldingsSummaryAPITestNested extends HoldingsSummaryApiIT {
-  }
+  class HoldingsSummaryAPITestNested extends HoldingsSummaryApiIT {}
 
   @Nested
-  class HoldingsSummaryServiceTestNested extends HoldingsSummaryServiceTest {
-  }
+  class HoldingsSummaryServiceTestNested extends HoldingsSummaryServiceTest {}
 
   @Nested
-  class HoldingDetailServiceTestNested extends HoldingDetailServiceTest {
-  }
+  class HoldingDetailServiceTestNested extends HoldingDetailServiceTest {}
 
   @Nested
-  class ExpenseClassValidationServiceTestNested extends ExpenseClassValidationServiceTest {
-  }
+  class ExpenseClassValidationServiceTestNested extends ExpenseClassValidationServiceTest {}
 
   @Nested
-  class PoLineCommonUtilTestNested extends PoLineCommonUtilTest {
-  }
+  class PoLineCommonUtilTestNested extends PoLineCommonUtilTest {}
 
   @Nested
-  class PoLineValidationServiceTestNested extends PoLineValidationServiceTest {
-  }
+  class PoLineValidationServiceTestNested extends PoLineValidationServiceTest {}
 
   @Nested
-  class FutureIteratorTestNested extends FutureIteratorTest {
-  }
+  class FutureIteratorTestNested extends FutureIteratorTest {}
 
   @Nested
-  class LocationsAndPiecesConsistencyValidatorTestNested extends LocationsAndPiecesConsistencyValidatorTest {
-  }
+  class LocationsAndPiecesConsistencyValidatorTestNested
+      extends LocationsAndPiecesConsistencyValidatorTest {}
 
   @Nested
-  class PieceStorageServiceTestNested extends PieceStorageServiceIT {
-  }
+  class PieceStorageServiceTestNested extends PieceStorageServiceIT {}
 
   @Nested
-  class PieceUpdateInventoryServiceTestNested extends PieceUpdateInventoryServiceIT {
-  }
+  class PieceUpdateInventoryServiceTestNested extends PieceUpdateInventoryServiceIT {}
 
   @Nested
-  class OrderInvoiceRelationServiceTestNested extends OrderInvoiceRelationServiceTest {
-  }
+  class OrderInvoiceRelationServiceTestNested extends OrderInvoiceRelationServiceTest {}
 
   @Nested
-  class PieceFlowUpdatePoLineStrategiesTestNested {
-  }
+  class PieceFlowUpdatePoLineStrategiesTestNested {}
 
   @Nested
-  class ExceptionUtilTestNested extends ExceptionUtilTest {
-  }
+  class ExceptionUtilTestNested extends ExceptionUtilTest {}
 
   @Nested
-  class ResponseUtilTestNested extends ResponseUtilTest {
-  }
+  class ResponseUtilTestNested extends ResponseUtilTest {}
 
   @Nested
-  class PieceValidatorUtilTestNested extends PieceValidatorUtilTest {
-  }
+  class PieceValidatorUtilTestNested extends PieceValidatorUtilTest {}
 
   @Nested
-  class PieceDeleteFlowManagerTestNested extends PieceDeleteFlowManagerIT {
-  }
+  class PieceDeleteFlowManagerTestNested extends PieceDeleteFlowManagerIT {}
 
   @Nested
-  class PieceCreateFlowInventoryManagerTestNested extends PieceCreateFlowInventoryManagerIT {
-  }
+  class PieceCreateFlowInventoryManagerTestNested extends PieceCreateFlowInventoryManagerIT {}
 
   @Nested
-  class DefaultPieceFlowsValidatorTestNested extends DefaultPieceFlowsValidatorTest {
-  }
+  class DefaultPieceFlowsValidatorTestNested extends DefaultPieceFlowsValidatorTest {}
 
   @Nested
-  class CheckinHelperTestNested extends CheckinHelperIT {
-  }
+  class CheckinHelperTestNested extends CheckinHelperIT {}
 
   @Nested
-  class PieceUpdateFlowManagerTestNested extends PieceUpdateFlowManagerIT {
-  }
+  class PieceUpdateFlowManagerTestNested extends PieceUpdateFlowManagerIT {}
 
   @Nested
-  class PieceUpdateFlowInventoryManagerTestNested extends PieceUpdateFlowInventoryManagerIT {
-  }
+  class PieceUpdateFlowInventoryManagerTestNested extends PieceUpdateFlowInventoryManagerIT {}
 
   @Nested
-  class BasePieceFlowHolderBuilderTestNested extends BasePieceFlowHolderBuilderIT {
-  }
+  class BasePieceFlowHolderBuilderTestNested extends BasePieceFlowHolderBuilderIT {}
 
   @Nested
-  class PieceCreateFlowPoLineServiceTestNested extends PieceCreateFlowPoLineServiceIT {
-  }
+  class PieceCreateFlowPoLineServiceTestNested extends PieceCreateFlowPoLineServiceIT {}
 
   @Nested
-  class PieceDeleteFlowPoLineServiceTestNested extends PieceDeleteFlowPoLineServiceIT {
-  }
+  class PieceDeleteFlowPoLineServiceTestNested extends PieceDeleteFlowPoLineServiceIT {}
 
   @Nested
-  class PieceUpdateFlowPoLineServiceTestNested extends PieceUpdateFlowPoLineServiceIT {
-  }
+  class PieceUpdateFlowPoLineServiceTestNested extends PieceUpdateFlowPoLineServiceIT {}
 
   @Nested
-  class OpenCompositeOrderInventoryServiceTestNested extends OpenCompositeOrderInventoryServiceIT {
-  }
+  class OpenCompositeOrderInventoryServiceTestNested extends OpenCompositeOrderInventoryServiceIT {}
 
   @Nested
-  class OpenCompositeOrderFlowValidatorTestNested extends OpenCompositeOrderFlowValidatorTest {
-  }
+  class OpenCompositeOrderFlowValidatorTestNested extends OpenCompositeOrderFlowValidatorTest {}
 
   @Nested
-  class OpenCompositeOrderManagerTestNested extends OpenCompositeOrderManagerIT {
-  }
+  class OpenCompositeOrderManagerTestNested extends OpenCompositeOrderManagerIT {}
 
   @Nested
-  class OpenCompositeOrderPieceServiceTestNested extends OpenCompositeOrderPieceServiceIT {
-  }
+  class OpenCompositeOrderPieceServiceTestNested extends OpenCompositeOrderPieceServiceIT {}
 
   @Nested
-  class OpenCompositeOrderHolderBuilderTestNested extends OpenCompositeOrderHolderBuilderTest {
-  }
+  class OpenCompositeOrderHolderBuilderTestNested extends OpenCompositeOrderHolderBuilderTest {}
 
   @Nested
-  class InvoiceLineServiceTestNested extends InvoiceLineServiceTest {
-  }
+  class InvoiceLineServiceTestNested extends InvoiceLineServiceTest {}
 
   @Nested
-  class ReOpenCompositeOrderManagerTestNested extends ReOpenCompositeOrderManagerIT {
-  }
+  class ReOpenCompositeOrderManagerTestNested extends ReOpenCompositeOrderManagerIT {}
 
   @Nested
-  class UnOpenCompositeOrderManagerTestNested extends UnOpenCompositeOrderManagerIT {
-  }
+  class UnOpenCompositeOrderManagerTestNested extends UnOpenCompositeOrderManagerIT {}
 
   @Nested
-  class OrderLineUpdateInstanceHandlerTestNested extends OrderLineUpdateInstanceHandlerIT {
-  }
+  class OrderLineUpdateInstanceHandlerTestNested extends OrderLineUpdateInstanceHandlerIT {}
 
   @Nested
-  class WithHoldingOrderLineUpdateInstanceStrategy extends WithHoldingOrderLineUpdateInstanceStrategyTest {
-  }
+  class WithHoldingOrderLineUpdateInstanceStrategy
+      extends WithHoldingOrderLineUpdateInstanceStrategyTest {}
 
   @Nested
-  class WithoutHoldingOrderLineUpdateInstanceStrategy extends WithoutHoldingOrderLineUpdateInstanceStrategyTest {
-  }
+  class WithoutHoldingOrderLineUpdateInstanceStrategy
+      extends WithoutHoldingOrderLineUpdateInstanceStrategyTest {}
 
   @Nested
-  class ExportHistoryImplTestNested extends ExportHistoryImplIT {
-  }
+  class ExportHistoryImplTestNested extends ExportHistoryImplIT {}
 
   @Nested
-  class LedgerRolloverServiceTestNested extends LedgerRolloverServiceTest {
-  }
+  class LedgerRolloverServiceTestNested extends LedgerRolloverServiceTest {}
 
   @Nested
-  class LedgerRolloverErrorServiceTestNested extends LedgerRolloverErrorServiceTest {
-  }
+  class LedgerRolloverErrorServiceTestNested extends LedgerRolloverErrorServiceTest {}
 
   @Nested
-  class LedgerRolloverProgressServiceTestNested extends LedgerRolloverProgressServiceTest {
-  }
+  class LedgerRolloverProgressServiceTestNested extends LedgerRolloverProgressServiceTest {}
 
   @Nested
-  class ClosedToOpenEncumbranceStrategyTestNested extends ClosedToOpenEncumbranceStrategyTest {
-  }
+  class ClosedToOpenEncumbranceStrategyTestNested extends ClosedToOpenEncumbranceStrategyTest {}
 
   @Nested
-  class FiscalYearServiceTestNested extends FiscalYearServiceTest {
-  }
+  class FiscalYearServiceTestNested extends FiscalYearServiceTest {}
 
   @Nested
-  class OrderFiscalYearServiceTestNested extends OrderFiscalYearServiceTest {
-  }
+  class OrderFiscalYearServiceTestNested extends OrderFiscalYearServiceTest {}
 
   @Nested
-  class TagServiceTestNested extends TagServiceTest {
-  }
+  class TagServiceTestNested extends TagServiceTest {}
 
   @Nested
-  class RoutingListServiceTestNested extends RoutingListServiceTest {
-  }
+  class RoutingListServiceTestNested extends RoutingListServiceTest {}
 
   @Nested
-  class UserServiceTestNested extends UserServiceTest {
-  }
+  class UserServiceTestNested extends UserServiceTest {}
 
   @Nested
-  class CirculationRequestsRetrieverTestNested extends CirculationRequestsRetrieverIT {
-  }
+  class CirculationRequestsRetrieverTestNested extends CirculationRequestsRetrieverIT {}
 
   @Nested
-  class BaseApiTestNested extends BaseApiTest {
-  }
+  class BaseApiTestNested extends BaseApiTest {}
 
   @Nested
-  class FinanceHoldersBuilderTestNested extends FinanceHoldersBuilderTest {
-  }
+  class FinanceHoldersBuilderTestNested extends FinanceHoldersBuilderTest {}
 
   @Nested
-  class SettingsRetrieverTestNested extends SettingsRetrieverTest {
-  }
+  class SettingsRetrieverTestNested extends SettingsRetrieverTest {}
 
   @Nested
-  class PiecesClaimingApiTestNested extends PiecesClaimingApiIT {
-  }
+  class PiecesClaimingApiTestNested extends PiecesClaimingApiIT {}
 
   @Nested
-  class PiecesClaimingServiceNested extends PiecesClaimingServiceTest {
-  }
+  class PiecesClaimingServiceNested extends PiecesClaimingServiceTest {}
 
   @Nested
-  class PieceUtilTestNested extends PieceUtilTest {
-  }
+  class PieceUtilTestNested extends PieceUtilTest {}
 
   @Nested
-  class WrapperPieceStorageServiceTestNested extends WrapperPieceStorageServiceTest {
-  }
+  class WrapperPieceStorageServiceTestNested extends WrapperPieceStorageServiceTest {}
 
   @Nested
-  class WrapperPiecesAPITestNested extends WrapperPiecesApiIT {
-  }
+  class WrapperPiecesAPITestNested extends WrapperPiecesApiIT {}
 
   @Nested
-  class TitlesServiceTestNested extends TitlesServiceTest {
-  }
+  class TitlesServiceTestNested extends TitlesServiceTest {}
 
   @Nested
-  class CacheableExchangeRateServiceTestNested extends CacheableExchangeRateServiceTest {
-  }
+  class CacheableExchangeRateServiceTestNested extends CacheableExchangeRateServiceTest {}
 
   @Nested
-  class EncumbranceUtilsNestest extends EncumbranceUtilsTest {
-  }
+  class EncumbranceUtilsNestest extends EncumbranceUtilsTest {}
 
   @Nested
-  class BatchTrackingServiceTestNested extends BatchTrackingServiceTest {
-  }
+  class BatchTrackingServiceTestNested extends BatchTrackingServiceTest {}
 
   @Nested
-  class ConsortiumUserTenantServiceTestNested extends ConsortiumUserTenantServiceTest {
-  }
+  class ConsortiumUserTenantServiceTestNested extends ConsortiumUserTenantServiceTest {}
 }

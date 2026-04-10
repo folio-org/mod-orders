@@ -31,6 +31,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
 import static org.hamcrest.core.Every.everyItem;
 
+import io.vertx.core.json.JsonObject;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -39,16 +40,15 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuiteIT;
 import org.folio.HttpStatus;
 import org.folio.config.ApplicationConfig;
 import org.folio.rest.jaxrs.model.CheckinCollection;
-import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ProcessingStatus;
 import org.folio.rest.jaxrs.model.ReceivingCollection;
 import org.folio.rest.jaxrs.model.ReceivingItemResult;
@@ -63,13 +63,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
-import io.vertx.core.json.JsonObject;
-
-
 public class ReceivingCheckinProtectionIT extends ProtectedEntityTestBase {
 
   private static final Logger logger = LogManager.getLogger();
-
 
   private static final String ORDER_WITH_PROTECTED_UNITS_ID = getRandomId();
   private static final String ORDER_WITH_NOT_PROTECTED_UNITS_ID = getRandomId();
@@ -107,8 +103,10 @@ public class ReceivingCheckinProtectionIT extends ProtectedEntityTestBase {
     }
   }
 
-  // After changing the check for acq-units from orders to titles, we now use the TitlesService#getTitlesByPieceIds method,
-  // which calls AcquisitionsUnitsService#buildAcqUnitsCqlExprToSearchRecords. As a result, our search for acq-units has increased.
+  // After changing the check for acq-units from orders to titles, we now use the
+  // TitlesService#getTitlesByPieceIds method,
+  // which calls AcquisitionsUnitsService#buildAcqUnitsCqlExprToSearchRecords. As a result, our
+  // search for acq-units has increased.
   private enum Entities {
     RECEIVING(ORDERS_RECEIVING_ENDPOINT) {
       @Override
@@ -141,8 +139,14 @@ public class ReceivingCheckinProtectionIT extends ProtectedEntityTestBase {
   void testFlowWithNonExistedUnits(Entities entity) {
     logger.info("=== Test check-in/receiving flow - non-existing units ===");
 
-    ReceivingResults results = verifyPostResponse(entity.getEndpoint(), entity.getJsonRequest(NON_EXISTENT_UNITS),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt()).as(ReceivingResults.class);
+    ReceivingResults results =
+        verifyPostResponse(
+                entity.getEndpoint(),
+                entity.getJsonRequest(NON_EXISTENT_UNITS),
+                prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID),
+                APPLICATION_JSON,
+                HttpStatus.HTTP_OK.toInt())
+            .as(ReceivingResults.class);
 
     verifyRestrictedCase(results);
     validateNumberOfRequests(2, 1);
@@ -153,8 +157,14 @@ public class ReceivingCheckinProtectionIT extends ProtectedEntityTestBase {
   void testFlowWithAllowedUnits(Entities entity) {
     logger.info("=== Test check-in/receiving flow - not-protecting units ===");
 
-    ReceivingResults results = verifyPostResponse(entity.getEndpoint(), entity.getJsonRequest(NOT_PROTECTED_UNITS),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt()).as(ReceivingResults.class);
+    ReceivingResults results =
+        verifyPostResponse(
+                entity.getEndpoint(),
+                entity.getJsonRequest(NOT_PROTECTED_UNITS),
+                prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID),
+                APPLICATION_JSON,
+                HttpStatus.HTTP_OK.toInt())
+            .as(ReceivingResults.class);
 
     verifyAllowedCase(results);
     validateNumberOfRequests(3, 2);
@@ -165,8 +175,16 @@ public class ReceivingCheckinProtectionIT extends ProtectedEntityTestBase {
   void testFlowWithRestrictedUnitsAndAllowedUser(Entities entity) {
     logger.info("=== Test check-in/receiving flow - protecting units and allowed user ===");
 
-    ReceivingResults results = verifyPostResponse(entity.getEndpoint(), entity.getJsonRequest(PROTECTED_UNITS),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_WITH_UNITS_ASSIGNED_TO_ORDER), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt()).as(ReceivingResults.class);
+    ReceivingResults results =
+        verifyPostResponse(
+                entity.getEndpoint(),
+                entity.getJsonRequest(PROTECTED_UNITS),
+                prepareHeaders(
+                    EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10,
+                    X_OKAPI_USER_WITH_UNITS_ASSIGNED_TO_ORDER),
+                APPLICATION_JSON,
+                HttpStatus.HTTP_OK.toInt())
+            .as(ReceivingResults.class);
 
     verifyAllowedCase(results);
     validateNumberOfRequests(3, 3);
@@ -177,8 +195,16 @@ public class ReceivingCheckinProtectionIT extends ProtectedEntityTestBase {
   void testCheckInWithProtectedUnitsAndForbiddenUser(Entities entity) {
     logger.info("=== Test check-in/receiving flow - protecting units and forbidden user ===");
 
-    ReceivingResults results = verifyPostResponse(entity.getEndpoint(), entity.getJsonRequest(PROTECTED_UNITS),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_WITH_UNITS_NOT_ASSIGNED_TO_ORDER), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt()).as(ReceivingResults.class);
+    ReceivingResults results =
+        verifyPostResponse(
+                entity.getEndpoint(),
+                entity.getJsonRequest(PROTECTED_UNITS),
+                prepareHeaders(
+                    EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10,
+                    X_OKAPI_USER_WITH_UNITS_NOT_ASSIGNED_TO_ORDER),
+                APPLICATION_JSON,
+                HttpStatus.HTTP_OK.toInt())
+            .as(ReceivingResults.class);
 
     verifyRestrictedCase(results);
     validateNumberOfRequests(2, 2);
@@ -186,17 +212,30 @@ public class ReceivingCheckinProtectionIT extends ProtectedEntityTestBase {
 
   @Test
   void testReceivingCompositeFlow() {
-    CompositePurchaseOrder purchaseOrder = new CompositePurchaseOrder().withId(UUID.randomUUID().toString());
-    PoLine expectedFlowPoLine = getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(EXPECTED_FLOW_PO_LINE_ID);
-    PoLine randomPoLine1 = getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_1);
-    PoLine randomPoLine2 = getMinimalContentCompositePoLine(ORDER_WITH_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_2);
-    List.of(expectedFlowPoLine, randomPoLine1, randomPoLine2).forEach(line -> addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(line.withPurchaseOrderId(purchaseOrder.getId()))));
+    CompositePurchaseOrder purchaseOrder =
+        new CompositePurchaseOrder().withId(UUID.randomUUID().toString());
+    PoLine expectedFlowPoLine =
+        getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID)
+            .withId(EXPECTED_FLOW_PO_LINE_ID);
+    PoLine randomPoLine1 =
+        getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID)
+            .withId(RANDOM_PO_LINE_ID_1);
+    PoLine randomPoLine2 =
+        getMinimalContentCompositePoLine(ORDER_WITH_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_2);
+    List.of(expectedFlowPoLine, randomPoLine1, randomPoLine2)
+        .forEach(
+            line ->
+                addMockEntry(
+                    PO_LINES_STORAGE,
+                    JsonObject.mapFrom(line.withPurchaseOrderId(purchaseOrder.getId()))));
     addMockEntry(PURCHASE_ORDER_STORAGE, purchaseOrder);
 
     Title expectedFlowTitle = getTitle(expectedFlowPoLine).withAcqUnitIds(NOT_PROTECTED_UNITS);
     Title randomTitle1 = getTitle(randomPoLine1).withAcqUnitIds(NOT_PROTECTED_UNITS);
-    Title randomTitle2 = getTitle(randomPoLine2).withId(RANDOM_TITLE_ID_2).withAcqUnitIds(PROTECTED_UNITS);
-    List.of(expectedFlowTitle, randomTitle1, randomTitle2).forEach(title -> addMockEntry(TITLES, title));
+    Title randomTitle2 =
+        getTitle(randomPoLine2).withId(RANDOM_TITLE_ID_2).withAcqUnitIds(PROTECTED_UNITS);
+    List.of(expectedFlowTitle, randomTitle1, randomTitle2)
+        .forEach(title -> addMockEntry(TITLES, title));
 
     ReceivingCollection toBeReceivedRq = new ReceivingCollection();
 
@@ -209,41 +248,71 @@ public class ReceivingCheckinProtectionIT extends ProtectedEntityTestBase {
     toBeReceivedRq.setToBeReceived(toBeReceivedList);
     toBeReceivedRq.setTotalRecords(toBeReceivedList.size());
 
-    ReceivingResults results = verifyPostResponse(Entities.RECEIVING.getEndpoint(), JsonObject.mapFrom(toBeReceivedRq).encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_WITH_UNITS_NOT_ASSIGNED_TO_ORDER), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt()).as(ReceivingResults.class);
+    ReceivingResults results =
+        verifyPostResponse(
+                Entities.RECEIVING.getEndpoint(),
+                JsonObject.mapFrom(toBeReceivedRq).encode(),
+                prepareHeaders(
+                    EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10,
+                    X_OKAPI_USER_WITH_UNITS_NOT_ASSIGNED_TO_ORDER),
+                APPLICATION_JSON,
+                HttpStatus.HTTP_OK.toInt())
+            .as(ReceivingResults.class);
 
-    List<ProcessingStatus> result = results.getReceivingResults().stream()
-      .flatMap(r -> r.getReceivingItemResults().stream()
-        .map(ReceivingItemResult::getProcessingStatus))
-      .filter(s -> Objects.isNull(s.getError()))
-      .collect(Collectors.toList());
+    List<ProcessingStatus> result =
+        results.getReceivingResults().stream()
+            .flatMap(
+                r ->
+                    r.getReceivingItemResults().stream()
+                        .map(ReceivingItemResult::getProcessingStatus))
+            .filter(s -> Objects.isNull(s.getError()))
+            .collect(Collectors.toList());
 
     assertThat(result, hasSize(1));
 
-    List<Error> errors = results.getReceivingResults().stream()
-      .flatMap(r -> r.getReceivingItemResults().stream()
-        .map(e -> e.getProcessingStatus().getError()))
-      .filter(Objects::nonNull)
-      .collect(Collectors.toList());
+    List<Error> errors =
+        results.getReceivingResults().stream()
+            .flatMap(
+                r ->
+                    r.getReceivingItemResults().stream()
+                        .map(e -> e.getProcessingStatus().getError()))
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
 
     assertThat(errors, hasSize(toBeReceivedList.size() - 1));
-    assertThat(errors.stream().filter(e -> e.getCode().equals(PIECE_NOT_FOUND.getCode())).count(), is(2L));
-    assertThat(errors.stream().filter(e -> e.getCode().equals(USER_HAS_NO_PERMISSIONS.getCode())).count(), is(1L));
+    assertThat(
+        errors.stream().filter(e -> e.getCode().equals(PIECE_NOT_FOUND.getCode())).count(), is(2L));
+    assertThat(
+        errors.stream().filter(e -> e.getCode().equals(USER_HAS_NO_PERMISSIONS.getCode())).count(),
+        is(1L));
   }
 
   @Test
   void testCheckInCompositeFlow() {
-    CompositePurchaseOrder purchaseOrder = new CompositePurchaseOrder().withId(UUID.randomUUID().toString());
-    PoLine expectedFlowPoLine = getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(EXPECTED_FLOW_PO_LINE_ID);
-    PoLine randomPoLine1 = getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_1);
-    PoLine randomPoLine2 = getMinimalContentCompositePoLine(ORDER_WITH_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_2);
-    List.of(expectedFlowPoLine, randomPoLine1, randomPoLine2).forEach(line -> addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(line.withPurchaseOrderId(purchaseOrder.getId()))));
+    CompositePurchaseOrder purchaseOrder =
+        new CompositePurchaseOrder().withId(UUID.randomUUID().toString());
+    PoLine expectedFlowPoLine =
+        getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID)
+            .withId(EXPECTED_FLOW_PO_LINE_ID);
+    PoLine randomPoLine1 =
+        getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID)
+            .withId(RANDOM_PO_LINE_ID_1);
+    PoLine randomPoLine2 =
+        getMinimalContentCompositePoLine(ORDER_WITH_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_2);
+    List.of(expectedFlowPoLine, randomPoLine1, randomPoLine2)
+        .forEach(
+            line ->
+                addMockEntry(
+                    PO_LINES_STORAGE,
+                    JsonObject.mapFrom(line.withPurchaseOrderId(purchaseOrder.getId()))));
     addMockEntry(PURCHASE_ORDER_STORAGE, purchaseOrder);
 
     Title expectedFlowTitle = getTitle(expectedFlowPoLine).withAcqUnitIds(NOT_PROTECTED_UNITS);
     Title randomTitle1 = getTitle(randomPoLine1).withAcqUnitIds(NOT_PROTECTED_UNITS);
-    Title randomTitle2 = getTitle(randomPoLine2).withId(RANDOM_TITLE_ID_2).withAcqUnitIds(PROTECTED_UNITS);
-    List.of(expectedFlowTitle, randomTitle1, randomTitle2).forEach(title -> addMockEntry(TITLES, title));
+    Title randomTitle2 =
+        getTitle(randomPoLine2).withId(RANDOM_TITLE_ID_2).withAcqUnitIds(PROTECTED_UNITS);
+    List.of(expectedFlowTitle, randomTitle1, randomTitle2)
+        .forEach(title -> addMockEntry(TITLES, title));
 
     CheckinCollection toBeCheckedInRq = new CheckinCollection();
 
@@ -256,34 +325,53 @@ public class ReceivingCheckinProtectionIT extends ProtectedEntityTestBase {
     toBeCheckedInRq.setToBeCheckedIn(toBeCheckedInList);
     toBeCheckedInRq.setTotalRecords(toBeCheckedInList.size());
 
-    ReceivingResults results = verifyPostResponse(Entities.CHECK_IN.getEndpoint(), JsonObject.mapFrom(toBeCheckedInRq).encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_WITH_UNITS_NOT_ASSIGNED_TO_ORDER), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt()).as(ReceivingResults.class);
+    ReceivingResults results =
+        verifyPostResponse(
+                Entities.CHECK_IN.getEndpoint(),
+                JsonObject.mapFrom(toBeCheckedInRq).encode(),
+                prepareHeaders(
+                    EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10,
+                    X_OKAPI_USER_WITH_UNITS_NOT_ASSIGNED_TO_ORDER),
+                APPLICATION_JSON,
+                HttpStatus.HTTP_OK.toInt())
+            .as(ReceivingResults.class);
 
-    List<ProcessingStatus> result = results.getReceivingResults().stream()
-      .flatMap(r -> r.getReceivingItemResults().stream()
-        .map(ReceivingItemResult::getProcessingStatus))
-      .filter(s -> Objects.isNull(s.getError()))
-      .collect(Collectors.toList());
+    List<ProcessingStatus> result =
+        results.getReceivingResults().stream()
+            .flatMap(
+                r ->
+                    r.getReceivingItemResults().stream()
+                        .map(ReceivingItemResult::getProcessingStatus))
+            .filter(s -> Objects.isNull(s.getError()))
+            .collect(Collectors.toList());
 
     assertThat(result, hasSize(1));
 
-    List<Error> errors = results.getReceivingResults().stream()
-      .flatMap(r -> r.getReceivingItemResults().stream()
-        .map(e -> e.getProcessingStatus().getError()))
-      .filter(Objects::nonNull)
-      .collect(Collectors.toList());
+    List<Error> errors =
+        results.getReceivingResults().stream()
+            .flatMap(
+                r ->
+                    r.getReceivingItemResults().stream()
+                        .map(e -> e.getProcessingStatus().getError()))
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
 
     assertThat(errors, hasSize(toBeCheckedInList.size() - 1));
-    assertThat(errors.stream().filter(e -> e.getCode().equals(PIECE_NOT_FOUND.getCode())).count(), is(2L));
-    assertThat(errors.stream().filter(e -> e.getCode().equals(USER_HAS_NO_PERMISSIONS.getCode())).count(), is(1L));
+    assertThat(
+        errors.stream().filter(e -> e.getCode().equals(PIECE_NOT_FOUND.getCode())).count(), is(2L));
+    assertThat(
+        errors.stream().filter(e -> e.getCode().equals(USER_HAS_NO_PERMISSIONS.getCode())).count(),
+        is(1L));
   }
 
   private static CheckinCollection getCheckInCollection(List<String> units) {
 
-    CompositePurchaseOrder order = getMinimalContentCompositePurchaseOrder().withAcqUnitIds(units).withId(getRandomId());
+    CompositePurchaseOrder order =
+        getMinimalContentCompositePurchaseOrder().withAcqUnitIds(units).withId(getRandomId());
     addMockEntry(PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(order));
 
-    PoLine poLine = getMinimalContentCompositePoLine(order.getId()).withId(EXPECTED_FLOW_PO_LINE_ID);
+    PoLine poLine =
+        getMinimalContentCompositePoLine(order.getId()).withId(EXPECTED_FLOW_PO_LINE_ID);
     addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
 
     Title title = getTitle(poLine).withAcqUnitIds(units);
@@ -291,9 +379,11 @@ public class ReceivingCheckinProtectionIT extends ProtectedEntityTestBase {
 
     CheckinCollection toBeCheckedInRq = new CheckinCollection();
 
-    List<ToBeCheckedIn> toBeCheckedInList
-      = new ArrayList<>(Arrays.asList(getToBeCheckedIn(poLine.getId(), EXPECTED_FLOW_PIECE_ID_1),
-      getToBeCheckedIn(poLine.getId(), EXPECTED_FLOW_PIECE_ID_2)));
+    List<ToBeCheckedIn> toBeCheckedInList =
+        new ArrayList<>(
+            Arrays.asList(
+                getToBeCheckedIn(poLine.getId(), EXPECTED_FLOW_PIECE_ID_1),
+                getToBeCheckedIn(poLine.getId(), EXPECTED_FLOW_PIECE_ID_2)));
 
     toBeCheckedInRq.setToBeCheckedIn(toBeCheckedInList);
     toBeCheckedInRq.setTotalRecords(toBeCheckedInList.size());
@@ -303,10 +393,12 @@ public class ReceivingCheckinProtectionIT extends ProtectedEntityTestBase {
 
   private static ReceivingCollection getReceivingCollection(List<String> units) {
 
-    CompositePurchaseOrder order = getMinimalContentCompositePurchaseOrder().withAcqUnitIds(units).withId(getRandomId());
+    CompositePurchaseOrder order =
+        getMinimalContentCompositePurchaseOrder().withAcqUnitIds(units).withId(getRandomId());
     addMockEntry(PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(order));
 
-    PoLine poLine = getMinimalContentCompositePoLine(order.getId()).withId(EXPECTED_FLOW_PO_LINE_ID);
+    PoLine poLine =
+        getMinimalContentCompositePoLine(order.getId()).withId(EXPECTED_FLOW_PO_LINE_ID);
     addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
 
     Title title = getTitle(poLine).withAcqUnitIds(units);
@@ -314,9 +406,11 @@ public class ReceivingCheckinProtectionIT extends ProtectedEntityTestBase {
 
     ReceivingCollection toBeReceivedRq = new ReceivingCollection();
 
-    List<ToBeReceived> toBeReceivedList
-      = new ArrayList<>(Arrays.asList(getToBeReceived(poLine.getId(), EXPECTED_FLOW_PIECE_ID_1),
-      getToBeReceived(poLine.getId(), EXPECTED_FLOW_PIECE_ID_2)));
+    List<ToBeReceived> toBeReceivedList =
+        new ArrayList<>(
+            Arrays.asList(
+                getToBeReceived(poLine.getId(), EXPECTED_FLOW_PIECE_ID_1),
+                getToBeReceived(poLine.getId(), EXPECTED_FLOW_PIECE_ID_2)));
 
     toBeReceivedRq.setToBeReceived(toBeReceivedList);
     toBeReceivedRq.setTotalRecords(toBeReceivedList.size());
@@ -325,36 +419,45 @@ public class ReceivingCheckinProtectionIT extends ProtectedEntityTestBase {
   }
 
   private void verifyAllowedCase(ReceivingResults results) {
-    assertThat(results.getReceivingResults(), allOf(
-      everyItem(hasProperty(PROCESSED_SUCCESSFULLY, is(1))),
-      everyItem(hasProperty(PROCESSED_WITH_ERROR, is(0)))
-    ));
+    assertThat(
+        results.getReceivingResults(),
+        allOf(
+            everyItem(hasProperty(PROCESSED_SUCCESSFULLY, is(1))),
+            everyItem(hasProperty(PROCESSED_WITH_ERROR, is(0)))));
 
-    List<Error> errors = results.getReceivingResults().stream()
-      .flatMap(r -> r.getReceivingItemResults().stream()
-        .map(e -> e.getProcessingStatus().getError()))
-      .filter(Objects::nonNull)
-      .collect(Collectors.toList());
+    List<Error> errors =
+        results.getReceivingResults().stream()
+            .flatMap(
+                r ->
+                    r.getReceivingItemResults().stream()
+                        .map(e -> e.getProcessingStatus().getError()))
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
 
     assertThat(errors, empty());
   }
 
   private void verifyRestrictedCase(ReceivingResults results) {
-    assertThat(results.getReceivingResults(), allOf(
-      everyItem(hasProperty(PROCESSED_SUCCESSFULLY, is(0))),
-      everyItem(hasProperty(PROCESSED_WITH_ERROR, is(1)))
-    ));
+    assertThat(
+        results.getReceivingResults(),
+        allOf(
+            everyItem(hasProperty(PROCESSED_SUCCESSFULLY, is(0))),
+            everyItem(hasProperty(PROCESSED_WITH_ERROR, is(1)))));
 
-    List<Error> errors = results.getReceivingResults().stream()
-      .flatMap(r -> r.getReceivingItemResults().stream()
-        .map(e -> e.getProcessingStatus().getError()))
-      .filter(Objects::nonNull)
-      .collect(Collectors.toList());
+    List<Error> errors =
+        results.getReceivingResults().stream()
+            .flatMap(
+                r ->
+                    r.getReceivingItemResults().stream()
+                        .map(e -> e.getProcessingStatus().getError()))
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
 
     assertThat(errors, hasSize(2));
-    assertThat(errors, allOf(
-      everyItem(hasProperty("code", equalTo(USER_HAS_NO_PERMISSIONS.getCode()))),
-      everyItem(hasProperty("message", equalTo(USER_HAS_NO_PERMISSIONS.getDescription())))
-    ));
+    assertThat(
+        errors,
+        allOf(
+            everyItem(hasProperty("code", equalTo(USER_HAS_NO_PERMISSIONS.getCode()))),
+            everyItem(hasProperty("message", equalTo(USER_HAS_NO_PERMISSIONS.getDescription())))));
   }
 }

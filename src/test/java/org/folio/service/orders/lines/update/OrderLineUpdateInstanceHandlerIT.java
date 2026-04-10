@@ -13,13 +13,15 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
+import com.google.common.collect.Lists;
+import io.vertx.core.Context;
+import io.vertx.core.Vertx;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-
 import org.folio.ApiTestSuiteIT;
 import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
 import org.folio.rest.core.RestClient;
@@ -37,20 +39,20 @@ import org.folio.service.ProtectionService;
 import org.folio.service.batch.BatchTrackingService;
 import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.caches.InventoryCache;
-import org.folio.service.consortium.ConsortiumUserTenantService;
-import org.folio.service.settings.CommonSettingsRetriever;
 import org.folio.service.consortium.ConsortiumConfigurationService;
+import org.folio.service.consortium.ConsortiumUserTenantService;
 import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
 import org.folio.service.consortium.SharingInstanceService;
 import org.folio.service.inventory.InventoryHoldingManager;
-import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.inventory.InventoryInstanceManager;
+import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.inventory.InventoryService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.orders.lines.update.instance.WithHoldingOrderLineUpdateInstanceStrategy;
 import org.folio.service.orders.lines.update.instance.WithoutHoldingOrderLineUpdateInstanceStrategy;
 import org.folio.service.pieces.PieceStorageService;
+import org.folio.service.settings.CommonSettingsRetriever;
 import org.folio.service.settings.SettingsRetriever;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -62,22 +64,14 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
-import com.google.common.collect.Lists;
-
-import io.vertx.core.Context;
-import io.vertx.core.Vertx;
-
 public class OrderLineUpdateInstanceHandlerIT {
 
   private static boolean runningOnOwn;
 
-  @Autowired
-  private OrderLinePatchOperationService orderLinePatchOperationService;
+  @Autowired private OrderLinePatchOperationService orderLinePatchOperationService;
 
-  @Mock
-  private Map<String, String> okapiHeadersMock;
-  @Mock
-  private PieceStorageService pieceStorageService;
+  @Mock private Map<String, String> okapiHeadersMock;
+  @Mock private PieceStorageService pieceStorageService;
 
   private RequestContext requestContext;
   private AutoCloseable openMocks;
@@ -93,7 +87,9 @@ public class OrderLineUpdateInstanceHandlerIT {
     okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
     requestContext = new RequestContext(ctxMock, okapiHeadersMock);
     autowireDependencies(this);
-    doReturn(succeededFuture(Lists.newArrayList())).when(pieceStorageService).getPiecesByPoLineId(any(), any());
+    doReturn(succeededFuture(Lists.newArrayList()))
+        .when(pieceStorageService)
+        .getPiecesByPoLineId(any(), any());
   }
 
   @AfterEach
@@ -122,24 +118,32 @@ public class OrderLineUpdateInstanceHandlerIT {
   @Test
   public void updateInstanceHoldingForMIXOrderFormat() {
     String orderLineId = UUID.randomUUID().toString();
-    PoLine poLine = new PoLine().
-        withId(orderLineId).
-        withOrderFormat(PoLine.OrderFormat.P_E_MIX)
-        .withPhysical(new Physical()
-            .withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING))
-        .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM));
+    PoLine poLine =
+        new PoLine()
+            .withId(orderLineId)
+            .withOrderFormat(PoLine.OrderFormat.P_E_MIX)
+            .withPhysical(
+                new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING))
+            .withEresource(
+                new Eresource()
+                    .withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM));
 
     PatchOrderLineRequest patchOrderLineRequest = new PatchOrderLineRequest();
-    patchOrderLineRequest.withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
-        .withReplaceInstanceRef(new ReplaceInstanceRef()
-            .withNewInstanceId("cd3288a4-898c-4347-a003-2d810ef70f03")
-            .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.MOVE)
-            .withDeleteAbandonedHoldings(false));
+    patchOrderLineRequest
+        .withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
+        .withReplaceInstanceRef(
+            new ReplaceInstanceRef()
+                .withNewInstanceId("cd3288a4-898c-4347-a003-2d810ef70f03")
+                .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.MOVE)
+                .withDeleteAbandonedHoldings(false));
 
-    OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
-        .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
+    OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder =
+        new OrderLineUpdateInstanceHolder()
+            .withStoragePoLine(poLine)
+            .withPathOrderLineRequest(patchOrderLineRequest);
 
-    orderLinePatchOperationService.handleUpdateInstance(orderLineUpdateInstanceHolder, requestContext);
+    orderLinePatchOperationService.handleUpdateInstance(
+        orderLineUpdateInstanceHolder, requestContext);
   }
 
   @Test
@@ -147,109 +151,138 @@ public class OrderLineUpdateInstanceHandlerIT {
     String orderLineId = UUID.randomUUID().toString();
     String holdingId = UUID.randomUUID().toString();
 
-    Location location = new Location()
-        .withHoldingId(holdingId)
-        .withQuantity(1)
-        .withQuantityPhysical(1);
+    Location location =
+        new Location().withHoldingId(holdingId).withQuantity(1).withQuantityPhysical(1);
 
     ArrayList<Location> locations = new ArrayList<>();
     locations.add(location);
 
-    PoLine poLine = new PoLine().
-            withId(orderLineId).
-            withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
-        .withPhysical(new Physical()
-            .withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING)).withLocations(locations);
+    PoLine poLine =
+        new PoLine()
+            .withId(orderLineId)
+            .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
+            .withPhysical(
+                new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING))
+            .withLocations(locations);
 
     PatchOrderLineRequest patchOrderLineRequest = new PatchOrderLineRequest();
-    patchOrderLineRequest.withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
-        .withReplaceInstanceRef(new ReplaceInstanceRef()
-            .withNewInstanceId("cd3288a4-898c-4347-a003-2d810ef70f03")
-            .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.CREATE)
-            .withDeleteAbandonedHoldings(false));
+    patchOrderLineRequest
+        .withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
+        .withReplaceInstanceRef(
+            new ReplaceInstanceRef()
+                .withNewInstanceId("cd3288a4-898c-4347-a003-2d810ef70f03")
+                .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.CREATE)
+                .withDeleteAbandonedHoldings(false));
 
-    OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
-        .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
+    OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder =
+        new OrderLineUpdateInstanceHolder()
+            .withStoragePoLine(poLine)
+            .withPathOrderLineRequest(patchOrderLineRequest);
 
-    orderLinePatchOperationService.handleUpdateInstance(orderLineUpdateInstanceHolder, requestContext);
+    orderLinePatchOperationService.handleUpdateInstance(
+        orderLineUpdateInstanceHolder, requestContext);
   }
 
   @Test
   public void updateInstanceHoldingForEresourceOrderFormat() {
     String orderLineId = UUID.randomUUID().toString();
 
-    PoLine poLine = new PoLine().
-            withId(orderLineId).
-            withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE)
-        .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM));
+    PoLine poLine =
+        new PoLine()
+            .withId(orderLineId)
+            .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE)
+            .withEresource(
+                new Eresource()
+                    .withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM));
 
     PatchOrderLineRequest patchOrderLineRequest = new PatchOrderLineRequest();
-    patchOrderLineRequest.withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
-        .withReplaceInstanceRef(new ReplaceInstanceRef()
-            .withNewInstanceId("cd3288a4-898c-4347-a003-2d810ef70f03")
-            .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.FIND_OR_CREATE)
-            .withDeleteAbandonedHoldings(true));
+    patchOrderLineRequest
+        .withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
+        .withReplaceInstanceRef(
+            new ReplaceInstanceRef()
+                .withNewInstanceId("cd3288a4-898c-4347-a003-2d810ef70f03")
+                .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.FIND_OR_CREATE)
+                .withDeleteAbandonedHoldings(true));
 
-    OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
-        .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
+    OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder =
+        new OrderLineUpdateInstanceHolder()
+            .withStoragePoLine(poLine)
+            .withPathOrderLineRequest(patchOrderLineRequest);
 
-    orderLinePatchOperationService.handleUpdateInstance(orderLineUpdateInstanceHolder, requestContext);
-
+    orderLinePatchOperationService.handleUpdateInstance(
+        orderLineUpdateInstanceHolder, requestContext);
   }
 
   @Test
   public void updateInstanceHoldingForOtherOrderFormat() {
     String orderLineId = UUID.randomUUID().toString();
-    PoLine poLine = new PoLine().
-            withId(orderLineId).
-            withOrderFormat(PoLine.OrderFormat.OTHER)
-        .withPhysical(new Physical()
-            .withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING));
+    PoLine poLine =
+        new PoLine()
+            .withId(orderLineId)
+            .withOrderFormat(PoLine.OrderFormat.OTHER)
+            .withPhysical(
+                new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING));
 
     PatchOrderLineRequest patchOrderLineRequest = new PatchOrderLineRequest();
-    patchOrderLineRequest.withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
-        .withReplaceInstanceRef(new ReplaceInstanceRef()
-            .withNewInstanceId("cd3288a4-898c-4347-a003-2d810ef70f03")
-            .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.CREATE)
-            .withDeleteAbandonedHoldings(false));
+    patchOrderLineRequest
+        .withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
+        .withReplaceInstanceRef(
+            new ReplaceInstanceRef()
+                .withNewInstanceId("cd3288a4-898c-4347-a003-2d810ef70f03")
+                .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.CREATE)
+                .withDeleteAbandonedHoldings(false));
 
-    OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
-        .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
+    OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder =
+        new OrderLineUpdateInstanceHolder()
+            .withStoragePoLine(poLine)
+            .withPathOrderLineRequest(patchOrderLineRequest);
 
-    orderLinePatchOperationService.handleUpdateInstance(orderLineUpdateInstanceHolder, requestContext);
-
+    orderLinePatchOperationService.handleUpdateInstance(
+        orderLineUpdateInstanceHolder, requestContext);
   }
 
   static class ContextConfiguration {
-    @Bean RestClient restClient() {
+    @Bean
+    RestClient restClient() {
       return new RestClient();
     }
 
-    @Bean AcquisitionsUnitsService acquisitionsUnitsService(RestClient restClient) {
+    @Bean
+    AcquisitionsUnitsService acquisitionsUnitsService(RestClient restClient) {
       return new AcquisitionsUnitsService(restClient);
     }
 
-    @Bean ProtectionService protectionService(AcquisitionsUnitsService acquisitionsUnitsService) {
+    @Bean
+    ProtectionService protectionService(AcquisitionsUnitsService acquisitionsUnitsService) {
       return new ProtectionService(acquisitionsUnitsService);
     }
 
-    @Bean PieceStorageService pieceStorageService(ConsortiumConfigurationService consortiumConfigurationService,
-                                                  ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever,
-                                                  SettingsRetriever settingsRetriever,
-                                                  RestClient restClient) {
-      return new PieceStorageService(consortiumConfigurationService, consortiumUserTenantsRetriever, settingsRetriever, restClient);
+    @Bean
+    PieceStorageService pieceStorageService(
+        ConsortiumConfigurationService consortiumConfigurationService,
+        ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever,
+        SettingsRetriever settingsRetriever,
+        RestClient restClient) {
+      return new PieceStorageService(
+          consortiumConfigurationService,
+          consortiumUserTenantsRetriever,
+          settingsRetriever,
+          restClient);
     }
 
-    @Bean InventoryService inventoryService (RestClient restClient) {
+    @Bean
+    InventoryService inventoryService(RestClient restClient) {
       return new InventoryService(restClient);
     }
 
-    @Bean SharingInstanceService sharingInstanceService (RestClient restClient) {
+    @Bean
+    SharingInstanceService sharingInstanceService(RestClient restClient) {
       return new SharingInstanceService(restClient);
     }
 
     @Bean
-    ConsortiumConfigurationService consortiumConfigurationService(RestClient restClient, SettingsRetriever settingsRetriever) {
+    ConsortiumConfigurationService consortiumConfigurationService(
+        RestClient restClient, SettingsRetriever settingsRetriever) {
       return new ConsortiumConfigurationService(restClient, settingsRetriever);
     }
 
@@ -258,7 +291,8 @@ public class OrderLineUpdateInstanceHandlerIT {
       return new ConsortiumUserTenantsRetriever(restClient);
     }
 
-    @Bean PurchaseOrderStorageService purchaseOrderStorageService () {
+    @Bean
+    PurchaseOrderStorageService purchaseOrderStorageService() {
       return mock(PurchaseOrderStorageService.class);
     }
 
@@ -268,31 +302,41 @@ public class OrderLineUpdateInstanceHandlerIT {
     }
 
     @Bean
-    public InventoryItemManager inventoryItemManager(RestClient restClient,
-                                                     CommonSettingsCache commonSettingsCache,
-                                                     InventoryCache inventoryCache,
-                                                     ConsortiumConfigurationService consortiumConfigurationService) {
-      return new InventoryItemManager(restClient, commonSettingsCache, inventoryCache, consortiumConfigurationService);
+    public InventoryItemManager inventoryItemManager(
+        RestClient restClient,
+        CommonSettingsCache commonSettingsCache,
+        InventoryCache inventoryCache,
+        ConsortiumConfigurationService consortiumConfigurationService) {
+      return new InventoryItemManager(
+          restClient, commonSettingsCache, inventoryCache, consortiumConfigurationService);
     }
 
     @Bean
-    public InventoryHoldingManager inventoryHoldingManager(RestClient restClient,
-                                                           CommonSettingsCache commonSettingsCache,
-                                                           InventoryCache inventoryCache) {
+    public InventoryHoldingManager inventoryHoldingManager(
+        RestClient restClient,
+        CommonSettingsCache commonSettingsCache,
+        InventoryCache inventoryCache) {
       return new InventoryHoldingManager(restClient, commonSettingsCache, inventoryCache);
     }
 
     @Bean
-    public InventoryInstanceManager inventoryInstanceManager(RestClient restClient,
-                                                             CommonSettingsCache commonSettingsCache,
-                                                             InventoryCache inventoryCache,
-                                                             ConsortiumConfigurationService consortiumConfigurationService,
-                                                             SharingInstanceService sharingInstanceService) {
-      return new InventoryInstanceManager(restClient, commonSettingsCache, inventoryCache, sharingInstanceService, consortiumConfigurationService);
+    public InventoryInstanceManager inventoryInstanceManager(
+        RestClient restClient,
+        CommonSettingsCache commonSettingsCache,
+        InventoryCache inventoryCache,
+        ConsortiumConfigurationService consortiumConfigurationService,
+        SharingInstanceService sharingInstanceService) {
+      return new InventoryInstanceManager(
+          restClient,
+          commonSettingsCache,
+          inventoryCache,
+          sharingInstanceService,
+          consortiumConfigurationService);
     }
 
     @Bean
-    PurchaseOrderLineService purchaseOrderLineService(RestClient restClient, InventoryHoldingManager inventoryHoldingManager) {
+    PurchaseOrderLineService purchaseOrderLineService(
+        RestClient restClient, InventoryHoldingManager inventoryHoldingManager) {
       return new PurchaseOrderLineService(restClient, inventoryHoldingManager);
     }
 
@@ -307,28 +351,44 @@ public class OrderLineUpdateInstanceHandlerIT {
     }
 
     @Bean
-    OrderLinePatchOperationService orderLinePatchOperationService(RestClient restClient, OrderLineUpdateInstanceStrategyResolver orderLineUpdateInstanceStrategyResolver,
-                                                                  PurchaseOrderLineService purchaseOrderLineService, InventoryInstanceManager inventoryInstanceManager) {
-      return new OrderLinePatchOperationService(restClient, orderLineUpdateInstanceStrategyResolver, purchaseOrderLineService, inventoryInstanceManager);
+    OrderLinePatchOperationService orderLinePatchOperationService(
+        RestClient restClient,
+        OrderLineUpdateInstanceStrategyResolver orderLineUpdateInstanceStrategyResolver,
+        PurchaseOrderLineService purchaseOrderLineService,
+        InventoryInstanceManager inventoryInstanceManager) {
+      return new OrderLinePatchOperationService(
+          restClient,
+          orderLineUpdateInstanceStrategyResolver,
+          purchaseOrderLineService,
+          inventoryInstanceManager);
     }
 
     @Bean
-    OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy(InventoryInstanceManager inventoryInstanceManager,
-                                                                               InventoryItemManager inventoryItemManager,
-                                                                               InventoryHoldingManager inventoryHoldingManager,
-                                                                               PieceStorageService pieceStorageService,
-                                                                               BatchTrackingService batchTrackingService,
-                                                                               HoldingDeletionService holdingDeletionService) {
-      return new WithHoldingOrderLineUpdateInstanceStrategy(inventoryInstanceManager, inventoryItemManager,
-        inventoryHoldingManager, pieceStorageService, batchTrackingService, holdingDeletionService);
+    OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy(
+        InventoryInstanceManager inventoryInstanceManager,
+        InventoryItemManager inventoryItemManager,
+        InventoryHoldingManager inventoryHoldingManager,
+        PieceStorageService pieceStorageService,
+        BatchTrackingService batchTrackingService,
+        HoldingDeletionService holdingDeletionService) {
+      return new WithHoldingOrderLineUpdateInstanceStrategy(
+          inventoryInstanceManager,
+          inventoryItemManager,
+          inventoryHoldingManager,
+          pieceStorageService,
+          batchTrackingService,
+          holdingDeletionService);
     }
 
     @Bean
-    OrderLineUpdateInstanceStrategyResolver updateInstanceStrategyResolver(OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy,
-                                                                                 OrderLineUpdateInstanceStrategy withoutHoldingOrderLineUpdateInstanceStrategy) {
+    OrderLineUpdateInstanceStrategyResolver updateInstanceStrategyResolver(
+        OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy,
+        OrderLineUpdateInstanceStrategy withoutHoldingOrderLineUpdateInstanceStrategy) {
       Map<CreateInventoryType, OrderLineUpdateInstanceStrategy> strategies = new HashMap<>();
-      strategies.put(CreateInventoryType.INSTANCE_HOLDING_ITEM, withHoldingOrderLineUpdateInstanceStrategy);
-      strategies.put(CreateInventoryType.INSTANCE_HOLDING, withHoldingOrderLineUpdateInstanceStrategy);
+      strategies.put(
+          CreateInventoryType.INSTANCE_HOLDING_ITEM, withHoldingOrderLineUpdateInstanceStrategy);
+      strategies.put(
+          CreateInventoryType.INSTANCE_HOLDING, withHoldingOrderLineUpdateInstanceStrategy);
       strategies.put(CreateInventoryType.INSTANCE, withoutHoldingOrderLineUpdateInstanceStrategy);
       strategies.put(CreateInventoryType.NONE, withoutHoldingOrderLineUpdateInstanceStrategy);
       return new OrderLineUpdateInstanceStrategyResolver(strategies);
@@ -345,27 +405,35 @@ public class OrderLineUpdateInstanceHandlerIT {
     }
 
     @Bean
-    ConsortiumUserTenantService consortiumUserTenantService(ConsortiumConfigurationService consortiumConfigurationService,
-                                                           ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever) {
-      return new ConsortiumUserTenantService(consortiumConfigurationService, consortiumUserTenantsRetriever);
+    ConsortiumUserTenantService consortiumUserTenantService(
+        ConsortiumConfigurationService consortiumConfigurationService,
+        ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever) {
+      return new ConsortiumUserTenantService(
+          consortiumConfigurationService, consortiumUserTenantsRetriever);
     }
 
     @Bean
-    HoldingDeletionService holdingDeletionService(ConsortiumUserTenantService consortiumUserTenantService,
-                                                  InventoryHoldingManager inventoryHoldingManager,
-                                                  InventoryItemManager inventoryItemManager,
-                                                  PieceStorageService pieceStorageService,
-                                                  PurchaseOrderLineService purchaseOrderLineService) {
-      return new HoldingDeletionService(consortiumUserTenantService,
-        inventoryHoldingManager, inventoryItemManager,
-        pieceStorageService, purchaseOrderLineService);
+    HoldingDeletionService holdingDeletionService(
+        ConsortiumUserTenantService consortiumUserTenantService,
+        InventoryHoldingManager inventoryHoldingManager,
+        InventoryItemManager inventoryItemManager,
+        PieceStorageService pieceStorageService,
+        PurchaseOrderLineService purchaseOrderLineService) {
+      return new HoldingDeletionService(
+          consortiumUserTenantService,
+          inventoryHoldingManager,
+          inventoryItemManager,
+          pieceStorageService,
+          purchaseOrderLineService);
     }
 
     @Bean
-    OrderLineUpdateInstanceStrategy withoutHoldingOrderLineUpdateInstanceStrategy(InventoryInstanceManager inventoryInstanceManager,
-                                                                                  InventoryItemManager inventoryItemManager,
-                                                                                  InventoryHoldingManager inventoryHoldingManager) {
-      return new WithoutHoldingOrderLineUpdateInstanceStrategy(inventoryInstanceManager, inventoryItemManager, inventoryHoldingManager);
+    OrderLineUpdateInstanceStrategy withoutHoldingOrderLineUpdateInstanceStrategy(
+        InventoryInstanceManager inventoryInstanceManager,
+        InventoryItemManager inventoryItemManager,
+        InventoryHoldingManager inventoryHoldingManager) {
+      return new WithoutHoldingOrderLineUpdateInstanceStrategy(
+          inventoryInstanceManager, inventoryItemManager, inventoryHoldingManager);
     }
   }
 }

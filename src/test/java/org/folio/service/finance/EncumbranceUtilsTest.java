@@ -1,5 +1,9 @@
 package org.folio.service.finance;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import java.util.List;
 import org.folio.CopilotGenerated;
 import org.folio.models.EncumbranceUnreleaseHolder;
 import org.folio.rest.acq.model.finance.AwaitingPayment;
@@ -9,11 +13,6 @@ import org.folio.rest.acq.model.invoice.InvoiceLine;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 @CopilotGenerated(partiallyGenerated = true, model = "GPT-4.1")
 public class EncumbranceUtilsTest {
@@ -33,7 +32,8 @@ public class EncumbranceUtilsTest {
     when(pendingPayment.getAwaitingPayment()).thenReturn(awaitingPayment);
     when(pendingPayment.getAwaitingPayment().getEncumbranceId()).thenReturn("enc1");
     when(pendingPayment.getSourceInvoiceLineId()).thenReturn("inv1");
-    when(pendingPayment.getTransactionType()).thenReturn(Transaction.TransactionType.PENDING_PAYMENT);
+    when(pendingPayment.getTransactionType())
+        .thenReturn(Transaction.TransactionType.PENDING_PAYMENT);
 
     var invoiceLine = mock(InvoiceLine.class);
     when(invoiceLine.getId()).thenReturn("inv1");
@@ -242,16 +242,21 @@ public class EncumbranceUtilsTest {
     "true,PENDING_PAYMENT,APPROVED,true,false",
     "false,PENDING_PAYMENT,APPROVED,false,false"
   })
-  void testHasReleaseEncumbranceFalseAndIsApprovedOrPaid(boolean match, String transactionType, String status, boolean release, boolean expected) {
+  void testHasReleaseEncumbranceFalseAndIsApprovedOrPaid(
+      boolean match, String transactionType, String status, boolean release, boolean expected) {
     var payment = mock(Transaction.class);
     when(payment.getSourceInvoiceLineId()).thenReturn("inv1");
-    when(payment.getTransactionType()).thenReturn(Transaction.TransactionType.valueOf(transactionType));
+    when(payment.getTransactionType())
+        .thenReturn(Transaction.TransactionType.valueOf(transactionType));
 
     var invoiceLine = mock(InvoiceLine.class);
     when(invoiceLine.getId()).thenReturn(match ? "inv1" : "other");
     when(invoiceLine.getReleaseEncumbrance()).thenReturn(release);
-    when(invoiceLine.getInvoiceLineStatus()).thenReturn(InvoiceLine.InvoiceLineStatus.valueOf(status));
-    assertEquals(expected, invokeHasReleaseEncumbranceFalseAndIsApprovedOrPaid(payment, List.of(invoiceLine)));
+    when(invoiceLine.getInvoiceLineStatus())
+        .thenReturn(InvoiceLine.InvoiceLineStatus.valueOf(status));
+    assertEquals(
+        expected,
+        invokeHasReleaseEncumbranceFalseAndIsApprovedOrPaid(payment, List.of(invoiceLine)));
   }
 
   // 5. allowEncumbranceToUnrelease & allowEncumbranceToReleaseOnReopen (public)
@@ -271,12 +276,11 @@ public class EncumbranceUtilsTest {
     "RELEASED,1,0,0,false"
   })
   void testAllowEncumbranceToUnrelease_and_ReleaseOnReopen(
-    Encumbrance.Status status,
-    double amountExpended,
-    double amountCredited,
-    double amountAwaitingPayment,
-    boolean expected
-  ) {
+      Encumbrance.Status status,
+      double amountExpended,
+      double amountCredited,
+      double amountAwaitingPayment,
+      boolean expected) {
     var encumbrance = mock(Encumbrance.class);
     when(encumbrance.getStatus()).thenReturn(status);
     when(encumbrance.getAmountExpended()).thenReturn(amountExpended);
@@ -301,9 +305,12 @@ public class EncumbranceUtilsTest {
   }
 
   // Reflection helpers for private methods
-  private boolean invokeHasPendingPayments(EncumbranceUnreleaseHolder holder, Transaction encumbrance) {
+  private boolean invokeHasPendingPayments(
+      EncumbranceUnreleaseHolder holder, Transaction encumbrance) {
     try {
-      var method = EncumbranceUtils.class.getDeclaredMethod("hasPendingPayments", EncumbranceUnreleaseHolder.class, Transaction.class);
+      var method =
+          EncumbranceUtils.class.getDeclaredMethod(
+              "hasPendingPayments", EncumbranceUnreleaseHolder.class, Transaction.class);
       method.setAccessible(true);
       return (Boolean) method.invoke(null, holder, encumbrance);
     } catch (Exception e) {
@@ -313,7 +320,9 @@ public class EncumbranceUtilsTest {
 
   private boolean invokeHasPayments(EncumbranceUnreleaseHolder holder, Transaction encumbrance) {
     try {
-      var method = EncumbranceUtils.class.getDeclaredMethod("hasPayments", EncumbranceUnreleaseHolder.class, Transaction.class);
+      var method =
+          EncumbranceUtils.class.getDeclaredMethod(
+              "hasPayments", EncumbranceUnreleaseHolder.class, Transaction.class);
       method.setAccessible(true);
       return (Boolean) method.invoke(null, holder, encumbrance);
     } catch (Exception e) {
@@ -321,9 +330,12 @@ public class EncumbranceUtilsTest {
     }
   }
 
-  private boolean invokeHasReleaseEncumbranceFalseAndIsApprovedOrPaid(Transaction payment, List<InvoiceLine> invoiceLines) {
+  private boolean invokeHasReleaseEncumbranceFalseAndIsApprovedOrPaid(
+      Transaction payment, List<InvoiceLine> invoiceLines) {
     try {
-      var method = EncumbranceUtils.class.getDeclaredMethod("hasReleaseEncumbranceFalseAndIsApprovedOrPaid", Transaction.class, List.class);
+      var method =
+          EncumbranceUtils.class.getDeclaredMethod(
+              "hasReleaseEncumbranceFalseAndIsApprovedOrPaid", Transaction.class, List.class);
       method.setAccessible(true);
       return (boolean) method.invoke(null, payment, invoiceLines);
     } catch (Exception e) {

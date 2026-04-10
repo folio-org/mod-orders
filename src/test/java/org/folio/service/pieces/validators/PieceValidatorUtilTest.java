@@ -10,16 +10,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
 import java.util.UUID;
-
 import org.folio.CopilotGenerated;
 import org.folio.rest.core.exceptions.ErrorCodes;
-import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.junit.jupiter.api.Test;
 
 @CopilotGenerated(partiallyGenerated = true)
@@ -28,7 +27,8 @@ public class PieceValidatorUtilTest {
   @Test
   void testShouldReturnErrorsIfLocationAndHoldingIsNotProvided() {
     Piece piece = new Piece().withFormat(Piece.Format.ELECTRONIC);
-    Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
+    Eresource eresource =
+        new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
     PoLine originPoLine = new PoLine().withIsPackage(false).withEresource(eresource);
     List<Error> errorList = PieceValidatorUtil.validatePieceLocation(piece, originPoLine);
     assertEquals(HOLDINGS_ID_AND_LOCATION_ID_IS_NULL_ERROR.toError(), errorList.get(0));
@@ -37,13 +37,14 @@ public class PieceValidatorUtilTest {
   @Test
   void testShouldReturnErrorsIfElectrLocationAndHoldingIsNotProvidedAndCreateInventoryNontNone() {
     Piece piece = new Piece().withFormat(Piece.Format.ELECTRONIC);
-    Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
+    Eresource eresource =
+        new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
     PoLine originPoLine = new PoLine().withIsPackage(false).withEresource(eresource);
     List<Error> errorList = PieceValidatorUtil.validatePieceLocation(piece, originPoLine);
     assertEquals(HOLDINGS_ID_AND_LOCATION_ID_IS_NULL_ERROR.toError(), errorList.get(0));
   }
 
-    @Test
+  @Test
   void testShouldValidIfElectrLocationAndHoldingIsNotProvided() {
     Piece piece = new Piece().withFormat(Piece.Format.ELECTRONIC);
     Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.NONE);
@@ -63,9 +64,13 @@ public class PieceValidatorUtilTest {
 
   @Test
   void testShouldReturnErrorsIfLocationAndHoldingProvidedAtOneTime() {
-    Piece piece = new Piece().withFormat(Piece.Format.PHYSICAL).withLocationId(UUID.randomUUID().toString())
-                             .withHoldingId(UUID.randomUUID().toString());
-    Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING);
+    Piece piece =
+        new Piece()
+            .withFormat(Piece.Format.PHYSICAL)
+            .withLocationId(UUID.randomUUID().toString())
+            .withHoldingId(UUID.randomUUID().toString());
+    Physical physical =
+        new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING);
     PoLine originPoLine = new PoLine().withIsPackage(false).withPhysical(physical);
     List<Error> errorList = PieceValidatorUtil.validatePieceLocation(piece, originPoLine);
     assertEquals(MAY_BE_LINK_TO_EITHER_HOLDING_OR_LOCATION_ERROR.toError(), errorList.get(0));
@@ -73,8 +78,8 @@ public class PieceValidatorUtilTest {
 
   @Test
   void testShouldReturnErrorWhenPiecePhysicalAndLineIsElectronic() {
-    Piece piece = new Piece().withLocationId(UUID.randomUUID().toString())
-      .withFormat(Piece.Format.PHYSICAL);
+    Piece piece =
+        new Piece().withLocationId(UUID.randomUUID().toString()).withFormat(Piece.Format.PHYSICAL);
     PoLine poLine = new PoLine().withOrderFormat(ELECTRONIC_RESOURCE);
     List<Error> errorList = PieceValidatorUtil.validatePieceFormat(piece, poLine);
     assertEquals(PIECE_FORMAT_IS_NOT_VALID_ERROR.getCode(), errorList.get(0).getCode());
@@ -82,8 +87,10 @@ public class PieceValidatorUtilTest {
 
   @Test
   void testShouldReturnErrorWhenPieceElectronicAndLineIsPhysical() {
-    Piece piece = new Piece().withLocationId(UUID.randomUUID().toString())
-      .withFormat(Piece.Format.ELECTRONIC);
+    Piece piece =
+        new Piece()
+            .withLocationId(UUID.randomUUID().toString())
+            .withFormat(Piece.Format.ELECTRONIC);
     PoLine poLine = new PoLine().withOrderFormat(PHYSICAL_RESOURCE);
     List<Error> errorList = PieceValidatorUtil.validatePieceFormat(piece, poLine);
     assertEquals(PIECE_FORMAT_IS_NOT_VALID_ERROR.getCode(), errorList.get(0).getCode());
@@ -91,8 +98,8 @@ public class PieceValidatorUtilTest {
 
   @Test
   void testShouldReturnErrorWhenPieceOtherAndLineIsPhysical() {
-    Piece piece = new Piece().withLocationId(UUID.randomUUID().toString())
-      .withFormat(Piece.Format.OTHER);
+    Piece piece =
+        new Piece().withLocationId(UUID.randomUUID().toString()).withFormat(Piece.Format.OTHER);
     PoLine poLine = new PoLine().withOrderFormat(PHYSICAL_RESOURCE);
     List<Error> errorList = PieceValidatorUtil.validatePieceFormat(piece, poLine);
     assertEquals(PIECE_FORMAT_IS_NOT_VALID_ERROR.getCode(), errorList.get(0).getCode());
@@ -100,8 +107,8 @@ public class PieceValidatorUtilTest {
 
   @Test
   void testPieceIsValidWhenLineAndPieceIsPhysical() {
-    Piece piece = new Piece().withLocationId(UUID.randomUUID().toString())
-      .withFormat(Piece.Format.PHYSICAL);
+    Piece piece =
+        new Piece().withLocationId(UUID.randomUUID().toString()).withFormat(Piece.Format.PHYSICAL);
     PoLine poLine = new PoLine().withOrderFormat(PHYSICAL_RESOURCE);
     List<Error> errorList = PieceValidatorUtil.validatePieceFormat(piece, poLine);
     assertEquals(0, errorList.size());
@@ -109,8 +116,10 @@ public class PieceValidatorUtilTest {
 
   @Test
   void testPieceIsValidWhenLineAndPieceIsElectronic() {
-    Piece piece = new Piece().withLocationId(UUID.randomUUID().toString())
-      .withFormat(Piece.Format.ELECTRONIC);
+    Piece piece =
+        new Piece()
+            .withLocationId(UUID.randomUUID().toString())
+            .withFormat(Piece.Format.ELECTRONIC);
     PoLine poLine = new PoLine().withOrderFormat(ELECTRONIC_RESOURCE);
     List<Error> errorList = PieceValidatorUtil.validatePieceFormat(piece, poLine);
     assertEquals(0, errorList.size());
@@ -118,8 +127,10 @@ public class PieceValidatorUtilTest {
 
   @Test
   void testPieceIsValidWhenLineIsMixedAndPieceIsElectronic() {
-    Piece piece = new Piece().withLocationId(UUID.randomUUID().toString())
-      .withFormat(Piece.Format.ELECTRONIC);
+    Piece piece =
+        new Piece()
+            .withLocationId(UUID.randomUUID().toString())
+            .withFormat(Piece.Format.ELECTRONIC);
     PoLine poLine = new PoLine().withOrderFormat(P_E_MIX);
     List<Error> errorList = PieceValidatorUtil.validatePieceFormat(piece, poLine);
     assertEquals(0, errorList.size());
@@ -127,8 +138,8 @@ public class PieceValidatorUtilTest {
 
   @Test
   void testPieceIsValidWhenLineIsMixedAndPieceIsPhysical() {
-    Piece piece = new Piece().withLocationId(UUID.randomUUID().toString())
-      .withFormat(Piece.Format.PHYSICAL);
+    Piece piece =
+        new Piece().withLocationId(UUID.randomUUID().toString()).withFormat(Piece.Format.PHYSICAL);
     PoLine poLine = new PoLine().withOrderFormat(P_E_MIX);
     List<Error> errorList = PieceValidatorUtil.validatePieceFormat(piece, poLine);
     assertEquals(0, errorList.size());
@@ -150,15 +161,18 @@ public class PieceValidatorUtilTest {
 
   @Test
   void testValidateRelatedWhenOrderIsPendingAndCheckinItemsIsFalse() {
-    CompositePurchaseOrder order = new CompositePurchaseOrder().withWorkflowStatus(WorkflowStatus.PENDING);
+    CompositePurchaseOrder order =
+        new CompositePurchaseOrder().withWorkflowStatus(WorkflowStatus.PENDING);
     PoLine poLine = new PoLine().withCheckinItems(false);
     List<Error> errorList = PieceValidatorUtil.validatePieceRelatedOrder(order, poLine);
-    assertEquals(ErrorCodes.PIECE_RELATED_ORDER_DATA_IS_NOT_VALID.getCode(), errorList.get(0).getCode());
+    assertEquals(
+        ErrorCodes.PIECE_RELATED_ORDER_DATA_IS_NOT_VALID.getCode(), errorList.get(0).getCode());
   }
 
   @Test
   void testValidateRelatedOrderWhenOrderIsPendingAndCheckinItemsIsTrue() {
-    CompositePurchaseOrder order = new CompositePurchaseOrder().withWorkflowStatus(WorkflowStatus.PENDING);
+    CompositePurchaseOrder order =
+        new CompositePurchaseOrder().withWorkflowStatus(WorkflowStatus.PENDING);
     PoLine poLine = new PoLine().withCheckinItems(true);
     List<Error> errorList = PieceValidatorUtil.validatePieceRelatedOrder(order, poLine);
     assertEquals(0, errorList.size());
@@ -166,7 +180,8 @@ public class PieceValidatorUtilTest {
 
   @Test
   void testValidateRelatedWhenOrderIsNotPending() {
-    CompositePurchaseOrder order = new CompositePurchaseOrder().withWorkflowStatus(WorkflowStatus.OPEN);
+    CompositePurchaseOrder order =
+        new CompositePurchaseOrder().withWorkflowStatus(WorkflowStatus.OPEN);
     PoLine poLine = new PoLine().withCheckinItems(false);
     List<Error> errorList = PieceValidatorUtil.validatePieceRelatedOrder(order, poLine);
     assertEquals(0, errorList.size());

@@ -8,7 +8,6 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
-
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Title;
 import org.junit.jupiter.api.BeforeEach;

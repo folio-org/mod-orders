@@ -21,10 +21,12 @@ import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
 
+import io.restassured.http.Header;
+import io.restassured.response.Response;
+import io.vertx.core.json.JsonObject;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuiteIT;
@@ -35,10 +37,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-
-import io.restassured.http.Header;
-import io.restassured.response.Response;
-import io.vertx.core.json.JsonObject;
 
 public class ConfigurationCrudIT {
 
@@ -72,10 +70,14 @@ public class ConfigurationCrudIT {
     logger.info(String.format("=== Test POST : %s ===", entity.name()));
     JsonObject json = entity.getTestSample();
     assertThat(json.remove(ID), notNullValue());
-    Response response = verifyPostResponse(entity.getEndpoint(), json.encode(),
-        prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt());
-    assertThat(new JsonObject(response.getBody()
-      .print()).getString(ID), notNullValue());
+    Response response =
+        verifyPostResponse(
+            entity.getEndpoint(),
+            json.encode(),
+            prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID),
+            APPLICATION_JSON,
+            HttpStatus.HTTP_CREATED.toInt());
+    assertThat(new JsonObject(response.getBody().print()).getString(ID), notNullValue());
   }
 
   @ParameterizedTest
@@ -84,10 +86,15 @@ public class ConfigurationCrudIT {
     logger.info(String.format("=== Test POST : %s (bad request) ===", entity.name()));
     JsonObject json = entity.getTestSample();
     int status400 = HttpStatus.HTTP_BAD_REQUEST.toInt();
-    verifyPostResponse(entity.getEndpoint(), JsonObject.mapFrom(json)
-      .encode(),
-        prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, new Header(X_ECHO_STATUS, String.valueOf(status400))),
-        APPLICATION_JSON, status400);
+    verifyPostResponse(
+        entity.getEndpoint(),
+        JsonObject.mapFrom(json).encode(),
+        prepareHeaders(
+            EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10,
+            X_OKAPI_USER_ID,
+            new Header(X_ECHO_STATUS, String.valueOf(status400))),
+        APPLICATION_JSON,
+        status400);
   }
 
   @ParameterizedTest
@@ -96,34 +103,45 @@ public class ConfigurationCrudIT {
     logger.info(String.format("=== Test POST : %s (internal server error) ===", entity.name()));
     JsonObject json = entity.getTestSample();
     int status500 = HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt();
-    verifyPostResponse(entity.getEndpoint(), JsonObject.mapFrom(json)
-      .encode(),
-        prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, new Header(X_ECHO_STATUS, String.valueOf(status500))),
-        APPLICATION_JSON, status500);
+    verifyPostResponse(
+        entity.getEndpoint(),
+        JsonObject.mapFrom(json).encode(),
+        prepareHeaders(
+            EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10,
+            X_OKAPI_USER_ID,
+            new Header(X_ECHO_STATUS, String.valueOf(status500))),
+        APPLICATION_JSON,
+        status500);
   }
 
   @ParameterizedTest
   @EnumSource(value = CrudTestEntities.class)
   void testGetCollectionCrud(CrudTestEntities entity) {
     logger.info(String.format("=== Test GET : %s ===", entity.name()));
-    verifyGet(entity.getEndpoint(), APPLICATION_JSON, 200).then()
-      .body("totalRecords", notNullValue());
+    verifyGet(entity.getEndpoint(), APPLICATION_JSON, 200)
+        .then()
+        .body("totalRecords", notNullValue());
   }
 
   @ParameterizedTest
   @EnumSource(value = CrudTestEntities.class)
   void testGetCollectionCrudInternalServerError(CrudTestEntities entity) {
     logger.info(String.format("=== Test GET : %s ===", entity.name()));
-    verifyGet(entity.getEndpoint() + "?query=id==" + ID_FOR_INTERNAL_SERVER_ERROR, APPLICATION_JSON, 500).then()
-      .body("errors", notNullValue());
+    verifyGet(
+            entity.getEndpoint() + "?query=id==" + ID_FOR_INTERNAL_SERVER_ERROR,
+            APPLICATION_JSON,
+            500)
+        .then()
+        .body("errors", notNullValue());
   }
 
   @ParameterizedTest
   @EnumSource(value = CrudTestEntities.class)
   void testGetByIdCrud(CrudTestEntities entity) {
     logger.info(String.format("=== Test GET by id : %s ===", entity.name()));
-    verifyGet(entity.getEndpoint() + "/" + EXISTED_ID, APPLICATION_JSON, 200).then()
-      .body(ID, notNullValue());
+    verifyGet(entity.getEndpoint() + "/" + EXISTED_ID, APPLICATION_JSON, 200)
+        .then()
+        .body(ID, notNullValue());
   }
 
   @ParameterizedTest
@@ -137,16 +155,19 @@ public class ConfigurationCrudIT {
   @EnumSource(value = CrudTestEntities.class)
   void testGetByIdCrudNotFound(CrudTestEntities entity) {
     logger.info(String.format("=== Test GET by id : %s (not found) ===", entity.name()));
-    verifyGet(entity.getEndpoint() + "/" + ID_DOES_NOT_EXIST, APPLICATION_JSON, 404).then()
-      .body("errors", notNullValue());
+    verifyGet(entity.getEndpoint() + "/" + ID_DOES_NOT_EXIST, APPLICATION_JSON, 404)
+        .then()
+        .body("errors", notNullValue());
   }
 
   @ParameterizedTest
   @EnumSource(value = CrudTestEntities.class)
   void testGetByIdCrudInternalServerError(CrudTestEntities entity) {
-    logger.info(String.format("=== Test GET by id : %s (internal server error) ===", entity.name()));
-    verifyGet(entity.getEndpoint() + "/" + ID_FOR_INTERNAL_SERVER_ERROR, APPLICATION_JSON, 500).then()
-      .body("errors", notNullValue());
+    logger.info(
+        String.format("=== Test GET by id : %s (internal server error) ===", entity.name()));
+    verifyGet(entity.getEndpoint() + "/" + ID_FOR_INTERNAL_SERVER_ERROR, APPLICATION_JSON, 500)
+        .then()
+        .body("errors", notNullValue());
   }
 
   @ParameterizedTest
@@ -164,8 +185,9 @@ public class ConfigurationCrudIT {
     logger.info(String.format("=== Test PUT (id mismatch) : %s ===", entity.name()));
     JsonObject json = entity.getTestSample();
     json.put(ID, UUID.randomUUID().toString());
-    verifyPut(entity.getEndpoint() + "/" + EXISTED_ID, json.encode(), "", 422).then()
-      .body("errors", notNullValue());
+    verifyPut(entity.getEndpoint() + "/" + EXISTED_ID, json.encode(), "", 422)
+        .then()
+        .body("errors", notNullValue());
   }
 
   @ParameterizedTest
@@ -192,15 +214,18 @@ public class ConfigurationCrudIT {
     logger.info(String.format("=== Test PUT : %s (internal server error) ===", entity.name()));
     JsonObject json = entity.getTestSample();
     json.put(ID, ID_FOR_INTERNAL_SERVER_ERROR);
-    verifyPut(entity.getEndpoint() + "/" + ID_FOR_INTERNAL_SERVER_ERROR, json.encode(), APPLICATION_JSON, 500);
+    verifyPut(
+        entity.getEndpoint() + "/" + ID_FOR_INTERNAL_SERVER_ERROR,
+        json.encode(),
+        APPLICATION_JSON,
+        500);
   }
 
   @ParameterizedTest
   @EnumSource(value = CrudTestEntities.class)
   void testDeleteCrud(CrudTestEntities entity) {
     logger.info(String.format("=== Test DELETE : %s ===", entity.name()));
-    verifyDeleteResponse(entity.getEndpoint() + "/" + UUID.randomUUID()
-      .toString(), "", 204);
+    verifyDeleteResponse(entity.getEndpoint() + "/" + UUID.randomUUID().toString(), "", 204);
   }
 
   @ParameterizedTest
@@ -221,7 +246,7 @@ public class ConfigurationCrudIT {
   @EnumSource(value = CrudTestEntities.class)
   void testDeleteCrudInternalServerError(CrudTestEntities entity) {
     logger.info(String.format("=== Test DELETE : %s (internal server error) ===", entity.name()));
-    verifyDeleteResponse(entity.getEndpoint() + "/" + ID_FOR_INTERNAL_SERVER_ERROR, APPLICATION_JSON, 500);
+    verifyDeleteResponse(
+        entity.getEndpoint() + "/" + ID_FOR_INTERNAL_SERVER_ERROR, APPLICATION_JSON, 500);
   }
-
 }

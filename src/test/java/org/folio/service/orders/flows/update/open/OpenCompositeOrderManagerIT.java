@@ -22,17 +22,17 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-
-import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
-import io.vertx.junit5.VertxExtension;
-import io.vertx.junit5.VertxTestContext;
 import org.folio.ApiTestSuiteIT;
 import org.folio.CopilotGenerated;
 import org.folio.helper.PurchaseOrderLineHelper;
@@ -43,14 +43,13 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.ProtectionService;
-import org.folio.service.inventory.InventoryRollbackService;
-import org.folio.service.settings.CommonSettingsRetriever;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.inventory.InventoryItemManager;
+import org.folio.service.inventory.InventoryRollbackService;
 import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
 import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderLinesSummaryPopulateService;
@@ -59,6 +58,7 @@ import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.orders.flows.update.unopen.UnOpenCompositeOrderManager;
 import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
 import org.folio.service.pieces.PieceStorageService;
+import org.folio.service.settings.CommonSettingsRetriever;
 import org.folio.service.titles.TitlesService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -72,46 +72,31 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
-import io.vertx.core.Context;
-
 @ExtendWith(MockitoExtension.class)
 @ExtendWith(VertxExtension.class)
 public class OpenCompositeOrderManagerIT {
 
-  @Autowired
-  private OpenCompositeOrderManager openCompositeOrderManager;
-  @Autowired
-  private PieceStorageService pieceStorageService;
-  @Autowired
-  private ProtectionService protectionService;
-  @Autowired
-  private InventoryItemManager inventoryItemManager;
-  @Autowired
-  private TitlesService titlesService;
-  @Autowired
-  private PieceChangeReceiptStatusPublisher receiptStatusPublisher;
-  @Autowired
-  private OpenCompositeOrderInventoryService openCompositeOrderInventoryService;
-  @Autowired
-  private PurchaseOrderStorageService purchaseOrderStorageService;
-  @Autowired
-  private EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
-  @Autowired
-  private OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator;
-  @Autowired
-  private InventoryRollbackService inventoryRollbackService;
-  @Autowired
-  private UnOpenCompositeOrderManager unOpenCompositeOrderManager;
+  @Autowired private OpenCompositeOrderManager openCompositeOrderManager;
+  @Autowired private PieceStorageService pieceStorageService;
+  @Autowired private ProtectionService protectionService;
+  @Autowired private InventoryItemManager inventoryItemManager;
+  @Autowired private TitlesService titlesService;
+  @Autowired private PieceChangeReceiptStatusPublisher receiptStatusPublisher;
+  @Autowired private OpenCompositeOrderInventoryService openCompositeOrderInventoryService;
+  @Autowired private PurchaseOrderStorageService purchaseOrderStorageService;
+  @Autowired private EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
+  @Autowired private OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator;
+  @Autowired private InventoryRollbackService inventoryRollbackService;
+  @Autowired private UnOpenCompositeOrderManager unOpenCompositeOrderManager;
 
-  @Mock
-  private Map<String, String> okapiHeadersMock;
+  @Mock private Map<String, String> okapiHeadersMock;
   private Context ctx = getFirstContextFromVertx(getVertx());
 
   private RequestContext requestContext;
   private static boolean runningOnOwn;
 
   @BeforeEach
-  void initMocks(){
+  void initMocks() {
     MockitoAnnotations.openMocks(this);
     autowireDependencies(this);
     requestContext = new RequestContext(ctx, okapiHeadersMock);
@@ -144,90 +129,103 @@ public class OpenCompositeOrderManagerIT {
   void testUpdateIncomingOrderShouldSetOpenedById(VertxTestContext vertxTestContext) {
     // Given
     var userId = UUID.randomUUID().toString();
-    var compPO = new CompositePurchaseOrder()
-      .withId(UUID.randomUUID().toString())
-      .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.PENDING);
+    var compPO =
+        new CompositePurchaseOrder()
+            .withId(UUID.randomUUID().toString())
+            .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.PENDING);
     var poFromStorage = JsonObject.mapFrom(compPO).mapTo(CompositePurchaseOrder.class);
-    var config = new JsonObject().put(DISABLE_INSTANCE_MARCHING_CONFIG_NAME,
-      new JsonObject().put(DISABLE_INSTANCE_MARCHING_CONFIG_KEY, true).encode());
+    var config =
+        new JsonObject()
+            .put(
+                DISABLE_INSTANCE_MARCHING_CONFIG_NAME,
+                new JsonObject().put(DISABLE_INSTANCE_MARCHING_CONFIG_KEY, true).encode());
 
     // Mock headers to return specific user ID
     when(okapiHeadersMock.get(anyString())).thenReturn(userId);
 
     // Setup other required mocks
     when(openCompositeOrderFlowValidator.validate(any(), any(), any()))
-      .thenReturn(succeededFuture());
+        .thenReturn(succeededFuture());
 
     Map<String, List<Title>> emptyTitles = new HashMap<>();
     when(titlesService.fetchNonPackageTitles(any(), any()))
-      .thenReturn(succeededFuture(emptyTitles));
+        .thenReturn(succeededFuture(emptyTitles));
 
-    when(openCompositeOrderInventoryService.processInventory(any(), any(), anyBoolean(), any(), any()))
-      .thenReturn(succeededFuture());
+    when(openCompositeOrderInventoryService.processInventory(
+            any(), any(), anyBoolean(), any(), any()))
+        .thenReturn(succeededFuture());
 
     var mockStrategy = mock(EncumbranceWorkflowStrategy.class);
-    when(mockStrategy.processEncumbrances(any(), any(), any()))
-      .thenReturn(succeededFuture());
-    when(encumbranceWorkflowStrategyFactory.getStrategy(any()))
-      .thenReturn(mockStrategy);
+    when(mockStrategy.processEncumbrances(any(), any(), any())).thenReturn(succeededFuture());
+    when(encumbranceWorkflowStrategyFactory.getStrategy(any())).thenReturn(mockStrategy);
 
     // When
     var future = openCompositeOrderManager.process(compPO, poFromStorage, config, requestContext);
 
     // Then
-    vertxTestContext.assertComplete(future)
-      .onSuccess(v -> vertxTestContext.verify(() -> {
-        assertEquals(OPEN, compPO.getWorkflowStatus());
-        assertEquals(userId, compPO.getOpenedById());
-        assertNotNull(compPO.getDateOrdered());
-        vertxTestContext.completeNow();
-      }))
-      .onFailure(vertxTestContext::failNow);
+    vertxTestContext
+        .assertComplete(future)
+        .onSuccess(
+            v ->
+                vertxTestContext.verify(
+                    () -> {
+                      assertEquals(OPEN, compPO.getWorkflowStatus());
+                      assertEquals(userId, compPO.getOpenedById());
+                      assertNotNull(compPO.getDateOrdered());
+                      vertxTestContext.completeNow();
+                    }))
+        .onFailure(vertxTestContext::failNow);
   }
 
   @Test
   @CopilotGenerated(model = "Claude 3.5 Sonnet")
-  void testInventoryProcessingFailure_ShouldTriggerRollbackAndDeleteOrphanedInstances(VertxTestContext vertxTestContext) {
+  void testInventoryProcessingFailure_ShouldTriggerRollbackAndDeleteOrphanedInstances(
+      VertxTestContext vertxTestContext) {
     // Given: Setup order with PoLines that have instanceIds
-    var poLine1 = new PoLine()
-      .withId(UUID.randomUUID().toString())
-      .withInstanceId("instance1");
-    var poLine2 = new PoLine()
-      .withId(UUID.randomUUID().toString())
-      .withInstanceId("instance2");
+    var poLine1 = new PoLine().withId(UUID.randomUUID().toString()).withInstanceId("instance1");
+    var poLine2 = new PoLine().withId(UUID.randomUUID().toString()).withInstanceId("instance2");
 
-    var compPO = new CompositePurchaseOrder()
-      .withId(UUID.randomUUID().toString())
-      .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.PENDING)
-      .withPoLines(List.of(poLine1, poLine2));
+    var compPO =
+        new CompositePurchaseOrder()
+            .withId(UUID.randomUUID().toString())
+            .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.PENDING)
+            .withPoLines(List.of(poLine1, poLine2));
     var poFromStorage = JsonObject.mapFrom(compPO).mapTo(CompositePurchaseOrder.class);
-    var config = new JsonObject().put(DISABLE_INSTANCE_MARCHING_CONFIG_NAME,
-      new JsonObject().put(DISABLE_INSTANCE_MARCHING_CONFIG_KEY, false).encode());
+    var config =
+        new JsonObject()
+            .put(
+                DISABLE_INSTANCE_MARCHING_CONFIG_NAME,
+                new JsonObject().put(DISABLE_INSTANCE_MARCHING_CONFIG_KEY, false).encode());
 
     when(openCompositeOrderFlowValidator.validate(any(), any(), any()))
-      .thenReturn(succeededFuture());
+        .thenReturn(succeededFuture());
     Map<String, List<Title>> titles = new HashMap<>();
-    when(titlesService.fetchNonPackageTitles(any(), any()))
-      .thenReturn(succeededFuture(titles));
+    when(titlesService.fetchNonPackageTitles(any(), any())).thenReturn(succeededFuture(titles));
 
     var inventoryError = new RuntimeException("Item material type invalid");
-    when(openCompositeOrderInventoryService.processInventory(any(), any(), anyBoolean(), any(), any()))
-      .thenReturn(Future.failedFuture(inventoryError));
-    when(unOpenCompositeOrderManager.rollbackInventory(any(), any()))
-      .thenReturn(succeededFuture());
+    when(openCompositeOrderInventoryService.processInventory(
+            any(), any(), anyBoolean(), any(), any()))
+        .thenReturn(Future.failedFuture(inventoryError));
+    when(unOpenCompositeOrderManager.rollbackInventory(any(), any())).thenReturn(succeededFuture());
     when(inventoryRollbackService.deleteOrphanedInstanceIfNeeded(any(), any(), any()))
-      .thenReturn(succeededFuture());
+        .thenReturn(succeededFuture());
 
     // When
     var future = openCompositeOrderManager.process(compPO, poFromStorage, config, requestContext);
 
     // Then: Should fail with original error, but rollback should have been triggered
-    vertxTestContext.assertFailure(future)
-      .onComplete(ar -> vertxTestContext.verify(() -> {
-        verify(unOpenCompositeOrderManager, times(1)).rollbackInventory(eq(compPO), eq(requestContext));
-        verify(inventoryRollbackService, times(2)).deleteOrphanedInstanceIfNeeded(any(), any(), eq(requestContext));
-        vertxTestContext.completeNow();
-      }));
+    vertxTestContext
+        .assertFailure(future)
+        .onComplete(
+            ar ->
+                vertxTestContext.verify(
+                    () -> {
+                      verify(unOpenCompositeOrderManager, times(1))
+                          .rollbackInventory(eq(compPO), eq(requestContext));
+                      verify(inventoryRollbackService, times(2))
+                          .deleteOrphanedInstanceIfNeeded(any(), any(), eq(requestContext));
+                      vertxTestContext.completeNow();
+                    }));
   }
 
   private static class ContextConfiguration {
@@ -237,75 +235,93 @@ public class OpenCompositeOrderManagerIT {
       return mock(CommonSettingsRetriever.class);
     }
 
-    @Bean TitlesService titlesService() {
+    @Bean
+    TitlesService titlesService() {
       return mock(TitlesService.class);
     }
 
-    @Bean ProtectionService protectionService() {
+    @Bean
+    ProtectionService protectionService() {
       return mock(ProtectionService.class);
     }
 
-    @Bean PurchaseOrderLineService purchaseOrderLineService() {
+    @Bean
+    PurchaseOrderLineService purchaseOrderLineService() {
       return mock(PurchaseOrderLineService.class);
     }
 
-    @Bean InventoryItemManager inventoryItemManager() {
+    @Bean
+    InventoryItemManager inventoryItemManager() {
       return mock(InventoryItemManager.class);
     }
 
-    @Bean PieceChangeReceiptStatusPublisher receiptStatusPublisher() {
+    @Bean
+    PieceChangeReceiptStatusPublisher receiptStatusPublisher() {
       return mock(PieceChangeReceiptStatusPublisher.class);
     }
 
-    @Bean ReceivingEncumbranceStrategy receivingEncumbranceStrategy() {
+    @Bean
+    ReceivingEncumbranceStrategy receivingEncumbranceStrategy() {
       return mock(ReceivingEncumbranceStrategy.class);
     }
 
-    @Bean PurchaseOrderStorageService purchaseOrderService() {
+    @Bean
+    PurchaseOrderStorageService purchaseOrderService() {
       return mock(PurchaseOrderStorageService.class);
     }
 
-    @Bean PieceStorageService pieceStorageService() {
+    @Bean
+    PieceStorageService pieceStorageService() {
       return mock(PieceStorageService.class);
     }
 
-    @Bean EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory() {
+    @Bean
+    EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory() {
       return mock(EncumbranceWorkflowStrategyFactory.class);
     }
 
-    @Bean OpenCompositeOrderInventoryService openCompositeOrderInventoryService() {
+    @Bean
+    OpenCompositeOrderInventoryService openCompositeOrderInventoryService() {
       return mock(OpenCompositeOrderInventoryService.class);
     }
 
-    @Bean OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator() {
+    @Bean
+    OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator() {
       return mock(OpenCompositeOrderFlowValidator.class);
     }
 
-    @Bean PurchaseOrderLineHelper purchaseOrderLineHelper() {
+    @Bean
+    PurchaseOrderLineHelper purchaseOrderLineHelper() {
       return mock(PurchaseOrderLineHelper.class);
     }
 
-    @Bean  EncumbranceService encumbranceService() {
+    @Bean
+    EncumbranceService encumbranceService() {
       return mock(EncumbranceService.class);
     }
 
-    @Bean ExpenseClassValidationService expenseClassValidationService() {
+    @Bean
+    ExpenseClassValidationService expenseClassValidationService() {
       return mock(ExpenseClassValidationService.class);
     }
 
-    @Bean OrderInvoiceRelationService orderInvoiceRelationService() {
+    @Bean
+    OrderInvoiceRelationService orderInvoiceRelationService() {
       return mock(OrderInvoiceRelationService.class);
     }
 
-    @Bean AcquisitionsUnitsService acquisitionsUnitsService() {
+    @Bean
+    AcquisitionsUnitsService acquisitionsUnitsService() {
       return mock(AcquisitionsUnitsService.class);
     }
 
-    @Bean CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService() {
+    @Bean
+    CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService() {
       return mock(OrderLinesSummaryPopulateService.class);
     }
 
-    @Bean RestClient restClient() {
+    @Bean
+    RestClient restClient() {
       return mock(RestClient.class);
     }
 
@@ -319,13 +335,22 @@ public class OpenCompositeOrderManagerIT {
       return mock(InventoryRollbackService.class);
     }
 
-    @Bean OpenCompositeOrderManager openCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
-      EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
-      TitlesService titlesService, OpenCompositeOrderInventoryService openCompositeOrderInventoryService,
-      OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator, UnOpenCompositeOrderManager unOpenCompositeOrderManager,
-      InventoryRollbackService inventoryRollbackService) {
-      return new OpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory,
-          titlesService, openCompositeOrderInventoryService, openCompositeOrderFlowValidator, unOpenCompositeOrderManager,
+    @Bean
+    OpenCompositeOrderManager openCompositeOrderManager(
+        PurchaseOrderLineService purchaseOrderLineService,
+        EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
+        TitlesService titlesService,
+        OpenCompositeOrderInventoryService openCompositeOrderInventoryService,
+        OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
+        UnOpenCompositeOrderManager unOpenCompositeOrderManager,
+        InventoryRollbackService inventoryRollbackService) {
+      return new OpenCompositeOrderManager(
+          purchaseOrderLineService,
+          encumbranceWorkflowStrategyFactory,
+          titlesService,
+          openCompositeOrderInventoryService,
+          openCompositeOrderFlowValidator,
+          unOpenCompositeOrderManager,
           inventoryRollbackService);
     }
   }

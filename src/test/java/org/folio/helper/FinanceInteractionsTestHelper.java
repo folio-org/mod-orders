@@ -8,7 +8,6 @@ import static org.hamcrest.Matchers.equalTo;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.FundDistribution;
@@ -24,12 +23,14 @@ public final class FinanceInteractionsTestHelper {
     // Check that number of linked encumbrances corresponds to FundDistribution count
     List<Transaction> createdEncumbrances = getCreatedEncumbrances();
 
-    Map<String, List<PoLine>> polUpdates = getPoLineUpdates().stream()
-      .map(json -> json.mapTo(PoLine.class))
-      .filter(poLine -> poLine.getFundDistribution()
-        .stream()
-        .allMatch(distr -> distr.getEncumbrance() != null))
-      .collect(Collectors.groupingBy(PoLine::getId));
+    Map<String, List<PoLine>> polUpdates =
+        getPoLineUpdates().stream()
+            .map(json -> json.mapTo(PoLine.class))
+            .filter(
+                poLine ->
+                    poLine.getFundDistribution().stream()
+                        .allMatch(distr -> distr.getEncumbrance() != null))
+            .collect(Collectors.groupingBy(PoLine::getId));
 
     assertThat(createdEncumbrances.size(), equalTo(expectedCreated));
     // Make sure that each fund distribution has now links to encumbrances
@@ -40,7 +41,8 @@ public final class FinanceInteractionsTestHelper {
       for (Map.Entry<String, List<PoLine>> poLines : polUpdates.entrySet()) {
         PoLine poLine = poLines.getValue().get(0);
         for (FundDistribution fundDistr : poLine.getFundDistribution()) {
-          Transaction encumbrance = getEncumbranceById(createdEncumbrances, fundDistr.getEncumbrance());
+          Transaction encumbrance =
+              getEncumbranceById(createdEncumbrances, fundDistr.getEncumbrance());
           if (encumbrance != null) {
             assertThat(fundDistr.getFundId(), equalTo(encumbrance.getFromFundId()));
           }
@@ -51,15 +53,12 @@ public final class FinanceInteractionsTestHelper {
 
   private static Transaction getEncumbranceById(List<Transaction> createdEncumbrances, String id) {
     return createdEncumbrances.stream()
-      .filter(encumbrance -> encumbrance.getId().equals(id))
-      .findFirst()
-      .orElse(null);
+        .filter(encumbrance -> encumbrance.getId().equals(id))
+        .findFirst()
+        .orElse(null);
   }
 
   private static int getFundDistributionCount(CompositePurchaseOrder rsPo) {
-    return rsPo.getPoLines()
-      .stream()
-      .mapToInt(pol -> pol.getFundDistribution().size())
-      .sum();
+    return rsPo.getPoLines().stream().mapToInt(pol -> pol.getFundDistribution().size()).sum();
   }
 }

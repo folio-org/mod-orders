@@ -39,25 +39,24 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
+import io.restassured.http.Header;
+import io.vertx.core.json.JsonObject;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-
-import io.restassured.http.Header;
-import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuiteIT;
 import org.folio.HttpStatus;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Physical;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.TitleCollection;
 import org.folio.service.AcquisitionsUnitsService;
@@ -88,21 +87,20 @@ public class TitlesApiIT {
   public static final String TITLES_ENDPOINT = "/orders/titles";
   private static final String TITLES_ID_PATH = TITLES_ENDPOINT + "/%s";
   private static final String VALID_UUID = "c3e26c0e-d6a6-46fb-9309-d494cd0c82de";
-  private static final String CONSISTENT_RECEIVED_STATUS_TITLE_UUID = "7d0aa803-a659-49f0-8a95-968f277c87d7";
+  private static final String CONSISTENT_RECEIVED_STATUS_TITLE_UUID =
+      "7d0aa803-a659-49f0-8a95-968f277c87d7";
   private static final String ACQ_UNIT_ID = "f6d2cc9d-82ca-437c-a4e6-e5c30323df00";
   public static final String SAMPLE_TITLE_ID = "9a665b22-9fe5-4c95-b4ee-837a5433c95d";
   public static final String SAMPLE_INSTANCE_ID = "8d1bc213-82ca-56fd-b4ec-238c5421a15c";
   private final JsonObject titleJsonReqData = getMockAsJson(TITLES_MOCK_DATA_PATH + "title.json");
-  private final JsonObject packageTitleJsonReqData = getMockAsJson(TITLES_MOCK_DATA_PATH + "package_title.json");
+  private final JsonObject packageTitleJsonReqData =
+      getMockAsJson(TITLES_MOCK_DATA_PATH + "package_title.json");
 
   private static boolean runningOnOwn;
 
-  @Autowired
-  private TitleInstanceService titleInstanceService;
-  @Autowired
-  private ConsortiumConfigurationService consortiumConfigurationService;
-  @Autowired
-  private PieceStorageService pieceStorageService;
+  @Autowired private TitleInstanceService titleInstanceService;
+  @Autowired private ConsortiumConfigurationService consortiumConfigurationService;
+  @Autowired private PieceStorageService pieceStorageService;
   private AutoCloseable mockitoMocks;
 
   @BeforeAll
@@ -127,7 +125,7 @@ public class TitlesApiIT {
   }
 
   @BeforeEach
-  void initMocks(){
+  void initMocks() {
     mockitoMocks = MockitoAnnotations.openMocks(this);
     autowireDependencies(this);
   }
@@ -137,23 +135,35 @@ public class TitlesApiIT {
     logger.info("=== Test POST Title (Create Title) ===");
 
     String poLineId = UUID.randomUUID().toString();
-    PoLine poLine = getMinimalContentCompositePoLine()
-      .withId(poLineId);
+    PoLine poLine = getMinimalContentCompositePoLine().withId(poLineId);
 
     addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
 
-    Title postTitleRq = titleJsonReqData.mapTo(Title.class)
-      .withPoLineId(poLineId)
-      .withAcqUnitIds(List.of(ACQ_UNIT_ID));
+    Title postTitleRq =
+        titleJsonReqData
+            .mapTo(Title.class)
+            .withPoLineId(poLineId)
+            .withAcqUnitIds(List.of(ACQ_UNIT_ID));
 
-    doReturn(succeededFuture(SAMPLE_INSTANCE_ID)).when(titleInstanceService).getOrCreateInstance(any(Title.class), any(RequestContext.class));
+    doReturn(succeededFuture(SAMPLE_INSTANCE_ID))
+        .when(titleInstanceService)
+        .getOrCreateInstance(any(Title.class), any(RequestContext.class));
 
     // Positive cases
     // Title id is null initially
     assertThat(postTitleRq.getId(), nullValue());
 
-    Title postTitleRs = verifyPostResponse(TITLES_ENDPOINT, JsonObject.mapFrom(postTitleRq).encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID_WITH_ACQ_UNITS, ALL_DESIRED_ACQ_PERMISSIONS_HEADER), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt()).as(Title.class);
+    Title postTitleRs =
+        verifyPostResponse(
+                TITLES_ENDPOINT,
+                JsonObject.mapFrom(postTitleRq).encode(),
+                prepareHeaders(
+                    EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10,
+                    X_OKAPI_USER_ID_WITH_ACQ_UNITS,
+                    ALL_DESIRED_ACQ_PERMISSIONS_HEADER),
+                APPLICATION_JSON,
+                HttpStatus.HTTP_CREATED.toInt())
+            .as(Title.class);
 
     // Title id not null
     assertThat(postTitleRs.getId(), Matchers.notNullValue());
@@ -161,13 +171,29 @@ public class TitlesApiIT {
     // Negative cases
     // Unable to create title test
     int status400 = HttpStatus.HTTP_BAD_REQUEST.toInt();
-    verifyPostResponse(TITLES_ENDPOINT, JsonObject.mapFrom(postTitleRq).encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID_WITH_ACQ_UNITS, ALL_DESIRED_ACQ_PERMISSIONS_HEADER,
-      new Header(X_ECHO_STATUS, String.valueOf(status400))), APPLICATION_JSON, status400);
+    verifyPostResponse(
+        TITLES_ENDPOINT,
+        JsonObject.mapFrom(postTitleRq).encode(),
+        prepareHeaders(
+            EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10,
+            X_OKAPI_USER_ID_WITH_ACQ_UNITS,
+            ALL_DESIRED_ACQ_PERMISSIONS_HEADER,
+            new Header(X_ECHO_STATUS, String.valueOf(status400))),
+        APPLICATION_JSON,
+        status400);
 
     // Internal error on mod-orders-storage test
     int status500 = HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt();
-    verifyPostResponse(TITLES_ENDPOINT, JsonObject.mapFrom(postTitleRq).encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID_WITH_ACQ_UNITS, ALL_DESIRED_ACQ_PERMISSIONS_HEADER,
-      new Header(X_ECHO_STATUS, String.valueOf(status500))), APPLICATION_JSON, status500);
+    verifyPostResponse(
+        TITLES_ENDPOINT,
+        JsonObject.mapFrom(postTitleRq).encode(),
+        prepareHeaders(
+            EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10,
+            X_OKAPI_USER_ID_WITH_ACQ_UNITS,
+            ALL_DESIRED_ACQ_PERMISSIONS_HEADER,
+            new Header(X_ECHO_STATUS, String.valueOf(status500))),
+        APPLICATION_JSON,
+        status500);
   }
 
   @Test
@@ -181,10 +207,15 @@ public class TitlesApiIT {
     // Title id is null initially
     assertThat(postTitleRq.getId(), nullValue());
 
-    List<Error> errors = verifyPostResponse(TITLES_ENDPOINT, JsonObject.mapFrom(postTitleRq).encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 403)
-      .as(Errors.class)
-      .getErrors();
+    List<Error> errors =
+        verifyPostResponse(
+                TITLES_ENDPOINT,
+                JsonObject.mapFrom(postTitleRq).encode(),
+                prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID),
+                APPLICATION_JSON,
+                403)
+            .as(Errors.class)
+            .getErrors();
 
     assertThat(errors.get(0).getMessage(), equalTo(USER_HAS_NO_ACQ_PERMISSIONS.getDescription()));
   }
@@ -195,9 +226,18 @@ public class TitlesApiIT {
 
     String reqData = getMockData(TITLES_MOCK_DATA_PATH + "title_invalid_claiming_config.json");
 
-    List<Error> errors = verifyPostResponse(TITLES_ENDPOINT, reqData, prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, ALL_DESIRED_ACQ_PERMISSIONS_HEADER), APPLICATION_JSON, 422)
-      .as(Errors.class)
-      .getErrors();
+    List<Error> errors =
+        verifyPostResponse(
+                TITLES_ENDPOINT,
+                reqData,
+                prepareHeaders(
+                    EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10,
+                    X_OKAPI_USER_ID,
+                    ALL_DESIRED_ACQ_PERMISSIONS_HEADER),
+                APPLICATION_JSON,
+                422)
+            .as(Errors.class)
+            .getErrors();
 
     assertThat(errors.get(0).getMessage(), equalTo(CLAIMING_CONFIG_INVALID.getDescription()));
   }
@@ -210,23 +250,35 @@ public class TitlesApiIT {
     String polNumbber = "1000-01";
     String packageNote = "test note";
 
-    PoLine packagePoLine = getMinimalContentCompositePoLine()
-      .withId(packagePoLineId)
-      .withTitleOrPackage(packageTitleName)
-      .withPoLineNumber(polNumbber)
-      .withPhysical(new Physical().withExpectedReceiptDate(new Date()))
-      .withDetails(new Details().withReceivingNote(packageNote))
-      .withIsPackage(true);
+    PoLine packagePoLine =
+        getMinimalContentCompositePoLine()
+            .withId(packagePoLineId)
+            .withTitleOrPackage(packageTitleName)
+            .withPoLineNumber(polNumbber)
+            .withPhysical(new Physical().withExpectedReceiptDate(new Date()))
+            .withDetails(new Details().withReceivingNote(packageNote))
+            .withIsPackage(true);
 
-    Title titleWithPackagePoLineRQ = packageTitleJsonReqData.mapTo(Title.class)
-      .withPoLineId(packagePoLineId);
+    Title titleWithPackagePoLineRQ =
+        packageTitleJsonReqData.mapTo(Title.class).withPoLineId(packagePoLineId);
 
     addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(packagePoLine));
 
-    doReturn(succeededFuture(SAMPLE_INSTANCE_ID)).when(titleInstanceService).getOrCreateInstance(any(Title.class), any(RequestContext.class));
+    doReturn(succeededFuture(SAMPLE_INSTANCE_ID))
+        .when(titleInstanceService)
+        .getOrCreateInstance(any(Title.class), any(RequestContext.class));
 
-    Title titleWithPackagePoLineRS = verifyPostResponse(TITLES_ENDPOINT, JsonObject.mapFrom(titleWithPackagePoLineRQ).encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, ALL_DESIRED_ACQ_PERMISSIONS_HEADER), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt()).as(Title.class);
+    Title titleWithPackagePoLineRS =
+        verifyPostResponse(
+                TITLES_ENDPOINT,
+                JsonObject.mapFrom(titleWithPackagePoLineRQ).encode(),
+                prepareHeaders(
+                    EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10,
+                    X_OKAPI_USER_ID,
+                    ALL_DESIRED_ACQ_PERMISSIONS_HEADER),
+                APPLICATION_JSON,
+                HttpStatus.HTTP_CREATED.toInt())
+            .as(Title.class);
 
     assertEquals(titleWithPackagePoLineRS.getPackageName(), packageTitleName);
     assertNotNull(titleWithPackagePoLineRS.getExpectedReceiptDate());
@@ -249,7 +301,8 @@ public class TitlesApiIT {
   void testGetTitleById() {
     logger.info("=== Test Get Title By Id ===");
 
-    final Title resp = verifySuccessGet(String.format(TITLES_ID_PATH, SAMPLE_TITLE_ID), Title.class);
+    final Title resp =
+        verifySuccessGet(String.format(TITLES_ID_PATH, SAMPLE_TITLE_ID), Title.class);
 
     logger.info(JsonObject.mapFrom(resp).encodePrettily());
 
@@ -259,29 +312,44 @@ public class TitlesApiIT {
   @Test
   void testPutTitlesByIdTest() {
     logger.info("=== Test update title by id - valid Id 204 ===");
-    Title reqData = titleJsonReqData.mapTo(Title.class)
-      .withId(SAMPLE_TITLE_ID)
-      .withTitle("new title")
-      .withAcqUnitIds(List.of(ACQ_UNIT_ID));
+    Title reqData =
+        titleJsonReqData
+            .mapTo(Title.class)
+            .withId(SAMPLE_TITLE_ID)
+            .withTitle("new title")
+            .withAcqUnitIds(List.of(ACQ_UNIT_ID));
 
-    doReturn(succeededFuture(SAMPLE_INSTANCE_ID)).when(titleInstanceService).getOrCreateInstance(any(Title.class), any(RequestContext.class));
+    doReturn(succeededFuture(SAMPLE_INSTANCE_ID))
+        .when(titleInstanceService)
+        .getOrCreateInstance(any(Title.class), any(RequestContext.class));
 
-    verifyPut(String.format(TITLES_ID_PATH, SAMPLE_TITLE_ID), JsonObject.mapFrom(reqData).encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_ACQ_PERMISSIONS_HEADER), "", 204);
+    verifyPut(
+        String.format(TITLES_ID_PATH, SAMPLE_TITLE_ID),
+        JsonObject.mapFrom(reqData).encode(),
+        prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_ACQ_PERMISSIONS_HEADER),
+        "",
+        204);
   }
 
   @Test
   void testPutTitlesByIdTestShouldFail() {
     logger.info("=== Test update Title by id should fail because it does not have permission ===");
-    Title reqData = titleJsonReqData.mapTo(Title.class)
-      .withId(SAMPLE_TITLE_ID)
-      .withTitle("new title")
-      .withAcqUnitIds(List.of(ACQ_UNIT_ID));
+    Title reqData =
+        titleJsonReqData
+            .mapTo(Title.class)
+            .withId(SAMPLE_TITLE_ID)
+            .withTitle("new title")
+            .withAcqUnitIds(List.of(ACQ_UNIT_ID));
 
-    List<Error> errors = verifyPut(String.format(TITLES_ID_PATH, SAMPLE_TITLE_ID), JsonObject.mapFrom(reqData).encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 403)
-      .as(Errors.class)
-      .getErrors();
+    List<Error> errors =
+        verifyPut(
+                String.format(TITLES_ID_PATH, SAMPLE_TITLE_ID),
+                JsonObject.mapFrom(reqData).encode(),
+                prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID),
+                "",
+                403)
+            .as(Errors.class)
+            .getErrors();
 
     assertThat(errors.get(0).getMessage(), equalTo(USER_HAS_NO_ACQ_PERMISSIONS.getDescription()));
   }
@@ -292,7 +360,8 @@ public class TitlesApiIT {
 
     String reqData = getMockData(TITLES_MOCK_DATA_PATH + "title_without_poLine.json");
 
-    verifyPut(String.format(TITLES_ID_PATH, CONSISTENT_RECEIVED_STATUS_TITLE_UUID), reqData, "", 422);
+    verifyPut(
+        String.format(TITLES_ID_PATH, CONSISTENT_RECEIVED_STATUS_TITLE_UUID), reqData, "", 422);
   }
 
   @Test
@@ -314,7 +383,11 @@ public class TitlesApiIT {
     reqData.setId(ID_FOR_INTERNAL_SERVER_ERROR);
     String jsonBody = JsonObject.mapFrom(reqData).encode();
 
-    verifyPut(String.format(TITLES_ID_PATH, ID_FOR_INTERNAL_SERVER_ERROR), jsonBody, APPLICATION_JSON, 500);
+    verifyPut(
+        String.format(TITLES_ID_PATH, ID_FOR_INTERNAL_SERVER_ERROR),
+        jsonBody,
+        APPLICATION_JSON,
+        500);
   }
 
   @Test
@@ -323,9 +396,10 @@ public class TitlesApiIT {
 
     String reqData = getMockData(TITLES_MOCK_DATA_PATH + "title_invalid_claiming_config.json");
 
-    List<Error> errors = verifyPut(String.format(TITLES_ID_PATH, VALID_UUID), reqData, APPLICATION_JSON, 422)
-      .as(Errors.class)
-      .getErrors();
+    List<Error> errors =
+        verifyPut(String.format(TITLES_ID_PATH, VALID_UUID), reqData, APPLICATION_JSON, 422)
+            .as(Errors.class)
+            .getErrors();
 
     assertThat(errors.get(0).getMessage(), equalTo(CLAIMING_CONFIG_INVALID.getDescription()));
   }
@@ -337,11 +411,13 @@ public class TitlesApiIT {
     String reqData = getMockData(TITLES_MOCK_DATA_PATH + "title_invalid_claiming_config.json");
     String randomId = UUID.randomUUID().toString();
 
-    List<Error> errors = verifyPut(String.format(TITLES_ID_PATH, randomId), reqData, APPLICATION_JSON, 422)
-      .as(Errors.class)
-      .getErrors();
+    List<Error> errors =
+        verifyPut(String.format(TITLES_ID_PATH, randomId), reqData, APPLICATION_JSON, 422)
+            .as(Errors.class)
+            .getErrors();
 
-    assertThat(errors.get(0).getMessage(), equalTo(MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.getDescription()));
+    assertThat(
+        errors.get(0).getMessage(), equalTo(MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.getDescription()));
   }
 
   @Test
@@ -353,22 +429,24 @@ public class TitlesApiIT {
     String orderId = UUID.randomUUID().toString();
     String deleteHoldings = "false";
 
-    var title = titleJsonReqData.mapTo(Title.class)
-      .withId(titleId)
-      .withPoLineId(poLineId);
+    var title = titleJsonReqData.mapTo(Title.class).withId(titleId).withPoLineId(poLineId);
 
-    var poLine = getMinimalContentCompositePoLine()
-      .withId(poLineId)
-      .withPurchaseOrderId(orderId)
-      .withIsPackage(true);
+    var poLine =
+        getMinimalContentCompositePoLine()
+            .withId(poLineId)
+            .withPurchaseOrderId(orderId)
+            .withIsPackage(true);
 
     addMockEntry(TITLES, JsonObject.mapFrom(title));
     addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
 
-    when(consortiumConfigurationService.isCentralOrderingEnabled(any())).thenReturn(succeededFuture(false));
-    when(pieceStorageService.getPiecesByLineIdAndTitleId(any(), any(), any())).thenReturn(succeededFuture(List.of()));
+    when(consortiumConfigurationService.isCentralOrderingEnabled(any()))
+        .thenReturn(succeededFuture(false));
+    when(pieceStorageService.getPiecesByLineIdAndTitleId(any(), any(), any()))
+        .thenReturn(succeededFuture(List.of()));
 
-    verifyDeleteResponse(String.format(TITLES_ID_PATH + "?deleteHoldings=%s", titleId, deleteHoldings), "", 204);
+    verifyDeleteResponse(
+        String.format(TITLES_ID_PATH + "?deleteHoldings=%s", titleId, deleteHoldings), "", 204);
   }
 
   @Test
@@ -386,13 +464,14 @@ public class TitlesApiIT {
   @Test
   void deleteTitleInternalErrorOnStorageTest() {
     logger.info("=== Test delete title by id - internal error from storage 500 ===");
-    verifyDeleteResponse(String.format(TITLES_ID_PATH, ID_FOR_INTERNAL_SERVER_ERROR), APPLICATION_JSON, 500);
+    verifyDeleteResponse(
+        String.format(TITLES_ID_PATH, ID_FOR_INTERNAL_SERVER_ERROR), APPLICATION_JSON, 500);
   }
 
   static class ContextConfiguration {
 
     @Bean
-    RestClient restClient(){
+    RestClient restClient() {
       return new RestClient();
     }
 
@@ -421,12 +500,13 @@ public class TitlesApiIT {
       return new InventoryCache(inventoryService());
     }
 
-    @Bean PurchaseOrderLineService purchaseOrderLineService() {
+    @Bean
+    PurchaseOrderLineService purchaseOrderLineService() {
       return new PurchaseOrderLineService(restClient(), inventoryHoldingManager());
     }
 
     @Bean
-    public  ConsortiumConfigurationService consortiumConfigurationService() {
+    public ConsortiumConfigurationService consortiumConfigurationService() {
       return mock(ConsortiumConfigurationService.class);
     }
 
@@ -436,12 +516,24 @@ public class TitlesApiIT {
     }
 
     @Bean
-    TitlesService titlesService(RestClient restClient, ProtectionService protectionService, TitleInstanceService titleInstanceService,
-                                InventoryHoldingManager inventoryHoldingManager, InventoryItemManager inventoryItemManager,
-                                PurchaseOrderLineService purchaseOrderLineService, PieceStorageService pieceStorageService,
-                                ConsortiumConfigurationService consortiumConfigurationService) {
-      return new TitlesService(restClient, protectionService, titleInstanceService, inventoryHoldingManager, inventoryItemManager,
-        purchaseOrderLineService, pieceStorageService, consortiumConfigurationService);
+    TitlesService titlesService(
+        RestClient restClient,
+        ProtectionService protectionService,
+        TitleInstanceService titleInstanceService,
+        InventoryHoldingManager inventoryHoldingManager,
+        InventoryItemManager inventoryItemManager,
+        PurchaseOrderLineService purchaseOrderLineService,
+        PieceStorageService pieceStorageService,
+        ConsortiumConfigurationService consortiumConfigurationService) {
+      return new TitlesService(
+          restClient,
+          protectionService,
+          titleInstanceService,
+          inventoryHoldingManager,
+          inventoryItemManager,
+          purchaseOrderLineService,
+          pieceStorageService,
+          consortiumConfigurationService);
     }
 
     @Bean
@@ -458,6 +550,5 @@ public class TitlesApiIT {
     ProtectionService protectionService(AcquisitionsUnitsService acquisitionsUnitsService) {
       return spy(new ProtectionService(acquisitionsUnitsService));
     }
-
   }
 }

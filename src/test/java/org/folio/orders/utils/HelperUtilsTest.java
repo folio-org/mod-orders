@@ -1,17 +1,5 @@
 package org.folio.orders.utils;
 
-import io.vertx.core.Future;
-import org.folio.rest.core.exceptions.HttpException;
-import org.folio.rest.jaxrs.model.CloseReason;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.folio.service.orders.utils.StatusUtils;
-import org.junit.jupiter.api.Test;
-
-import javax.money.convert.ConversionQuery;
-import java.util.List;
-import java.util.UUID;
-
 import static org.folio.orders.utils.HelperUtils.REASON_CANCELLED;
 import static org.folio.orders.utils.HelperUtils.buildConversionQuery;
 import static org.folio.orders.utils.HelperUtils.combineResultListsOnSuccess;
@@ -24,6 +12,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.vertx.core.Future;
+import java.util.List;
+import java.util.UUID;
+import javax.money.convert.ConversionQuery;
+import org.folio.rest.core.exceptions.HttpException;
+import org.folio.rest.jaxrs.model.CloseReason;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PurchaseOrder;
+import org.folio.service.orders.utils.StatusUtils;
+import org.junit.jupiter.api.Test;
+
 public class HelperUtilsTest {
 
   @Test
@@ -32,9 +31,7 @@ public class HelperUtilsTest {
     var f2 = Future.succeededFuture(List.of(4, 5, 6));
     var f3 = Future.succeededFuture(List.of(7, 8, 9));
     Future<List<Integer>> listFuture = combineResultListsOnSuccess(List.of(f1, f2, f3));
-    listFuture.onSuccess(
-      combined -> assertEquals(List.of(1, 2, 3, 4, 5, 6, 7, 8, 9), combined)
-    );
+    listFuture.onSuccess(combined -> assertEquals(List.of(1, 2, 3, 4, 5, 6, 7, 8, 9), combined));
   }
 
   @Test

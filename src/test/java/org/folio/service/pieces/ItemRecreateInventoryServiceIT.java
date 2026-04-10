@@ -46,20 +46,17 @@ import org.springframework.context.annotation.Bean;
 
 public class ItemRecreateInventoryServiceIT {
 
-  @Autowired
-  private ItemRecreateInventoryService itemRecreateInventoryService;
-  @Autowired
-  private InventoryItemManager inventoryItemManager;
+  @Autowired private ItemRecreateInventoryService itemRecreateInventoryService;
+  @Autowired private InventoryItemManager inventoryItemManager;
 
-  @Mock
-  private Map<String, String> okapiHeadersMock;
+  @Mock private Map<String, String> okapiHeadersMock;
   private final Context ctx = getFirstContextFromVertx(getVertx());
 
   private RequestContext requestContext;
   private static boolean runningOnOwn;
 
   @BeforeEach
-  void initMocks(){
+  void initMocks() {
     MockitoAnnotations.openMocks(this);
     autowireDependencies(this);
 
@@ -93,52 +90,93 @@ public class ItemRecreateInventoryServiceIT {
 
   @Test
   void shouldRecreatePhysicalItem() throws IOException {
-    var purchaseOrderMock = getMockData(String.format(ECS_CONSORTIUM_PURCHASE_ORDER_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
-    var poLineMock = getMockData(String.format(ECS_CONSORTIUM_PO_LINE_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
-    var piecesMock = getMockData(String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
+    var purchaseOrderMock =
+        getMockData(
+            String.format(
+                ECS_CONSORTIUM_PURCHASE_ORDER_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
+    var poLineMock =
+        getMockData(
+            String.format(ECS_CONSORTIUM_PO_LINE_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
+    var piecesMock =
+        getMockData(
+            String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
 
     var piece = new JsonObject(piecesMock).mapTo(Piece.class);
     var purchaseOrder = new JsonObject(purchaseOrderMock).mapTo(PurchaseOrder.class);
     var compPO = HelperUtils.convertToCompositePurchaseOrder(new JsonObject(purchaseOrderMock));
     var poLine = new JsonObject(poLineMock).mapTo(PoLine.class);
 
-    var pieceHolder = (PieceUpdateHolder) new PieceUpdateHolder()
-      .withPieceToUpdate(piece)
-      .withOrderInformation(purchaseOrder, poLine);
+    var pieceHolder =
+        (PieceUpdateHolder)
+            new PieceUpdateHolder()
+                .withPieceToUpdate(piece)
+                .withOrderInformation(purchaseOrder, poLine);
 
     var srcLocCtx = RequestContextUtil.createContextWithNewTenantId(requestContext, "tenant1");
     var dstLocCtx = RequestContextUtil.createContextWithNewTenantId(requestContext, "tenant2");
 
-    itemRecreateInventoryService.recreateItemInDestinationTenant(compPO, pieceHolder.getPoLineToSave(),
-      pieceHolder.getPieceToUpdate(), srcLocCtx ,dstLocCtx).result();
+    itemRecreateInventoryService
+        .recreateItemInDestinationTenant(
+            compPO,
+            pieceHolder.getPoLineToSave(),
+            pieceHolder.getPieceToUpdate(),
+            srcLocCtx,
+            dstLocCtx)
+        .result();
 
-    verify(inventoryItemManager, times(1)).createMissingPhysicalItems(compPO,
-      pieceHolder.getPoLineToSave(), pieceHolder.getPieceToUpdate(), ITEM_QUANTITY, dstLocCtx);
+    verify(inventoryItemManager, times(1))
+        .createMissingPhysicalItems(
+            compPO,
+            pieceHolder.getPoLineToSave(),
+            pieceHolder.getPieceToUpdate(),
+            ITEM_QUANTITY,
+            dstLocCtx);
   }
 
   @Test
   void shouldRecreateElectronicItem() throws IOException {
-    var purchaseOrderMock = getMockData(String.format(ECS_CONSORTIUM_PURCHASE_ORDER_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_ELECTRONIC));
-    var poLineMock = getMockData(String.format(ECS_CONSORTIUM_PO_LINE_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_ELECTRONIC));
-    var piecesMock = getMockData(String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_ELECTRONIC));
+    var purchaseOrderMock =
+        getMockData(
+            String.format(
+                ECS_CONSORTIUM_PURCHASE_ORDER_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_ELECTRONIC));
+    var poLineMock =
+        getMockData(
+            String.format(
+                ECS_CONSORTIUM_PO_LINE_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_ELECTRONIC));
+    var piecesMock =
+        getMockData(
+            String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_ELECTRONIC));
 
     var piece = new JsonObject(piecesMock).mapTo(Piece.class);
     var purchaseOrder = new JsonObject(purchaseOrderMock).mapTo(PurchaseOrder.class);
     var compPO = HelperUtils.convertToCompositePurchaseOrder(new JsonObject(purchaseOrderMock));
     var poLine = new JsonObject(poLineMock).mapTo(PoLine.class);
 
-    var pieceHolder = (PieceUpdateHolder) new PieceUpdateHolder()
-      .withPieceToUpdate(piece)
-      .withOrderInformation(purchaseOrder, poLine);
+    var pieceHolder =
+        (PieceUpdateHolder)
+            new PieceUpdateHolder()
+                .withPieceToUpdate(piece)
+                .withOrderInformation(purchaseOrder, poLine);
 
     var srcLocCtx = RequestContextUtil.createContextWithNewTenantId(requestContext, "tenant1");
     var dstLocCtx = RequestContextUtil.createContextWithNewTenantId(requestContext, "tenant2");
 
-    itemRecreateInventoryService.recreateItemInDestinationTenant(compPO, pieceHolder.getPoLineToSave(),
-      pieceHolder.getPieceToUpdate(), srcLocCtx, dstLocCtx).result();
+    itemRecreateInventoryService
+        .recreateItemInDestinationTenant(
+            compPO,
+            pieceHolder.getPoLineToSave(),
+            pieceHolder.getPieceToUpdate(),
+            srcLocCtx,
+            dstLocCtx)
+        .result();
 
     verify(inventoryItemManager, times(1))
-      .createMissingElectronicItems(compPO, pieceHolder.getPoLineToSave(), pieceHolder.getPieceToUpdate(), ITEM_QUANTITY, dstLocCtx);
+        .createMissingElectronicItems(
+            compPO,
+            pieceHolder.getPoLineToSave(),
+            pieceHolder.getPieceToUpdate(),
+            ITEM_QUANTITY,
+            dstLocCtx);
   }
 
   private static class ContextConfiguration {
@@ -149,7 +187,8 @@ public class ItemRecreateInventoryServiceIT {
     }
 
     @Bean
-    ItemRecreateInventoryService pieceUpdateInventoryService(InventoryItemManager inventoryItemManager) {
+    ItemRecreateInventoryService pieceUpdateInventoryService(
+        InventoryItemManager inventoryItemManager) {
       return spy(new ItemRecreateInventoryService(inventoryItemManager));
     }
   }

@@ -94,6 +94,7 @@
     <copy-rename-maven-plugin.version>1.0.1</copy-rename-maven-plugin.version>
     <maven-failsafe-plugin.version>3.5.5</maven-failsafe-plugin.version>
     <maven-jacoco-plugin.version>0.8.12</maven-jacoco-plugin.version>
+    <maven-spotless-plugin.version>3.1.0</maven-spotless-plugin.version>
 
     <!--Test dependencies-->
     <junit-jupiter.version>6.0.3</junit-jupiter.version>
@@ -924,6 +925,31 @@
               <goal>integration-test</goal>
               <goal>verify</goal>
             </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>com.diffplug.spotless</groupId>
+        <artifactId>spotless-maven-plugin</artifactId>
+        <version>${maven-spotless-plugin.version}</version>
+        <configuration>
+          <java>
+            <googleJavaFormat>
+              <style>GOOGLE</style>
+            </googleJavaFormat>
+            <removeUnusedImports/>
+            <includes>
+              <include>src/test/java/**/*.java</include>
+            </includes>
+          </java>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>apply</goal>
+            </goals>
+            <phase>validate</phase>
           </execution>
         </executions>
       </plugin>

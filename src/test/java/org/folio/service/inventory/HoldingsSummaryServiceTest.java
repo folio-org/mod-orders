@@ -9,11 +9,12 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
+import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -28,24 +29,17 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
-
 public class HoldingsSummaryServiceTest {
 
-  @InjectMocks
-  private HoldingsSummaryService holdingsSummaryService;
+  @InjectMocks private HoldingsSummaryService holdingsSummaryService;
 
-  @Mock
-  private PurchaseOrderStorageService purchaseOrderStorageService;
+  @Mock private PurchaseOrderStorageService purchaseOrderStorageService;
 
-  @Mock
-  private PurchaseOrderLineService purchaseOrderLineService;
+  @Mock private PurchaseOrderLineService purchaseOrderLineService;
 
   @Mock PieceStorageService pieceStorageService;
 
-  @Mock
-  private RequestContext requestContext;
+  @Mock private RequestContext requestContext;
 
   @BeforeEach
   public void initMocks() {
@@ -57,25 +51,35 @@ public class HoldingsSummaryServiceTest {
     List<PurchaseOrder> purchaseOrders = new ArrayList<>();
     List<PoLine> polines = new ArrayList<>();
 
-    var order = new JsonObject(getMockData(BASE_MOCK_DATA_PATH + "purchase-orders/81_ongoing_pending.json")).mapTo(PurchaseOrder.class);
-    var line = new JsonObject(getMockData(BASE_MOCK_DATA_PATH + "lines/81-1_pending_fomat-other.json")).mapTo(PoLine.class);
-    var pieces = new JsonObject(getMockData(BASE_MOCK_DATA_PATH + "pieces/pieceRecords-d471d766-8dbb-4609-999a-02681dea6c22.json")).mapTo(PieceCollection.class);
+    var order =
+        new JsonObject(getMockData(BASE_MOCK_DATA_PATH + "purchase-orders/81_ongoing_pending.json"))
+            .mapTo(PurchaseOrder.class);
+    var line =
+        new JsonObject(getMockData(BASE_MOCK_DATA_PATH + "lines/81-1_pending_fomat-other.json"))
+            .mapTo(PoLine.class);
+    var pieces =
+        new JsonObject(
+                getMockData(
+                    BASE_MOCK_DATA_PATH
+                        + "pieces/pieceRecords-d471d766-8dbb-4609-999a-02681dea6c22.json"))
+            .mapTo(PieceCollection.class);
     purchaseOrders.add(order);
     polines.add(line);
 
     when(purchaseOrderStorageService.getPurchaseOrdersByIds(any(), any()))
-      .thenReturn(Future.succeededFuture(purchaseOrders));
+        .thenReturn(Future.succeededFuture(purchaseOrders));
 
     when(purchaseOrderLineService.getOrderLines(anyString(), anyInt(), anyInt(), any()))
-      .thenReturn(Future.succeededFuture(polines));
+        .thenReturn(Future.succeededFuture(polines));
 
     when(pieceStorageService.getAllPieces(anyString(), any()))
-      .thenReturn(Future.succeededFuture(pieces));
+        .thenReturn(Future.succeededFuture(pieces));
 
-    var hs = holdingsSummaryService.getHoldingsSummary(UUID.randomUUID().toString(), requestContext)
-      .result();
+    var hs =
+        holdingsSummaryService
+            .getHoldingsSummary(UUID.randomUUID().toString(), requestContext)
+            .result();
 
     assertThat(hs.getHoldingSummaries().size(), greaterThan(0));
-
   }
 }

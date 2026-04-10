@@ -26,6 +26,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -35,7 +39,6 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
-
 import org.folio.ApiTestSuiteIT;
 import org.folio.CopilotGenerated;
 import org.folio.models.consortium.ConsortiumConfiguration;
@@ -63,11 +66,6 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
-import io.vertx.core.Context;
-import io.vertx.core.Future;
-import io.vertx.junit5.VertxExtension;
-import io.vertx.junit5.VertxTestContext;
-
 @ExtendWith(VertxExtension.class)
 public class PieceStorageServiceIT {
 
@@ -80,23 +78,19 @@ public class PieceStorageServiceIT {
 
   private final Context ctx = getFirstContextFromVertx(getVertx());
 
-  @Autowired
-  PieceStorageService pieceStorageService;
+  @Autowired PieceStorageService pieceStorageService;
 
-  @Autowired
-  ConsortiumConfigurationService consortiumConfigurationService;
+  @Autowired ConsortiumConfigurationService consortiumConfigurationService;
 
-  @Autowired
-  SettingsRetriever settingsRetriever;
+  @Autowired SettingsRetriever settingsRetriever;
 
-  @Autowired
-  private RestClient restClient;
+  @Autowired private RestClient restClient;
 
   private RequestContext requestContext;
   private AutoCloseable openMocks;
 
   @BeforeEach
-  void initMocks(){
+  void initMocks() {
     openMocks = MockitoAnnotations.openMocks(this);
     autowireDependencies(this);
     var okapiHeadersMock = new HashMap<String, String>();
@@ -137,29 +131,36 @@ public class PieceStorageServiceIT {
     String pieceId = UUID.randomUUID().toString();
     List<Piece> pieces = Collections.singletonList(new Piece().withId(pieceId));
 
-    PieceCollection pieceCollection = new PieceCollection().withPieces(pieces)
-      .withTotalRecords(1);
+    PieceCollection pieceCollection = new PieceCollection().withPieces(pieces).withTotalRecords(1);
 
-    when(restClient.get(any(RequestEntry.class), any(), any())).thenReturn(Future.succeededFuture(pieceCollection));
-    when(consortiumConfigurationService.getConsortiumConfiguration(any(RequestContext.class))).thenReturn(Future.succeededFuture(Optional.empty()));
+    when(restClient.get(any(RequestEntry.class), any(), any()))
+        .thenReturn(Future.succeededFuture(pieceCollection));
+    when(consortiumConfigurationService.getConsortiumConfiguration(any(RequestContext.class)))
+        .thenReturn(Future.succeededFuture(Optional.empty()));
 
     String expectedQuery = String.format("id==%s", pieceId);
     var future = pieceStorageService.getAllPieces(expectedQuery, requestContext);
 
     verify(restClient).get(any(RequestEntry.class), eq(PieceCollection.class), eq(requestContext));
-    vertxTestContext.assertComplete(future)
-      .onComplete(result -> {
-        assertEquals(pieceCollection, result.result());
-        vertxTestContext.completeNow();
-      });
+    vertxTestContext
+        .assertComplete(future)
+        .onComplete(
+            result -> {
+              assertEquals(pieceCollection, result.result());
+              vertxTestContext.completeNow();
+            });
   }
 
   @Test
   void testShouldDeleteItems() {
     // Given
-    doReturn(succeededFuture(null)).when(pieceStorageService).deletePiece(any(String.class), eq(requestContext));
+    doReturn(succeededFuture(null))
+        .when(pieceStorageService)
+        .deletePiece(any(String.class), eq(requestContext));
     // When
-    pieceStorageService.deletePiecesByIds(List.of(UUID.randomUUID().toString()), requestContext).result();
+    pieceStorageService
+        .deletePiecesByIds(List.of(UUID.randomUUID().toString()), requestContext)
+        .result();
     // Then
     verify(pieceStorageService, times(1)).deletePiece(any(String.class), eq(requestContext));
   }
@@ -167,35 +168,48 @@ public class PieceStorageServiceIT {
   @ParameterizedTest
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   @MethodSource("testGetPiecesFilterByUserTenantsParams")
-  void testGetPiecesFilterByUserTenants(Optional<ConsortiumConfiguration> consortiumConfiguration, Boolean shouldFilter, VertxTestContext vertxTestContext) {
+  void testGetPiecesFilterByUserTenants(
+      Optional<ConsortiumConfiguration> consortiumConfiguration,
+      Boolean shouldFilter,
+      VertxTestContext vertxTestContext) {
     var userTenantsMockData = getMockAsJson(USER_TENANTS_PATH, USER_TENANTS_MOCK);
     var piecesMockData = getMockAsJson(PIECES_PATH, PIECES_MOCK).mapTo(PieceCollection.class);
 
     doReturn(Future.succeededFuture(consortiumConfiguration))
-      .when(consortiumConfigurationService).getConsortiumConfiguration(any(RequestContext.class));
-    doReturn(Future.succeededFuture(Optional.of(new Setting().withValue((shouldFilter.toString())))))
-      .when(settingsRetriever).getSettingByKey(eq(SettingKey.CENTRAL_ORDERING_ENABLED), any(RequestContext.class));
+        .when(consortiumConfigurationService)
+        .getConsortiumConfiguration(any(RequestContext.class));
+    doReturn(
+            Future.succeededFuture(Optional.of(new Setting().withValue((shouldFilter.toString())))))
+        .when(settingsRetriever)
+        .getSettingByKey(eq(SettingKey.CENTRAL_ORDERING_ENABLED), any(RequestContext.class));
     doReturn(Future.succeededFuture(piecesMockData))
-      .when(restClient).get(any(RequestEntry.class), eq(PieceCollection.class), any(RequestContext.class));
+        .when(restClient)
+        .get(any(RequestEntry.class), eq(PieceCollection.class), any(RequestContext.class));
 
     if (shouldFilter) {
-      doReturn(Future.succeededFuture(userTenantsMockData)).when(restClient).getAsJsonObject(any(), any(RequestContext.class));
+      doReturn(Future.succeededFuture(userTenantsMockData))
+          .when(restClient)
+          .getAsJsonObject(any(), any(RequestContext.class));
     }
 
     var future = pieceStorageService.getPieces(Integer.MAX_VALUE, 0, null, requestContext);
 
-    verify(restClient, times(1)).get(any(RequestEntry.class), eq(PieceCollection.class), eq(requestContext));
-    verify(restClient, times(shouldFilter ? 1 : 0)).getAsJsonObject(any(), any(RequestContext.class));
+    verify(restClient, times(1))
+        .get(any(RequestEntry.class), eq(PieceCollection.class), eq(requestContext));
+    verify(restClient, times(shouldFilter ? 1 : 0))
+        .getAsJsonObject(any(), any(RequestContext.class));
     verify(consortiumConfigurationService, times(1)).getConsortiumConfiguration(eq(requestContext));
 
-    vertxTestContext.assertComplete(future)
-      .onComplete(f -> {
-        var result = f.result();
-        assertThat(result).isNotNull();
-        assertThat(result.getTotalRecords()).isEqualTo(3);
-        assertThat(result.getPieces()).hasSize(3);
-        vertxTestContext.completeNow();
-      });
+    vertxTestContext
+        .assertComplete(future)
+        .onComplete(
+            f -> {
+              var result = f.result();
+              assertThat(result).isNotNull();
+              assertThat(result.getTotalRecords()).isEqualTo(3);
+              assertThat(result.getPieces()).hasSize(3);
+              vertxTestContext.completeNow();
+            });
   }
 
   @ParameterizedTest
@@ -207,24 +221,34 @@ public class PieceStorageServiceIT {
 
   private static Stream<Arguments> testGetPiecesFilterByUserTenantsParams() {
     return Stream.of(
-      Arguments.of(Optional.of(new ConsortiumConfiguration(REQUEST_TENANT_ID, UUID.randomUUID().toString())), true),
-      Arguments.of(Optional.of(new ConsortiumConfiguration("centralTenantId", UUID.randomUUID().toString())), false),
-      Arguments.of(Optional.empty(), false)
-    );
+        Arguments.of(
+            Optional.of(
+                new ConsortiumConfiguration(REQUEST_TENANT_ID, UUID.randomUUID().toString())),
+            true),
+        Arguments.of(
+            Optional.of(
+                new ConsortiumConfiguration("centralTenantId", UUID.randomUUID().toString())),
+            false),
+        Arguments.of(Optional.empty(), false));
   }
 
   @Test
   @CopilotGenerated(model = "Gemini")
   void testGetPiecesWithChunkingAndPagination(VertxTestContext vertxTestContext) {
     // GIVEN
-    List<String> userTenants = Stream.iterate(0, i -> i + 1).limit(20).map(i -> "tenant" + i).toList();
-    var consortiumConfig = new ConsortiumConfiguration(REQUEST_TENANT_ID, UUID.randomUUID().toString());
+    List<String> userTenants =
+        Stream.iterate(0, i -> i + 1).limit(20).map(i -> "tenant" + i).toList();
+    var consortiumConfig =
+        new ConsortiumConfiguration(REQUEST_TENANT_ID, UUID.randomUUID().toString());
     doReturn(succeededFuture(Optional.of(consortiumConfig)))
-      .when(consortiumConfigurationService).getConsortiumConfiguration(any(RequestContext.class));
+        .when(consortiumConfigurationService)
+        .getConsortiumConfiguration(any(RequestContext.class));
     doReturn(succeededFuture(Optional.of(new Setting().withValue("true"))))
-      .when(settingsRetriever).getSettingByKey(eq(SettingKey.CENTRAL_ORDERING_ENABLED), any(RequestContext.class));
+        .when(settingsRetriever)
+        .getSettingByKey(eq(SettingKey.CENTRAL_ORDERING_ENABLED), any(RequestContext.class));
     doReturn(succeededFuture(userTenants))
-      .when(pieceStorageService).getUserTenantsIfNeeded(any(RequestContext.class));
+        .when(pieceStorageService)
+        .getUserTenantsIfNeeded(any(RequestContext.class));
 
     // Create 5 unique pieces. The order of results from RestClient is deterministic.
     Piece p1 = new Piece().withId(UUID.randomUUID().toString());
@@ -233,23 +257,42 @@ public class PieceStorageServiceIT {
     Piece p4 = new Piece().withId(UUID.randomUUID().toString());
     Piece p5 = new Piece().withId(UUID.randomUUID().toString());
 
-    when(restClient.get(any(RequestEntry.class), eq(PieceCollection.class), any(RequestContext.class)))
-      .thenReturn(succeededFuture(new PieceCollection().withPieces(List.of(p1, p2)).withTotalRecords(2))) // For first chunk
-      .thenReturn(succeededFuture(new PieceCollection().withPieces(List.of(p3)).withTotalRecords(1)))      // For second chunk
-      .thenReturn(succeededFuture(new PieceCollection().withPieces(List.of(p4, p5)).withTotalRecords(2))); // For null-tenant
+    when(restClient.get(
+            any(RequestEntry.class), eq(PieceCollection.class), any(RequestContext.class)))
+        .thenReturn(
+            succeededFuture(
+                new PieceCollection()
+                    .withPieces(List.of(p1, p2))
+                    .withTotalRecords(2))) // For first chunk
+        .thenReturn(
+            succeededFuture(
+                new PieceCollection()
+                    .withPieces(List.of(p3))
+                    .withTotalRecords(1))) // For second chunk
+        .thenReturn(
+            succeededFuture(
+                new PieceCollection()
+                    .withPieces(List.of(p4, p5))
+                    .withTotalRecords(2))); // For null-tenant
 
     // WHEN
     // Combined list will be [p1, p2, p3, p4, p5]. Request the middle 2 pieces.
     var future = pieceStorageService.getPieces(2, 2, null, requestContext);
 
     // THEN
-    vertxTestContext.assertComplete(future)
-      .onSuccess(result -> vertxTestContext.verify(() -> {
-        assertThat(result.getTotalRecords()).isEqualTo(5);
-        assertThat(result.getPieces()).hasSize(2);
-        assertThat(result.getPieces()).extracting(Piece::getId).containsExactly(p3.getId(), p4.getId());
-        vertxTestContext.completeNow();
-      }));
+    vertxTestContext
+        .assertComplete(future)
+        .onSuccess(
+            result ->
+                vertxTestContext.verify(
+                    () -> {
+                      assertThat(result.getTotalRecords()).isEqualTo(5);
+                      assertThat(result.getPieces()).hasSize(2);
+                      assertThat(result.getPieces())
+                          .extracting(Piece::getId)
+                          .containsExactly(p3.getId(), p4.getId());
+                      vertxTestContext.completeNow();
+                    }));
   }
 
   @Test
@@ -257,76 +300,101 @@ public class PieceStorageServiceIT {
   void testGetPiecesWithChunkingReturnsOnlyNullTenantPieces(VertxTestContext vertxTestContext) {
     // GIVEN
     // A user with many tenants to trigger the chunking logic
-    List<String> userTenants = Stream.iterate(0, i -> i + 1).limit(20).map(i -> "tenant" + i).toList();
-    var consortiumConfig = new ConsortiumConfiguration(REQUEST_TENANT_ID, UUID.randomUUID().toString());
+    List<String> userTenants =
+        Stream.iterate(0, i -> i + 1).limit(20).map(i -> "tenant" + i).toList();
+    var consortiumConfig =
+        new ConsortiumConfiguration(REQUEST_TENANT_ID, UUID.randomUUID().toString());
     doReturn(succeededFuture(Optional.of(consortiumConfig)))
-      .when(consortiumConfigurationService).getConsortiumConfiguration(any(RequestContext.class));
+        .when(consortiumConfigurationService)
+        .getConsortiumConfiguration(any(RequestContext.class));
     doReturn(succeededFuture(Optional.of(new Setting().withValue("true"))))
-      .when(settingsRetriever).getSettingByKey(eq(SettingKey.CENTRAL_ORDERING_ENABLED), any(RequestContext.class));
+        .when(settingsRetriever)
+        .getSettingByKey(eq(SettingKey.CENTRAL_ORDERING_ENABLED), any(RequestContext.class));
     doReturn(succeededFuture(userTenants))
-      .when(pieceStorageService).getUserTenantsIfNeeded(any(RequestContext.class));
+        .when(pieceStorageService)
+        .getUserTenantsIfNeeded(any(RequestContext.class));
 
     // Mock pieces that only exist for the "null" tenant
     Piece nullTenantPiece = new Piece().withId(UUID.randomUUID().toString());
-    PieceCollection nullTenantPieces = new PieceCollection().withPieces(List.of(nullTenantPiece)).withTotalRecords(1);
-    PieceCollection emptyPieceCollection = new PieceCollection().withPieces(Collections.emptyList()).withTotalRecords(0);
+    PieceCollection nullTenantPieces =
+        new PieceCollection().withPieces(List.of(nullTenantPiece)).withTotalRecords(1);
+    PieceCollection emptyPieceCollection =
+        new PieceCollection().withPieces(Collections.emptyList()).withTotalRecords(0);
 
-    // Mock RestClient to return empty collections for tenant chunks, and the actual pieces for the null-tenant query
-    when(restClient.get(any(RequestEntry.class), eq(PieceCollection.class), any(RequestContext.class)))
-      .thenReturn(succeededFuture(emptyPieceCollection))      // For first chunk
-      .thenReturn(succeededFuture(emptyPieceCollection))      // For second chunk
-      .thenReturn(succeededFuture(nullTenantPieces));         // For null-tenant query
+    // Mock RestClient to return empty collections for tenant chunks, and the actual pieces for the
+    // null-tenant query
+    when(restClient.get(
+            any(RequestEntry.class), eq(PieceCollection.class), any(RequestContext.class)))
+        .thenReturn(succeededFuture(emptyPieceCollection)) // For first chunk
+        .thenReturn(succeededFuture(emptyPieceCollection)) // For second chunk
+        .thenReturn(succeededFuture(nullTenantPieces)); // For null-tenant query
 
     // WHEN
     var future = pieceStorageService.getPieces(10, 0, null, requestContext);
 
     // THEN
-    vertxTestContext.assertComplete(future)
-      .onSuccess(result -> vertxTestContext.verify(() -> {
-        // Verify that only the null-tenant piece is returned
-        assertThat(result.getTotalRecords()).isEqualTo(1);
-        assertThat(result.getPieces()).hasSize(1);
-        assertThat(result.getPieces().get(0).getId()).isEqualTo(nullTenantPiece.getId());
-        // Verify that RestClient was called for each chunk (2) and for the null-tenant query (1)
-        verify(restClient, times(3)).get(any(RequestEntry.class), eq(PieceCollection.class), any(RequestContext.class));
-        vertxTestContext.completeNow();
-      }));
+    vertxTestContext
+        .assertComplete(future)
+        .onSuccess(
+            result ->
+                vertxTestContext.verify(
+                    () -> {
+                      // Verify that only the null-tenant piece is returned
+                      assertThat(result.getTotalRecords()).isEqualTo(1);
+                      assertThat(result.getPieces()).hasSize(1);
+                      assertThat(result.getPieces().get(0).getId())
+                          .isEqualTo(nullTenantPiece.getId());
+                      // Verify that RestClient was called for each chunk (2) and for the
+                      // null-tenant query (1)
+                      verify(restClient, times(3))
+                          .get(
+                              any(RequestEntry.class),
+                              eq(PieceCollection.class),
+                              any(RequestContext.class));
+                      vertxTestContext.completeNow();
+                    }));
   }
 
   private static Stream<Arguments> getQueryForUserTenantsParamProvider() {
     return Stream.of(
-      Arguments.of(null, "format==Physical",
-        "format==Physical"),
-      Arguments.of(new ArrayList<>(), "format==Physical",
-        "format==Physical"),
-      Arguments.of(new ArrayList<>(List.of("tenant1")), "format==Physical",
-        "((receivingTenantId==(tenant1)) or (cql.allRecords=1 NOT receivingTenantId=\"\")) and (format==Physical)"),
-      Arguments.of(new ArrayList<>(List.of("tenant1", "tenant2")), "format==Physical",
-        "((receivingTenantId==(tenant1 or tenant2)) or (cql.allRecords=1 NOT receivingTenantId=\"\")) and (format==Physical)"),
-      Arguments.of(new ArrayList<>(List.of("tenant1", "tenant2")), "format==Physical sortBy receiptDate/sort.ascending",
-        "((receivingTenantId==(tenant1 or tenant2)) or (cql.allRecords=1 NOT receivingTenantId=\"\")) and (format==Physical) sortBy receiptDate/sort.ascending")
-    );
+        Arguments.of(null, "format==Physical", "format==Physical"),
+        Arguments.of(new ArrayList<>(), "format==Physical", "format==Physical"),
+        Arguments.of(
+            new ArrayList<>(List.of("tenant1")),
+            "format==Physical",
+            "((receivingTenantId==(tenant1)) or (cql.allRecords=1 NOT receivingTenantId=\"\")) and (format==Physical)"),
+        Arguments.of(
+            new ArrayList<>(List.of("tenant1", "tenant2")),
+            "format==Physical",
+            "((receivingTenantId==(tenant1 or tenant2)) or (cql.allRecords=1 NOT receivingTenantId=\"\")) and (format==Physical)"),
+        Arguments.of(
+            new ArrayList<>(List.of("tenant1", "tenant2")),
+            "format==Physical sortBy receiptDate/sort.ascending",
+            "((receivingTenantId==(tenant1 or tenant2)) or (cql.allRecords=1 NOT receivingTenantId=\"\")) and (format==Physical) sortBy receiptDate/sort.ascending"));
   }
 
   @Test
   void testGetPiecesByLineIdAndTitleId(VertxTestContext vertxTestContext) {
     String lineId = UUID.randomUUID().toString();
     String titleId = UUID.randomUUID().toString();
-    List<Piece> pieces = Collections.singletonList(new Piece().withId(UUID.randomUUID().toString()));
+    List<Piece> pieces =
+        Collections.singletonList(new Piece().withId(UUID.randomUUID().toString()));
 
-    PieceCollection pieceCollection = new PieceCollection().withPieces(pieces)
-      .withTotalRecords(1);
+    PieceCollection pieceCollection = new PieceCollection().withPieces(pieces).withTotalRecords(1);
 
-    when(restClient.get(any(RequestEntry.class), any(), any())).thenReturn(Future.succeededFuture(pieceCollection));
+    when(restClient.get(any(RequestEntry.class), any(), any()))
+        .thenReturn(Future.succeededFuture(pieceCollection));
 
     var future = pieceStorageService.getPiecesByLineIdAndTitleId(lineId, titleId, requestContext);
 
     verify(restClient).get(any(RequestEntry.class), eq(PieceCollection.class), eq(requestContext));
-    vertxTestContext.assertComplete(future)
-      .onComplete(result -> {
-        assertEquals(pieceCollection.getPieces(), result.result());
-        vertxTestContext.completeNow();
-      });
+    vertxTestContext
+        .assertComplete(future)
+        .onComplete(
+            result -> {
+              assertEquals(pieceCollection.getPieces(), result.result());
+              vertxTestContext.completeNow();
+            });
   }
 
   private static class ContextConfiguration {
@@ -342,15 +410,22 @@ public class PieceStorageServiceIT {
     }
 
     @Bean
-    PieceStorageService pieceStorageService(ConsortiumConfigurationService consortiumConfigurationService,
-                                            ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever,
-                                            SettingsRetriever settingsRetriever,
-                                            RestClient restClient) {
-      return spy(new PieceStorageService(consortiumConfigurationService, consortiumUserTenantsRetriever, settingsRetriever, restClient));
+    PieceStorageService pieceStorageService(
+        ConsortiumConfigurationService consortiumConfigurationService,
+        ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever,
+        SettingsRetriever settingsRetriever,
+        RestClient restClient) {
+      return spy(
+          new PieceStorageService(
+              consortiumConfigurationService,
+              consortiumUserTenantsRetriever,
+              settingsRetriever,
+              restClient));
     }
 
     @Bean
-    ConsortiumConfigurationService consortiumConfigurationService(RestClient restClient, SettingsRetriever settingsRetriever) {
+    ConsortiumConfigurationService consortiumConfigurationService(
+        RestClient restClient, SettingsRetriever settingsRetriever) {
       return spy(new ConsortiumConfigurationService(restClient, settingsRetriever));
     }
 

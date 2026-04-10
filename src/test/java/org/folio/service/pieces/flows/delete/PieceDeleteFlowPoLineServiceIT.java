@@ -17,21 +17,22 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import io.vertx.core.Context;
+import io.vertx.junit5.VertxExtension;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-
 import org.folio.ApiTestSuiteIT;
 import org.folio.models.pieces.PieceDeletionHolder;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.acq.Location;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
@@ -52,9 +53,6 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
-import io.vertx.core.Context;
-import io.vertx.junit5.VertxExtension;
-
 @ExtendWith(VertxExtension.class)
 public class PieceDeleteFlowPoLineServiceIT {
   @Autowired PurchaseOrderStorageService purchaseOrderStorageService;
@@ -63,15 +61,14 @@ public class PieceDeleteFlowPoLineServiceIT {
   @Autowired PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService;
 
   private final Context ctx = getFirstContextFromVertx(getVertx());
-  @Mock
-  private Map<String, String> okapiHeadersMock;
+  @Mock private Map<String, String> okapiHeadersMock;
 
   private RequestContext requestContext;
   private static boolean runningOnOwn;
   private AutoCloseable mockitoMocks;
 
   @BeforeEach
-  void initMocks(){
+  void initMocks() {
     mockitoMocks = MockitoAnnotations.openMocks(this);
     autowireDependencies(this);
     requestContext = new RequestContext(ctx, okapiHeadersMock);
@@ -100,34 +97,53 @@ public class PieceDeleteFlowPoLineServiceIT {
     mockitoMocks.close();
   }
 
-
   @Test
-  @DisplayName("Delete 1 physical piece with holding to physical pol with 1 location and same holding id as in piece")
-  void physDeleteStrategyShouldDecreaseQuantityTo1ForCostAndLocationIfInitiallyWas1AndHoldingIdInPOLAndPieceTheSame() {
+  @DisplayName(
+      "Delete 1 physical piece with holding to physical pol with 1 location and same holding id as in piece")
+  void
+      physDeleteStrategyShouldDecreaseQuantityTo1ForCostAndLocationIfInitiallyWas1AndHoldingIdInPOLAndPieceTheSame() {
     String orderId = UUID.randomUUID().toString();
     String holdingId = UUID.randomUUID().toString();
     String lineId = UUID.randomUUID().toString();
-    Piece piece = new Piece().withPoLineId(lineId).withHoldingId(holdingId).withFormat(Piece.Format.PHYSICAL);
+    Piece piece =
+        new Piece().withPoLineId(lineId).withHoldingId(holdingId).withFormat(Piece.Format.PHYSICAL);
     Location loc = new Location().withHoldingId(holdingId).withQuantityPhysical(2).withQuantity(2);
-    Cost cost = new Cost().withQuantityPhysical(2)
-      .withListUnitPrice(1d).withExchangeRate(1d).withCurrency("USD")
-      .withPoLineEstimatedPrice(2d);
+    Cost cost =
+        new Cost()
+            .withQuantityPhysical(2)
+            .withListUnitPrice(1d)
+            .withExchangeRate(1d)
+            .withCurrency("USD")
+            .withPoLineEstimatedPrice(2d);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
-    Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM);
-    PoLine originPoLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId)
-      .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE).withId(lineId)
-      .withPhysical(physical)
-      .withLocations(List.of(loc)).withCost(cost);
+    Physical physical =
+        new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM);
+    PoLine originPoLine =
+        new PoLine()
+            .withIsPackage(false)
+            .withPurchaseOrderId(orderId)
+            .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
+            .withId(lineId)
+            .withPhysical(physical)
+            .withLocations(List.of(loc))
+            .withCost(cost);
 
-    PieceDeletionHolder incomingUpdateHolder = new PieceDeletionHolder().withPieceToDelete(piece).withDeleteHolding(true);
+    PieceDeletionHolder incomingUpdateHolder =
+        new PieceDeletionHolder().withPieceToDelete(piece).withDeleteHolding(true);
     incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
 
-    doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
-      incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
-    //When
+    doReturn(succeededFuture(null))
+        .when(receivingEncumbranceStrategy)
+        .processEncumbrances(
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            requestContext);
+    doReturn(succeededFuture(null))
+        .when(purchaseOrderLineService)
+        .saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
+    // When
     pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
-    //Then
+    // Then
     PoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityElectronic());
     assertEquals(1, poLineToSave.getCost().getQuantityPhysical());
@@ -135,39 +151,67 @@ public class PieceDeleteFlowPoLineServiceIT {
     assertNull(poLineToSave.getLocations().get(0).getQuantityElectronic());
     assertEquals(1, poLineToSave.getLocations().get(0).getQuantityPhysical());
     assertEquals(1, poLineToSave.getLocations().get(0).getQuantity());
-    verify(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
-      incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
+    verify(receivingEncumbranceStrategy)
+        .processEncumbrances(
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            requestContext);
     List<Location> locations = PieceUtil.findOrderPieceLineLocation(piece, poLineToSave);
-    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
+    verify(purchaseOrderLineService)
+        .saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
   }
 
   @Test
-  @DisplayName("Delete 1 physical piece with location to physical pol with 1 location and same location id as in piece")
-  void physDeleteStrategyShouldDecreaseQuantityTo1ForCostAndLocationIfInitiallyWas1AndLocationIdInPOLAndPieceTheSame() {
+  @DisplayName(
+      "Delete 1 physical piece with location to physical pol with 1 location and same location id as in piece")
+  void
+      physDeleteStrategyShouldDecreaseQuantityTo1ForCostAndLocationIfInitiallyWas1AndLocationIdInPOLAndPieceTheSame() {
     String orderId = UUID.randomUUID().toString();
     String locationId = UUID.randomUUID().toString();
     String lineId = UUID.randomUUID().toString();
-    Piece piece = new Piece().withPoLineId(lineId).withLocationId(locationId).withFormat(Piece.Format.PHYSICAL);
-    Location loc = new Location().withLocationId(locationId).withQuantityPhysical(2).withQuantity(2);
-    Cost cost = new Cost().withQuantityPhysical(2)
-      .withListUnitPrice(1d).withExchangeRate(1d).withCurrency("USD")
-      .withPoLineEstimatedPrice(2d);
+    Piece piece =
+        new Piece()
+            .withPoLineId(lineId)
+            .withLocationId(locationId)
+            .withFormat(Piece.Format.PHYSICAL);
+    Location loc =
+        new Location().withLocationId(locationId).withQuantityPhysical(2).withQuantity(2);
+    Cost cost =
+        new Cost()
+            .withQuantityPhysical(2)
+            .withListUnitPrice(1d)
+            .withExchangeRate(1d)
+            .withCurrency("USD")
+            .withPoLineEstimatedPrice(2d);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
-    Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM);
-    PoLine originPoLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId)
-      .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE).withId(lineId)
-      .withPhysical(physical)
-      .withLocations(List.of(loc)).withCost(cost);
+    Physical physical =
+        new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM);
+    PoLine originPoLine =
+        new PoLine()
+            .withIsPackage(false)
+            .withPurchaseOrderId(orderId)
+            .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
+            .withId(lineId)
+            .withPhysical(physical)
+            .withLocations(List.of(loc))
+            .withCost(cost);
 
-    PieceDeletionHolder incomingUpdateHolder = new PieceDeletionHolder().withPieceToDelete(piece).withDeleteHolding(true);
+    PieceDeletionHolder incomingUpdateHolder =
+        new PieceDeletionHolder().withPieceToDelete(piece).withDeleteHolding(true);
     incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
 
-    doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
-      incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
-    //When
+    doReturn(succeededFuture(null))
+        .when(receivingEncumbranceStrategy)
+        .processEncumbrances(
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            requestContext);
+    doReturn(succeededFuture(null))
+        .when(purchaseOrderLineService)
+        .saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
+    // When
     pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
-    //Then
+    // Then
     PoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityElectronic());
     assertEquals(1, poLineToSave.getCost().getQuantityPhysical());
@@ -175,39 +219,67 @@ public class PieceDeleteFlowPoLineServiceIT {
     assertNull(poLineToSave.getLocations().get(0).getQuantityElectronic());
     assertEquals(1, poLineToSave.getLocations().get(0).getQuantityPhysical());
     assertEquals(1, poLineToSave.getLocations().get(0).getQuantity());
-    verify(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
-      incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
+    verify(receivingEncumbranceStrategy)
+        .processEncumbrances(
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            requestContext);
     List<Location> locations = PieceUtil.findOrderPieceLineLocation(piece, poLineToSave);
-    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
+    verify(purchaseOrderLineService)
+        .saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
   }
 
   @Test
-  @DisplayName("Delete 1 electronic piece with location to electronic pol with 1 location and same location id as in piece")
-  void elecDeleteStrategyShouldDecreaseQuantityTo1ForCostAndLocationIfInitiallyWas1AndLocationIdInPOLAndPieceTheSame() {
+  @DisplayName(
+      "Delete 1 electronic piece with location to electronic pol with 1 location and same location id as in piece")
+  void
+      elecDeleteStrategyShouldDecreaseQuantityTo1ForCostAndLocationIfInitiallyWas1AndLocationIdInPOLAndPieceTheSame() {
     String orderId = UUID.randomUUID().toString();
     String locationId = UUID.randomUUID().toString();
     String lineId = UUID.randomUUID().toString();
-    Piece piece = new Piece().withPoLineId(lineId).withLocationId(locationId).withFormat(Piece.Format.ELECTRONIC);
-    Location loc = new Location().withLocationId(locationId).withQuantityElectronic(2).withQuantity(2);
-    Cost cost = new Cost().withQuantityElectronic(2)
-      .withListUnitPriceElectronic(1d).withExchangeRate(1d).withCurrency("USD")
-      .withPoLineEstimatedPrice(1d);
+    Piece piece =
+        new Piece()
+            .withPoLineId(lineId)
+            .withLocationId(locationId)
+            .withFormat(Piece.Format.ELECTRONIC);
+    Location loc =
+        new Location().withLocationId(locationId).withQuantityElectronic(2).withQuantity(2);
+    Cost cost =
+        new Cost()
+            .withQuantityElectronic(2)
+            .withListUnitPriceElectronic(1d)
+            .withExchangeRate(1d)
+            .withCurrency("USD")
+            .withPoLineEstimatedPrice(1d);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
-    Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
-    PoLine originPoLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId)
-      .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(lineId)
-      .withEresource(eresource)
-      .withLocations(List.of(loc)).withCost(cost);
+    Eresource eresource =
+        new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
+    PoLine originPoLine =
+        new PoLine()
+            .withIsPackage(false)
+            .withPurchaseOrderId(orderId)
+            .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE)
+            .withId(lineId)
+            .withEresource(eresource)
+            .withLocations(List.of(loc))
+            .withCost(cost);
 
-    PieceDeletionHolder incomingUpdateHolder = new PieceDeletionHolder().withPieceToDelete(piece).withDeleteHolding(true);
-        incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
+    PieceDeletionHolder incomingUpdateHolder =
+        new PieceDeletionHolder().withPieceToDelete(piece).withDeleteHolding(true);
+    incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
 
-    doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
-          incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
-    //When
+    doReturn(succeededFuture(null))
+        .when(receivingEncumbranceStrategy)
+        .processEncumbrances(
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            requestContext);
+    doReturn(succeededFuture(null))
+        .when(purchaseOrderLineService)
+        .saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
+    // When
     pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
-    //Then
+    // Then
     PoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityPhysical());
     assertEquals(1, poLineToSave.getCost().getQuantityElectronic());
@@ -215,113 +287,197 @@ public class PieceDeleteFlowPoLineServiceIT {
     assertNull(poLineToSave.getLocations().get(0).getQuantityPhysical());
     assertEquals(1, poLineToSave.getLocations().get(0).getQuantityElectronic());
     assertEquals(1, poLineToSave.getLocations().get(0).getQuantity());
-    verify(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
-      incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
+    verify(receivingEncumbranceStrategy)
+        .processEncumbrances(
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            requestContext);
     List<Location> locations = PieceUtil.findOrderPieceLineLocation(piece, poLineToSave);
-    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
+    verify(purchaseOrderLineService)
+        .saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
   }
 
   @Test
-  @DisplayName("Should delete POL location if 1 physical piece with location to physical pol with 1 location and same location id as in piece")
-  void physDeleteLocationStrategyShouldDecreaseQuantityTo1ForCostAndLocationIfInitiallyWas1AndLocationIdInPOLAndPieceTheSame() {
+  @DisplayName(
+      "Should delete POL location if 1 physical piece with location to physical pol with 1 location and same location id as in piece")
+  void
+      physDeleteLocationStrategyShouldDecreaseQuantityTo1ForCostAndLocationIfInitiallyWas1AndLocationIdInPOLAndPieceTheSame() {
     String orderId = UUID.randomUUID().toString();
     String locationId = UUID.randomUUID().toString();
     String lineId = UUID.randomUUID().toString();
-    Piece piece = new Piece().withPoLineId(lineId).withLocationId(locationId).withFormat(Piece.Format.PHYSICAL);
-    Location loc = new Location().withLocationId(locationId).withQuantityPhysical(1).withQuantity(1);
-    Cost cost = new Cost().withQuantityPhysical(1)
-      .withListUnitPrice(1d).withExchangeRate(1d).withCurrency("USD")
-      .withPoLineEstimatedPrice(1d);
+    Piece piece =
+        new Piece()
+            .withPoLineId(lineId)
+            .withLocationId(locationId)
+            .withFormat(Piece.Format.PHYSICAL);
+    Location loc =
+        new Location().withLocationId(locationId).withQuantityPhysical(1).withQuantity(1);
+    Cost cost =
+        new Cost()
+            .withQuantityPhysical(1)
+            .withListUnitPrice(1d)
+            .withExchangeRate(1d)
+            .withCurrency("USD")
+            .withPoLineEstimatedPrice(1d);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
-    Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM);
-    PoLine originPoLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId)
-      .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE).withId(lineId)
-      .withPhysical(physical)
-      .withLocations(List.of(loc)).withCost(cost);
+    Physical physical =
+        new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM);
+    PoLine originPoLine =
+        new PoLine()
+            .withIsPackage(false)
+            .withPurchaseOrderId(orderId)
+            .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
+            .withId(lineId)
+            .withPhysical(physical)
+            .withLocations(List.of(loc))
+            .withCost(cost);
 
-    PieceDeletionHolder incomingUpdateHolder = new PieceDeletionHolder().withPieceToDelete(piece).withDeleteHolding(true);
+    PieceDeletionHolder incomingUpdateHolder =
+        new PieceDeletionHolder().withPieceToDelete(piece).withDeleteHolding(true);
     incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
 
-    doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
-      incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
-    //When
+    doReturn(succeededFuture(null))
+        .when(receivingEncumbranceStrategy)
+        .processEncumbrances(
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            requestContext);
+    doReturn(succeededFuture(null))
+        .when(purchaseOrderLineService)
+        .saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
+    // When
     pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
-    //Then
+    // Then
     PoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityElectronic());
     assertEquals(0, poLineToSave.getCost().getQuantityPhysical());
     assertEquals(Collections.emptyList(), poLineToSave.getLocations());
-    verify(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
-      incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
+    verify(receivingEncumbranceStrategy)
+        .processEncumbrances(
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            requestContext);
     List<Location> locations = PieceUtil.findOrderPieceLineLocation(piece, poLineToSave);
-    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
+    verify(purchaseOrderLineService)
+        .saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
   }
 
   @Test
-  @DisplayName("Should delete POL location if 1 electronic piece with location to electronic pol with 1 location and same location id as in piece")
-  void elecDeleteLocationStrategyShouldDecreaseQuantityForCostAndLocationIfInitiallyWas1AndLocationIdInPOLAndPieceTheSame() {
+  @DisplayName(
+      "Should delete POL location if 1 electronic piece with location to electronic pol with 1 location and same location id as in piece")
+  void
+      elecDeleteLocationStrategyShouldDecreaseQuantityForCostAndLocationIfInitiallyWas1AndLocationIdInPOLAndPieceTheSame() {
     String orderId = UUID.randomUUID().toString();
     String locationId = UUID.randomUUID().toString();
     String lineId = UUID.randomUUID().toString();
-    Piece piece = new Piece().withPoLineId(lineId).withLocationId(locationId).withFormat(Piece.Format.ELECTRONIC);
-    Location loc = new Location().withLocationId(locationId).withQuantityElectronic(1).withQuantity(1);
-    Cost cost = new Cost().withQuantityElectronic(1)
-      .withListUnitPriceElectronic(1d).withExchangeRate(1d).withCurrency("USD")
-      .withPoLineEstimatedPrice(1d);
+    Piece piece =
+        new Piece()
+            .withPoLineId(lineId)
+            .withLocationId(locationId)
+            .withFormat(Piece.Format.ELECTRONIC);
+    Location loc =
+        new Location().withLocationId(locationId).withQuantityElectronic(1).withQuantity(1);
+    Cost cost =
+        new Cost()
+            .withQuantityElectronic(1)
+            .withListUnitPriceElectronic(1d)
+            .withExchangeRate(1d)
+            .withCurrency("USD")
+            .withPoLineEstimatedPrice(1d);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
-    Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
-    PoLine originPoLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId)
-      .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(lineId)
-      .withEresource(eresource)
-      .withLocations(List.of(loc)).withCost(cost);
+    Eresource eresource =
+        new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
+    PoLine originPoLine =
+        new PoLine()
+            .withIsPackage(false)
+            .withPurchaseOrderId(orderId)
+            .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE)
+            .withId(lineId)
+            .withEresource(eresource)
+            .withLocations(List.of(loc))
+            .withCost(cost);
 
-    PieceDeletionHolder incomingUpdateHolder = new PieceDeletionHolder().withPieceToDelete(piece).withDeleteHolding(true);
+    PieceDeletionHolder incomingUpdateHolder =
+        new PieceDeletionHolder().withPieceToDelete(piece).withDeleteHolding(true);
     incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
 
-    doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
-      incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
-    //When
+    doReturn(succeededFuture(null))
+        .when(receivingEncumbranceStrategy)
+        .processEncumbrances(
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            requestContext);
+    doReturn(succeededFuture(null))
+        .when(purchaseOrderLineService)
+        .saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
+    // When
     pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
-    //Then
+    // Then
     PoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityPhysical());
     assertEquals(0, poLineToSave.getCost().getQuantityElectronic());
     assertEquals(Collections.emptyList(), poLineToSave.getLocations());
-    verify(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
-      incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
+    verify(receivingEncumbranceStrategy)
+        .processEncumbrances(
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            requestContext);
     List<Location> locations = PieceUtil.findOrderPieceLineLocation(piece, poLineToSave);
-    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
+    verify(purchaseOrderLineService)
+        .saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
   }
 
   @Test
-  @DisplayName("Delete 1 electronic piece with holding to electronic pol with 1 location and same holding id as in piece")
-  void electDeleteStrategyShouldDecreaseQuantityTo1ForCostAndLocationIfInitiallyWas1AndHoldingIdInPOLAndPieceTheSame() {
+  @DisplayName(
+      "Delete 1 electronic piece with holding to electronic pol with 1 location and same holding id as in piece")
+  void
+      electDeleteStrategyShouldDecreaseQuantityTo1ForCostAndLocationIfInitiallyWas1AndHoldingIdInPOLAndPieceTheSame() {
     String orderId = UUID.randomUUID().toString();
     String holdingId = UUID.randomUUID().toString();
     String lineId = UUID.randomUUID().toString();
-    Piece piece = new Piece().withPoLineId(lineId).withHoldingId(holdingId).withFormat(Piece.Format.ELECTRONIC);
-    Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(2).withQuantity(2);
-    Cost cost = new Cost().withQuantityElectronic(2)
-      .withListUnitPriceElectronic(1d).withExchangeRate(1d).withCurrency("USD")
-      .withPoLineEstimatedPrice(2d);
+    Piece piece =
+        new Piece()
+            .withPoLineId(lineId)
+            .withHoldingId(holdingId)
+            .withFormat(Piece.Format.ELECTRONIC);
+    Location loc =
+        new Location().withHoldingId(holdingId).withQuantityElectronic(2).withQuantity(2);
+    Cost cost =
+        new Cost()
+            .withQuantityElectronic(2)
+            .withListUnitPriceElectronic(1d)
+            .withExchangeRate(1d)
+            .withCurrency("USD")
+            .withPoLineEstimatedPrice(2d);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
-    Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
-    PoLine originPoLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId)
-      .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(lineId)
-      .withEresource(eresource)
-      .withLocations(List.of(loc)).withCost(cost);
+    Eresource eresource =
+        new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
+    PoLine originPoLine =
+        new PoLine()
+            .withIsPackage(false)
+            .withPurchaseOrderId(orderId)
+            .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE)
+            .withId(lineId)
+            .withEresource(eresource)
+            .withLocations(List.of(loc))
+            .withCost(cost);
 
-    PieceDeletionHolder incomingUpdateHolder = new PieceDeletionHolder().withPieceToDelete(piece).withDeleteHolding(true);
+    PieceDeletionHolder incomingUpdateHolder =
+        new PieceDeletionHolder().withPieceToDelete(piece).withDeleteHolding(true);
     incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
 
-    doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
-      incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
-    //When
+    doReturn(succeededFuture(null))
+        .when(receivingEncumbranceStrategy)
+        .processEncumbrances(
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            requestContext);
+    doReturn(succeededFuture(null))
+        .when(purchaseOrderLineService)
+        .saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
+    // When
     pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
-    //Then
+    // Then
     PoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityPhysical());
     assertEquals(1, poLineToSave.getCost().getQuantityElectronic());
@@ -330,114 +486,167 @@ public class PieceDeleteFlowPoLineServiceIT {
     assertEquals(1, poLineToSave.getLocations().get(0).getQuantityElectronic());
     assertEquals(1, poLineToSave.getLocations().get(0).getQuantity());
 
-    verify(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
-      incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
+    verify(receivingEncumbranceStrategy)
+        .processEncumbrances(
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            requestContext);
     List<Location> locations = PieceUtil.findOrderPieceLineLocation(piece, poLineToSave);
-    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
+    verify(purchaseOrderLineService)
+        .saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
   }
 
   @ParameterizedTest
   @DisplayName("Should decrease quantity for cost if initially POL without location")
-  @CsvSource(value = {
-                   "Electronic Resource:Instance:2:Electronic:1",
-                   "Electronic Resource:None:2:Electronic:1",
-                   "Electronic Resource:None:1:Electronic:0"}, delimiter = ':')
+  @CsvSource(
+      value = {
+        "Electronic Resource:Instance:2:Electronic:1",
+        "Electronic Resource:None:2:Electronic:1",
+        "Electronic Resource:None:1:Electronic:0"
+      },
+      delimiter = ':')
   void shouldDecreaseElectronicQuantityTo1ForCostIfInitiallyWas2AndPOLWithoutLocation(
-              String lineType, String createInventory, int qty, String pieceFormat, int expQty) {
+      String lineType, String createInventory, int qty, String pieceFormat, int expQty) {
     String orderId = UUID.randomUUID().toString();
     String lineId = UUID.randomUUID().toString();
     Piece.Format pieceFormatE = Piece.Format.fromValue(pieceFormat);
     Piece piece = new Piece().withPoLineId(lineId).withFormat(pieceFormatE);
     Cost cost = new Cost();
-    PoLine originPoLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId)
-      .withOrderFormat(PoLine.OrderFormat.fromValue(lineType)).withId(lineId)
-      .withCost(cost);
-    Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.fromValue(createInventory));
+    PoLine originPoLine =
+        new PoLine()
+            .withIsPackage(false)
+            .withPurchaseOrderId(orderId)
+            .withOrderFormat(PoLine.OrderFormat.fromValue(lineType))
+            .withId(lineId)
+            .withCost(cost);
+    Eresource eresource =
+        new Eresource().withCreateInventory(Eresource.CreateInventory.fromValue(createInventory));
     originPoLine.withEresource(eresource);
     cost.withQuantityElectronic(qty)
-      .withListUnitPriceElectronic(1d).withExchangeRate(1d).withCurrency("USD")
-      .withPoLineEstimatedPrice((double) qty);
+        .withListUnitPriceElectronic(1d)
+        .withExchangeRate(1d)
+        .withCurrency("USD")
+        .withPoLineEstimatedPrice((double) qty);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
-    PieceDeletionHolder incomingUpdateHolder = new PieceDeletionHolder().withPieceToDelete(piece).withDeleteHolding(true);
+    PieceDeletionHolder incomingUpdateHolder =
+        new PieceDeletionHolder().withPieceToDelete(piece).withDeleteHolding(true);
     incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
 
-    doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
-      incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
-    //When
+    doReturn(succeededFuture(null))
+        .when(receivingEncumbranceStrategy)
+        .processEncumbrances(
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            requestContext);
+    doReturn(succeededFuture(null))
+        .when(purchaseOrderLineService)
+        .saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
+    // When
     pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
-    //Then
+    // Then
     PoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityPhysical());
     assertEquals(expQty, poLineToSave.getCost().getQuantityElectronic());
     assertEquals(0, poLineToSave.getLocations().size());
 
-    verify(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
-      incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
+    verify(receivingEncumbranceStrategy)
+        .processEncumbrances(
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            requestContext);
     List<Location> locations = PieceUtil.findOrderPieceLineLocation(piece, poLineToSave);
-    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
+    verify(purchaseOrderLineService)
+        .saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
   }
 
   @ParameterizedTest
   @DisplayName("Should decrease quantity for cost if initially POL without location")
-  @CsvSource(value = {
-    "Physical Resource:None:2:Physical:1",
-    "Physical Resource:Instance:2:Physical:1",
-    "Physical Resource:None:1:Physical:0",
-    "Other:None:2:Other:1",
-    "Other:None:1:Other:0"}, delimiter = ':')
+  @CsvSource(
+      value = {
+        "Physical Resource:None:2:Physical:1",
+        "Physical Resource:Instance:2:Physical:1",
+        "Physical Resource:None:1:Physical:0",
+        "Other:None:2:Other:1",
+        "Other:None:1:Other:0"
+      },
+      delimiter = ':')
   void shouldDecreasePhysicalQuantityTo1ForCostIfInitiallyWas2AndPOLWithoutLocation(
-    String lineType, String createInventory, int qty, String pieceFormat, int expQty) {
+      String lineType, String createInventory, int qty, String pieceFormat, int expQty) {
     String orderId = UUID.randomUUID().toString();
     String lineId = UUID.randomUUID().toString();
     Piece.Format pieceFormatE = Piece.Format.fromValue(pieceFormat);
     Piece piece = new Piece().withPoLineId(lineId).withFormat(pieceFormatE);
     Cost cost = new Cost();
-    PoLine originPoLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId)
-      .withOrderFormat(PoLine.OrderFormat.fromValue(lineType)).withId(lineId)
-      .withCost(cost);
-    Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.fromValue(createInventory));
+    PoLine originPoLine =
+        new PoLine()
+            .withIsPackage(false)
+            .withPurchaseOrderId(orderId)
+            .withOrderFormat(PoLine.OrderFormat.fromValue(lineType))
+            .withId(lineId)
+            .withCost(cost);
+    Physical physical =
+        new Physical().withCreateInventory(Physical.CreateInventory.fromValue(createInventory));
     originPoLine.withPhysical(physical);
     cost.withQuantityPhysical(qty)
-      .withListUnitPrice(1d).withExchangeRate(1d).withCurrency("USD")
-      .withPoLineEstimatedPrice((double) qty);
+        .withListUnitPrice(1d)
+        .withExchangeRate(1d)
+        .withCurrency("USD")
+        .withPoLineEstimatedPrice((double) qty);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
-    PieceDeletionHolder incomingUpdateHolder = new PieceDeletionHolder().withPieceToDelete(piece).withDeleteHolding(true);
+    PieceDeletionHolder incomingUpdateHolder =
+        new PieceDeletionHolder().withPieceToDelete(piece).withDeleteHolding(true);
     incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
 
-    doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
-      incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
-    //When
+    doReturn(succeededFuture(null))
+        .when(receivingEncumbranceStrategy)
+        .processEncumbrances(
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            requestContext);
+    doReturn(succeededFuture(null))
+        .when(purchaseOrderLineService)
+        .saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
+    // When
     pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
-    //Then
+    // Then
     PoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityElectronic());
     assertEquals(expQty, poLineToSave.getCost().getQuantityPhysical());
     assertEquals(0, poLineToSave.getLocations().size());
 
-    verify(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
-      incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
+    verify(receivingEncumbranceStrategy)
+        .processEncumbrances(
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            incomingUpdateHolder.getPurchaseOrderToSave(),
+            requestContext);
     List<Location> locations = PieceUtil.findOrderPieceLineLocation(piece, poLineToSave);
-    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
+    verify(purchaseOrderLineService)
+        .saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
   }
 
   private static class ContextConfiguration {
-    @Bean PurchaseOrderStorageService purchaseOrderService() {
+    @Bean
+    PurchaseOrderStorageService purchaseOrderService() {
       return mock(PurchaseOrderStorageService.class);
     }
 
-    @Bean PurchaseOrderLineService purchaseOrderLineService() {
+    @Bean
+    PurchaseOrderLineService purchaseOrderLineService() {
       return mock(PurchaseOrderLineService.class);
     }
 
-    @Bean ReceivingEncumbranceStrategy receivingEncumbranceStrategy() {
+    @Bean
+    ReceivingEncumbranceStrategy receivingEncumbranceStrategy() {
       return mock(ReceivingEncumbranceStrategy.class);
     }
 
-    @Bean  PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService(PurchaseOrderStorageService purchaseOrderStorageService,
-                      PurchaseOrderLineService purchaseOrderLineService, ReceivingEncumbranceStrategy receivingEncumbranceStrategy) {
-      return new PieceDeleteFlowPoLineService(purchaseOrderStorageService, purchaseOrderLineService, receivingEncumbranceStrategy);
+    @Bean
+    PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService(
+        PurchaseOrderStorageService purchaseOrderStorageService,
+        PurchaseOrderLineService purchaseOrderLineService,
+        ReceivingEncumbranceStrategy receivingEncumbranceStrategy) {
+      return new PieceDeleteFlowPoLineService(
+          purchaseOrderStorageService, purchaseOrderLineService, receivingEncumbranceStrategy);
     }
   }
 }

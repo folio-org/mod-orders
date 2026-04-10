@@ -27,13 +27,16 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 
+import io.restassured.http.Header;
+import io.restassured.http.Headers;
+import io.restassured.response.Response;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonObject;
 import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-
 import javax.ws.rs.core.HttpHeaders;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuiteIT;
@@ -45,12 +48,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-
-import io.restassured.http.Header;
-import io.restassured.http.Headers;
-import io.restassured.response.Response;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.JsonObject;
 
 public class AcquisitionMethodApiIT {
 
@@ -85,9 +82,11 @@ public class AcquisitionMethodApiIT {
   @Test
   void testGetAcqMethodsNoQuery() throws IOException {
     logger.info("=== Test GET acquisition methods - with empty query ===");
-    AcquisitionMethodCollection expected = new JsonObject(getMockData(ACQUISITION_METHODS_COLLECTION))
-      .mapTo(AcquisitionMethodCollection.class);
-    final AcquisitionMethodCollection acquisitionMethods = verifySuccessGet(ACQUISITION_METHODS, AcquisitionMethodCollection.class);
+    AcquisitionMethodCollection expected =
+        new JsonObject(getMockData(ACQUISITION_METHODS_COLLECTION))
+            .mapTo(AcquisitionMethodCollection.class);
+    final AcquisitionMethodCollection acquisitionMethods =
+        verifySuccessGet(ACQUISITION_METHODS, AcquisitionMethodCollection.class);
     assertThat(expected.getAcquisitionMethods(), hasSize(expected.getTotalRecords()));
     assertThat(acquisitionMethods.getAcquisitionMethods(), hasSize(expected.getTotalRecords()));
   }
@@ -97,7 +96,8 @@ public class AcquisitionMethodApiIT {
     logger.info("=== Test GET acquisitions methods - search by query ===");
     String url = ACQUISITION_METHODS + "?query=source==" + SYSTEM_SOURCE;
 
-    final AcquisitionMethodCollection methods = verifySuccessGet(url, AcquisitionMethodCollection.class);
+    final AcquisitionMethodCollection methods =
+        verifySuccessGet(url, AcquisitionMethodCollection.class);
     assertThat(methods.getAcquisitionMethods(), hasSize(3));
   }
 
@@ -147,7 +147,11 @@ public class AcquisitionMethodApiIT {
     logger.info("=== Test PUT acquisitions method - not found ===");
     String url = ACQUISITION_METHODS + "/" + ID_DOES_NOT_EXIST;
 
-    verifyPut(url, JsonObject.mapFrom(new AcquisitionMethod().withValue("New value")), APPLICATION_JSON, 404);
+    verifyPut(
+        url,
+        JsonObject.mapFrom(new AcquisitionMethod().withValue("New value")),
+        APPLICATION_JSON,
+        404);
   }
 
   @Test
@@ -179,11 +183,19 @@ public class AcquisitionMethodApiIT {
   void testPostAcqMethodSuccess() {
     logger.info("=== Test POST acquisitions method - success case ===");
 
-    String body = JsonObject.mapFrom(new AcquisitionMethod().withValue("Some value")
-      .withSource(AcquisitionMethod.Source.USER))
-      .encode();
-    Response response = verifyPostResponse(ACQUISITION_METHODS, body, prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10),
-        APPLICATION_JSON, 201);
+    String body =
+        JsonObject.mapFrom(
+                new AcquisitionMethod()
+                    .withValue("Some value")
+                    .withSource(AcquisitionMethod.Source.USER))
+            .encode();
+    Response response =
+        verifyPostResponse(
+            ACQUISITION_METHODS,
+            body,
+            prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10),
+            APPLICATION_JSON,
+            201);
     AcquisitionMethod method = response.as(AcquisitionMethod.class);
 
     assertThat(method.getId(), not(is(emptyOrNullString())));
@@ -194,11 +206,15 @@ public class AcquisitionMethodApiIT {
   void testPostAcqMethodServerError() {
     logger.info("=== Test POST acquisitions method - Server Error ===");
 
-    String body = JsonObject.mapFrom(new AcquisitionMethod().withValue("Some value")
-      .withSource(AcquisitionMethod.Source.USER))
-      .encode();
-    Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, new Header(X_ECHO_STATUS, String.valueOf(500)));
+    String body =
+        JsonObject.mapFrom(
+                new AcquisitionMethod()
+                    .withValue("Some value")
+                    .withSource(AcquisitionMethod.Source.USER))
+            .encode();
+    Headers headers =
+        prepareHeaders(
+            EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, new Header(X_ECHO_STATUS, String.valueOf(500)));
     verifyPostResponse(ACQUISITION_METHODS, body, headers, APPLICATION_JSON, 500);
   }
-
 }

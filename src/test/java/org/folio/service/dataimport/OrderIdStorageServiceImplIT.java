@@ -5,6 +5,7 @@ import io.vertx.core.Vertx;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
+import java.util.UUID;
 import org.folio.dao.RecordIdStorageDao;
 import org.folio.dao.RecordIdStorageDaoImpl;
 import org.folio.dao.util.PostgresClientFactory;
@@ -12,14 +13,13 @@ import org.folio.di.DiAbstractRestIT;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.util.UUID;
-
 @RunWith(VertxUnitRunner.class)
 public class OrderIdStorageServiceImplIT extends DiAbstractRestIT {
 
   private PostgresClientFactory pgClientFactory = new PostgresClientFactory(Vertx.vertx());
   private RecordIdStorageDao orderRecordIdStorageDao = new RecordIdStorageDaoImpl(pgClientFactory);
-  private IdStorageService orderIdStorageService = new OrderIdStorageServiceImpl(orderRecordIdStorageDao);
+  private IdStorageService orderIdStorageService =
+      new OrderIdStorageServiceImpl(orderRecordIdStorageDao);
 
   @Test
   public void shouldSaveAndReturnNewRecordId(TestContext context) {
@@ -27,24 +27,28 @@ public class OrderIdStorageServiceImplIT extends DiAbstractRestIT {
     String recordId = UUID.randomUUID().toString();
     Future<String> future = orderIdStorageService.store(recordId, TENANT_ID);
 
-    future.onComplete(ar -> {
-      context.assertTrue(ar.succeeded());
-      context.assertEquals(recordId, ar.result());
-      async.complete();
-    });
+    future.onComplete(
+        ar -> {
+          context.assertTrue(ar.succeeded());
+          context.assertEquals(recordId, ar.result());
+          async.complete();
+        });
   }
 
   @Test
   public void shouldNotSaveRecordIdAndReturnExistingByRecordId(TestContext context) {
     Async async = context.async();
     String recordId = UUID.randomUUID().toString();
-    Future<String> future = orderIdStorageService.store(recordId, TENANT_ID)
-      .compose(v -> orderIdStorageService.store(recordId, TENANT_ID));
+    Future<String> future =
+        orderIdStorageService
+            .store(recordId, TENANT_ID)
+            .compose(v -> orderIdStorageService.store(recordId, TENANT_ID));
 
-    future.onComplete(ar -> {
-      context.assertTrue(ar.failed());
-      async.complete();
-    });
+    future.onComplete(
+        ar -> {
+          context.assertTrue(ar.failed());
+          async.complete();
+        });
   }
 
   @Test
@@ -53,10 +57,11 @@ public class OrderIdStorageServiceImplIT extends DiAbstractRestIT {
     String recordId = UUID.randomUUID().toString();
     Future<String> future = orderIdStorageService.store(recordId, TENANT_ID);
 
-    future.onComplete(ar -> {
-      context.assertTrue(ar.succeeded());
-      context.assertEquals(recordId, ar.result());
-      async.complete();
-    });
+    future.onComplete(
+        ar -> {
+          context.assertTrue(ar.succeeded());
+          context.assertEquals(recordId, ar.result());
+          async.complete();
+        });
   }
 }

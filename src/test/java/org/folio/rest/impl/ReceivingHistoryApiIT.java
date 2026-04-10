@@ -24,10 +24,11 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 
+import io.restassured.http.Headers;
+import io.vertx.core.http.HttpMethod;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuiteIT;
@@ -41,9 +42,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockitoAnnotations;
 
-import io.restassured.http.Headers;
-import io.vertx.core.http.HttpMethod;
-
 public class ReceivingHistoryApiIT {
 
   private static final Logger logger = LogManager.getLogger();
@@ -51,7 +49,8 @@ public class ReceivingHistoryApiIT {
   static final String RECEIVING_HISTORY_PURCHASE_ORDER_ID = "0804ddec-6545-404a-b54d-a693f505681d";
   private static final String ORDERS_RECEIVING_HISTORY_ENDPOINT = "/orders/receiving-history";
   private static final String ACQUISITIONS_UNIT_IDS = "acqUnitIds";
-  private static final String NO_ACQ_UNIT_ASSIGNED_CQL = "cql.allRecords=1 not " + ACQUISITIONS_UNIT_IDS + " <> []";
+  private static final String NO_ACQ_UNIT_ASSIGNED_CQL =
+      "cql.allRecords=1 not " + ACQUISITIONS_UNIT_IDS + " <> []";
 
   private static boolean runningOnOwn;
 
@@ -77,14 +76,18 @@ public class ReceivingHistoryApiIT {
   }
 
   @BeforeEach
-  void initMocks(){
+  void initMocks() {
     MockitoAnnotations.openMocks(this);
   }
 
   @Test
   void testGetReceivingHistory() {
     logger.info("=== Test Get Receiving History - With empty query ===");
-    final ReceivingHistoryCollection receivingHistory = verifySuccessGet(ORDERS_RECEIVING_HISTORY_ENDPOINT, ReceivingHistoryCollection.class, PROTECTED_READ_ONLY_TENANT);
+    final ReceivingHistoryCollection receivingHistory =
+        verifySuccessGet(
+            ORDERS_RECEIVING_HISTORY_ENDPOINT,
+            ReceivingHistoryCollection.class,
+            PROTECTED_READ_ONLY_TENANT);
 
     assertThat(receivingHistory.getTotalRecords(), is(0));
 
@@ -100,9 +103,14 @@ public class ReceivingHistoryApiIT {
   @Test
   void testGetReceivingHistoryForPurchaseOrder() {
     logger.info("=== Test Get Receiving History - With purchase Order query ===");
-    String endpointQuery = String.format("%s?query=purchaseOrderId=%s", ORDERS_RECEIVING_HISTORY_ENDPOINT, RECEIVING_HISTORY_PURCHASE_ORDER_ID);
+    String endpointQuery =
+        String.format(
+            "%s?query=purchaseOrderId=%s",
+            ORDERS_RECEIVING_HISTORY_ENDPOINT, RECEIVING_HISTORY_PURCHASE_ORDER_ID);
 
-    final ReceivingHistoryCollection receivingHistory = verifySuccessGet(endpointQuery, ReceivingHistoryCollection.class, PROTECTED_READ_ONLY_TENANT);
+    final ReceivingHistoryCollection receivingHistory =
+        verifySuccessGet(
+            endpointQuery, ReceivingHistoryCollection.class, PROTECTED_READ_ONLY_TENANT);
 
     assertThat(receivingHistory.getTotalRecords(), is(1));
 
@@ -121,9 +129,14 @@ public class ReceivingHistoryApiIT {
   @Test
   void testGetReceivingHistoryForUserAssignedToAcqUnits() {
     logger.info("=== Test Get Receiving History - user assigned to acq units ===");
-    String endpointQuery = String.format("%s?query=purchaseOrderId=%s", ORDERS_RECEIVING_HISTORY_ENDPOINT, RECEIVING_HISTORY_PURCHASE_ORDER_ID);
+    String endpointQuery =
+        String.format(
+            "%s?query=purchaseOrderId=%s",
+            ORDERS_RECEIVING_HISTORY_ENDPOINT, RECEIVING_HISTORY_PURCHASE_ORDER_ID);
 
-    Headers headers = prepareHeaders(X_OKAPI_URL, NON_EXIST_CONFIG_X_OKAPI_TENANT, X_OKAPI_USER_ID_WITH_ACQ_UNITS);
+    Headers headers =
+        prepareHeaders(
+            X_OKAPI_URL, NON_EXIST_CONFIG_X_OKAPI_TENANT, X_OKAPI_USER_ID_WITH_ACQ_UNITS);
     verifyGet(endpointQuery, headers, APPLICATION_JSON, 200);
 
     assertThat(MockServer.serverRqRs.get(RECEIVING_HISTORY, HttpMethod.GET), hasSize(1));
@@ -136,27 +149,30 @@ public class ReceivingHistoryApiIT {
     assertThat(queryToStorage, containsString(ACQUISITIONS_UNIT_IDS + "="));
     assertThat(queryToStorage, containsString(NO_ACQ_UNIT_ASSIGNED_CQL));
 
-    MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET)
-      .get(0)
-      .mapTo(AcquisitionsUnitMembershipCollection.class)
-      .getAcquisitionsUnitMemberships()
-      .forEach(member -> assertThat(queryToStorage, containsString(member.getAcquisitionsUnitId())));
+    MockServer.serverRqRs
+        .get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET)
+        .get(0)
+        .mapTo(AcquisitionsUnitMembershipCollection.class)
+        .getAcquisitionsUnitMemberships()
+        .forEach(
+            member -> assertThat(queryToStorage, containsString(member.getAcquisitionsUnitId())));
   }
 
   @Test
   void testGetReceivingHistoryForPurchaseOrderWithError() {
     logger.info("=== Test Get Receiving History - With purchase Order query Error===");
-    String endpointQuery = String.format("%s?query=purchaseOrderId=%s", ORDERS_RECEIVING_HISTORY_ENDPOINT, INTERNAL_SERVER_ERROR.getReasonPhrase());
+    String endpointQuery =
+        String.format(
+            "%s?query=purchaseOrderId=%s",
+            ORDERS_RECEIVING_HISTORY_ENDPOINT, INTERNAL_SERVER_ERROR.getReasonPhrase());
 
     verifyGet(endpointQuery, APPLICATION_JSON, 500);
-
   }
 
   @Test
   void testGetReceivingHistoryBadRequest() {
     logger.info("=== Test Get Receiving History - With Bad Request");
 
-    verifyGet(ORDERS_RECEIVING_HISTORY_ENDPOINT+"?query=" + BAD_QUERY, APPLICATION_JSON, 400);
-
+    verifyGet(ORDERS_RECEIVING_HISTORY_ENDPOINT + "?query=" + BAD_QUERY, APPLICATION_JSON, 400);
   }
 }

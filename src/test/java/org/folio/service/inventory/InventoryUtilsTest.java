@@ -1,22 +1,5 @@
 package org.folio.service.inventory;
 
-import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
-import io.vertx.junit5.VertxExtension;
-import java.io.IOException;
-import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CheckInPiece;
-import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.tools.utils.TenantTool;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-
-import java.util.HashMap;
-import java.util.Map;
-import org.mockito.MockitoAnnotations;
-
 import static org.folio.TestConfig.mockPort;
 import static org.folio.TestConstants.X_OKAPI_TOKEN;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
@@ -30,6 +13,22 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.CheckInPiece;
+import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.tools.utils.TenantTool;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.MockitoAnnotations;
 
 @ExtendWith(VertxExtension.class)
 public class InventoryUtilsTest {
@@ -64,15 +63,17 @@ public class InventoryUtilsTest {
     piece.setDiscoverySuppress(true);
 
     String oldValue = "old value";
-    JsonObject item = new JsonObject(new HashMap<>(Map.of(
-      ITEM_ENUMERATION, oldValue,
-      COPY_NUMBER, oldValue,
-      ITEM_CHRONOLOGY, oldValue,
-      ITEM_BARCODE, oldValue,
-      ITEM_ACCESSION_NUMBER, oldValue,
-      ITEM_LEVEL_CALL_NUMBER, oldValue,
-      ITEM_DISCOVERY_SUPPRESS, false
-    )));
+    JsonObject item =
+        new JsonObject(
+            new HashMap<>(
+                Map.of(
+                    ITEM_ENUMERATION, oldValue,
+                    COPY_NUMBER, oldValue,
+                    ITEM_CHRONOLOGY, oldValue,
+                    ITEM_BARCODE, oldValue,
+                    ITEM_ACCESSION_NUMBER, oldValue,
+                    ITEM_LEVEL_CALL_NUMBER, oldValue,
+                    ITEM_DISCOVERY_SUPPRESS, false)));
 
     // when
     InventoryUtils.updateItemWithPieceFields(item, pieceFromStorage, piece);
@@ -90,16 +91,17 @@ public class InventoryUtilsTest {
 
   @Test
   void updatesItemWithAllCheckinPieceFields() {
-    CheckInPiece checkinPiece = new CheckInPiece()
-      .withItemStatus(CheckInPiece.ItemStatus.IN_PROCESS)
-      .withDisplaySummary("Display Summary")
-      .withEnumeration("Enumeration")
-      .withCopyNumber("Copy Number")
-      .withChronology("Chronology")
-      .withBarcode("Barcode")
-      .withAccessionNumber("Accession Number")
-      .withCallNumber("Call Number")
-      .withDiscoverySuppress(true);
+    CheckInPiece checkinPiece =
+        new CheckInPiece()
+            .withItemStatus(CheckInPiece.ItemStatus.IN_PROCESS)
+            .withDisplaySummary("Display Summary")
+            .withEnumeration("Enumeration")
+            .withCopyNumber("Copy Number")
+            .withChronology("Chronology")
+            .withBarcode("Barcode")
+            .withAccessionNumber("Accession Number")
+            .withCallNumber("Call Number")
+            .withDiscoverySuppress(true);
 
     Piece pieceFromStorage = new Piece();
     pieceFromStorage.setDisplaySummary("Display Summary");
@@ -108,7 +110,9 @@ public class InventoryUtilsTest {
 
     InventoryUtils.updateItemWithCheckinPieceFields(item, pieceFromStorage, checkinPiece);
 
-    assertEquals(checkinPiece.getItemStatus().value(), item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME));
+    assertEquals(
+        checkinPiece.getItemStatus().value(),
+        item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME));
     assertEquals("oldValue", item.getString(ITEM_DISPLAY_SUMMARY));
     assertEquals(checkinPiece.getEnumeration(), item.getString(ITEM_ENUMERATION));
     assertEquals(checkinPiece.getCopyNumber(), item.getString(COPY_NUMBER));
@@ -127,15 +131,17 @@ public class InventoryUtilsTest {
     Piece piece = new Piece();
 
     String oldValue = "old value";
-    JsonObject item = new JsonObject(new HashMap<>(Map.of(
-      ITEM_ENUMERATION, oldValue,
-      COPY_NUMBER, oldValue,
-      ITEM_CHRONOLOGY, oldValue,
-      ITEM_BARCODE, oldValue,
-      ITEM_ACCESSION_NUMBER, oldValue,
-      ITEM_LEVEL_CALL_NUMBER, oldValue,
-      ITEM_DISCOVERY_SUPPRESS, false
-    )));
+    JsonObject item =
+        new JsonObject(
+            new HashMap<>(
+                Map.of(
+                    ITEM_ENUMERATION, oldValue,
+                    COPY_NUMBER, oldValue,
+                    ITEM_CHRONOLOGY, oldValue,
+                    ITEM_BARCODE, oldValue,
+                    ITEM_ACCESSION_NUMBER, oldValue,
+                    ITEM_LEVEL_CALL_NUMBER, oldValue,
+                    ITEM_DISCOVERY_SUPPRESS, false)));
 
     // when
     InventoryUtils.updateItemWithPieceFields(item, pieceFromStorage, piece);
@@ -162,9 +168,16 @@ public class InventoryUtilsTest {
     String accessionNumber = "New Accession";
     String callNumber = "New Call";
 
-    InventoryUtils.updateCommonItemFields(item, null,
-      displaySummary, enumeration, copyNumber, chronology,
-      barcode, accessionNumber, callNumber);
+    InventoryUtils.updateCommonItemFields(
+        item,
+        null,
+        displaySummary,
+        enumeration,
+        copyNumber,
+        chronology,
+        barcode,
+        accessionNumber,
+        callNumber);
 
     assertEquals(displaySummary, item.getString(ITEM_DISPLAY_SUMMARY));
     assertEquals(enumeration, item.getString(ITEM_ENUMERATION));
@@ -178,17 +191,17 @@ public class InventoryUtilsTest {
   @Test
   void doesNotUpdateItemFieldsWhenValuesAreEmpty() {
     JsonObject item = new JsonObject();
-    Piece pieceFromStorage = new Piece()
-      .withDisplaySummary("Old Display")
-      .withEnumeration("Old Enum")
-      .withCopyNumber("Old Copy")
-      .withChronology("Old Chrono")
-      .withBarcode("Old Barcode")
-      .withAccessionNumber("Old Accession")
-      .withCallNumber("Old Call");
+    Piece pieceFromStorage =
+        new Piece()
+            .withDisplaySummary("Old Display")
+            .withEnumeration("Old Enum")
+            .withCopyNumber("Old Copy")
+            .withChronology("Old Chrono")
+            .withBarcode("Old Barcode")
+            .withAccessionNumber("Old Accession")
+            .withCallNumber("Old Call");
 
-    InventoryUtils.updateCommonItemFields(item, pieceFromStorage,
-      "", null, "", "", "", "", "");
+    InventoryUtils.updateCommonItemFields(item, pieceFromStorage, "", null, "", "", "", "", "");
 
     assertFalse(item.isEmpty());
     assertEquals("", item.getString(ITEM_BARCODE));
@@ -200,18 +213,26 @@ public class InventoryUtilsTest {
   void doesNotUpdateItemFieldsWhenValuesAreUnchanged() {
     JsonObject item = new JsonObject();
     String existingValue = "Existing Value";
-    Piece pieceFromStorage = new Piece()
-      .withDisplaySummary(existingValue)
-      .withEnumeration(existingValue)
-      .withCopyNumber(existingValue)
-      .withChronology(existingValue)
-      .withBarcode(existingValue)
-      .withAccessionNumber(existingValue)
-      .withCallNumber(existingValue);
+    Piece pieceFromStorage =
+        new Piece()
+            .withDisplaySummary(existingValue)
+            .withEnumeration(existingValue)
+            .withCopyNumber(existingValue)
+            .withChronology(existingValue)
+            .withBarcode(existingValue)
+            .withAccessionNumber(existingValue)
+            .withCallNumber(existingValue);
 
-    InventoryUtils.updateCommonItemFields(item, pieceFromStorage,
-      existingValue, existingValue, existingValue, existingValue,
-      existingValue, existingValue, existingValue);
+    InventoryUtils.updateCommonItemFields(
+        item,
+        pieceFromStorage,
+        existingValue,
+        existingValue,
+        existingValue,
+        existingValue,
+        existingValue,
+        existingValue,
+        existingValue);
 
     assertTrue(item.isEmpty());
   }
@@ -219,26 +240,29 @@ public class InventoryUtilsTest {
   @Test
   void updatesOnlyChangedItemFields() {
     JsonObject item = new JsonObject();
-    Piece pieceFromStorage = new Piece()
-      .withDisplaySummary("Old Display")
-      .withEnumeration("Old Enum")
-      .withCopyNumber("Old Copy")
-      .withChronology("Old Chrono")
-      .withBarcode("Old Barcode")
-      .withAccessionNumber("Old Accession")
-      .withCallNumber("Old Call");
+    Piece pieceFromStorage =
+        new Piece()
+            .withDisplaySummary("Old Display")
+            .withEnumeration("Old Enum")
+            .withCopyNumber("Old Copy")
+            .withChronology("Old Chrono")
+            .withBarcode("Old Barcode")
+            .withAccessionNumber("Old Accession")
+            .withCallNumber("Old Call");
 
     String newBarcode = "New Barcode";
     String newCallNumber = "New Call";
 
-    InventoryUtils.updateCommonItemFields(item, pieceFromStorage,
-      pieceFromStorage.getDisplaySummary(),
-      pieceFromStorage.getEnumeration(),
-      pieceFromStorage.getCopyNumber(),
-      pieceFromStorage.getChronology(),
-      newBarcode,
-      pieceFromStorage.getAccessionNumber(),
-      newCallNumber);
+    InventoryUtils.updateCommonItemFields(
+        item,
+        pieceFromStorage,
+        pieceFromStorage.getDisplaySummary(),
+        pieceFromStorage.getEnumeration(),
+        pieceFromStorage.getCopyNumber(),
+        pieceFromStorage.getChronology(),
+        newBarcode,
+        pieceFromStorage.getAccessionNumber(),
+        newCallNumber);
 
     assertEquals(2, item.size());
     assertEquals(newBarcode, item.getString(ITEM_BARCODE));
@@ -249,9 +273,13 @@ public class InventoryUtilsTest {
   void testConstructItemRecreateConfigSrcWithReceivingTenantId() throws IOException {
     var exceptedSrcTenantId = "university";
 
-    var piecesMock = getMockData(String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
+    var piecesMock =
+        getMockData(
+            String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
     var piecesStorage = new JsonObject(piecesMock).mapTo(Piece.class);
-    var srcConfig = InventoryUtils.constructItemRecreateConfig(piecesStorage.getReceivingTenantId(), requestContext, true);
+    var srcConfig =
+        InventoryUtils.constructItemRecreateConfig(
+            piecesStorage.getReceivingTenantId(), requestContext, true);
 
     assertEquals(exceptedSrcTenantId, srcConfig.tenantId());
     assertEquals(exceptedSrcTenantId, TenantTool.tenantId(srcConfig.context().getHeaders()));
@@ -261,31 +289,46 @@ public class InventoryUtilsTest {
   void testConstructItemRecreateConfigSrcWithNullReceivingTenantId() throws IOException {
     var exceptedSrcTenantId = TenantTool.tenantId(requestContext.getHeaders());
 
-    var piecesMock = getMockData(String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
+    var piecesMock =
+        getMockData(
+            String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
     var piecesStorage = new JsonObject(piecesMock).mapTo(Piece.class).withReceivingTenantId(null);
-    var srcConfig = InventoryUtils.constructItemRecreateConfig(piecesStorage.getReceivingTenantId(), requestContext, true);
+    var srcConfig =
+        InventoryUtils.constructItemRecreateConfig(
+            piecesStorage.getReceivingTenantId(), requestContext, true);
 
     Assertions.assertNull(srcConfig.tenantId());
-    Assertions.assertEquals(exceptedSrcTenantId, TenantTool.tenantId(srcConfig.context().getHeaders()));
+    Assertions.assertEquals(
+        exceptedSrcTenantId, TenantTool.tenantId(srcConfig.context().getHeaders()));
   }
 
   @Test
   void testConstructItemRecreateConfigDstWithReceivingTenantId() throws IOException {
     var exceptedDstTenantId = "college";
 
-    var piecesMock = getMockData(String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
-    var piecesStorage = new JsonObject(piecesMock).mapTo(Piece.class).withReceivingTenantId(exceptedDstTenantId);
-    var dstConfig = InventoryUtils.constructItemRecreateConfig(piecesStorage.getReceivingTenantId(), requestContext, false);
+    var piecesMock =
+        getMockData(
+            String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
+    var piecesStorage =
+        new JsonObject(piecesMock).mapTo(Piece.class).withReceivingTenantId(exceptedDstTenantId);
+    var dstConfig =
+        InventoryUtils.constructItemRecreateConfig(
+            piecesStorage.getReceivingTenantId(), requestContext, false);
 
     Assertions.assertEquals(exceptedDstTenantId, dstConfig.tenantId());
-    Assertions.assertEquals(exceptedDstTenantId, TenantTool.tenantId(dstConfig.context().getHeaders()));
+    Assertions.assertEquals(
+        exceptedDstTenantId, TenantTool.tenantId(dstConfig.context().getHeaders()));
   }
 
   @Test
   void testConstructItemRecreateConfigDstWithNullReceivingTenantId() throws IOException {
-    var piecesMock = getMockData(String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
+    var piecesMock =
+        getMockData(
+            String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
     var piecesStorage = new JsonObject(piecesMock).mapTo(Piece.class).withReceivingTenantId(null);
-    var dstConfig = InventoryUtils.constructItemRecreateConfig(piecesStorage.getReceivingTenantId(), requestContext, false);
+    var dstConfig =
+        InventoryUtils.constructItemRecreateConfig(
+            piecesStorage.getReceivingTenantId(), requestContext, false);
 
     Assertions.assertNull(dstConfig.tenantId());
     Assertions.assertNull(dstConfig.context());
@@ -293,53 +336,83 @@ public class InventoryUtilsTest {
 
   @Test
   void testAllowItemRecreateTrue() throws IOException {
-    var piecesMock = getMockData(String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
+    var piecesMock =
+        getMockData(
+            String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
 
     var piecesStorage = new JsonObject(piecesMock).mapTo(Piece.class);
-    var piecesRequest = new JsonObject(piecesMock).mapTo(Piece.class).withReceivingTenantId("college");
+    var piecesRequest =
+        new JsonObject(piecesMock).mapTo(Piece.class).withReceivingTenantId("college");
 
-    var srcConfig = InventoryUtils.constructItemRecreateConfig(piecesStorage.getReceivingTenantId(), requestContext, true);
-    var dstConfig = InventoryUtils.constructItemRecreateConfig(piecesRequest.getReceivingTenantId(), requestContext, false);
+    var srcConfig =
+        InventoryUtils.constructItemRecreateConfig(
+            piecesStorage.getReceivingTenantId(), requestContext, true);
+    var dstConfig =
+        InventoryUtils.constructItemRecreateConfig(
+            piecesRequest.getReceivingTenantId(), requestContext, false);
 
-    Assertions.assertTrue(InventoryUtils.allowItemRecreate(srcConfig.tenantId(), dstConfig.tenantId()));
+    Assertions.assertTrue(
+        InventoryUtils.allowItemRecreate(srcConfig.tenantId(), dstConfig.tenantId()));
   }
 
   @Test
   void testAllowItemRecreateFalseWithSameTenant() throws IOException {
-    var piecesMock = getMockData(String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
+    var piecesMock =
+        getMockData(
+            String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
 
     var piecesStorage = new JsonObject(piecesMock).mapTo(Piece.class);
-    var piecesRequest = new JsonObject(piecesMock).mapTo(Piece.class).withReceivingTenantId("university");
+    var piecesRequest =
+        new JsonObject(piecesMock).mapTo(Piece.class).withReceivingTenantId("university");
 
-    var srcConfig = InventoryUtils.constructItemRecreateConfig(piecesStorage.getReceivingTenantId(), requestContext, true);
-    var dstConfig = InventoryUtils.constructItemRecreateConfig(piecesRequest.getReceivingTenantId(), requestContext, false);
+    var srcConfig =
+        InventoryUtils.constructItemRecreateConfig(
+            piecesStorage.getReceivingTenantId(), requestContext, true);
+    var dstConfig =
+        InventoryUtils.constructItemRecreateConfig(
+            piecesRequest.getReceivingTenantId(), requestContext, false);
 
-    Assertions.assertFalse(InventoryUtils.allowItemRecreate(srcConfig.tenantId(), dstConfig.tenantId()));
+    Assertions.assertFalse(
+        InventoryUtils.allowItemRecreate(srcConfig.tenantId(), dstConfig.tenantId()));
   }
 
   @Test
   void testAllowItemRecreateFalseWithNullSrcTenant() throws IOException {
-    var piecesMock = getMockData(String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
+    var piecesMock =
+        getMockData(
+            String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
 
     var piecesStorage = new JsonObject(piecesMock).mapTo(Piece.class);
     var piecesRequest = new JsonObject(piecesMock).mapTo(Piece.class).withReceivingTenantId(null);
 
-    var srcConfig = InventoryUtils.constructItemRecreateConfig(piecesStorage.getReceivingTenantId(), requestContext, true);
-    var dstConfig = InventoryUtils.constructItemRecreateConfig(piecesRequest.getReceivingTenantId(), requestContext, false);
+    var srcConfig =
+        InventoryUtils.constructItemRecreateConfig(
+            piecesStorage.getReceivingTenantId(), requestContext, true);
+    var dstConfig =
+        InventoryUtils.constructItemRecreateConfig(
+            piecesRequest.getReceivingTenantId(), requestContext, false);
 
-    Assertions.assertFalse(InventoryUtils.allowItemRecreate(srcConfig.tenantId(), dstConfig.tenantId()));
+    Assertions.assertFalse(
+        InventoryUtils.allowItemRecreate(srcConfig.tenantId(), dstConfig.tenantId()));
   }
 
   @Test
   void testAllowItemRecreateFalseWithNullDstTenant() throws IOException {
-    var piecesMock = getMockData(String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
+    var piecesMock =
+        getMockData(
+            String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
 
     var piecesStorage = new JsonObject(piecesMock).mapTo(Piece.class).withReceivingTenantId(null);
     var piecesRequest = new JsonObject(piecesMock).mapTo(Piece.class);
 
-    var srcConfig = InventoryUtils.constructItemRecreateConfig(piecesStorage.getReceivingTenantId(), requestContext, true);
-    var dstConfig = InventoryUtils.constructItemRecreateConfig(piecesRequest.getReceivingTenantId(), requestContext, false);
+    var srcConfig =
+        InventoryUtils.constructItemRecreateConfig(
+            piecesStorage.getReceivingTenantId(), requestContext, true);
+    var dstConfig =
+        InventoryUtils.constructItemRecreateConfig(
+            piecesRequest.getReceivingTenantId(), requestContext, false);
 
-    Assertions.assertFalse(InventoryUtils.allowItemRecreate(srcConfig.tenantId(), dstConfig.tenantId()));
+    Assertions.assertFalse(
+        InventoryUtils.allowItemRecreate(srcConfig.tenantId(), dstConfig.tenantId()));
   }
 }

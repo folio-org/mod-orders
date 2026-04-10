@@ -15,9 +15,9 @@ import static org.folio.rest.impl.MockServer.PO_NUMBER_ERROR_X_OKAPI_TENANT;
 import static org.folio.rest.impl.MockServer.PO_NUMBER_VALUE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import io.vertx.core.json.JsonObject;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuiteIT;
@@ -28,8 +28,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-
-import io.vertx.core.json.JsonObject;
 
 public class PoNumberApiIT {
 
@@ -69,22 +67,36 @@ public class PoNumberApiIT {
   void testPoNumberValidateWithExistingPONumber() {
     JsonObject poNumber = new JsonObject();
     poNumber.put(PO_NUMBER, EXISTING_PO_NUMBER);
-    verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 400);
+    verifyPostResponse(
+        PONUMBER_VALIDATE_PATH,
+        poNumber.encodePrettily(),
+        prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10),
+        APPLICATION_JSON,
+        400);
   }
 
   @Test
-  void testPoNumberValidateWithUniquePONumber()
-  {
-    JsonObject poNumber=new JsonObject();
+  void testPoNumberValidateWithUniquePONumber() {
+    JsonObject poNumber = new JsonObject();
     poNumber.put(PO_NUMBER, NONEXISTING_PO_NUMBER);
-    verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), "", 204);
+    verifyPostResponse(
+        PONUMBER_VALIDATE_PATH,
+        poNumber.encodePrettily(),
+        prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10),
+        "",
+        204);
   }
 
   @Test
   void testPoNumberValidateWithInvalidPattern() {
-    JsonObject poNumber=new JsonObject();
+    JsonObject poNumber = new JsonObject();
     poNumber.put(PO_NUMBER, "12345678901234567890123"); // 23 characters - exceeds limit of 22
-    verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422);
+    verifyPostResponse(
+        PONUMBER_VALIDATE_PATH,
+        poNumber.encodePrettily(),
+        prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10),
+        APPLICATION_JSON,
+        422);
   }
 
   @Test
@@ -101,7 +113,10 @@ public class PoNumberApiIT {
   void testGetPoNumberError() {
     logger.info("=== Test Get PO Number (generate poNumber) - fail ===");
 
-    verifyGet(GET_PO_NUMBER_PATH, prepareHeaders(X_OKAPI_URL, PO_NUMBER_ERROR_X_OKAPI_TENANT), APPLICATION_JSON, 500);
+    verifyGet(
+        GET_PO_NUMBER_PATH,
+        prepareHeaders(X_OKAPI_URL, PO_NUMBER_ERROR_X_OKAPI_TENANT),
+        APPLICATION_JSON,
+        500);
   }
-
 }

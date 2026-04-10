@@ -17,15 +17,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import io.vertx.core.Context;
+import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-
-import io.vertx.core.Context;
-import io.vertx.core.json.JsonObject;
-import io.vertx.junit5.VertxExtension;
 import org.folio.ApiTestSuiteIT;
 import org.folio.models.ItemStatus;
 import org.folio.models.pieces.PieceUpdateHolder;
@@ -53,17 +52,12 @@ import org.springframework.context.annotation.Bean;
 
 @ExtendWith(VertxExtension.class)
 public class BasePieceFlowHolderBuilderIT {
-  @Autowired
-  private BasePieceFlowHolderBuilder basePieceFlowHolderBuilder;
-  @Autowired
-  private PurchaseOrderStorageService purchaseOrderStorageService;
-  @Autowired
-  private PurchaseOrderLineService purchaseOrderLineService;
-  @Autowired
-  private TitlesService titlesService;
+  @Autowired private BasePieceFlowHolderBuilder basePieceFlowHolderBuilder;
+  @Autowired private PurchaseOrderStorageService purchaseOrderStorageService;
+  @Autowired private PurchaseOrderLineService purchaseOrderLineService;
+  @Autowired private TitlesService titlesService;
   private final Context ctx = getFirstContextFromVertx(getVertx());
-  @Mock
-  private Map<String, String> okapiHeadersMock;
+  @Mock private Map<String, String> okapiHeadersMock;
   private RequestContext requestContext;
   private static boolean runningOnOwn;
 
@@ -112,30 +106,55 @@ public class BasePieceFlowHolderBuilderIT {
     item.put(ITEM_HOLDINGS_RECORD_ID, holdingFromStorageId);
     JsonObject holding = new JsonObject().put(ID, holdingFromStorageId);
     holding.put(HOLDING_PERMANENT_LOCATION_ID, UUID.randomUUID().toString());
-    Piece pieceFromStorage = new Piece().withId(pieceId).withTitleId(titleId).withItemId(itemId)
-      .withPoLineId(lineId).withHoldingId(holdingFromStorageId)
-      .withFormat(Piece.Format.PHYSICAL);
-    Piece pieceToUpdate = new Piece().withId(pieceId)
-      .withTitleId(titleId).withItemId(itemId)
-      .withPoLineId(lineId).withHoldingId(holdingId).withFormat(Piece.Format.PHYSICAL);
-    Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
+    Piece pieceFromStorage =
+        new Piece()
+            .withId(pieceId)
+            .withTitleId(titleId)
+            .withItemId(itemId)
+            .withPoLineId(lineId)
+            .withHoldingId(holdingFromStorageId)
+            .withFormat(Piece.Format.PHYSICAL);
+    Piece pieceToUpdate =
+        new Piece()
+            .withId(pieceId)
+            .withTitleId(titleId)
+            .withItemId(itemId)
+            .withPoLineId(lineId)
+            .withHoldingId(holdingId)
+            .withFormat(Piece.Format.PHYSICAL);
+    Location loc =
+        new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
-    PoLine poLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId).withId(lineId)
-      .withInstanceId(instanceId).withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE).withId(lineId)
-      .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
-      .withLocations(List.of(loc)).withCost(cost);
-    PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
-    PieceUpdateHolder holder = new PieceUpdateHolder()
-      .withPieceToUpdate(pieceToUpdate).withPieceFromStorage(pieceFromStorage)
-      .withCreateItem(true).withDeleteHolding(true);
+    PoLine poLine =
+        new PoLine()
+            .withIsPackage(false)
+            .withPurchaseOrderId(orderId)
+            .withId(lineId)
+            .withInstanceId(instanceId)
+            .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
+            .withId(lineId)
+            .withPhysical(
+                new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
+            .withLocations(List.of(loc))
+            .withCost(cost);
+    PurchaseOrder purchaseOrder =
+        new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
+    PieceUpdateHolder holder =
+        new PieceUpdateHolder()
+            .withPieceToUpdate(pieceToUpdate)
+            .withPieceFromStorage(pieceFromStorage)
+            .withCreateItem(true)
+            .withDeleteHolding(true);
     holder.withOrderInformation(purchaseOrder, poLine);
     Title expectedTitle = new Title();
     expectedTitle.setId(titleId);
     expectedTitle.setAcqUnitIds(acqUnitIds);
 
     // Given
-    when(purchaseOrderStorageService.getPurchaseOrderById(orderId, requestContext)).thenReturn(succeededFuture(purchaseOrder));
-    when(purchaseOrderLineService.getOrderLineById(lineId, requestContext)).thenReturn(succeededFuture(poLine));
+    when(purchaseOrderStorageService.getPurchaseOrderById(orderId, requestContext))
+        .thenReturn(succeededFuture(purchaseOrder));
+    when(purchaseOrderLineService.getOrderLineById(lineId, requestContext))
+        .thenReturn(succeededFuture(poLine));
     // When
     basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext);
 
@@ -160,36 +179,62 @@ public class BasePieceFlowHolderBuilderIT {
     item.put(ITEM_HOLDINGS_RECORD_ID, holdingFromStorageId);
     JsonObject holding = new JsonObject().put(ID, holdingFromStorageId);
     holding.put(HOLDING_PERMANENT_LOCATION_ID, UUID.randomUUID().toString());
-    Piece pieceFromStorage = new Piece().withId(pieceId).withTitleId(titleId).withItemId(itemId)
-      .withPoLineId(lineId).withHoldingId(holdingFromStorageId)
-      .withFormat(Piece.Format.PHYSICAL);
-    Piece pieceToUpdate = new Piece().withId(pieceId)
-      .withTitleId(titleId).withItemId(itemId)
-      .withPoLineId(lineId).withHoldingId(holdingId).withFormat(Piece.Format.PHYSICAL);
-    Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
+    Piece pieceFromStorage =
+        new Piece()
+            .withId(pieceId)
+            .withTitleId(titleId)
+            .withItemId(itemId)
+            .withPoLineId(lineId)
+            .withHoldingId(holdingFromStorageId)
+            .withFormat(Piece.Format.PHYSICAL);
+    Piece pieceToUpdate =
+        new Piece()
+            .withId(pieceId)
+            .withTitleId(titleId)
+            .withItemId(itemId)
+            .withPoLineId(lineId)
+            .withHoldingId(holdingId)
+            .withFormat(Piece.Format.PHYSICAL);
+    Location loc =
+        new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
-    PoLine poLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId).withId(lineId)
-      .withInstanceId(instanceId).withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE).withId(lineId)
-      .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
-      .withLocations(List.of(loc)).withCost(cost);
-    PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
-    PieceUpdateHolder holder = new PieceUpdateHolder()
-      .withPieceToUpdate(pieceToUpdate).withPieceFromStorage(pieceFromStorage)
-      .withCreateItem(true).withDeleteHolding(true);
+    PoLine poLine =
+        new PoLine()
+            .withIsPackage(false)
+            .withPurchaseOrderId(orderId)
+            .withId(lineId)
+            .withInstanceId(instanceId)
+            .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
+            .withId(lineId)
+            .withPhysical(
+                new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
+            .withLocations(List.of(loc))
+            .withCost(cost);
+    PurchaseOrder purchaseOrder =
+        new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
+    PieceUpdateHolder holder =
+        new PieceUpdateHolder()
+            .withPieceToUpdate(pieceToUpdate)
+            .withPieceFromStorage(pieceFromStorage)
+            .withCreateItem(true)
+            .withDeleteHolding(true);
     holder.withOrderInformation(purchaseOrder, poLine);
     Title expectedTitle = new Title();
     expectedTitle.setId(titleId);
     expectedTitle.setAcqUnitIds(acqUnitIds);
 
     // Given
-    when(titlesService.getTitleById(titleId, requestContext)).thenReturn(succeededFuture(expectedTitle));
+    when(titlesService.getTitleById(titleId, requestContext))
+        .thenReturn(succeededFuture(expectedTitle));
 
     // When
-    basePieceFlowHolderBuilder.updateHolderWithTitleInformation(holder, requestContext)
-      .onComplete(ar -> {
-        assertEquals(titleId, holder.getTitleId());
-        assertEquals(expectedTitle.getAcqUnitIds(), holder.getTitle().getAcqUnitIds());
-      });
+    basePieceFlowHolderBuilder
+        .updateHolderWithTitleInformation(holder, requestContext)
+        .onComplete(
+            ar -> {
+              assertEquals(titleId, holder.getTitleId());
+              assertEquals(expectedTitle.getAcqUnitIds(), holder.getTitle().getAcqUnitIds());
+            });
   }
 
   private static class ContextConfiguration {
@@ -209,10 +254,12 @@ public class BasePieceFlowHolderBuilderIT {
     }
 
     @Bean
-    BasePieceFlowHolderBuilder basePieceFlowHolderBuilder(PurchaseOrderStorageService purchaseOrderStorageService,
-                                                          PurchaseOrderLineService purchaseOrderLineStorageService,
-                                                          TitlesService titlesService) {
-      return new BasePieceFlowHolderBuilder(purchaseOrderStorageService, purchaseOrderLineStorageService, titlesService);
+    BasePieceFlowHolderBuilder basePieceFlowHolderBuilder(
+        PurchaseOrderStorageService purchaseOrderStorageService,
+        PurchaseOrderLineService purchaseOrderLineStorageService,
+        TitlesService titlesService) {
+      return new BasePieceFlowHolderBuilder(
+          purchaseOrderStorageService, purchaseOrderLineStorageService, titlesService);
     }
   }
 }

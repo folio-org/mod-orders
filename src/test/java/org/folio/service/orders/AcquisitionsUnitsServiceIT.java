@@ -33,15 +33,18 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 
+import io.restassured.http.Header;
+import io.restassured.http.Headers;
+import io.restassured.response.Response;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonObject;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
-
 import javax.ws.rs.core.HttpHeaders;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuiteIT;
@@ -55,12 +58,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-
-import io.restassured.http.Header;
-import io.restassured.http.Headers;
-import io.restassured.response.Response;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.JsonObject;
 
 public class AcquisitionsUnitsServiceIT {
   private static final Logger logger = LogManager.getLogger();
@@ -98,8 +95,12 @@ public class AcquisitionsUnitsServiceIT {
   @Test
   void testGetAcqMembershipsNoQuery() throws IOException {
     logger.info("=== Test GET acquisitions units - with empty query ===");
-    AcquisitionsUnitMembershipCollection expected = new JsonObject(getMockData(ACQUISITIONS_MEMBERSHIPS_COLLECTION)).mapTo(AcquisitionsUnitMembershipCollection.class);
-    final AcquisitionsUnitMembershipCollection memberships = verifySuccessGet(ACQ_UNITS_MEMBERSHIPS_ENDPOINT, AcquisitionsUnitMembershipCollection.class);
+    AcquisitionsUnitMembershipCollection expected =
+        new JsonObject(getMockData(ACQUISITIONS_MEMBERSHIPS_COLLECTION))
+            .mapTo(AcquisitionsUnitMembershipCollection.class);
+    final AcquisitionsUnitMembershipCollection memberships =
+        verifySuccessGet(
+            ACQ_UNITS_MEMBERSHIPS_ENDPOINT, AcquisitionsUnitMembershipCollection.class);
     assertThat(expected.getAcquisitionsUnitMemberships(), hasSize(expected.getTotalRecords()));
     assertThat(memberships.getAcquisitionsUnitMemberships(), hasSize(expected.getTotalRecords()));
   }
@@ -109,7 +110,8 @@ public class AcquisitionsUnitsServiceIT {
     logger.info("=== Test GET acquisitions units memberships - search by query ===");
     String url = ACQ_UNITS_MEMBERSHIPS_ENDPOINT + "?query=userId==" + USER_ID_ASSIGNED_TO_ACQ_UNITS;
 
-    final AcquisitionsUnitMembershipCollection units = verifySuccessGet(url, AcquisitionsUnitMembershipCollection.class);
+    final AcquisitionsUnitMembershipCollection units =
+        verifySuccessGet(url, AcquisitionsUnitMembershipCollection.class);
     assertThat(units.getAcquisitionsUnitMemberships(), hasSize(2));
   }
 
@@ -143,7 +145,14 @@ public class AcquisitionsUnitsServiceIT {
     logger.info("=== Test PUT acquisitions units membership - success case ===");
     String url = ACQ_UNITS_MEMBERSHIPS_ENDPOINT + "/0e9525aa-d123-4e4d-9f7e-1b302a97eb90";
 
-    verifyPut(url, JsonObject.mapFrom(new AcquisitionsUnitMembership().withUserId(UUID.randomUUID().toString()).withAcquisitionsUnitId(UUID.randomUUID().toString())), "", 204);
+    verifyPut(
+        url,
+        JsonObject.mapFrom(
+            new AcquisitionsUnitMembership()
+                .withUserId(UUID.randomUUID().toString())
+                .withAcquisitionsUnitId(UUID.randomUUID().toString())),
+        "",
+        204);
   }
 
   @Test
@@ -159,7 +168,14 @@ public class AcquisitionsUnitsServiceIT {
     logger.info("=== Test PUT acquisitions units membership - not found ===");
     String url = ACQ_UNITS_MEMBERSHIPS_ENDPOINT + "/" + ID_DOES_NOT_EXIST;
 
-    verifyPut(url, JsonObject.mapFrom(new AcquisitionsUnitMembership().withUserId(UUID.randomUUID().toString()).withAcquisitionsUnitId(UUID.randomUUID().toString())), APPLICATION_JSON, 404);
+    verifyPut(
+        url,
+        JsonObject.mapFrom(
+            new AcquisitionsUnitMembership()
+                .withUserId(UUID.randomUUID().toString())
+                .withAcquisitionsUnitId(UUID.randomUUID().toString())),
+        APPLICATION_JSON,
+        404);
   }
 
   @Test
@@ -167,10 +183,17 @@ public class AcquisitionsUnitsServiceIT {
     logger.info("=== Test PUT acquisitions units membership - different ids in path and body ===");
     String url = ACQ_UNITS_MEMBERSHIPS_ENDPOINT + "/" + UUID.randomUUID().toString();
 
-    AcquisitionsUnitMembership unit = new AcquisitionsUnitMembership().withUserId(UUID.randomUUID().toString()).withAcquisitionsUnitId(UUID.randomUUID().toString()).withId(UUID.randomUUID().toString());
-    Errors errors = verifyPut(url, JsonObject.mapFrom(unit), APPLICATION_JSON, 422).as(Errors.class);
+    AcquisitionsUnitMembership unit =
+        new AcquisitionsUnitMembership()
+            .withUserId(UUID.randomUUID().toString())
+            .withAcquisitionsUnitId(UUID.randomUUID().toString())
+            .withId(UUID.randomUUID().toString());
+    Errors errors =
+        verifyPut(url, JsonObject.mapFrom(unit), APPLICATION_JSON, 422).as(Errors.class);
     assertThat(errors.getErrors(), hasSize(1));
-    assertThat(errors.getErrors().get(0).getCode(), equalTo(MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.getCode()));
+    assertThat(
+        errors.getErrors().get(0).getCode(),
+        equalTo(MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.getCode()));
   }
 
   @Test
@@ -186,17 +209,34 @@ public class AcquisitionsUnitsServiceIT {
     logger.info("=== Test DELETE acquisitions units membership - not found ===");
     String url = ACQ_UNITS_MEMBERSHIPS_ENDPOINT + "/" + ID_DOES_NOT_EXIST;
 
-    verifyPut(url, JsonObject.mapFrom(new AcquisitionsUnitMembership().withUserId(UUID.randomUUID().toString()).withAcquisitionsUnitId(UUID.randomUUID().toString())), APPLICATION_JSON, 404);
+    verifyPut(
+        url,
+        JsonObject.mapFrom(
+            new AcquisitionsUnitMembership()
+                .withUserId(UUID.randomUUID().toString())
+                .withAcquisitionsUnitId(UUID.randomUUID().toString())),
+        APPLICATION_JSON,
+        404);
   }
 
   @Test
   void testPostAcqUnitsMembershipSuccess() {
     logger.info("=== Test POST acquisitions unit - success case ===");
 
-    String body = JsonObject.mapFrom(new AcquisitionsUnitMembership().withUserId(UUID.randomUUID().toString()).withAcquisitionsUnitId(UUID.randomUUID().toString())).encode();
+    String body =
+        JsonObject.mapFrom(
+                new AcquisitionsUnitMembership()
+                    .withUserId(UUID.randomUUID().toString())
+                    .withAcquisitionsUnitId(UUID.randomUUID().toString()))
+            .encode();
 
-    Response response = verifyPostResponse(ACQ_UNITS_MEMBERSHIPS_ENDPOINT, body, prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10),
-      APPLICATION_JSON, 201);
+    Response response =
+        verifyPostResponse(
+            ACQ_UNITS_MEMBERSHIPS_ENDPOINT,
+            body,
+            prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10),
+            APPLICATION_JSON,
+            201);
     AcquisitionsUnitMembership unit = response.as(AcquisitionsUnitMembership.class);
 
     assertThat(unit.getId(), not(is(emptyOrNullString())));
@@ -207,15 +247,26 @@ public class AcquisitionsUnitsServiceIT {
   void testPostAcqUnitsMembershipServerError() {
     logger.info("=== Test POST acquisitions unit - Server Error ===");
 
-    String body = JsonObject.mapFrom(new AcquisitionsUnitMembership().withUserId(UUID.randomUUID().toString()).withAcquisitionsUnitId(UUID.randomUUID().toString())).encode();
-    Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, new Header(X_ECHO_STATUS, String.valueOf(500)));
+    String body =
+        JsonObject.mapFrom(
+                new AcquisitionsUnitMembership()
+                    .withUserId(UUID.randomUUID().toString())
+                    .withAcquisitionsUnitId(UUID.randomUUID().toString()))
+            .encode();
+    Headers headers =
+        prepareHeaders(
+            EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, new Header(X_ECHO_STATUS, String.valueOf(500)));
     verifyPostResponse(ACQ_UNITS_MEMBERSHIPS_ENDPOINT, body, headers, APPLICATION_JSON, 500);
   }
+
   @Test
   void testGetAcqUnitsNoQuery() throws IOException {
     logger.info("=== Test Get Acquisitions Units - With empty query ===");
-    AcquisitionsUnitCollection expected = new JsonObject(getMockData(ACQUISITIONS_UNITS_COLLECTION)).mapTo(AcquisitionsUnitCollection.class);
-    final AcquisitionsUnitCollection units = verifySuccessGet(ACQ_UNITS_UNITS_ENDPOINT, AcquisitionsUnitCollection.class);
+    AcquisitionsUnitCollection expected =
+        new JsonObject(getMockData(ACQUISITIONS_UNITS_COLLECTION))
+            .mapTo(AcquisitionsUnitCollection.class);
+    final AcquisitionsUnitCollection units =
+        verifySuccessGet(ACQ_UNITS_UNITS_ENDPOINT, AcquisitionsUnitCollection.class);
     assertThat(expected.getAcquisitionsUnits(), hasSize(expected.getTotalRecords()));
     assertThat(units.getAcquisitionsUnits(), hasSize(expected.getTotalRecords()));
 
@@ -230,7 +281,8 @@ public class AcquisitionsUnitsServiceIT {
     String cql = ALL_UNITS_CQL + " and name==Read only";
     String url = ACQ_UNITS_UNITS_ENDPOINT + "?query=" + cql;
 
-    final AcquisitionsUnitCollection units = verifySuccessGet(url, AcquisitionsUnitCollection.class);
+    final AcquisitionsUnitCollection units =
+        verifySuccessGet(url, AcquisitionsUnitCollection.class);
     assertThat(units.getAcquisitionsUnits(), hasSize(1));
 
     List<String> queryParams = getQueryParams(ACQUISITIONS_UNITS);
@@ -284,7 +336,11 @@ public class AcquisitionsUnitsServiceIT {
     logger.info("=== Test PUT acquisitions unit - not found ===");
     String url = ACQ_UNITS_UNITS_ENDPOINT + "/" + ID_DOES_NOT_EXIST;
 
-    verifyPut(url, JsonObject.mapFrom(new AcquisitionsUnit().withName("Some name")), APPLICATION_JSON, 404);
+    verifyPut(
+        url,
+        JsonObject.mapFrom(new AcquisitionsUnit().withName("Some name")),
+        APPLICATION_JSON,
+        404);
   }
 
   @Test
@@ -292,10 +348,14 @@ public class AcquisitionsUnitsServiceIT {
     logger.info("=== Test PUT acquisitions unit - different ids in path and body ===");
     String url = ACQ_UNITS_UNITS_ENDPOINT + "/" + UUID.randomUUID().toString();
 
-    AcquisitionsUnit unit = new AcquisitionsUnit().withName("Some name").withId(UUID.randomUUID().toString());
-    Errors errors = verifyPut(url, JsonObject.mapFrom(unit), APPLICATION_JSON, 422).as(Errors.class);
+    AcquisitionsUnit unit =
+        new AcquisitionsUnit().withName("Some name").withId(UUID.randomUUID().toString());
+    Errors errors =
+        verifyPut(url, JsonObject.mapFrom(unit), APPLICATION_JSON, 422).as(Errors.class);
     assertThat(errors.getErrors(), hasSize(1));
-    assertThat(errors.getErrors().get(0).getCode(), equalTo(MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.getCode()));
+    assertThat(
+        errors.getErrors().get(0).getCode(),
+        equalTo(MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.getCode()));
   }
 
   @Test
@@ -306,9 +366,10 @@ public class AcquisitionsUnitsServiceIT {
     verifyDeleteResponse(url, "", 204);
     assertThat(getAcqUnitsRetrievals(), hasSize(1));
 
-    List<AcquisitionsUnit> updates = getRqRsEntries(HttpMethod.PUT, ACQUISITIONS_UNITS).stream()
-      .map(json -> json.mapTo(AcquisitionsUnit.class))
-      .collect(Collectors.toList());
+    List<AcquisitionsUnit> updates =
+        getRqRsEntries(HttpMethod.PUT, ACQUISITIONS_UNITS).stream()
+            .map(json -> json.mapTo(AcquisitionsUnit.class))
+            .collect(Collectors.toList());
     assertThat(updates, hasSize(1));
     assertThat(updates.get(0).getIsDeleted(), is(true));
   }
@@ -327,8 +388,13 @@ public class AcquisitionsUnitsServiceIT {
     logger.info("=== Test POST acquisitions unit - success case ===");
 
     String body = JsonObject.mapFrom(new AcquisitionsUnit().withName("Some name")).encode();
-    Response response = verifyPostResponse(ACQ_UNITS_UNITS_ENDPOINT, body, prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10),
-      APPLICATION_JSON, 201);
+    Response response =
+        verifyPostResponse(
+            ACQ_UNITS_UNITS_ENDPOINT,
+            body,
+            prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10),
+            APPLICATION_JSON,
+            201);
     AcquisitionsUnit unit = response.as(AcquisitionsUnit.class);
 
     assertThat(unit.getId(), not(is(emptyOrNullString())));
@@ -340,7 +406,9 @@ public class AcquisitionsUnitsServiceIT {
     logger.info("=== Test POST acquisitions unit - Server Error ===");
 
     String body = JsonObject.mapFrom(new AcquisitionsUnit().withName("Some name")).encode();
-    Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, new Header(X_ECHO_STATUS, String.valueOf(500)));
+    Headers headers =
+        prepareHeaders(
+            EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, new Header(X_ECHO_STATUS, String.valueOf(500)));
     verifyPostResponse(ACQ_UNITS_UNITS_ENDPOINT, body, headers, APPLICATION_JSON, 500);
   }
 }

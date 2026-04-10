@@ -1,23 +1,22 @@
 package org.folio.service.dataimport.utils;
 
-import io.vertx.core.buffer.Buffer;
-import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
-import io.vertx.kafka.client.producer.KafkaHeader;
-import org.folio.CopilotGenerated;
-import org.folio.DataImportEventPayload;
-import org.folio.rest.RestConstants;
-import org.folio.rest.RestVerticle;
-import org.junit.jupiter.api.Test;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
+import io.vertx.core.buffer.Buffer;
+import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
+import io.vertx.kafka.client.producer.KafkaHeader;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.folio.CopilotGenerated;
+import org.folio.DataImportEventPayload;
+import org.folio.rest.RestConstants;
+import org.folio.rest.RestVerticle;
+import org.junit.jupiter.api.Test;
 
 @CopilotGenerated(model = "Claude Sonnet 4.5")
 class DataImportUtilsTest {
@@ -37,11 +36,12 @@ class DataImportUtilsTest {
     context.put(RestVerticle.OKAPI_USERID_HEADER, USER_ID);
     context.put(RestVerticle.OKAPI_REQUESTID_HEADER, REQUEST_ID);
 
-    DataImportEventPayload eventPayload = new DataImportEventPayload()
-      .withTenant(TENANT)
-      .withOkapiUrl(OKAPI_URL)
-      .withToken(TOKEN)
-      .withContext(context);
+    DataImportEventPayload eventPayload =
+        new DataImportEventPayload()
+            .withTenant(TENANT)
+            .withOkapiUrl(OKAPI_URL)
+            .withToken(TOKEN)
+            .withContext(context);
 
     // When
     Map<String, String> headers = DataImportUtils.extractOkapiHeaders(eventPayload);
@@ -63,11 +63,12 @@ class DataImportUtilsTest {
     context.put(RestVerticle.OKAPI_USERID_HEADER, "   ");
     context.put(RestVerticle.OKAPI_REQUESTID_HEADER, null);
 
-    DataImportEventPayload eventPayload = new DataImportEventPayload()
-      .withTenant(TENANT)
-      .withOkapiUrl(OKAPI_URL)
-      .withToken(TOKEN)
-      .withContext(context);
+    DataImportEventPayload eventPayload =
+        new DataImportEventPayload()
+            .withTenant(TENANT)
+            .withOkapiUrl(OKAPI_URL)
+            .withToken(TOKEN)
+            .withContext(context);
 
     // When
     Map<String, String> headers = DataImportUtils.extractOkapiHeaders(eventPayload);

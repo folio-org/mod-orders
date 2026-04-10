@@ -39,8 +39,7 @@ public class KafkaAdminClientServiceTest {
   private final String STUB_TENANT = "foo-tenant";
   private KafkaAdminClient mockClient;
   private Vertx vertx;
-  @Mock
-  private OrdersKafkaTopicService ordersKafkaTopicService;
+  @Mock private OrdersKafkaTopicService ordersKafkaTopicService;
 
   @Before
   public void setUp() {
@@ -60,46 +59,53 @@ public class KafkaAdminClientServiceTest {
   @Test
   public void shouldCreateTopicIfAlreadyExist(TestContext testContext) {
     when(mockClient.createTopics(anyList()))
-      .thenReturn(failedFuture(new TopicExistsException("x")))
-      .thenReturn(failedFuture(new TopicExistsException("y")))
-      .thenReturn(failedFuture(new TopicExistsException("z")))
-      .thenReturn(succeededFuture());
+        .thenReturn(failedFuture(new TopicExistsException("x")))
+        .thenReturn(failedFuture(new TopicExistsException("y")))
+        .thenReturn(failedFuture(new TopicExistsException("z")))
+        .thenReturn(succeededFuture());
     when(mockClient.listTopics()).thenReturn(succeededFuture(Set.of("old")));
     when(mockClient.close()).thenReturn(succeededFuture());
 
     createKafkaTopicsAsync(mockClient)
-      .onComplete(testContext.asyncAssertSuccess(notUsed -> {
-        verify(mockClient, times(4)).listTopics();
-        verify(mockClient, times(4)).createTopics(anyList());
-        verify(mockClient, times(1)).close();
-      }));
+        .onComplete(
+            testContext.asyncAssertSuccess(
+                notUsed -> {
+                  verify(mockClient, times(4)).listTopics();
+                  verify(mockClient, times(4)).createTopics(anyList());
+                  verify(mockClient, times(1)).close();
+                }));
   }
 
   @Test
   public void shouldFailIfExistExceptionIsPermanent(TestContext testContext) {
-    when(mockClient.createTopics(anyList())).thenReturn(failedFuture(new TopicExistsException("x")));
+    when(mockClient.createTopics(anyList()))
+        .thenReturn(failedFuture(new TopicExistsException("x")));
     when(mockClient.listTopics()).thenReturn(succeededFuture(Set.of("old")));
     when(mockClient.close()).thenReturn(succeededFuture());
 
     createKafkaTopicsAsync(mockClient)
-      .onComplete(testContext.asyncAssertFailure(e -> {
-        assertThat(e, instanceOf(TopicExistsException.class));
-        verify(mockClient, times(1)).close();
-      }));
+        .onComplete(
+            testContext.asyncAssertFailure(
+                e -> {
+                  assertThat(e, instanceOf(TopicExistsException.class));
+                  verify(mockClient, times(1)).close();
+                }));
   }
 
   @Test
   public void shouldNotCreateTopicOnOther(TestContext testContext) {
-    when(mockClient.createTopics(anyList())).thenReturn(failedFuture(new RuntimeException("err msg")));
+    when(mockClient.createTopics(anyList()))
+        .thenReturn(failedFuture(new RuntimeException("err msg")));
     when(mockClient.listTopics()).thenReturn(succeededFuture(Set.of("old")));
     when(mockClient.close()).thenReturn(succeededFuture());
 
     createKafkaTopicsAsync(mockClient)
-      .onComplete(testContext.asyncAssertFailure(cause -> {
-          testContext.assertEquals("err msg", cause.getMessage());
-          verify(mockClient, times(1)).close();
-        }
-      ));
+        .onComplete(
+            testContext.asyncAssertFailure(
+                cause -> {
+                  testContext.assertEquals("err msg", cause.getMessage());
+                  verify(mockClient, times(1)).close();
+                }));
   }
 
   @Test
@@ -109,23 +115,26 @@ public class KafkaAdminClientServiceTest {
     when(mockClient.close()).thenReturn(succeededFuture());
 
     createKafkaTopicsAsync(mockClient)
-      .onComplete(testContext.asyncAssertSuccess(notUsed -> {
+        .onComplete(
+            testContext.asyncAssertSuccess(
+                notUsed -> {
+                  @SuppressWarnings("unchecked")
+                  final ArgumentCaptor<List<NewTopic>> createTopicsCaptor = forClass(List.class);
 
-        @SuppressWarnings("unchecked")
-        final ArgumentCaptor<List<NewTopic>> createTopicsCaptor = forClass(List.class);
+                  verify(mockClient, times(1)).createTopics(createTopicsCaptor.capture());
+                  verify(mockClient, times(1)).close();
 
-        verify(mockClient, times(1)).createTopics(createTopicsCaptor.capture());
-        verify(mockClient, times(1)).close();
-
-        // Only these items are expected, so implicitly checks size of list
-        assertThat(getTopicNames(createTopicsCaptor), containsInAnyOrder(allExpectedTopics.toArray()));
-      }));
+                  // Only these items are expected, so implicitly checks size of list
+                  assertThat(
+                      getTopicNames(createTopicsCaptor),
+                      containsInAnyOrder(allExpectedTopics.toArray()));
+                }));
   }
 
   private List<String> getTopicNames(ArgumentCaptor<List<NewTopic>> createTopicsCaptor) {
     return createTopicsCaptor.getAllValues().get(0).stream()
-      .map(NewTopic::getName)
-      .collect(Collectors.toList());
+        .map(NewTopic::getName)
+        .collect(Collectors.toList());
   }
 
   private Future<Void> createKafkaTopicsAsync(KafkaAdminClient client) {
@@ -133,13 +142,13 @@ public class KafkaAdminClientServiceTest {
       mocked.when(() -> KafkaAdminClient.create(eq(vertx), anyMap())).thenReturn(client);
 
       return new KafkaAdminClientService(vertx)
-        .createKafkaTopics(ordersKafkaTopicService.createTopicObjects(), STUB_TENANT);
+          .createKafkaTopics(ordersKafkaTopicService.createTopicObjects(), STUB_TENANT);
     }
   }
 
-  private final Set<String> allExpectedTopics = Set.of(
-    "test-env.Default.foo-tenant.DI_ORDER_CREATED_READY_FOR_POST_PROCESSING",
-    "test-env.Default.foo-tenant.DI_ORDER_CREATED",
-    "test-env.Default.foo-tenant.DI_PENDING_ORDER_CREATED"
-  );
+  private final Set<String> allExpectedTopics =
+      Set.of(
+          "test-env.Default.foo-tenant.DI_ORDER_CREATED_READY_FOR_POST_PROCESSING",
+          "test-env.Default.foo-tenant.DI_ORDER_CREATED",
+          "test-env.Default.foo-tenant.DI_PENDING_ORDER_CREATED");
 }

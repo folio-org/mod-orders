@@ -1,6 +1,15 @@
 package org.folio.service.finance.budget;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasSize;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+
 import io.vertx.core.Future;
+import java.util.List;
 import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.BudgetCollection;
 import org.folio.rest.core.RestClient;
@@ -13,23 +22,11 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.util.List;
-
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.hasSize;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
-
 public class BudgetServiceTest {
   private AutoCloseable mockitoMocks;
   private BudgetService budgetService;
-  @Mock
-  private RequestContext requestContext;
-  @Mock
-  private RestClient restClient;
+  @Mock private RequestContext requestContext;
+  @Mock private RestClient restClient;
 
   @BeforeEach
   void beforeEach() {
@@ -49,7 +46,8 @@ public class BudgetServiceTest {
     Budget budget = new Budget();
     BudgetCollection budgetCollection = new BudgetCollection().withBudgets(List.of(budget));
     doReturn(Future.succeededFuture(budgetCollection))
-      .when(restClient).get(any(RequestEntry.class), eq(BudgetCollection.class), eq(requestContext));
+        .when(restClient)
+        .get(any(RequestEntry.class), eq(BudgetCollection.class), eq(requestContext));
 
     // When
     Future<List<Budget>> future = budgetService.getBudgetsByQuery("", requestContext);
@@ -59,5 +57,4 @@ public class BudgetServiceTest {
     assertThat(future.result(), hasSize(1));
     assertEquals(budget, future.result().get(0));
   }
-
 }
