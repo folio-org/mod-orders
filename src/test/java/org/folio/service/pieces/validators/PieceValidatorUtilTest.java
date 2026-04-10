@@ -21,6 +21,11 @@ import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
 import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import org.junit.jupiter.params.provider.CsvSource;
 
 @CopilotGenerated(partiallyGenerated = true)
 public class PieceValidatorUtilTest {
@@ -170,5 +175,60 @@ public class PieceValidatorUtilTest {
     PoLine poLine = new PoLine().withCheckinItems(false);
     List<Error> errorList = PieceValidatorUtil.validatePieceRelatedOrder(order, poLine);
     assertEquals(0, errorList.size());
+  }
+
+    @ParameterizedTest
+  @EnumSource(value = Physical.CreateInventory.class, names = {"INSTANCE_HOLDING", "INSTANCE_HOLDING_ITEM"})
+  void testIsLocationRequiredWhenPhysicalPieceAndPhysicalCreateInventoryIsHoldingOrItem(Physical.CreateInventory inventoryType) {
+    // TestMate-ed82770e6d633b49d5db3d33db07ceee
+    //given
+    Physical physical = new Physical().withCreateInventory(inventoryType);
+    PoLine poLine = new PoLine().withPhysical(physical);
+    Piece.Format pieceFormat = Piece.Format.PHYSICAL;
+    //When
+    boolean isLocationRequired = PieceValidatorUtil.isLocationRequired(pieceFormat, poLine);
+    //Then
+    assertTrue(isLocationRequired);
+  }
+
+    @ParameterizedTest
+  @CsvSource({
+    "ELECTRONIC, true, false",
+    "PHYSICAL, false, true",
+    "OTHER, false, true"
+  })
+  void testIsLocationRequiredWhenResourceDetailsAreMissing(Piece.Format pieceFormat, boolean withPhysical, boolean withEresource) {
+    // TestMate-693d44ada71c2d071ee90a6521d9dc04
+    // Given
+    PoLine poLine = new PoLine();
+    if (withPhysical) {
+      poLine.setPhysical(new Physical());
+    }
+    if (withEresource) {
+      poLine.setEresource(new Eresource());
+    }
+    // When
+    boolean isLocationRequired = PieceValidatorUtil.isLocationRequired(pieceFormat, poLine);
+    // Then
+    assertFalse(isLocationRequired);
+  }
+
+    @ParameterizedTest
+  @CsvSource({
+    "INSTANCE_HOLDING, true",
+    "INSTANCE_HOLDING_ITEM, true",
+    "NONE, false",
+    "INSTANCE, false"
+  })
+  void testIsLocationRequiredWhenPieceFormatIsOther(Physical.CreateInventory inventoryType, boolean expectedResult) {
+    // TestMate-dfb94abd5db2d1a039b299cb78ea44d1
+    // Given
+    Physical physical = new Physical().withCreateInventory(inventoryType);
+    PoLine poLine = new PoLine().withPhysical(physical);
+    Piece.Format pieceFormat = Piece.Format.OTHER;
+    // When
+    boolean actualResult = PieceValidatorUtil.isLocationRequired(pieceFormat, poLine);
+    // Then
+    assertEquals(expectedResult, actualResult);
   }
 }
