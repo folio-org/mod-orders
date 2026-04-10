@@ -3,6 +3,7 @@
 * [MODORDERS-1040](https://folio-org.atlassian.net/browse/MODORDERS-1040) - Subscribe to JobExecution status change and add cache
 * [MODORDERS-1042](https://folio-org.atlassian.net/browse/MODORDERS-1042) - Do not process event if JobExecution status is Cancelled
 * [MODORDERS-1400](https://folio-org.atlassian.net/browse/MODORDERS-1400) - assertj: Fix scope to test, bump version to 3.27.7
+* [MODORDERS-1432](https://folio-org.atlassian.net/browse/MODORDERS-1432) - The open order is not created after import .mrc file
 
 ## 13.0.0 - Released (Sunflower R1 2025)
 The primary focus of this release was to enhance multi-tenant functionality, improve piece management, and implement various inventory and order processing features.
