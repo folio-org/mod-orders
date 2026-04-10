@@ -15,6 +15,9 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.folio.service.pieces.PieceUtil;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 @CopilotGenerated(model = "Claude Sonnet 4", partiallyGenerated = true)
 public class PieceUtilTest {
@@ -130,6 +133,75 @@ public class PieceUtilTest {
     assertEquals(holdingId, location.getHoldingId());
     assertEquals(locationId, location.getLocationId());
     assertEquals(tenantId, location.getTenantId());
+  }
+
+    @Test
+  void testCanDeletePieceForTitleRemovalWhenAllConditionsMetShouldReturnTrue() {
+    // TestMate-5158820b352e7d8e5d81d3d908d774a2
+    // Given
+    String holdingId = "holding-1";
+    String tenantId = "tenant-a";
+    List<String> holdingIds = List.of(holdingId, "holding-2");
+    Piece piece = new Piece()
+      .withHoldingId(holdingId)
+      .withReceivingTenantId(tenantId)
+      .withReceivingStatus(Piece.ReceivingStatus.EXPECTED);
+    // When
+    boolean result = PieceUtil.canDeletePieceForTitleRemoval(piece, holdingIds, tenantId);
+    // Then
+    assertTrue(result);
+  }
+
+    @Test
+  void testCanDeletePieceForTitleRemovalWhenHoldingIdNotPresentShouldReturnFalse() {
+    // TestMate-905f3160445ddf202de1045018a2900a
+    // Given
+    String tenantId = "tenant-a";
+    List<String> holdingIds = List.of("holding-1", "holding-2");
+    Piece piece = new Piece()
+      .withHoldingId("holding-3")
+      .withReceivingTenantId(tenantId)
+      .withReceivingStatus(Piece.ReceivingStatus.EXPECTED);
+    // When
+    boolean result = PieceUtil.canDeletePieceForTitleRemoval(piece, holdingIds, tenantId);
+    // Then
+    assertFalse(result);
+  }
+
+    @Test
+  void testCanDeletePieceForTitleRemovalWhenTenantIdMismatchShouldReturnFalse() {
+    // TestMate-67a47dab31d9effe847573e97a356134
+    // Given
+    String pieceHoldingId = "holding-1";
+    String pieceTenantId = "tenant-b";
+    String requestContextTenantId = "tenant-a";
+    List<String> holdingIds = List.of(pieceHoldingId);
+    Piece piece = new Piece()
+      .withHoldingId(pieceHoldingId)
+      .withReceivingTenantId(pieceTenantId)
+      .withReceivingStatus(Piece.ReceivingStatus.EXPECTED);
+    // When
+    boolean result = PieceUtil.canDeletePieceForTitleRemoval(piece, holdingIds, requestContextTenantId);
+    // Then
+    assertFalse(result);
+  }
+
+    @Test
+  void testCanDeletePieceForTitleRemovalWhenTenantIdIsNullShouldReturnTrue() {
+    // TestMate-b8d02ab56edeba4223ee61e25373e855
+    // Given
+    String holdingId = "holding-123";
+    String pieceTenantId = "tenant-x";
+    List<String> holdingIds = List.of(holdingId);
+    Piece piece = new Piece()
+      .withHoldingId(holdingId)
+      .withReceivingTenantId(pieceTenantId)
+      .withReceivingStatus(Piece.ReceivingStatus.EXPECTED);
+    String inputTenantId = null;
+    // When
+    boolean result = PieceUtil.canDeletePieceForTitleRemoval(piece, holdingIds, inputTenantId);
+    // Then
+    assertTrue(result);
   }
 
 }
