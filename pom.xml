@@ -55,15 +55,15 @@
     <ramlfiles_path>${basedir}/ramls</ramlfiles_path>
     <ramlfiles_util_path>${ramlfiles_path}/raml-util</ramlfiles_util_path>
     <ramlfiles_acq_models_path>${ramlfiles_path}/acq-models</ramlfiles_acq_models_path>
-    <raml-module-builder.version>36.0.0-SNAPSHOT</raml-module-builder.version>
+    <raml-module-builder.version>36.0.0</raml-module-builder.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
     <!--Dependency Management Properties-->
-    <vertx.version>5.0.8</vertx.version>
-    <jackson-bom.version>2.21.1</jackson-bom.version>
-    <log4j.version>2.25.3</log4j.version>
-    <testcontainers-bom.version>2.0.3</testcontainers-bom.version>
+    <vertx.version>5.0.10</vertx.version>
+    <jackson-bom.version>2.21.2</jackson-bom.version>
+    <log4j.version>2.25.4</log4j.version>
+    <testcontainers-bom.version>2.0.4</testcontainers-bom.version>
 
     <!--Dependency Properties-->
     <spring.version>7.0.6</spring.version>
@@ -79,7 +79,7 @@
     <folio-di-support.version>4.0.0</folio-di-support.version>
     <mod-di-converter-storage-client.version>2.4.3</mod-di-converter-storage-client.version>
     <data-import-processing-core.version>5.0.0-SNAPSHOT</data-import-processing-core.version>
-    <folio-kafka-wrapper.version>4.0.0-SNAPSHOT</folio-kafka-wrapper.version>
+    <folio-kafka-wrapper.version>4.0.0</folio-kafka-wrapper.version>
 
     <!--Maven plugin dependencies-->
     <build-helper-maven-plugin.version>3.6.1</build-helper-maven-plugin.version>
@@ -357,7 +357,7 @@
     <dependency>
       <groupId>org.folio</groupId>
       <artifactId>data-import-utils</artifactId>
-      <version>1.14.0</version>
+      <version>2.0.0</version>
       <type>jar</type>
       <exclusions>
         <exclusion>
