@@ -29,14 +29,28 @@ public class PieceCreateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
   }
 
   @Override
-  public boolean poLineUpdateQuantity(PieceCreationHolder holder) {
+  public boolean poLineUpdateCost(PieceCreationHolder holder) {
+    PoLine lineToSave = holder.getPoLineToSave();
+    Piece piece = holder.getPieceToCreate();
+    Cost cost = lineToSave.getCost();
+    if (piece.getFormat() == Piece.Format.ELECTRONIC) {
+      Integer prevQty = Optional.ofNullable(cost.getQuantityElectronic()).orElse(0);
+      cost.setQuantityElectronic(prevQty + 1);
+    } else {
+      Integer prevQty = Optional.ofNullable(cost.getQuantityPhysical()).orElse(0);
+      cost.setQuantityPhysical(prevQty + 1);
+    }
+    return true;
+  }
+
+  @Override
+  public boolean poLineUpdateLocations(PieceCreationHolder holder) {
     PoLine lineToSave = holder.getPoLineToSave();
     Piece piece = holder.getPieceToCreate();
     final int qty = 1;
     List<Location> locationsToUpdate = PieceUtil.findOrderPieceLineLocation(piece, lineToSave);
     if (CollectionUtils.isNotEmpty(locationsToUpdate)) {
       Location loc = locationsToUpdate.get(0);
-      Cost cost = lineToSave.getCost();
       if (Objects.nonNull(piece.getReceivingTenantId())) {
         loc.setTenantId(piece.getReceivingTenantId());
       }
@@ -44,14 +58,10 @@ public class PieceCreateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
         Integer prevLocQty = Optional.ofNullable(loc.getQuantityElectronic()).orElse(0);
         loc.setQuantityElectronic(prevLocQty + qty);
         loc.setQuantity(loc.getQuantity() + qty);
-        Integer prevCostQty = Optional.ofNullable(cost.getQuantityElectronic()).orElse(0);
-        cost.setQuantityElectronic(prevCostQty + qty);
       } else {
         Integer prevLocQty = Optional.ofNullable(loc.getQuantityPhysical()).orElse(0);
         loc.setQuantityPhysical(prevLocQty + qty);
         loc.setQuantity(loc.getQuantity() + qty);
-        Integer prevCostQty = Optional.ofNullable(cost.getQuantityPhysical()).orElse(0);
-        cost.setQuantityPhysical(prevCostQty + qty);
       }
     } else if (isLocationUpdateRequired(piece, lineToSave)) {
       Location locationToAdd = new Location().withQuantity(qty);
@@ -60,31 +70,18 @@ public class PieceCreateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
       } else {
         locationToAdd = locationToAdd.withLocationId(piece.getLocationId());
       }
-      Cost cost = lineToSave.getCost();
       if (Objects.nonNull(piece.getReceivingTenantId())) {
         locationToAdd.setTenantId(piece.getReceivingTenantId());
       }
       if (piece.getFormat() == Piece.Format.ELECTRONIC) {
         locationToAdd.withQuantityElectronic(qty);
-        Integer prevQty = Optional.ofNullable(cost.getQuantityElectronic()).orElse(0);
-        cost.setQuantityElectronic(prevQty + qty);
       } else {
         locationToAdd.withQuantityPhysical(qty);
-        Integer prevQty = Optional.ofNullable(cost.getQuantityPhysical()).orElse(0);
-        cost.setQuantityPhysical(prevQty + qty);
       }
       List<Location> locations = lineToSave.getLocations();
       locations.add(locationToAdd);
-    } else {
-      Cost cost = lineToSave.getCost();
-      if (piece.getFormat() == Piece.Format.ELECTRONIC) {
-        Integer prevQty = Optional.ofNullable(cost.getQuantityElectronic()).orElse(0);
-        cost.setQuantityElectronic(prevQty + qty);
-      } else {
-        Integer prevQty = Optional.ofNullable(cost.getQuantityPhysical()).orElse(0);
-        cost.setQuantityPhysical(prevQty + qty);
-      }
     }
     return true;
   }
+
 }

@@ -51,13 +51,14 @@ public class PieceDeleteFlowManager {
     return pieceStorageService.getPieceById(pieceId, requestContext)
       .map(holder::withPieceToDelete)
       .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext))
-      .compose(aVoid -> basePieceFlowHolderBuilder.updateHolderWithTitleInformation(holder, requestContext))
-      .compose(aVoid -> protectionService.isOperationRestricted(holder.getTitle().getAcqUnitIds(), DELETE, requestContext))
-      .compose(aVoid -> isAllowedToDeletePiece(holder))
-      .compose(aVoid -> isDeletePieceRequestValid(holder, requestContext))
-      .compose(aVoid -> pieceDeleteFlowInventoryManager.processInventory(holder, requestContext))
-      .compose(pair -> updatePoLine(holder, requestContext))
-      .compose(aVoid -> pieceStorageService.deletePiece(holder.getPieceToDelete().getId(), true, requestContext));
+      .compose(v -> basePieceFlowHolderBuilder.updateHolderWithTitleInformation(holder, requestContext))
+      .compose(v -> protectionService.isOperationRestricted(holder.getTitle().getAcqUnitIds(), DELETE, requestContext))
+      .compose(v -> isAllowedToDeletePiece(holder))
+      .compose(v -> isDeletePieceRequestValid(holder, requestContext))
+      .compose(v -> pieceDeleteFlowPoLineService.updatePoLine(holder, requestContext))
+      .compose(v -> pieceDeleteFlowInventoryManager.processInventory(holder, requestContext))
+      .compose(v -> pieceDeleteFlowPoLineService.updateLocationsAndSavePoLine(holder, requestContext))
+      .compose(pair -> pieceStorageService.deletePiece(holder.getPieceToDelete().getId(), true, requestContext));
   }
 
   private Future<Void> isAllowedToDeletePiece(PieceDeletionHolder holder) {
@@ -91,13 +92,6 @@ public class PieceDeleteFlowManager {
         return Future.succeededFuture();
       })
       .mapEmpty();
-  }
-
-  protected Future<Void> updatePoLine(PieceDeletionHolder holder, RequestContext requestContext) {
-    var poLine = holder.getOriginPoLine();
-    return Boolean.TRUE.equals(poLine.getIsPackage()) || Boolean.TRUE.equals(poLine.getCheckinItems())
-      ? Future.succeededFuture()
-      : pieceDeleteFlowPoLineService.updatePoLine(holder, requestContext);
   }
 
 }

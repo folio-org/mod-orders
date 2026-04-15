@@ -48,7 +48,13 @@ public class PieceUpdateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
   }
 
   @Override
-  public boolean poLineUpdateQuantity(PieceUpdateHolder pieceUpdateHolder) {
+  public boolean poLineUpdateCost(PieceUpdateHolder holder) {
+    // FIXME: See MODORDERS-1435
+    return false;
+  }
+
+  @Override
+  public boolean poLineUpdateLocations(PieceUpdateHolder pieceUpdateHolder) {
     PoLine lineToSave = pieceUpdateHolder.getPoLineToSave();
     Piece pieceToUpdate = pieceUpdateHolder.getPieceToUpdate();
     Piece pieceFromStorage = pieceUpdateHolder.getPieceFromStorage();
@@ -60,7 +66,7 @@ public class PieceUpdateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
       } else {
         pieceDeletionHolder.withPoLineOnly(lineToSave);
       }
-      boolean isDecreased = pieceDeleteFlowPoLineService.poLineUpdateQuantity(pieceDeletionHolder);
+      boolean isDecreased = pieceDeleteFlowPoLineService.poLineUpdateLocations(pieceDeletionHolder);
       if (isDecreased) {
         PieceCreationHolder pieceCreationHolder = new PieceCreationHolder().withPieceToCreate(pieceToUpdate);
         if (pieceDeletionHolder.getPurchaseOrderToSave() != null) {
@@ -68,7 +74,7 @@ public class PieceUpdateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
         } else {
           pieceCreationHolder.withPoLineOnly(lineToSave);
         }
-        pieceCreateFlowPoLineService.poLineUpdateQuantity(pieceCreationHolder);
+        pieceCreateFlowPoLineService.poLineUpdateLocations(pieceCreationHolder);
         if (pieceCreationHolder.getPurchaseOrderToSave() != null) {
           pieceUpdateHolder.withOrderInformation(pieceCreationHolder.getPurchaseOrderToSave());
         } else {
@@ -81,7 +87,7 @@ public class PieceUpdateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
   }
 
   public boolean updatePoLineWithoutSave(PieceUpdateHolder holder) {
-    boolean isLineUpdated = poLineUpdateQuantity(holder);
+    boolean isLineUpdated = poLineUpdateLocations(holder);
     if (isLineUpdated) {
       updateEstimatedPrice(holder.getPoLineToSave());
       return true;
