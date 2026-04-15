@@ -55,7 +55,7 @@
     <ramlfiles_path>${basedir}/ramls</ramlfiles_path>
     <ramlfiles_util_path>${ramlfiles_path}/raml-util</ramlfiles_util_path>
     <ramlfiles_acq_models_path>${ramlfiles_path}/acq-models</ramlfiles_acq_models_path>
-    <raml-module-builder.version>36.0.0-SNAPSHOT</raml-module-builder.version>
+    <raml-module-builder.version>36.0.0</raml-module-builder.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
@@ -78,8 +78,8 @@
     <mod-configuration-client.version>5.12.1</mod-configuration-client.version>
     <folio-di-support.version>4.0.0</folio-di-support.version>
     <mod-di-converter-storage-client.version>2.4.3</mod-di-converter-storage-client.version>
-    <data-import-processing-core.version>5.0.0-SNAPSHOT</data-import-processing-core.version>
-    <folio-kafka-wrapper.version>4.0.0-SNAPSHOT</folio-kafka-wrapper.version>
+    <data-import-processing-core.version>5.0.0</data-import-processing-core.version>
+    <folio-kafka-wrapper.version>4.0.0</folio-kafka-wrapper.version>
 
     <!--Maven plugin dependencies-->
     <build-helper-maven-plugin.version>3.6.1</build-helper-maven-plugin.version>
