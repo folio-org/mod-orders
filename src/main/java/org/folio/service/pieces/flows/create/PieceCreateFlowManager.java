@@ -80,8 +80,8 @@ public class PieceCreateFlowManager {
   }
 
   protected Future<Void> updatePoLineBatch(PieceBatchCreationHolder holder, RequestContext requestContext) {
-    var pieceCreationHolderList = createPieceCreationHolderList(holder);
-    return chainCall(pieceCreationHolderList, pieceCreationHolder -> pieceCreateFlowPoLineService.updatePoLine(pieceCreationHolder, requestContext));
+    return chainCall(holder.getPiecesToCreate(), piece ->
+      pieceCreateFlowPoLineService.updatePoLine(createPieceCreationHolder(piece, holder), requestContext));
   }
 
   private Future<Void> updateLocationsAndSavePoLineBatch(PieceBatchCreationHolder holder, RequestContext requestContext) {
@@ -104,8 +104,7 @@ public class PieceCreateFlowManager {
       .withCreateItem(holder.isCreateItem());
     pieceCreationHolder
       .withTitleInformation(holder.getTitle())
-      .withPoLineOnly(holder.getPoLineToSave())
-      .withOrderInformation(holder.getPurchaseOrderToSave());
+      .withOrderInformation(holder.getOriginPurchaseOrder(), holder.getPurchaseOrderToSave());
     return pieceCreationHolder;
   }
 

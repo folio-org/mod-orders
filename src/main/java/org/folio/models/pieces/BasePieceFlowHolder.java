@@ -5,7 +5,6 @@ import java.util.List;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
 
@@ -30,6 +29,12 @@ public abstract class BasePieceFlowHolder {
   public BasePieceFlowHolder withOrderInformation(PurchaseOrder originPurchaseOrder, PoLine originPoLine) {
     this.originPurchaseOrder = HelperUtils.convertToCompositePurchaseOrder(originPurchaseOrder, List.of(originPoLine));
     this.purchaseOrderToSave = HelperUtils.clone(CompositePurchaseOrder.class, this.originPurchaseOrder);
+    return this;
+  }
+
+  public BasePieceFlowHolder withOrderInformation(CompositePurchaseOrder originPurchaseOrder, CompositePurchaseOrder purchaseOrderToSave) {
+    this.originPurchaseOrder = originPurchaseOrder;
+    this.purchaseOrderToSave =  purchaseOrderToSave;
     return this;
   }
 
