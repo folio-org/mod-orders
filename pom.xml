@@ -60,7 +60,7 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
     <!--Dependency Management Properties-->
-    <vertx.version>5.0.8</vertx.version>
+    <vertx.version>5.0.10</vertx.version>
     <jackson-bom.version>2.21.1</jackson-bom.version>
     <log4j.version>2.25.3</log4j.version>
     <testcontainers-bom.version>2.0.3</testcontainers-bom.version>
