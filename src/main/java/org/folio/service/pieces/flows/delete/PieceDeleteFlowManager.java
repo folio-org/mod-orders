@@ -55,7 +55,7 @@ public class PieceDeleteFlowManager {
       .compose(v -> protectionService.isOperationRestricted(holder.getTitle().getAcqUnitIds(), DELETE, requestContext))
       .compose(v -> isAllowedToDeletePiece(holder))
       .compose(v -> isDeletePieceRequestValid(holder, requestContext))
-      .compose(v -> pieceDeleteFlowPoLineService.updatePoLine(holder, requestContext))
+      .compose(v -> pieceDeleteFlowPoLineService.updatePoLineCostAndProcessEncumbrances(holder, requestContext))
       .compose(v -> pieceDeleteFlowInventoryManager.processInventory(holder, requestContext))
       .compose(v -> pieceDeleteFlowPoLineService.updateLocationsAndSavePoLine(holder, requestContext))
       .compose(pair -> pieceStorageService.deletePiece(holder.getPieceToDelete().getId(), true, requestContext));

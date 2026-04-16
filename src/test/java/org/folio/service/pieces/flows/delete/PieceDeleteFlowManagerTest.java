@@ -176,7 +176,7 @@ public class PieceDeleteFlowManagerTest {
     doReturn(succeededFuture(new ArrayList<JsonObject>())).when(inventoryItemManager).getItemsByHoldingId(holdingId,  requestContext);
 
     final ArgumentCaptor<PieceDeletionHolder> pieceDeletionHolderCapture = ArgumentCaptor.forClass(PieceDeletionHolder.class);
-    doReturn(succeededFuture(null)).when(pieceDeleteFlowPoLineService).updatePoLine(pieceDeletionHolderCapture.capture(), eq(requestContext));
+    doReturn(succeededFuture(null)).when(pieceDeleteFlowPoLineService).updatePoLineCostAndProcessEncumbrances(pieceDeletionHolderCapture.capture(), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceDeleteFlowPoLineService).updateLocationsAndSavePoLine(pieceDeletionHolderCapture.capture(), eq(requestContext));
 
     //When
@@ -190,7 +190,7 @@ public class PieceDeleteFlowManagerTest {
     //Then
     assertNull(poLine.getLocations().get(0).getLocationId());
     assertEquals(holdingId, poLine.getLocations().get(0).getHoldingId());
-    verify(pieceDeleteFlowPoLineService).updatePoLine(pieceDeletionHolderCapture.capture(), eq(requestContext));
+    verify(pieceDeleteFlowPoLineService).updatePoLineCostAndProcessEncumbrances(pieceDeletionHolderCapture.capture(), eq(requestContext));
     verify(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(holder, requestContext);
   }
 
@@ -237,7 +237,7 @@ public class PieceDeleteFlowManagerTest {
 
     assertNull(poLine.getLocations().get(0).getLocationId());
     assertEquals(holdingId, poLine.getLocations().get(0).getHoldingId());
-    verify(pieceDeleteFlowPoLineService, times(0)).updatePoLine(any(), any());
+    verify(pieceDeleteFlowPoLineService, times(0)).updatePoLineCostAndProcessEncumbrances(any(), any());
     verify(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(holder, requestContext);
   }
 
@@ -282,7 +282,7 @@ public class PieceDeleteFlowManagerTest {
     }).when(basePieceFlowHolderBuilder).updateHolderWithTitleInformation(PieceDeletionHolderCapture.capture(), eq(requestContext));
 
     final ArgumentCaptor<PieceDeletionHolder> pieceDeletionHolderCapture = ArgumentCaptor.forClass(PieceDeletionHolder.class);
-    doReturn(succeededFuture(null)).when(pieceDeleteFlowPoLineService).updatePoLine(pieceDeletionHolderCapture.capture(), eq(requestContext));
+    doReturn(succeededFuture(null)).when(pieceDeleteFlowPoLineService).updatePoLineCostAndProcessEncumbrances(pieceDeletionHolderCapture.capture(), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceDeleteFlowPoLineService).updateLocationsAndSavePoLine(pieceDeletionHolderCapture.capture(), eq(requestContext));
 
     //When
@@ -293,7 +293,7 @@ public class PieceDeleteFlowManagerTest {
     verify(inventoryItemManager, times(0)).deleteItem(itemId, true, requestContext);
     verify(inventoryHoldingManager, times(0)).deleteHoldingById(holdingId, true, requestContext);
     verify(pieceStorageService, times(1)).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
-    verify(pieceDeleteFlowPoLineService).updatePoLine(pieceDeletionHolderCapture.capture(), eq(requestContext));
+    verify(pieceDeleteFlowPoLineService).updatePoLineCostAndProcessEncumbrances(pieceDeletionHolderCapture.capture(), eq(requestContext));
     verify(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(holder, requestContext);
   }
 
@@ -347,7 +347,7 @@ public class PieceDeleteFlowManagerTest {
     }).when(basePieceFlowHolderBuilder).updateHolderWithTitleInformation(PieceDeletionHolderCapture.capture(), eq(requestContext));
 
     final ArgumentCaptor<PieceDeletionHolder> pieceDeletionHolderCapture = ArgumentCaptor.forClass(PieceDeletionHolder.class);
-    doReturn(succeededFuture(null)).when(pieceDeleteFlowPoLineService).updatePoLine(pieceDeletionHolderCapture.capture(), eq(requestContext));
+    doReturn(succeededFuture(null)).when(pieceDeleteFlowPoLineService).updatePoLineCostAndProcessEncumbrances(pieceDeletionHolderCapture.capture(), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceDeleteFlowPoLineService).updateLocationsAndSavePoLine(pieceDeletionHolderCapture.capture(), eq(requestContext));
     //When
     pieceDeleteFlowManager.deletePiece(piece.getId(), true, requestContext).result();
@@ -357,7 +357,7 @@ public class PieceDeleteFlowManagerTest {
     verify(inventoryItemManager, times(0)).deleteItem(itemId, true, requestContext);
     verify(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(piece, requestContext);
     verify(pieceStorageService, times(1)).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
-    verify(pieceDeleteFlowPoLineService).updatePoLine(pieceDeletionHolderCapture.capture(), eq(requestContext));
+    verify(pieceDeleteFlowPoLineService).updatePoLineCostAndProcessEncumbrances(pieceDeletionHolderCapture.capture(), eq(requestContext));
     verify(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(holder, requestContext);
   }
 

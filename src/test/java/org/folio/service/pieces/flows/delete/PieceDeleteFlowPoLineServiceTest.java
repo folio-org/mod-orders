@@ -8,23 +8,17 @@ import static org.folio.TestConfig.getFirstContextFromVertx;
 import static org.folio.TestConfig.getVertx;
 import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
-import static org.folio.TestConstants.ID;
 import static org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus.OPEN;
-import static org.folio.service.inventory.InventoryHoldingManager.HOLDING_PERMANENT_LOCATION_ID;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -32,12 +26,8 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
 import org.folio.ApiTestSuite;
-import org.folio.models.ItemStatus;
 import org.folio.models.pieces.PieceDeletionHolder;
-import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Cost;
@@ -45,7 +35,6 @@ import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.acq.Location;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.orders.PurchaseOrderLineService;
@@ -60,10 +49,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.stubbing.Answer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
@@ -142,7 +129,7 @@ public class PieceDeleteFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
 
     //When
-    pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext);
+    pieceDeleteFlowPoLineService.updatePoLineCostAndProcessEncumbrances(incomingUpdateHolder, requestContext);
     pieceDeleteFlowPoLineService.updateLocationsAndSavePoLine(incomingUpdateHolder, requestContext);
 
     //Then
@@ -185,7 +172,7 @@ public class PieceDeleteFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
 
     //When
-    pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext);
+    pieceDeleteFlowPoLineService.updatePoLineCostAndProcessEncumbrances(incomingUpdateHolder, requestContext);
     pieceDeleteFlowPoLineService.updateLocationsAndSavePoLine(incomingUpdateHolder, requestContext);
 
     //Then
@@ -228,7 +215,7 @@ public class PieceDeleteFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
 
     //When
-    pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext);
+    pieceDeleteFlowPoLineService.updatePoLineCostAndProcessEncumbrances(incomingUpdateHolder, requestContext);
     pieceDeleteFlowPoLineService.updateLocationsAndSavePoLine(incomingUpdateHolder, requestContext);
 
     //Then
@@ -271,7 +258,7 @@ public class PieceDeleteFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
 
     //When
-    pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext);
+    pieceDeleteFlowPoLineService.updatePoLineCostAndProcessEncumbrances(incomingUpdateHolder, requestContext);
     pieceDeleteFlowPoLineService.updateLocationsAndSavePoLine(incomingUpdateHolder, requestContext);
 
     //Then
@@ -311,7 +298,7 @@ public class PieceDeleteFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
 
     //When
-    pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext);
+    pieceDeleteFlowPoLineService.updatePoLineCostAndProcessEncumbrances(incomingUpdateHolder, requestContext);
     pieceDeleteFlowPoLineService.updateLocationsAndSavePoLine(incomingUpdateHolder, requestContext);
 
     //Then
@@ -351,7 +338,7 @@ public class PieceDeleteFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
 
     //When
-    pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext);
+    pieceDeleteFlowPoLineService.updatePoLineCostAndProcessEncumbrances(incomingUpdateHolder, requestContext);
     pieceDeleteFlowPoLineService.updateLocationsAndSavePoLine(incomingUpdateHolder, requestContext);
 
     //Then
@@ -396,7 +383,7 @@ public class PieceDeleteFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
 
     //When
-    pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext);
+    pieceDeleteFlowPoLineService.updatePoLineCostAndProcessEncumbrances(incomingUpdateHolder, requestContext);
     pieceDeleteFlowPoLineService.updateLocationsAndSavePoLine(incomingUpdateHolder, requestContext);
 
     //Then
@@ -439,7 +426,7 @@ public class PieceDeleteFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
 
     //When
-    pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext);
+    pieceDeleteFlowPoLineService.updatePoLineCostAndProcessEncumbrances(incomingUpdateHolder, requestContext);
     pieceDeleteFlowPoLineService.updateLocationsAndSavePoLine(incomingUpdateHolder, requestContext);
 
     //Then
@@ -486,7 +473,7 @@ public class PieceDeleteFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
 
     //When
-    pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext);
+    pieceDeleteFlowPoLineService.updatePoLineCostAndProcessEncumbrances(incomingUpdateHolder, requestContext);
     pieceDeleteFlowPoLineService.updateLocationsAndSavePoLine(incomingUpdateHolder, requestContext);
 
     //Then
@@ -533,7 +520,7 @@ public class PieceDeleteFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
 
     //When
-    pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext);
+    pieceDeleteFlowPoLineService.updatePoLineCostAndProcessEncumbrances(incomingUpdateHolder, requestContext);
     pieceDeleteFlowPoLineService.updateLocationsAndSavePoLine(incomingUpdateHolder, requestContext);
 
     //Then

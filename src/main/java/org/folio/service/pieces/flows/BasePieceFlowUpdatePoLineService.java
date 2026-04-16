@@ -30,19 +30,14 @@ public abstract class BasePieceFlowUpdatePoLineService<T extends BasePieceFlowHo
     this.receivingEncumbranceStrategy = receivingEncumbranceStrategy;
   }
 
-  public Future<Void> updatePoLine(T holder, RequestContext requestContext) {
+  public Future<Void> updatePoLineCostAndProcessEncumbrances(T holder, RequestContext requestContext) {
     if (skipUpdatingPoLine(holder.getOriginPoLine())) {
       return Future.succeededFuture();
     }
     boolean isLineUpdated = poLineUpdateCost(holder);
     holder.setLineUpdated(isLineUpdated);
     if (isLineUpdated) {
-      return receivingEncumbranceStrategy
-        .processEncumbrances(holder.getPurchaseOrderToSave(), holder.getPurchaseOrderToSave(), requestContext)
-        .map(aVoid -> {
-          updateEstimatedPrice(holder.getPoLineToSave());
-          return null;
-        });
+      return receivingEncumbranceStrategy.processEncumbrances(holder.getPurchaseOrderToSave(), holder.getPurchaseOrderToSave(), requestContext);
     }
     return Future.succeededFuture();
   }

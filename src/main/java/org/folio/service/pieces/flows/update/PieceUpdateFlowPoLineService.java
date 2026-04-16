@@ -1,12 +1,13 @@
 package org.folio.service.pieces.flows.update;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.models.pieces.PieceCreationHolder;
 import org.folio.models.pieces.PieceDeletionHolder;
 import org.folio.models.pieces.PieceUpdateHolder;
-import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.acq.Location;
@@ -18,11 +19,9 @@ import org.folio.service.pieces.flows.BasePieceFlowUpdatePoLineService;
 import org.folio.service.pieces.flows.create.PieceCreateFlowPoLineService;
 import org.folio.service.pieces.flows.delete.PieceDeleteFlowPoLineService;
 
-import io.vertx.core.Future;
-
 public class PieceUpdateFlowPoLineService extends BasePieceFlowUpdatePoLineService<PieceUpdateHolder> {
-  private PieceCreateFlowPoLineService pieceCreateFlowPoLineService;
-  private PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService;
+  private final PieceCreateFlowPoLineService pieceCreateFlowPoLineService;
+  private final PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService;
 
   public PieceUpdateFlowPoLineService(PurchaseOrderStorageService purchaseOrderStorageService, PurchaseOrderLineService purchaseOrderLineService,
               ReceivingEncumbranceStrategy receivingEncumbranceStrategy, PieceCreateFlowPoLineService pieceCreateFlowPoLineService,
@@ -33,24 +32,39 @@ public class PieceUpdateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
   }
 
   @Override
-  public Future<Void> updatePoLine(PieceUpdateHolder holder, RequestContext requestContext) {
-    boolean isLineUpdated = updatePoLineWithoutSave(holder);
-    if (isLineUpdated) {
-      return purchaseOrderLineService.saveOrderLine(holder.getPoLineToSave(), getPieceLocations(holder), requestContext);
-    } else {
-      return Future.succeededFuture();
-    }
-  }
-
-  @Override
   protected List<Location> getPieceLocations(PieceUpdateHolder holder) {
     return PieceUtil.findOrderPieceLineLocation(holder.getPieceToUpdate(), holder.getPoLineToSave());
   }
 
   @Override
   public boolean poLineUpdateCost(PieceUpdateHolder holder) {
-    // FIXME: See MODORDERS-1435
-    return false;
+    // Handle a change of piece format, which could affect the cost
+    Piece pieceFromStorage = holder.getPieceFromStorage();
+    Piece pieceToUpdate = holder.getPieceToUpdate();
+    if (pieceFromStorage.getFormat() == pieceToUpdate.getFormat()) {
+      return false;
+    }
+    PoLine lineToSave = holder.getPoLineToSave();
+    Cost cost = lineToSave.getCost();
+    if (pieceFromStorage.getFormat() == Piece.Format.ELECTRONIC) {
+      int prevQty = Optional.ofNullable(cost.getQuantityElectronic()).orElse(0);
+      if (prevQty > 0) {
+        cost.setQuantityElectronic(prevQty - 1);
+      }
+    } else {
+      int prevQty = Optional.ofNullable(cost.getQuantityPhysical()).orElse(0);
+      if (prevQty > 0) {
+        cost.setQuantityPhysical(prevQty - 1);
+      }
+    }
+    if (pieceToUpdate.getFormat() == Piece.Format.ELECTRONIC) {
+      int prevQty = Optional.ofNullable(cost.getQuantityElectronic()).orElse(0);
+      cost.setQuantityElectronic(prevQty + 1);
+    } else {
+      int prevQty = Optional.ofNullable(cost.getQuantityPhysical()).orElse(0);
+      cost.setQuantityPhysical(prevQty + 1);
+    }
+    return true;
   }
 
   @Override
@@ -86,12 +100,10 @@ public class PieceUpdateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
     return false;
   }
 
-  public boolean updatePoLineWithoutSave(PieceUpdateHolder holder) {
-    boolean isLineUpdated = poLineUpdateLocations(holder);
-    if (isLineUpdated) {
+  public void updatePoLineWithoutSave(PieceUpdateHolder holder) {
+    if (poLineUpdateCost(holder)) {
       updateEstimatedPrice(holder.getPoLineToSave());
-      return true;
     }
-    return false;
+    poLineUpdateLocations(holder);
   }
 }

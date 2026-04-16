@@ -41,7 +41,7 @@ public class PieceCreateFlowManager {
       .compose(v -> basePieceFlowHolderBuilder.updateHolderWithTitleInformation(holder, requestContext))
       .compose(v -> asFuture(() -> defaultPieceFlowsValidator.isPieceRequestValid(pieceToCreate, holder.getOriginPurchaseOrder(), holder.getOriginPoLine(), holder.getTitle(), createItem)))
       .compose(v -> protectionService.isOperationRestricted(holder.getTitle().getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext))
-      .compose(v -> pieceCreateFlowPoLineService.updatePoLine(holder, requestContext))
+      .compose(v -> pieceCreateFlowPoLineService.updatePoLineCostAndProcessEncumbrances(holder, requestContext))
       .compose(v -> processInventory(holder, requestContext))
       .compose(v -> pieceCreateFlowPoLineService.updateLocationsAndSavePoLine(holder, requestContext))
       .compose(v -> titlesService.generateNextSequenceNumbers(List.of(holder.getPieceToCreate()), holder.getTitle(), requestContext))
@@ -81,7 +81,7 @@ public class PieceCreateFlowManager {
 
   protected Future<Void> updatePoLineBatch(PieceBatchCreationHolder holder, RequestContext requestContext) {
     return chainCall(holder.getPiecesToCreate(), piece ->
-      pieceCreateFlowPoLineService.updatePoLine(createPieceCreationHolder(piece, holder), requestContext));
+      pieceCreateFlowPoLineService.updatePoLineCostAndProcessEncumbrances(createPieceCreationHolder(piece, holder), requestContext));
   }
 
   private Future<Void> updateLocationsAndSavePoLineBatch(PieceBatchCreationHolder holder, RequestContext requestContext) {
