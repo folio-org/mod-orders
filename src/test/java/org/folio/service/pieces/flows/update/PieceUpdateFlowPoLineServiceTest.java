@@ -47,6 +47,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -399,6 +401,46 @@ public class PieceUpdateFlowPoLineServiceTest {
 
     List<Location> locations = PieceUtil.findOrderPieceLineLocation(pieceToUpdate, poLineToUpdate);
     verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
+  }
+
+  @ParameterizedTest
+  @CsvSource(value = {"Electronic:Physical:0:1:1:0",
+    "Physical:Electronic:1:0:0:1"}, delimiter = ':')
+  void shouldUpdateCostQuantitiesWhenPieceFormatIsChanged(String initialPieceFormat, String newPieceFormat, int initialPhysical,
+      int initialElectronic, int expectedPhysical, int expectedElectronic) {
+    String orderId = UUID.randomUUID().toString();
+    String holdingId = UUID.randomUUID().toString();
+    String lineId = UUID.randomUUID().toString();
+    String titleId = UUID.randomUUID().toString();
+    String itemId = UUID.randomUUID().toString();
+    String pieceId = UUID.randomUUID().toString();
+    Piece pieceFromStorage = new Piece().withId(pieceId).withPoLineId(lineId).withItemId(itemId).withTitleId(titleId)
+      .withHoldingId(holdingId).withFormat(Piece.Format.fromValue(initialPieceFormat));
+    Piece pieceToUpdate = new Piece().withId(pieceId).withPoLineId(lineId).withItemId(itemId).withTitleId(titleId)
+      .withHoldingId(holdingId).withFormat(Piece.Format.fromValue(newPieceFormat));
+    Cost cost = new Cost().withQuantityElectronic(initialElectronic).withQuantityPhysical(initialPhysical)
+      .withListUnitPriceElectronic(1d).withListUnitPrice(2d)
+      .withExchangeRate(1d).withCurrency("USD")
+      .withPoLineEstimatedPrice(1d);
+    Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
+    PoLine poLineFromStorage = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId).withId(lineId)
+      .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM))
+      .withOrderFormat(PoLine.OrderFormat.P_E_MIX)
+      .withLocations(List.of(loc)).withCost(cost);
+    PurchaseOrder purchaseOrderFromStorage = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
+
+    PieceUpdateHolder incomingUpdateHolder = new PieceUpdateHolder().withPieceToUpdate(pieceToUpdate)
+      .withPieceFromStorage(pieceFromStorage);
+    incomingUpdateHolder.withOrderInformation(purchaseOrderFromStorage, poLineFromStorage);
+
+    //When
+    pieceUpdateFlowPoLineService.updatePoLineCostAndProcessEncumbrances(incomingUpdateHolder, requestContext);
+
+    //Then
+    PoLine poLineToUpdate = incomingUpdateHolder.getPoLineToSave();
+    Cost costToSave = poLineToUpdate.getCost();
+    assertEquals(expectedElectronic, costToSave.getQuantityElectronic());
+    assertEquals(expectedPhysical, costToSave.getQuantityPhysical());
   }
 
   private static class ContextConfiguration {
