@@ -1,7 +1,6 @@
 package org.folio.service.pieces.flows.create;
 
 import static org.folio.orders.utils.FutureUtils.asFuture;
-import static org.folio.orders.utils.HelperUtils.chainCall;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 
 import java.util.List;
@@ -59,9 +58,9 @@ public class PieceCreateFlowManager {
       .compose(v -> basePieceFlowHolderBuilder.updateHolderWithTitleInformation(holder, requestContext))
       .compose(v -> asFuture(() -> defaultPieceFlowsValidator.isPieceBatchRequestValid(holder.getPiecesToCreate(), holder.getOriginPurchaseOrder(), holder.getOriginPoLine(), holder.getTitle(), createItem)))
       .compose(v -> protectionService.isOperationRestricted(holder.getTitle().getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext))
-      .compose(v -> updatePoLineBatch(holder, requestContext))
+      .compose(v -> pieceCreateFlowPoLineService.updatePoLineBatch(holder, requestContext))
       .compose(v -> processInventoryBatch(holder, requestContext))
-      .compose(v -> updateLocationsAndSavePoLineBatch(holder, requestContext))
+      .compose(v -> pieceCreateFlowPoLineService.updateLocationsAndSavePoLineBatch(holder, requestContext))
       .compose(v -> titlesService.generateNextSequenceNumbers(holder.getPiecesToCreate(), holder.getTitle(), requestContext))
       .compose(pieces -> pieceStorageService.insertPiecesBatch(pieces, requestContext));
   }
@@ -77,35 +76,6 @@ public class PieceCreateFlowManager {
         holder.getPoLineToSave(), piece, holder.isCreateItem(), requestContext))
       .toList();
     return collectResultsOnSuccess(futures).mapEmpty();
-  }
-
-  protected Future<Void> updatePoLineBatch(PieceBatchCreationHolder holder, RequestContext requestContext) {
-    return chainCall(holder.getPiecesToCreate(), piece ->
-      pieceCreateFlowPoLineService.updatePoLineCostAndProcessEncumbrances(createPieceCreationHolder(piece, holder), requestContext));
-  }
-
-  private Future<Void> updateLocationsAndSavePoLineBatch(PieceBatchCreationHolder holder, RequestContext requestContext) {
-    var pieceCreationHolderList = createPieceCreationHolderList(holder);
-    var futures = pieceCreationHolderList.stream()
-      .map(pieceCreationHolder -> pieceCreateFlowPoLineService.updateLocationsAndSavePoLine(pieceCreationHolder, requestContext))
-      .toList();
-    return collectResultsOnSuccess(futures).mapEmpty();
-  }
-
-  private List<PieceCreationHolder> createPieceCreationHolderList(PieceBatchCreationHolder holder) {
-    return holder.getPiecesToCreate().stream()
-      .map(piece -> createPieceCreationHolder(piece, holder))
-      .toList();
-  }
-
-  private PieceCreationHolder createPieceCreationHolder(Piece piece, PieceBatchCreationHolder holder) {
-    var pieceCreationHolder = new PieceCreationHolder()
-      .withPieceToCreate(piece)
-      .withCreateItem(holder.isCreateItem());
-    pieceCreationHolder
-      .withTitleInformation(holder.getTitle())
-      .withOrderInformation(holder.getOriginPurchaseOrder(), holder.getPurchaseOrderToSave());
-    return pieceCreationHolder;
   }
 
 }

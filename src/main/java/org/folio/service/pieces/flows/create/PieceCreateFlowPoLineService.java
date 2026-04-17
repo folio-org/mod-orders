@@ -4,8 +4,11 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import io.vertx.core.Future;
 import org.apache.commons.collections4.CollectionUtils;
+import org.folio.models.pieces.PieceBatchCreationHolder;
 import org.folio.models.pieces.PieceCreationHolder;
+import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Piece;
@@ -15,6 +18,8 @@ import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.pieces.PieceUtil;
 import org.folio.service.pieces.flows.BasePieceFlowUpdatePoLineService;
+
+import static org.folio.orders.utils.HelperUtils.chainCall;
 
 public class PieceCreateFlowPoLineService extends BasePieceFlowUpdatePoLineService<PieceCreationHolder> {
 
@@ -82,6 +87,39 @@ public class PieceCreateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
       locations.add(locationToAdd);
     }
     return true;
+  }
+
+  public Future<Void> updatePoLineBatch(PieceBatchCreationHolder holder, RequestContext requestContext) {
+    return chainCall(holder.getPiecesToCreate(), piece ->
+      updatePoLineCostAndProcessEncumbrances(createPieceCreationHolder(piece, holder), requestContext));
+  }
+
+  public Future<Void> updateLocationsAndSavePoLineBatch(PieceBatchCreationHolder holder, RequestContext requestContext) {
+    var pieceCreationHolderList = createPieceCreationHolderList(holder);
+    for (var pieceCreationHolder : pieceCreationHolderList) {
+      poLineUpdateLocations(pieceCreationHolder);
+    }
+    return purchaseOrderLineService.saveOrderLine(holder.getPoLineToSave(), getPieceLocations(holder), requestContext);
+  }
+
+  private PieceCreationHolder createPieceCreationHolder(Piece piece, PieceBatchCreationHolder holder) {
+    var pieceCreationHolder = new PieceCreationHolder()
+      .withPieceToCreate(piece)
+      .withCreateItem(holder.isCreateItem());
+    pieceCreationHolder
+      .withTitleInformation(holder.getTitle())
+      .withOrderInformation(holder.getOriginPurchaseOrder(), holder.getPurchaseOrderToSave());
+    return pieceCreationHolder;
+  }
+
+  private List<PieceCreationHolder> createPieceCreationHolderList(PieceBatchCreationHolder holder) {
+    return holder.getPiecesToCreate().stream()
+      .map(piece -> createPieceCreationHolder(piece, holder))
+      .toList();
+  }
+
+  private List<Location> getPieceLocations(PieceBatchCreationHolder holder) {
+    return PieceUtil.findLocationsUsingPieceList(holder.getPiecesToCreate(), holder.getPoLineToSave());
   }
 
 }

@@ -2,6 +2,7 @@ package org.folio.service.pieces;
 
 import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.OTHER;
 
+import java.util.Collection;
 import java.util.Date;
 import java.util.EnumMap;
 import java.util.List;
@@ -41,6 +42,14 @@ public class PieceUtil {
       .filter(loc -> Objects.nonNull(loc.getQuantityPhysical()))
       .filter(loc -> isLocationMatch(piece, loc))
       .collect(Collectors.toList());
+  }
+
+  public static List<Location> findLocationsUsingPieceList(List<Piece> pieces, PoLine poLine) {
+    return pieces.stream()
+      .map(piece -> findOrderPieceLineLocation(piece, poLine))
+      .flatMap(Collection::stream)
+      .distinct()
+      .toList();
   }
 
   public static Map<Piece.Format, Integer> calculatePiecesQuantityWithoutLocation(PoLine poLine) {
