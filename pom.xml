@@ -60,7 +60,7 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
     <!--Dependency Management Properties-->
-    <vertx.version>5.0.8</vertx.version>
+    <vertx.version>5.0.11</vertx.version>
     <jackson-bom.version>2.21.1</jackson-bom.version>
     <log4j.version>2.25.3</log4j.version>
     <testcontainers-bom.version>2.0.3</testcontainers-bom.version>
@@ -93,8 +93,8 @@
     <maven-surefire-plugin.version>3.5.5</maven-surefire-plugin.version>
     <copy-rename-maven-plugin.version>1.0.1</copy-rename-maven-plugin.version>
     <maven-failsafe-plugin.version>3.5.5</maven-failsafe-plugin.version>
-    <maven-jacoco-plugin.version>0.8.12</maven-jacoco-plugin.version>
-    <maven-spotless-plugin.version>3.1.0</maven-spotless-plugin.version>
+    <maven-jacoco-plugin.version>0.8.14</maven-jacoco-plugin.version>
+    <maven-spotless-plugin.version>3.4.0</maven-spotless-plugin.version>
 
     <!--Test dependencies-->
     <junit-jupiter.version>6.0.3</junit-jupiter.version>
