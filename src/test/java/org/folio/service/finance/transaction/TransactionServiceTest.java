@@ -9,6 +9,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 
+import io.vertx.junit5.VertxExtension;
+import java.util.List;
 import org.folio.rest.acq.model.finance.Batch;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.RestClient;
@@ -21,43 +23,37 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import io.vertx.junit5.VertxExtension;
-
-import java.util.List;
-
-
 @ExtendWith(VertxExtension.class)
 public class TransactionServiceTest {
-  @InjectMocks
-  private TransactionService transactionService;
-  @Mock
-  private RestClient restClient;
-  @Mock
-  private RequestContext requestContext;
+  @InjectMocks private TransactionService transactionService;
+  @Mock private RestClient restClient;
+  @Mock private RequestContext requestContext;
 
   @BeforeEach
-  public void initMocks(){
+  public void initMocks() {
     MockitoAnnotations.openMocks(this);
   }
 
   @Test
   void testShouldInvokeUpdateTransaction() {
-    //Given
-    Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0)
-      .mapTo(Transaction.class);
-    Batch batch = new Batch()
-      .withTransactionsToUpdate(List.of(encumbrance));
+    // Given
+    Transaction encumbrance =
+        getMockAsJson(ENCUMBRANCE_PATH)
+            .getJsonArray("transactions")
+            .getJsonObject(0)
+            .mapTo(Transaction.class);
+    Batch batch = new Batch().withTransactionsToUpdate(List.of(encumbrance));
     doReturn(succeededFuture())
-      .when(restClient).postEmptyResponse(anyString(), eq(batch), eq(requestContext));
+        .when(restClient)
+        .postEmptyResponse(anyString(), eq(batch), eq(requestContext));
 
-    //When
+    // When
     transactionService.batchUpdate(List.of(encumbrance), requestContext).result();
 
-    //Then
+    // Then
     ArgumentCaptor<String> argumentCaptor = ArgumentCaptor.forClass(String.class);
     verify(restClient).postEmptyResponse(argumentCaptor.capture(), eq(batch), eq(requestContext));
     String endPoint = argumentCaptor.getValue();
     assertEquals("/finance/transactions/batch-all-or-nothing", endPoint);
   }
-
 }

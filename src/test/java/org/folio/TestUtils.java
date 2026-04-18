@@ -11,7 +11,7 @@ import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.serverRqRs;
-import static org.folio.rest.impl.TitlesApiTest.SAMPLE_TITLE_ID;
+import static org.folio.rest.impl.TitlesApiIT.SAMPLE_TITLE_ID;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
@@ -19,6 +19,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxTestContext;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
@@ -32,7 +35,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
-
 import org.apache.commons.io.IOUtils;
 import org.folio.models.ItemStatus;
 import org.folio.rest.impl.MockServer;
@@ -52,10 +54,6 @@ import org.folio.rest.jaxrs.model.ToBeCheckedIn;
 import org.folio.rest.jaxrs.model.ToBeReceived;
 import org.folio.rest.jaxrs.model.acq.Location;
 
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.JsonObject;
-import io.vertx.junit5.VertxTestContext;
-
 public final class TestUtils {
 
   public static final String PURCHASE_METHOD = "df26d81b-9d63-4ff8-bf41-49bf75cfa70e";
@@ -66,7 +64,8 @@ public final class TestUtils {
 
   public static String getMockData(String path) throws IOException {
 
-    try (InputStream resourceAsStream = TestConstants.class.getClassLoader().getResourceAsStream(path)) {
+    try (InputStream resourceAsStream =
+        TestConstants.class.getClassLoader().getResourceAsStream(path)) {
       if (resourceAsStream != null) {
         return IOUtils.toString(resourceAsStream, StandardCharsets.UTF_8);
       } else {
@@ -93,42 +92,45 @@ public final class TestUtils {
   }
 
   public static Object[] getModifiedProtectedFields(Error error) {
-    return Optional.of(error.getAdditionalProperties()
-            .get("protectedAndModifiedFields"))
-            .map(obj -> (List<?>) obj)
-            .get()
-            .toArray();
+    return Optional.of(error.getAdditionalProperties().get("protectedAndModifiedFields"))
+        .map(obj -> (List<?>) obj)
+        .get()
+        .toArray();
   }
 
-    public static void checkVertxContextCompletion(VertxTestContext context) throws Throwable {
-      assertTrue(context.awaitCompletion(30, SECONDS));
-      if (context.failed()) {
-        throw context.causeOfFailure();
-      }
+  public static void checkVertxContextCompletion(VertxTestContext context) throws Throwable {
+    assertTrue(context.awaitCompletion(30, SECONDS));
+    if (context.failed()) {
+      throw context.causeOfFailure();
     }
+  }
 
   public static Piece getMinimalContentPiece(String poLineId) {
     return new Piece()
-      .withId(PIECE_ID)
-      .withReceivingStatus(Piece.ReceivingStatus.RECEIVED)
-      .withFormat(Piece.Format.PHYSICAL)
-      .withItemId(EXISTED_ITEM_ID)
-      .withTitleId(SAMPLE_TITLE_ID)
-      .withReceiptDate(new Date())
-      .withPoLineId(poLineId)
-      .withLocationId(UUID.randomUUID().toString())
-      .withSequenceNumber(1);
+        .withId(PIECE_ID)
+        .withReceivingStatus(Piece.ReceivingStatus.RECEIVED)
+        .withFormat(Piece.Format.PHYSICAL)
+        .withItemId(EXISTED_ITEM_ID)
+        .withTitleId(SAMPLE_TITLE_ID)
+        .withReceiptDate(new Date())
+        .withPoLineId(poLineId)
+        .withLocationId(UUID.randomUUID().toString())
+        .withSequenceNumber(1);
   }
 
   public static String getInstanceId(PoLine poline) {
-    return Optional.ofNullable(serverRqRs.get(TITLES, HttpMethod.PUT)).orElseGet(Collections::emptyList).stream()
-      .map(title -> title.mapTo(Title.class))
-      .filter(title -> poline.getId().equals(title.getPoLineId()))
-      .map(Title::getInstanceId)
-      .findFirst().orElse(null);
+    return Optional.ofNullable(serverRqRs.get(TITLES, HttpMethod.PUT))
+        .orElseGet(Collections::emptyList)
+        .stream()
+        .map(title -> title.mapTo(Title.class))
+        .filter(title -> poline.getId().equals(title.getPoLineId()))
+        .map(Title::getInstanceId)
+        .findFirst()
+        .orElse(null);
   }
 
-  public static void validatePoLineCreationErrorForNonPendingOrder(String errorCode, Errors errors, int externalAPICalls) {
+  public static void validatePoLineCreationErrorForNonPendingOrder(
+      String errorCode, Errors errors, int externalAPICalls) {
     assertEquals(1, errors.getErrors().size());
     assertEquals(errorCode, errors.getErrors().get(0).getCode());
     // Assert that only PO Lines limit (count of existing Lines) , GET PO validation requests made
@@ -139,24 +141,30 @@ public final class TestUtils {
   public static void verifyLocationQuantity(Location location, PoLine.OrderFormat orderFormat) {
     switch (orderFormat) {
       case P_E_MIX ->
-        assertEquals(location.getQuantityPhysical() + location.getQuantityElectronic(), location.getQuantity().intValue());
-      case ELECTRONIC_RESOURCE -> assertEquals(location.getQuantityElectronic(), location.getQuantity());
-      case PHYSICAL_RESOURCE, OTHER -> assertEquals(location.getQuantityPhysical(), location.getQuantity());
+          assertEquals(
+              location.getQuantityPhysical() + location.getQuantityElectronic(),
+              location.getQuantity().intValue());
+      case ELECTRONIC_RESOURCE ->
+          assertEquals(location.getQuantityElectronic(), location.getQuantity());
+      case PHYSICAL_RESOURCE, OTHER ->
+          assertEquals(location.getQuantityPhysical(), location.getQuantity());
     }
   }
 
   public static CompositePurchaseOrder getMinimalOrder(PoLine poLine) {
     return new CompositePurchaseOrder()
-      .withId(poLine.getPurchaseOrderId())
-      .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+        .withId(poLine.getPurchaseOrderId())
+        .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
   }
 
   public static Title getTitle(PoLine poLine) {
-    return new Title().withId(UUID.randomUUID().toString())
-      .withPoLineId(poLine.getId())
-      .withTitle(poLine.getTitleOrPackage())
-      .withInstanceId(poLine.getInstanceId())
-      .withProductIds(Optional.ofNullable(poLine.getDetails()).orElseGet(Details::new).getProductIds());
+    return new Title()
+        .withId(UUID.randomUUID().toString())
+        .withPoLineId(poLine.getId())
+        .withTitle(poLine.getTitleOrPackage())
+        .withInstanceId(poLine.getInstanceId())
+        .withProductIds(
+            Optional.ofNullable(poLine.getDetails()).orElseGet(Details::new).getProductIds());
   }
 
   public static PoLine getMinimalContentCompositePoLine() {
@@ -164,15 +172,21 @@ public final class TestUtils {
   }
 
   public static PoLine getMinimalContentCompositePoLine(String orderId) {
-    return new PoLine().withSource(PoLine.Source.EDI)
-      .withId(MIN_PO_LINE_ID)
-      .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
-      .withAcquisitionMethod(PURCHASE_METHOD)
-      .withPhysical(new Physical().withMaterialType("2d1398ae-e1aa-4c7c-b9c9-15adf8cf6425"))
-      .withCost(new Cost().withCurrency("EUR").withQuantityPhysical(2).withListUnitPrice(10.0))
-      .withLocations(Collections.singletonList(new Location().withLocationId("2a00b0be-1447-42a1-a112-124450991899").withQuantityPhysical(2).withQuantity(2)))
-      .withTitleOrPackage("Title")
-      .withPurchaseOrderId(orderId);
+    return new PoLine()
+        .withSource(PoLine.Source.EDI)
+        .withId(MIN_PO_LINE_ID)
+        .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
+        .withAcquisitionMethod(PURCHASE_METHOD)
+        .withPhysical(new Physical().withMaterialType("2d1398ae-e1aa-4c7c-b9c9-15adf8cf6425"))
+        .withCost(new Cost().withCurrency("EUR").withQuantityPhysical(2).withListUnitPrice(10.0))
+        .withLocations(
+            Collections.singletonList(
+                new Location()
+                    .withLocationId("2a00b0be-1447-42a1-a112-124450991899")
+                    .withQuantityPhysical(2)
+                    .withQuantity(2)))
+        .withTitleOrPackage("Title")
+        .withPurchaseOrderId(orderId);
   }
 
   public static PoLine getMinimalContentPoLine() {
@@ -180,15 +194,21 @@ public final class TestUtils {
   }
 
   public static PoLine getMinimalContentPoLine(String orderId) {
-    return new PoLine().withSource(PoLine.Source.EDI)
-      .withId(MIN_PO_LINE_ID)
-      .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
-      .withAcquisitionMethod(PURCHASE_METHOD)
-      .withPhysical(new Physical().withMaterialType("2d1398ae-e1aa-4c7c-b9c9-15adf8cf6425"))
-      .withCost(new Cost().withCurrency("EUR").withQuantityPhysical(1).withListUnitPrice(10.0))
-      .withLocations(List.of(new Location().withLocationId("2a00b0be-1447-42a1-a112-124450991899").withQuantityPhysical(1).withQuantity(1)))
-      .withTitleOrPackage("Title")
-      .withPurchaseOrderId(orderId);
+    return new PoLine()
+        .withSource(PoLine.Source.EDI)
+        .withId(MIN_PO_LINE_ID)
+        .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
+        .withAcquisitionMethod(PURCHASE_METHOD)
+        .withPhysical(new Physical().withMaterialType("2d1398ae-e1aa-4c7c-b9c9-15adf8cf6425"))
+        .withCost(new Cost().withCurrency("EUR").withQuantityPhysical(1).withListUnitPrice(10.0))
+        .withLocations(
+            List.of(
+                new Location()
+                    .withLocationId("2a00b0be-1447-42a1-a112-124450991899")
+                    .withQuantityPhysical(1)
+                    .withQuantity(1)))
+        .withTitleOrPackage("Title")
+        .withPurchaseOrderId(orderId);
   }
 
   public static Title getMinimalContentTitle() {
@@ -197,20 +217,21 @@ public final class TestUtils {
 
   public static CompositePurchaseOrder getMinimalContentCompositePurchaseOrder() {
     return new CompositePurchaseOrder()
-      .withId(MIN_PO_ID)
-      .withPoNumber("TestNumber")
-      .withOrderType(CompositePurchaseOrder.OrderType.ONE_TIME)
-      .withVendor("7d232b43-bf9a-4301-a0ce-9e076298632e");
+        .withId(MIN_PO_ID)
+        .withPoNumber("TestNumber")
+        .withOrderType(CompositePurchaseOrder.OrderType.ONE_TIME)
+        .withVendor("7d232b43-bf9a-4301-a0ce-9e076298632e");
   }
 
   public static BindItem getMinimalContentBindItem() {
     return new BindItem()
-      .withBarcode("223512")
-      .withCallNumber("TK5105.88815 . A58 2004 FT MEADE")
-      .withMaterialTypeId("1a54b431-2e4f-452d-9cae-9cee66c9a892")
-      .withPermanentLoanTypeId("2b94c631-fca9-4892-a730-03ee529ffe27")
-      .withLocationId("fcd64ce1-6995-48f0-840e-89ffa2288371");
+        .withBarcode("223512")
+        .withCallNumber("TK5105.88815 . A58 2004 FT MEADE")
+        .withMaterialTypeId("1a54b431-2e4f-452d-9cae-9cee66c9a892")
+        .withPermanentLoanTypeId("2b94c631-fca9-4892-a730-03ee529ffe27")
+        .withLocationId("fcd64ce1-6995-48f0-840e-89ffa2288371");
   }
+
   public static String encodePrettily(Object entity) {
     return JsonObject.mapFrom(entity).encodePrettily();
   }
@@ -224,23 +245,29 @@ public final class TestUtils {
   }
 
   public static CheckInPiece getCheckInPiece(String id) {
-    return new CheckInPiece().withItemStatus(CheckInPiece.ItemStatus.IN_PROCESS).withLocationId(LOCATION_ID).withId(id);
+    return new CheckInPiece()
+        .withItemStatus(CheckInPiece.ItemStatus.IN_PROCESS)
+        .withLocationId(LOCATION_ID)
+        .withId(id);
   }
 
   public static ReceivedItem getReceivedItem(String pieceId) {
-    return new ReceivedItem().withItemStatus(ReceivedItem.ItemStatus.IN_PROCESS).withLocationId(LOCATION_ID).withPieceId(pieceId);
+    return new ReceivedItem()
+        .withItemStatus(ReceivedItem.ItemStatus.IN_PROCESS)
+        .withLocationId(LOCATION_ID)
+        .withPieceId(pieceId);
   }
 
   public static ToBeCheckedIn getToBeCheckedIn(String poLineId, String pieceId) {
     return new ToBeCheckedIn()
-      .withPoLineId(poLineId)
-      .withCheckInPieces(getCheckInPieces(getCheckInPiece(pieceId)));
+        .withPoLineId(poLineId)
+        .withCheckInPieces(getCheckInPieces(getCheckInPiece(pieceId)));
   }
 
   public static ToBeReceived getToBeReceived(String poLineId, String pieceId) {
     return new ToBeReceived()
-      .withPoLineId(poLineId)
-      .withReceivedItems(getReceivedItems(getReceivedItem(pieceId)));
+        .withPoLineId(poLineId)
+        .withReceivedItems(getReceivedItems(getReceivedItem(pieceId)));
   }
 
   public static String getRandomId() {
@@ -248,10 +275,11 @@ public final class TestUtils {
   }
 
   public static List<Location> getLocationPhysicalCopies(int n) {
-    return List.of(new Location()
-      .withLocationId(UUID.randomUUID().toString())
-      .withQuantityPhysical(n)
-      .withQuantity(n));
+    return List.of(
+        new Location()
+            .withLocationId(UUID.randomUUID().toString())
+            .withQuantityPhysical(n)
+            .withQuantity(n));
   }
 
   public static JsonObject getItem(String id, String poLineId) {
@@ -259,33 +287,38 @@ public final class TestUtils {
   }
 
   public static JsonObject getItem(String id, String poLineId, ItemStatus status) {
-    return JsonObject.of(ID, id,
-      ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLineId,
-      ITEM_STATUS, JsonObject.of(ITEM_STATUS_NAME, status.value()));
+    return JsonObject.of(
+        ID,
+        id,
+        ITEM_PURCHASE_ORDER_LINE_IDENTIFIER,
+        poLineId,
+        ITEM_STATUS,
+        JsonObject.of(ITEM_STATUS_NAME, status.value()));
   }
 
   public static List<Location> getLocationsForTenants(List<String> tenantIds) {
     return tenantIds.stream()
-      .flatMap(tenantId -> getLocationPhysicalCopies(5).stream()
-        .map(location -> location.withLocationId(null).withTenantId(tenantId)))
-      .toList();
+        .flatMap(
+            tenantId ->
+                getLocationPhysicalCopies(5).stream()
+                    .map(location -> location.withLocationId(null).withTenantId(tenantId)))
+        .toList();
   }
 
-  public static <T, C> T callPrivateMethod(C object, String methodName, Class<T> returnType, Class<?>[] paramTypes, Object[] params)
-    throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+  public static <T, C> T callPrivateMethod(
+      C object, String methodName, Class<T> returnType, Class<?>[] paramTypes, Object[] params)
+      throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
 
-    var method = object.getClass()
-      .getDeclaredMethod(methodName, paramTypes);
+    var method = object.getClass().getDeclaredMethod(methodName, paramTypes);
     method.setAccessible(true);
     return returnType.cast(method.invoke(object, params));
   }
 
   public static void callPrivateMethod(Object object, String methodName)
-    throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+      throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
 
     var method = object.getClass().getDeclaredMethod(methodName);
     method.setAccessible(true);
     method.invoke(object);
   }
-
 }

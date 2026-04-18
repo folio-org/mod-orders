@@ -1,9 +1,9 @@
 package org.folio.utils;
 
+import static org.mockito.ArgumentMatchers.argThat;
+
 import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.rest.core.models.RequestContext;
-
-import static org.mockito.ArgumentMatchers.argThat;
 
 public class RequestContextMatcher {
 
@@ -14,10 +14,12 @@ public class RequestContextMatcher {
   }
 
   public static RequestContext matchTenant(String tenantId) {
-    return argThat(context -> {
-      String contextTenant = context.getHeaders().get(XOkapiHeaders.TENANT);
-      return contextTenant == null ? tenantId.equals(FOLIO_SHARED) : contextTenant.equals(tenantId);
-    });
+    return argThat(
+        context -> {
+          String contextTenant = context.getHeaders().get(XOkapiHeaders.TENANT);
+          return contextTenant == null
+              ? tenantId.equals(FOLIO_SHARED)
+              : contextTenant.equals(tenantId);
+        });
   }
-
 }

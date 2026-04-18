@@ -11,6 +11,8 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import java.util.HashSet;
+import java.util.Set;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
@@ -21,20 +23,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.HashSet;
-import java.util.Set;
-
 @ExtendWith(MockitoExtension.class)
 @ExtendWith(VertxExtension.class)
 public class InventoryRollbackServiceTest {
 
   private InventoryRollbackService inventoryRollbackService;
 
-  @Mock
-  private RestClient restClient;
+  @Mock private RestClient restClient;
 
-  @Mock
-  private RequestContext requestContext;
+  @Mock private RequestContext requestContext;
 
   private PoLine poLine;
 
@@ -51,19 +48,30 @@ public class InventoryRollbackServiceTest {
     poLine.setInstanceId("instanceId123");
     JsonObject holdingsResponse = new JsonObject().put("totalRecords", 0);
     when(restClient.getAsJsonObject(any(RequestEntry.class), eq(requestContext)))
-      .thenReturn(Future.succeededFuture(holdingsResponse));
+        .thenReturn(Future.succeededFuture(holdingsResponse));
     when(restClient.delete(any(RequestEntry.class), eq(requestContext)))
-      .thenReturn(Future.succeededFuture(null));
+        .thenReturn(Future.succeededFuture(null));
+
+    Set<String> createdInstanceIds = new HashSet<>();
+    createdInstanceIds.add("instanceId123");
 
     // When
-    Future<Void> future = inventoryRollbackService.deleteOrphanedInstanceIfNeeded(poLine, new HashSet<>(), requestContext);
+    Future<Void> future =
+        inventoryRollbackService.deleteOrphanedInstanceIfNeeded(
+            poLine, createdInstanceIds, requestContext);
 
     // Then
-    future.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
-      verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
-      verify(restClient, times(1)).delete(any(RequestEntry.class), eq(requestContext));
-      testContext.completeNow();
-    })));
+    future.onComplete(
+        testContext.succeeding(
+            result ->
+                testContext.verify(
+                    () -> {
+                      verify(restClient, times(1))
+                          .getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+                      verify(restClient, times(1))
+                          .delete(any(RequestEntry.class), eq(requestContext));
+                      testContext.completeNow();
+                    })));
   }
 
   @Test
@@ -72,17 +80,28 @@ public class InventoryRollbackServiceTest {
     poLine.setInstanceId("instanceId123");
     JsonObject holdingsResponse = new JsonObject().put("totalRecords", 1);
     when(restClient.getAsJsonObject(any(RequestEntry.class), eq(requestContext)))
-      .thenReturn(Future.succeededFuture(holdingsResponse));
+        .thenReturn(Future.succeededFuture(holdingsResponse));
+
+    Set<String> createdInstanceIds = new HashSet<>();
+    createdInstanceIds.add("instanceId123");
 
     // When
-    Future<Void> future = inventoryRollbackService.deleteOrphanedInstanceIfNeeded(poLine, new HashSet<>(), requestContext);
+    Future<Void> future =
+        inventoryRollbackService.deleteOrphanedInstanceIfNeeded(
+            poLine, createdInstanceIds, requestContext);
 
     // Then
-    future.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
-      verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
-      verify(restClient, never()).delete(any(RequestEntry.class), any(RequestContext.class));
-      testContext.completeNow();
-    })));
+    future.onComplete(
+        testContext.succeeding(
+            result ->
+                testContext.verify(
+                    () -> {
+                      verify(restClient, times(1))
+                          .getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+                      verify(restClient, never())
+                          .delete(any(RequestEntry.class), any(RequestContext.class));
+                      testContext.completeNow();
+                    })));
   }
 
   @Test
@@ -91,14 +110,22 @@ public class InventoryRollbackServiceTest {
     poLine.setInstanceId(null);
 
     // When
-    Future<Void> future = inventoryRollbackService.deleteOrphanedInstanceIfNeeded(poLine, new HashSet<>(), requestContext);
+    Future<Void> future =
+        inventoryRollbackService.deleteOrphanedInstanceIfNeeded(
+            poLine, new HashSet<>(), requestContext);
 
     // Then
-    future.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
-      verify(restClient, never()).getAsJsonObject(any(RequestEntry.class), any(RequestContext.class));
-      verify(restClient, never()).delete(any(RequestEntry.class), any(RequestContext.class));
-      testContext.completeNow();
-    })));
+    future.onComplete(
+        testContext.succeeding(
+            result ->
+                testContext.verify(
+                    () -> {
+                      verify(restClient, never())
+                          .getAsJsonObject(any(RequestEntry.class), any(RequestContext.class));
+                      verify(restClient, never())
+                          .delete(any(RequestEntry.class), any(RequestContext.class));
+                      testContext.completeNow();
+                    })));
   }
 
   @Test
@@ -111,19 +138,27 @@ public class InventoryRollbackServiceTest {
 
     JsonObject holdingsResponse = new JsonObject().put("totalRecords", 0);
     when(restClient.getAsJsonObject(any(RequestEntry.class), eq(requestContext)))
-      .thenReturn(Future.succeededFuture(holdingsResponse));
+        .thenReturn(Future.succeededFuture(holdingsResponse));
     when(restClient.delete(any(RequestEntry.class), eq(requestContext)))
-      .thenReturn(Future.succeededFuture(null));
+        .thenReturn(Future.succeededFuture(null));
 
     // When
-    Future<Void> future = inventoryRollbackService.deleteOrphanedInstanceIfNeeded(poLine, createdInstanceIds, requestContext);
+    Future<Void> future =
+        inventoryRollbackService.deleteOrphanedInstanceIfNeeded(
+            poLine, createdInstanceIds, requestContext);
 
     // Then
-    future.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
-      verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
-      verify(restClient, times(1)).delete(any(RequestEntry.class), eq(requestContext));
-      testContext.completeNow();
-    })));
+    future.onComplete(
+        testContext.succeeding(
+            result ->
+                testContext.verify(
+                    () -> {
+                      verify(restClient, times(1))
+                          .getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+                      verify(restClient, times(1))
+                          .delete(any(RequestEntry.class), eq(requestContext));
+                      testContext.completeNow();
+                    })));
   }
 
   @Test
@@ -135,15 +170,23 @@ public class InventoryRollbackServiceTest {
     // Instance ID is not in the created set, meaning it was matched to an existing instance
 
     // When
-    Future<Void> future = inventoryRollbackService.deleteOrphanedInstanceIfNeeded(poLine, createdInstanceIds, requestContext);
+    Future<Void> future =
+        inventoryRollbackService.deleteOrphanedInstanceIfNeeded(
+            poLine, createdInstanceIds, requestContext);
 
     // Then
-    future.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
-      // Should not check holdings or delete since instance was matched, not created
-      verify(restClient, never()).getAsJsonObject(any(RequestEntry.class), any(RequestContext.class));
-      verify(restClient, never()).delete(any(RequestEntry.class), any(RequestContext.class));
-      testContext.completeNow();
-    })));
+    future.onComplete(
+        testContext.succeeding(
+            result ->
+                testContext.verify(
+                    () -> {
+                      // Should not check holdings or delete since instance was matched, not created
+                      verify(restClient, never())
+                          .getAsJsonObject(any(RequestEntry.class), any(RequestContext.class));
+                      verify(restClient, never())
+                          .delete(any(RequestEntry.class), any(RequestContext.class));
+                      testContext.completeNow();
+                    })));
   }
 
   @Test
@@ -165,29 +208,47 @@ public class InventoryRollbackServiceTest {
 
     JsonObject holdingsResponse = new JsonObject().put("totalRecords", 0);
     when(restClient.getAsJsonObject(any(RequestEntry.class), eq(requestContext)))
-      .thenReturn(Future.succeededFuture(holdingsResponse));
+        .thenReturn(Future.succeededFuture(holdingsResponse));
     when(restClient.delete(any(RequestEntry.class), eq(requestContext)))
-      .thenReturn(Future.succeededFuture(null));
+        .thenReturn(Future.succeededFuture(null));
 
     // When - process created instance
-    Future<Void> createdFuture = inventoryRollbackService.deleteOrphanedInstanceIfNeeded(createdPoLine, createdInstanceIds, requestContext);
+    Future<Void> createdFuture =
+        inventoryRollbackService.deleteOrphanedInstanceIfNeeded(
+            createdPoLine, createdInstanceIds, requestContext);
 
     // Then
-    createdFuture.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
-      // Created instance should be deleted
-      verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
-      verify(restClient, times(1)).delete(any(RequestEntry.class), eq(requestContext));
+    createdFuture.onComplete(
+        testContext.succeeding(
+            result ->
+                testContext.verify(
+                    () -> {
+                      // Created instance should be deleted
+                      verify(restClient, times(1))
+                          .getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+                      verify(restClient, times(1))
+                          .delete(any(RequestEntry.class), eq(requestContext));
 
-      // When - process matched instance
-      Future<Void> matchedFuture = inventoryRollbackService.deleteOrphanedInstanceIfNeeded(matchedPoLine, createdInstanceIds, requestContext);
+                      // When - process matched instance
+                      Future<Void> matchedFuture =
+                          inventoryRollbackService.deleteOrphanedInstanceIfNeeded(
+                              matchedPoLine, createdInstanceIds, requestContext);
 
-      matchedFuture.onComplete(testContext.succeeding(result2 -> testContext.verify(() -> {
-        // Matched instance should not be deleted (still only 1 getAsJsonObject and 1 delete call from before)
-        verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
-        verify(restClient, times(1)).delete(any(RequestEntry.class), eq(requestContext));
-        testContext.completeNow();
-      })));
-    })));
+                      matchedFuture.onComplete(
+                          testContext.succeeding(
+                              result2 ->
+                                  testContext.verify(
+                                      () -> {
+                                        // Matched instance should not be deleted (still only 1
+                                        // getAsJsonObject and 1 delete call from before)
+                                        verify(restClient, times(1))
+                                            .getAsJsonObject(
+                                                any(RequestEntry.class), eq(requestContext));
+                                        verify(restClient, times(1))
+                                            .delete(any(RequestEntry.class), eq(requestContext));
+                                        testContext.completeNow();
+                                      })));
+                    })));
   }
 
   @Test
@@ -196,18 +257,29 @@ public class InventoryRollbackServiceTest {
     poLine.setInstanceId("instanceId123");
     JsonObject holdingsResponse = new JsonObject().put("totalRecords", 0);
     when(restClient.getAsJsonObject(any(RequestEntry.class), eq(requestContext)))
-      .thenReturn(Future.succeededFuture(holdingsResponse));
+        .thenReturn(Future.succeededFuture(holdingsResponse));
     when(restClient.delete(any(RequestEntry.class), eq(requestContext)))
-      .thenReturn(Future.failedFuture(new RuntimeException("Delete failed")));
+        .thenReturn(Future.failedFuture(new RuntimeException("Delete failed")));
+
+    Set<String> createdInstanceIds = new HashSet<>();
+    createdInstanceIds.add("instanceId123");
 
     // When
-    Future<Void> future = inventoryRollbackService.deleteOrphanedInstanceIfNeeded(poLine, new HashSet<>(), requestContext);
+    Future<Void> future =
+        inventoryRollbackService.deleteOrphanedInstanceIfNeeded(
+            poLine, createdInstanceIds, requestContext);
 
     // Then - should succeed despite deletion failure (graceful recovery)
-    future.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
-      verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
-      verify(restClient, times(1)).delete(any(RequestEntry.class), eq(requestContext));
-      testContext.completeNow();
-    })));
+    future.onComplete(
+        testContext.succeeding(
+            result ->
+                testContext.verify(
+                    () -> {
+                      verify(restClient, times(1))
+                          .getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+                      verify(restClient, times(1))
+                          .delete(any(RequestEntry.class), eq(requestContext));
+                      testContext.completeNow();
+                    })));
   }
 }

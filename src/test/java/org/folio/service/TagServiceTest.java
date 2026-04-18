@@ -8,6 +8,8 @@ import static org.mockito.Mockito.doReturn;
 import io.vertx.core.Future;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import java.util.ArrayList;
+import java.util.Collections;
 import org.folio.rest.acq.model.tag.Tag;
 import org.folio.rest.acq.model.tag.TagCollection;
 import org.folio.rest.core.RestClient;
@@ -21,17 +23,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.util.ArrayList;
-import java.util.Collections;
-
 @ExtendWith(VertxExtension.class)
 public class TagServiceTest {
-  @InjectMocks
-  TagService tagService;
-  @Mock
-  private RestClient restClient;
-  @Mock
-  private RequestContext requestContextMock;
+  @InjectMocks TagService tagService;
+  @Mock private RestClient restClient;
+  @Mock private RequestContext requestContextMock;
 
   @BeforeEach
   public void initMocks() {
@@ -42,19 +38,25 @@ public class TagServiceTest {
   void createTagsIfMissing(VertxTestContext vertxTestContext) {
     String sampleTag = "CAseSenSeTivE";
     Tag postTagResponse = new Tag().withLabel(sampleTag);
-    TagCollection emptyTagCollection = new TagCollection()
-      .withTags(new ArrayList<>())
-      .withTotalRecords(0);
+    TagCollection emptyTagCollection =
+        new TagCollection().withTags(new ArrayList<>()).withTotalRecords(0);
 
-    doReturn(succeededFuture(emptyTagCollection)).when(restClient).get(any(RequestEntry.class), eq(TagCollection.class), any(RequestContext.class));
-    doReturn(succeededFuture(postTagResponse)).when(restClient).post(any(RequestEntry.class), any(),  eq(Tag.class), any());
+    doReturn(succeededFuture(emptyTagCollection))
+        .when(restClient)
+        .get(any(RequestEntry.class), eq(TagCollection.class), any(RequestContext.class));
+    doReturn(succeededFuture(postTagResponse))
+        .when(restClient)
+        .post(any(RequestEntry.class), any(), eq(Tag.class), any());
 
-    Future<Void> future = tagService.createTagsIfMissing(Collections.singleton(sampleTag), requestContextMock);
+    Future<Void> future =
+        tagService.createTagsIfMissing(Collections.singleton(sampleTag), requestContextMock);
 
-    vertxTestContext.assertComplete(future)
-      .onComplete(result -> {
-        Assertions.assertTrue(result.succeeded());
-        vertxTestContext.completeNow();
-      });
+    vertxTestContext
+        .assertComplete(future)
+        .onComplete(
+            result -> {
+              Assertions.assertTrue(result.succeeded());
+              vertxTestContext.completeNow();
+            });
   }
 }

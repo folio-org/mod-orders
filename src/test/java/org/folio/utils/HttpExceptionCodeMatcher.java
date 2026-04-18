@@ -25,8 +25,9 @@ public class HttpExceptionCodeMatcher extends TypeSafeMatcher<HttpException> {
 
   @Override
   public void describeTo(Description description) {
-    description.appendValue(foundErrorCode)
-      .appendText(" was not found instead of ")
-      .appendValue(expectedErrorCode);
+    description
+        .appendValue(foundErrorCode)
+        .appendText(" was not found instead of ")
+        .appendValue(expectedErrorCode);
   }
 }

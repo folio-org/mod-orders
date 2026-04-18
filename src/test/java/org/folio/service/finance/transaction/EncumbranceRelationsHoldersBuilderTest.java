@@ -25,23 +25,22 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-
-import io.vertx.junit5.VertxExtension;
-import io.vertx.junit5.VertxTestContext;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Metadata;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Ongoing;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,14 +53,10 @@ import org.mockito.Spy;
 @ExtendWith(VertxExtension.class)
 public class EncumbranceRelationsHoldersBuilderTest {
 
-  @Spy
-  @InjectMocks
-  private EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder;
+  @Spy @InjectMocks private EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder;
 
-  @Mock
-  private EncumbranceService encumbranceService;
-  @Mock
-  private RequestContext requestContextMock;
+  @Mock private EncumbranceService encumbranceService;
+  @Mock private RequestContext requestContextMock;
 
   CompositePurchaseOrder order;
   PoLine line1;
@@ -79,98 +74,124 @@ public class EncumbranceRelationsHoldersBuilderTest {
 
   private AutoCloseable mockitoMocks;
 
-
   @BeforeEach
-  public void initMocks(){
+  public void initMocks() {
     mockitoMocks = MockitoAnnotations.openMocks(this);
-    order = new CompositePurchaseOrder().withId(UUID.randomUUID().toString())
-        .withReEncumber(true)
-        .withOrderType(CompositePurchaseOrder.OrderType.ONGOING)
-        .withOngoing(new Ongoing().withIsSubscription(false));
+    order =
+        new CompositePurchaseOrder()
+            .withId(UUID.randomUUID().toString())
+            .withReEncumber(true)
+            .withOrderType(CompositePurchaseOrder.OrderType.ONGOING)
+            .withOngoing(new Ongoing().withIsSubscription(false));
 
-    distribution1 = new FundDistribution().withFundId(UUID.randomUUID().toString())
-        .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
-        .withValue(100d)
-        .withEncumbrance(UUID.randomUUID().toString());
+    distribution1 =
+        new FundDistribution()
+            .withFundId(UUID.randomUUID().toString())
+            .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
+            .withValue(100d)
+            .withEncumbrance(UUID.randomUUID().toString());
 
-    line1 = new PoLine().withId(UUID.randomUUID().toString())
-        .withCost(new Cost().withCurrency("USD").withListUnitPrice(68d).withQuantityPhysical(1))
-        .withPurchaseOrderId(order.getId())
-        .withFundDistribution(Collections.singletonList(distribution1));
+    line1 =
+        new PoLine()
+            .withId(UUID.randomUUID().toString())
+            .withCost(new Cost().withCurrency("USD").withListUnitPrice(68d).withQuantityPhysical(1))
+            .withPurchaseOrderId(order.getId())
+            .withFundDistribution(Collections.singletonList(distribution1));
 
-    distribution2 = new FundDistribution().withFundId(UUID.randomUUID().toString())
-        .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
-        .withValue(100d)
-        .withEncumbrance(UUID.randomUUID().toString());
+    distribution2 =
+        new FundDistribution()
+            .withFundId(UUID.randomUUID().toString())
+            .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
+            .withValue(100d)
+            .withEncumbrance(UUID.randomUUID().toString());
 
-    line2 = new PoLine().withId(UUID.randomUUID().toString())
-        .withCost(new Cost().withCurrency("USD").withListUnitPrice(34.95).withQuantityPhysical(1))
-        .withPurchaseOrderId(order.getId())
-        .withFundDistribution(Collections.singletonList(distribution2));
+    line2 =
+        new PoLine()
+            .withId(UUID.randomUUID().toString())
+            .withCost(
+                new Cost().withCurrency("USD").withListUnitPrice(34.95).withQuantityPhysical(1))
+            .withPurchaseOrderId(order.getId())
+            .withFundDistribution(Collections.singletonList(distribution2));
 
-    distribution3 = new FundDistribution().withFundId(UUID.randomUUID().toString())
-        .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
-        .withExpenseClassId(UUID.randomUUID().toString())
-        .withValue(100d)
-        .withEncumbrance(UUID.randomUUID().toString());
+    distribution3 =
+        new FundDistribution()
+            .withFundId(UUID.randomUUID().toString())
+            .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
+            .withExpenseClassId(UUID.randomUUID().toString())
+            .withValue(100d)
+            .withEncumbrance(UUID.randomUUID().toString());
 
-    line3 = new PoLine().withId(UUID.randomUUID().toString())
-        .withCost(new Cost().withCurrency("EUR").withListUnitPrice(24.99).withQuantityPhysical(1))
-        .withPurchaseOrderId(order.getId())
-        .withFundDistribution(Collections.singletonList(distribution3));
+    line3 =
+        new PoLine()
+            .withId(UUID.randomUUID().toString())
+            .withCost(
+                new Cost().withCurrency("EUR").withListUnitPrice(24.99).withQuantityPhysical(1))
+            .withPurchaseOrderId(order.getId())
+            .withFundDistribution(Collections.singletonList(distribution3));
 
     order.setPoLines(List.of(line1, line2, line3));
 
-    newEncumbrance1 = new Transaction()
-        .withFromFundId(distribution1.getFundId())
-        .withSource(PO_LINE)
-        .withEncumbrance(
-            new Encumbrance()
-              .withOrderType(ONGOING)
-              .withReEncumber(true)
-              .withOrderStatus(OPEN)
-              .withStatus(UNRELEASED)
-              .withSubscription(false)
-              .withSourcePurchaseOrderId(order.getId())
-              .withSourcePoLineId(line1.getId())
-        );
+    newEncumbrance1 =
+        new Transaction()
+            .withFromFundId(distribution1.getFundId())
+            .withSource(PO_LINE)
+            .withEncumbrance(
+                new Encumbrance()
+                    .withOrderType(ONGOING)
+                    .withReEncumber(true)
+                    .withOrderStatus(OPEN)
+                    .withStatus(UNRELEASED)
+                    .withSubscription(false)
+                    .withSourcePurchaseOrderId(order.getId())
+                    .withSourcePoLineId(line1.getId()));
 
-    newEncumbrance2 = new Transaction()
-        .withFromFundId(distribution2.getFundId())
-        .withSource(PO_LINE)
-        .withEncumbrance(
-            new Encumbrance()
-                .withOrderType(ONGOING)
-                .withReEncumber(true)
-                .withOrderStatus(OPEN)
-                .withStatus(UNRELEASED)
-                .withSubscription(false)
-                .withSourcePurchaseOrderId(order.getId())
-                .withSourcePoLineId(line2.getId())
-        );
+    newEncumbrance2 =
+        new Transaction()
+            .withFromFundId(distribution2.getFundId())
+            .withSource(PO_LINE)
+            .withEncumbrance(
+                new Encumbrance()
+                    .withOrderType(ONGOING)
+                    .withReEncumber(true)
+                    .withOrderStatus(OPEN)
+                    .withStatus(UNRELEASED)
+                    .withSubscription(false)
+                    .withSourcePurchaseOrderId(order.getId())
+                    .withSourcePoLineId(line2.getId()));
 
-    newEncumbrance3 = new Transaction()
-        .withFromFundId(distribution3.getFundId())
-        .withSource(PO_LINE)
-        .withExpenseClassId(distribution3.getExpenseClassId())
-        .withEncumbrance(
-            new Encumbrance()
-                .withOrderType(ONGOING)
-                .withReEncumber(true)
-                .withOrderStatus(OPEN)
-                .withStatus(UNRELEASED)
-                .withSubscription(false)
-                .withSourcePurchaseOrderId(order.getId())
-                .withSourcePoLineId(line3.getId())
-        );
+    newEncumbrance3 =
+        new Transaction()
+            .withFromFundId(distribution3.getFundId())
+            .withSource(PO_LINE)
+            .withExpenseClassId(distribution3.getExpenseClassId())
+            .withEncumbrance(
+                new Encumbrance()
+                    .withOrderType(ONGOING)
+                    .withReEncumber(true)
+                    .withOrderStatus(OPEN)
+                    .withStatus(UNRELEASED)
+                    .withSubscription(false)
+                    .withSourcePurchaseOrderId(order.getId())
+                    .withSourcePoLineId(line3.getId()));
 
-    holder1 = new EncumbranceRelationsHolder().withPurchaseOrder(order).withPoLine(line1)
-        .withFundDistribution(distribution1).withNewEncumbrance(newEncumbrance1);
-    holder2 = new EncumbranceRelationsHolder().withPurchaseOrder(order).withPoLine(line2)
-        .withFundDistribution(distribution2).withNewEncumbrance(newEncumbrance2);
-    holder3 = new EncumbranceRelationsHolder().withPurchaseOrder(order).withPoLine(line3)
-        .withFundDistribution(distribution3).withNewEncumbrance(newEncumbrance3);
-
+    holder1 =
+        new EncumbranceRelationsHolder()
+            .withPurchaseOrder(order)
+            .withPoLine(line1)
+            .withFundDistribution(distribution1)
+            .withNewEncumbrance(newEncumbrance1);
+    holder2 =
+        new EncumbranceRelationsHolder()
+            .withPurchaseOrder(order)
+            .withPoLine(line2)
+            .withFundDistribution(distribution2)
+            .withNewEncumbrance(newEncumbrance2);
+    holder3 =
+        new EncumbranceRelationsHolder()
+            .withPurchaseOrder(order)
+            .withPoLine(line3)
+            .withFundDistribution(distribution3)
+            .withNewEncumbrance(newEncumbrance3);
   }
 
   @AfterEach
@@ -180,37 +201,58 @@ public class EncumbranceRelationsHoldersBuilderTest {
 
   @Test
   void testShouldReturnHoldersForEveryFundDistribution() {
-    //When
-    List<EncumbranceRelationsHolder> resultHolders = encumbranceRelationsHoldersBuilder.buildBaseHolders(order);
+    // When
+    List<EncumbranceRelationsHolder> resultHolders =
+        encumbranceRelationsHoldersBuilder.buildBaseHolders(order);
 
-    //Then
+    // Then
     assertEquals(3, resultHolders.size());
-    assertThat(resultHolders, everyItem(hasProperty("newEncumbrance",  allOf(
-        hasProperty("source", is(PO_LINE)),
-        hasProperty("encumbrance", allOf(
-            hasProperty("subscription", is(false)),
-            hasProperty("status", is(UNRELEASED)),
-            hasProperty("orderType", is(ONGOING)),
-            hasProperty("orderStatus", is(OPEN)),
-            hasProperty("reEncumber", is(true)),
-            hasProperty("sourcePurchaseOrderId", is(order.getId()))
-        ))
-    ))));
-    assertThat(resultHolders, hasItem(hasProperty("newEncumbrance", allOf(
-        hasProperty("fromFundId", is(distribution1.getFundId())),
-        hasProperty("expenseClassId", nullValue()),
-        hasProperty("encumbrance", hasProperty("sourcePoLineId", is(line1.getId())))
-    ))));
-    assertThat(resultHolders, hasItem(hasProperty("newEncumbrance", allOf(
-        hasProperty("fromFundId", is(distribution2.getFundId())),
-        hasProperty("expenseClassId", nullValue()),
-        hasProperty("encumbrance", hasProperty("sourcePoLineId", is(line2.getId())))
-    ))));
-    assertThat(resultHolders, hasItem(hasProperty("newEncumbrance", allOf(
-        hasProperty("fromFundId", is(distribution3.getFundId())),
-        hasProperty("expenseClassId", is(distribution3.getExpenseClassId())),
-        hasProperty("encumbrance", hasProperty("sourcePoLineId", is(line3.getId())))
-    ))));
+    assertThat(
+        resultHolders,
+        everyItem(
+            hasProperty(
+                "newEncumbrance",
+                allOf(
+                    hasProperty("source", is(PO_LINE)),
+                    hasProperty(
+                        "encumbrance",
+                        allOf(
+                            hasProperty("subscription", is(false)),
+                            hasProperty("status", is(UNRELEASED)),
+                            hasProperty("orderType", is(ONGOING)),
+                            hasProperty("orderStatus", is(OPEN)),
+                            hasProperty("reEncumber", is(true)),
+                            hasProperty("sourcePurchaseOrderId", is(order.getId()))))))));
+    assertThat(
+        resultHolders,
+        hasItem(
+            hasProperty(
+                "newEncumbrance",
+                allOf(
+                    hasProperty("fromFundId", is(distribution1.getFundId())),
+                    hasProperty("expenseClassId", nullValue()),
+                    hasProperty(
+                        "encumbrance", hasProperty("sourcePoLineId", is(line1.getId())))))));
+    assertThat(
+        resultHolders,
+        hasItem(
+            hasProperty(
+                "newEncumbrance",
+                allOf(
+                    hasProperty("fromFundId", is(distribution2.getFundId())),
+                    hasProperty("expenseClassId", nullValue()),
+                    hasProperty(
+                        "encumbrance", hasProperty("sourcePoLineId", is(line2.getId())))))));
+    assertThat(
+        resultHolders,
+        hasItem(
+            hasProperty(
+                "newEncumbrance",
+                allOf(
+                    hasProperty("fromFundId", is(distribution3.getFundId())),
+                    hasProperty("expenseClassId", is(distribution3.getExpenseClassId())),
+                    hasProperty(
+                        "encumbrance", hasProperty("sourcePoLineId", is(line3.getId())))))));
     assertThat(resultHolders, hasItem(hasProperty("fundDistribution", is(distribution1))));
     assertThat(resultHolders, hasItem(hasProperty("fundDistribution", is(distribution2))));
     assertThat(resultHolders, hasItem(hasProperty("fundDistribution", is(distribution3))));
@@ -222,98 +264,106 @@ public class EncumbranceRelationsHoldersBuilderTest {
 
   @Test
   void testShouldReturnEmptyCollectionWhenOrdersNotContainsFundDistribution() {
-    //given
+    // given
     order.getPoLines().forEach(poLine -> poLine.setFundDistribution(emptyList()));
-    //When
-    List<EncumbranceRelationsHolder> resultHolders = encumbranceRelationsHoldersBuilder.buildBaseHolders(order);
-    //Then
+    // When
+    List<EncumbranceRelationsHolder> resultHolders =
+        encumbranceRelationsHoldersBuilder.buildBaseHolders(order);
+    // Then
     assertThat(resultHolders, empty());
   }
 
   @Test
   void testShouldPopulateHoldersWithOldEncumbranceIfMatchesTransactionFromStorage() {
-    //given
-    Transaction encumbranceFromStorage = new Transaction()
-        .withId(UUID.randomUUID().toString())
-        .withFromFundId(distribution1.getFundId())
-        .withSource(PO_LINE)
-        .withAmount(38d)
-        .withFiscalYearId(UUID.randomUUID().toString())
-        .withEncumbrance(new Encumbrance()
-                             .withSubscription(false)
-                             .withReEncumber(true)
-                             .withOrderType(ONGOING)
-                             .withSourcePurchaseOrderId(order.getId())
-                             .withSourcePoLineId(line1.getId())
-                             .withInitialAmountEncumbered(68d)
-                             .withAmountExpended(18d)
-                             .withAmountCredited(8d)
-                             .withAmountAwaitingPayment(20d)
-            )
-      .withMetadata(new Metadata());
+    // given
+    Transaction encumbranceFromStorage =
+        new Transaction()
+            .withId(UUID.randomUUID().toString())
+            .withFromFundId(distribution1.getFundId())
+            .withSource(PO_LINE)
+            .withAmount(38d)
+            .withFiscalYearId(UUID.randomUUID().toString())
+            .withEncumbrance(
+                new Encumbrance()
+                    .withSubscription(false)
+                    .withReEncumber(true)
+                    .withOrderType(ONGOING)
+                    .withSourcePurchaseOrderId(order.getId())
+                    .withSourcePoLineId(line1.getId())
+                    .withInitialAmountEncumbered(68d)
+                    .withAmountExpended(18d)
+                    .withAmountCredited(8d)
+                    .withAmountAwaitingPayment(20d))
+            .withMetadata(new Metadata());
 
     List<EncumbranceRelationsHolder> holders = new ArrayList<>();
     holders.add(holder1);
     holders.add(holder2);
 
     when(encumbranceService.getEncumbrancesByIds(anyList(), any()))
-      .thenReturn(succeededFuture(singletonList(encumbranceFromStorage)));
-    //When
-    List<EncumbranceRelationsHolder> resultHolders = encumbranceRelationsHoldersBuilder
-        .withExistingTransactions(holders, order, requestContextMock).result();
-    //Then
+        .thenReturn(succeededFuture(singletonList(encumbranceFromStorage)));
+    // When
+    List<EncumbranceRelationsHolder> resultHolders =
+        encumbranceRelationsHoldersBuilder
+            .withExistingTransactions(holders, order, requestContextMock)
+            .result();
+    // Then
     assertThat(resultHolders, hasSize(2));
     assertEquals(encumbranceFromStorage, holder1.getOldEncumbrance());
     assertEquals(encumbranceFromStorage.getId(), holder1.getNewEncumbrance().getId());
-    assertEquals(encumbranceFromStorage.getEncumbrance().getAmountExpended(),
-                 holder1.getNewEncumbrance().getEncumbrance().getAmountExpended());
-    assertEquals(encumbranceFromStorage.getEncumbrance().getAmountCredited(),
-                 holder1.getNewEncumbrance().getEncumbrance().getAmountCredited());
-    assertEquals(encumbranceFromStorage.getEncumbrance().getAmountAwaitingPayment(),
-                 holder1.getNewEncumbrance().getEncumbrance().getAmountAwaitingPayment());
+    assertEquals(
+        encumbranceFromStorage.getEncumbrance().getAmountExpended(),
+        holder1.getNewEncumbrance().getEncumbrance().getAmountExpended());
+    assertEquals(
+        encumbranceFromStorage.getEncumbrance().getAmountCredited(),
+        holder1.getNewEncumbrance().getEncumbrance().getAmountCredited());
+    assertEquals(
+        encumbranceFromStorage.getEncumbrance().getAmountAwaitingPayment(),
+        holder1.getNewEncumbrance().getEncumbrance().getAmountAwaitingPayment());
     assertNull(holder2.getOldEncumbrance());
-
   }
 
   @Test
   void testShouldCreateNewHoldersForTransactionsFromStorageThatNotMatchProvidedHolders() {
-    //given
-    Transaction encumbranceFromStorage1 = new Transaction()
-        .withId(UUID.randomUUID().toString())
-        .withFromFundId(distribution1.getFundId())
-        .withSource(PO_LINE)
-        .withAmount(38d)
-        .withExpenseClassId(UUID.randomUUID().toString())
-        .withFiscalYearId(UUID.randomUUID().toString())
-        .withEncumbrance(new Encumbrance()
-                             .withSubscription(false)
-                             .withReEncumber(true)
-                             .withOrderType(ONGOING)
-                             .withSourcePurchaseOrderId(order.getId())
-                             .withSourcePoLineId(line1.getId())
-                             .withInitialAmountEncumbered(68d)
-                             .withAmountExpended(18d)
-                             .withAmountCredited(8d)
-                             .withAmountAwaitingPayment(20d)
-        );
+    // given
+    Transaction encumbranceFromStorage1 =
+        new Transaction()
+            .withId(UUID.randomUUID().toString())
+            .withFromFundId(distribution1.getFundId())
+            .withSource(PO_LINE)
+            .withAmount(38d)
+            .withExpenseClassId(UUID.randomUUID().toString())
+            .withFiscalYearId(UUID.randomUUID().toString())
+            .withEncumbrance(
+                new Encumbrance()
+                    .withSubscription(false)
+                    .withReEncumber(true)
+                    .withOrderType(ONGOING)
+                    .withSourcePurchaseOrderId(order.getId())
+                    .withSourcePoLineId(line1.getId())
+                    .withInitialAmountEncumbered(68d)
+                    .withAmountExpended(18d)
+                    .withAmountCredited(8d)
+                    .withAmountAwaitingPayment(20d));
 
-    Transaction encumbranceFromStorage2 = new Transaction()
-        .withId(UUID.randomUUID().toString())
-        .withFromFundId(UUID.randomUUID().toString())
-        .withSource(PO_LINE)
-        .withAmount(38d)
-        .withFiscalYearId(UUID.randomUUID().toString())
-        .withEncumbrance(new Encumbrance()
-                             .withSubscription(false)
-                             .withReEncumber(true)
-                             .withOrderType(ONGOING)
-                             .withSourcePurchaseOrderId(order.getId())
-                             .withSourcePoLineId(line1.getId())
-                             .withInitialAmountEncumbered(68d)
-                             .withAmountExpended(18d)
-                             .withAmountCredited(8d)
-                             .withAmountAwaitingPayment(20d)
-        );
+    Transaction encumbranceFromStorage2 =
+        new Transaction()
+            .withId(UUID.randomUUID().toString())
+            .withFromFundId(UUID.randomUUID().toString())
+            .withSource(PO_LINE)
+            .withAmount(38d)
+            .withFiscalYearId(UUID.randomUUID().toString())
+            .withEncumbrance(
+                new Encumbrance()
+                    .withSubscription(false)
+                    .withReEncumber(true)
+                    .withOrderType(ONGOING)
+                    .withSourcePurchaseOrderId(order.getId())
+                    .withSourcePoLineId(line1.getId())
+                    .withInitialAmountEncumbered(68d)
+                    .withAmountExpended(18d)
+                    .withAmountCredited(8d)
+                    .withAmountAwaitingPayment(20d));
 
     String fiscalYearId = UUID.randomUUID().toString();
     holder1.withCurrentFiscalYearId(fiscalYearId);
@@ -325,19 +375,21 @@ public class EncumbranceRelationsHoldersBuilderTest {
     holders.add(holder3);
 
     when(encumbranceService.getEncumbrancesByIds(anyList(), any()))
-      .thenReturn(succeededFuture(List.of(encumbranceFromStorage1, encumbranceFromStorage2)));
+        .thenReturn(succeededFuture(List.of(encumbranceFromStorage1, encumbranceFromStorage2)));
 
-    //When
-    List<EncumbranceRelationsHolder> resultHolders = encumbranceRelationsHoldersBuilder
-      .withExistingTransactions(holders, order, requestContextMock).result();
-    //Then
+    // When
+    List<EncumbranceRelationsHolder> resultHolders =
+        encumbranceRelationsHoldersBuilder
+            .withExistingTransactions(holders, order, requestContextMock)
+            .result();
+    // Then
     assertThat(resultHolders, hasSize(5));
     assertNull(holder1.getOldEncumbrance());
     assertNull(holder2.getOldEncumbrance());
     assertNull(holder3.getOldEncumbrance());
 
-    assertThat(resultHolders, hasItem( hasProperty("oldEncumbrance", is(encumbranceFromStorage1))));
-    assertThat(resultHolders, hasItem( hasProperty("oldEncumbrance", is(encumbranceFromStorage2))));
+    assertThat(resultHolders, hasItem(hasProperty("oldEncumbrance", is(encumbranceFromStorage1))));
+    assertThat(resultHolders, hasItem(hasProperty("oldEncumbrance", is(encumbranceFromStorage2))));
   }
 
   @Test
@@ -353,26 +405,32 @@ public class EncumbranceRelationsHoldersBuilderTest {
     holder1.withPoLine(line1);
     holder3.withPoLine(line1);
 
-    List<EncumbranceRelationsHolder> holders = List.of(holder1, holder2, holder3); // Removed holder4
+    List<EncumbranceRelationsHolder> holders =
+        List.of(holder1, holder2, holder3); // Removed holder4
 
     doReturn(succeededFuture(holders))
-      .when(encumbranceRelationsHoldersBuilder).prepareEncumbranceRelationsHolder(any(), any(), any());
+        .when(encumbranceRelationsHoldersBuilder)
+        .prepareEncumbranceRelationsHolder(any(), any(), any());
 
-    var future = encumbranceRelationsHoldersBuilder.retrieveMapFiscalYearsWithPoLines(order, order, requestContextMock);
-    vertxTestContext.assertComplete(future)
-      .onSuccess(result -> {
-        assertThat(result.keySet(), hasSize(2));
-        assertThat(result.keySet(), hasItems(fiscalYearId1, fiscalYearId2));
+    var future =
+        encumbranceRelationsHoldersBuilder.retrieveMapFiscalYearsWithPoLines(
+            order, order, requestContextMock);
+    vertxTestContext
+        .assertComplete(future)
+        .onSuccess(
+            result -> {
+              assertThat(result.keySet(), hasSize(2));
+              assertThat(result.keySet(), hasItems(fiscalYearId1, fiscalYearId2));
 
-        // Check if the list for fiscalYearId1 shouldn't contain duplicates of line1
-        assertThat(result.get(fiscalYearId1), hasSize(1));
-        assertThat(result.get(fiscalYearId1), hasItems(line1));
+              // Check if the list for fiscalYearId1 shouldn't contain duplicates of line1
+              assertThat(result.get(fiscalYearId1), hasSize(1));
+              assertThat(result.get(fiscalYearId1), hasItems(line1));
 
-        assertThat(result.get(fiscalYearId2), hasSize(1));
-        assertThat(result.get(fiscalYearId2), hasItem(line2));
+              assertThat(result.get(fiscalYearId2), hasSize(1));
+              assertThat(result.get(fiscalYearId2), hasItem(line2));
 
-        vertxTestContext.completeNow();
-      });
+              vertxTestContext.completeNow();
+            });
   }
 
   @Test
@@ -380,14 +438,19 @@ public class EncumbranceRelationsHoldersBuilderTest {
     List<EncumbranceRelationsHolder> holders = List.of(holder1, holder2, holder3);
 
     doReturn(succeededFuture(holders))
-      .when(encumbranceRelationsHoldersBuilder).prepareEncumbranceRelationsHolder(any(), any(), any());
+        .when(encumbranceRelationsHoldersBuilder)
+        .prepareEncumbranceRelationsHolder(any(), any(), any());
 
-    var future = encumbranceRelationsHoldersBuilder.retrieveMapFiscalYearsWithPoLines(order, order, requestContextMock);
-    vertxTestContext.assertComplete(future)
-      .onSuccess(result -> {
-        //Then
-        assertTrue(result.isEmpty());
-        vertxTestContext.completeNow();
-      });
+    var future =
+        encumbranceRelationsHoldersBuilder.retrieveMapFiscalYearsWithPoLines(
+            order, order, requestContextMock);
+    vertxTestContext
+        .assertComplete(future)
+        .onSuccess(
+            result -> {
+              // Then
+              assertTrue(result.isEmpty());
+              vertxTestContext.completeNow();
+            });
   }
 }

@@ -3,8 +3,8 @@ package org.folio.rest;
 import static io.restassured.RestAssured.when;
 import static org.hamcrest.Matchers.is;
 
+import io.restassured.RestAssured;
 import java.nio.file.Path;
-
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,8 +18,6 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
-
-import io.restassured.RestAssured;
 
 /**
  * Check the shaded fat uber jar and Dockerfile:
@@ -39,18 +37,18 @@ public class InstallUpgradeIT {
 
   @Container
   private static final KafkaContainer KAFKA =
-    new KafkaContainer(DockerImageName.parse("apache/kafka-native:3.8.0"))
-      .withNetwork(NETWORK)
-      .withNetworkAliases("mykafka");
+      new KafkaContainer(DockerImageName.parse("apache/kafka-native:3.8.0"))
+          .withNetwork(NETWORK)
+          .withNetworkAliases("mykafka");
 
   @Container
   private static final GenericContainer<?> MOD_ORDERS =
-    new GenericContainer<>(
-      new ImageFromDockerfile("mod-orders").withFileFromPath(".", Path.of(".")))
-      .withNetwork(NETWORK)
-      .withExposedPorts(8081)
-      .withEnv("KAFKA_HOST", "mykafka")
-      .withEnv("KAFKA_PORT", "9092");
+      new GenericContainer<>(
+              new ImageFromDockerfile("mod-orders").withFileFromPath(".", Path.of(".")))
+          .withNetwork(NETWORK)
+          .withExposedPorts(8081)
+          .withEnv("KAFKA_HOST", "mykafka")
+          .withEnv("KAFKA_PORT", "9092");
 
   @BeforeAll
   public static void beforeClass() {
@@ -71,11 +69,6 @@ public class InstallUpgradeIT {
   @Test
   public void health() {
     // request without X-Okapi-Tenant
-    when()
-      .get("/admin/health")
-      .then()
-      .statusCode(200)
-      .body(is("\"OK\""));
+    when().get("/admin/health").then().statusCode(200).body(is("\"OK\""));
   }
-
 }
