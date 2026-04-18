@@ -1,9 +1,87 @@
-## 13.1.0 - Unreleased
-* [MODDATAIMP-1225](https://folio-org.atlassian.net/browse/MODDATAIMP-1225) - Change dependencies on SRM and mod-di-converter-storage interfaces to optional
-* [MODORDERS-1040](https://folio-org.atlassian.net/browse/MODORDERS-1040) - Subscribe to JobExecution status change and add cache
-* [MODORDERS-1042](https://folio-org.atlassian.net/browse/MODORDERS-1042) - Do not process event if JobExecution status is Cancelled
+## 13.1.0 - Released (Trillium R2 2025)
+This release focused on upgrading to Vert.x 5.0, improving holdings/instance connection handling, enhancing fiscal year and encumbrance logic, piece/receiving improvements, and a large round of bug fixes across the acquisitions flow.
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v13.0.0...v13.1.0)
+
+### Stories
+* [MODORDERS-1418](https://folio-org.atlassian.net/browse/MODORDERS-1418) - Resolve the class name conflict for org.folio.rest.jaxrs.model.Location
+* [MODORDERS-1417](https://folio-org.atlassian.net/browse/MODORDERS-1417) - Add dependency on mod-inventory-storage-dto
+* [MODORDERS-1410](https://folio-org.atlassian.net/browse/MODORDERS-1410) - ECS | Do not delete used holdings during un-opening and changing instance connection 
+* [MODORDERS-1407](https://folio-org.atlassian.net/browse/MODORDERS-1407) - Update GitHub Workflows for Maven
+* [MODORDERS-1403](https://folio-org.atlassian.net/browse/MODORDERS-1403) - Enhance the holding-detail endpoint to always return all linked PO lines
+* [MODORDERS-1402](https://folio-org.atlassian.net/browse/MODORDERS-1402) - Add deleteHoldings flag to checkin endpoint and implement holding delete logic
+* [MODORDERS-1401](https://folio-org.atlassian.net/browse/MODORDERS-1401) - Use GET /locale to get tenant language & locale settings
 * [MODORDERS-1400](https://folio-org.atlassian.net/browse/MODORDERS-1400) - assertj: Fix scope to test, bump version to 3.27.7
+* [MODORDERS-1395](https://folio-org.atlassian.net/browse/MODORDERS-1395) - Populate holdings relations details with information about PO Lines
+* [MODORDERS-1392](https://folio-org.atlassian.net/browse/MODORDERS-1392) - Display only one fiscal year in the Order view when PO lines include funds from different ledgers 
+* [MODORDERS-1387](https://folio-org.atlassian.net/browse/MODORDERS-1387) - Update DataImportHandler to include common headers into kafka messages 
+* [MODORDERS-1381](https://folio-org.atlassian.net/browse/MODORDERS-1381) - Add validation to block adding fund distributions from different FYs in Open order 
+* [MODORDERS-1372](https://folio-org.atlassian.net/browse/MODORDERS-1372) - Use batch endpoint to update items during change Instance connection
+* [MODORDERS-1371](https://folio-org.atlassian.net/browse/MODORDERS-1371) - Implement endpoint whether to Show Delete/Keep Holdings Modal
+* [MODORDERS-1367](https://folio-org.atlassian.net/browse/MODORDERS-1367) - Prevent releasing in a different fiscal year
+* [MODORDERS-1363](https://folio-org.atlassian.net/browse/MODORDERS-1363) - Create encumbrance as released after changing Fund distribution in POL
+* [MODORDERS-1361](https://folio-org.atlassian.net/browse/MODORDERS-1361) - Add displayToPublic and Sequence fields to schema
+* [MODORDERS-1356](https://folio-org.atlassian.net/browse/MODORDERS-1356) - BE - Create Sequence field in receiving
+* [MODORDERS-1343](https://folio-org.atlassian.net/browse/MODORDERS-1343) - Do not delete used holdings during un-opening the order
+* [MODORDERS-1340](https://folio-org.atlassian.net/browse/MODORDERS-1340) - Upgrade module to Vert.x 5.0
+* [MODORDERS-1333](https://folio-org.atlassian.net/browse/MODORDERS-1333) - Do not delete used holdings during instance connection change
+* [MODORDERS-1326](https://folio-org.atlassian.net/browse/MODORDERS-1326) - Update to Support itemLevelCallNumberTypeId Constraint (Breaking Change)
+* [MODORDERS-1324](https://folio-org.atlassian.net/browse/MODORDERS-1324) - Setup dependabot for the module
+* [MODORDERS-1321](https://folio-org.atlassian.net/browse/MODORDERS-1321) - Add 'Suppress from discovery' toggle for instance interaction
+* [MODORDERS-1320](https://folio-org.atlassian.net/browse/MODORDERS-1320) - Backend for Enabling the deactivation of obsolete Order Suffix/Prefix values
+* [MODORDERS-1313](https://folio-org.atlassian.net/browse/MODORDERS-1313) - Use mod-settings to get Language & locale setting selections
+* [MODORDERS-1311](https://folio-org.atlassian.net/browse/MODORDERS-1311) - Prevent unopening of order when related piece has a request 
+* [MODORDERS-1300](https://folio-org.atlassian.net/browse/MODORDERS-1300) - Holdings duplicated in new instance after selecting "Create new" during changing instance connection for P/E mix order 
+* [MODORDERS-1299](https://folio-org.atlassian.net/browse/MODORDERS-1299) - After changing instance in P/E mix order, new instance not displayed and locations show "Invalid reference"
+* [MODORDERS-1293](https://folio-org.atlassian.net/browse/MODORDERS-1293) - Issue with removing titles from package with associated holdings and items 
+* [MODORDERS-1289](https://folio-org.atlassian.net/browse/MODORDERS-1289) - Holding is created despite an error about non-unique barcode during binding
+* [MODORDERS-1285](https://folio-org.atlassian.net/browse/MODORDERS-1285) - SYSTEM_USER_ENABLED env var implementation via standard mechanism
+* [MODORDERS-1278](https://folio-org.atlassian.net/browse/MODORDERS-1278) - Display the fiscal year in which the Order was opened based on "Date opened"
+* [MODORDERS-1274](https://folio-org.atlassian.net/browse/MODORDERS-1274) - Fix Caffeine cache associated with MappingParametersCache and related caches
+* [MODORDERS-1269](https://folio-org.atlassian.net/browse/MODORDERS-1269) - Single po line schema, remove alerts and reporting codes
+* [MODORDERS-1260](https://folio-org.atlassian.net/browse/MODORDERS-1260) - Implement endpoint to unlink Title from Package
+* [MODORDERS-1254](https://folio-org.atlassian.net/browse/MODORDERS-1254) - Allow user to view PO value for any related fiscal year
+* [MODORDERS-1252](https://folio-org.atlassian.net/browse/MODORDERS-1252) - Switch to using the Finance Exchange Rate Api 
+* [MODORDERS-1250](https://folio-org.atlassian.net/browse/MODORDERS-1250) - Sensitive data in logs cleanup
+* [MODORDERS-1214](https://folio-org.atlassian.net/browse/MODORDERS-1214) - Replace mod-configuration usage to use Settings API from orders-storage
+* [MODORDERS-1065](https://folio-org.atlassian.net/browse/MODORDERS-1065) - Validate checkinItems based on receiptStatus
+* [MODORDERS-1042](https://folio-org.atlassian.net/browse/MODORDERS-1042) - Do not process event if JobExecution status is Cancelled
+* [MODORDERS-1040](https://folio-org.atlassian.net/browse/MODORDERS-1040) - Subscribe to JobExecution cancellation and add cache
+* [MODORDERS-981](https://folio-org.atlassian.net/browse/MODORDERS-981) - Populate the fundCode dynamically using the fundId if it is missing
+* [MODEXPS-296](https://folio-org.atlassian.net/browse/MODEXPS-296) - Fetch export configurations using data export spring endpoint
+* [MODDATAIMP-1225](https://folio-org.atlassian.net/browse/MODDATAIMP-1225) - Change dependencies on SRM and mod-di-converter-storage interfaces to optional
+
+### Bug Fixes
+* [MODORDERS-1436](https://folio-org.atlassian.net/browse/MODORDERS-1436) - Order record is not updated after moving holdings/items in Inventory
 * [MODORDERS-1432](https://folio-org.atlassian.net/browse/MODORDERS-1432) - The open order is not created after import .mrc file
+* [MODORDERS-1414](https://folio-org.atlassian.net/browse/MODORDERS-1414) - Fixed inventory processing when unopening order
+* [MODORDERS-1412](https://folio-org.atlassian.net/browse/MODORDERS-1412) - Date opened is missing for the closed and re-opened order
+* [MODORDERS-1408](https://folio-org.atlassian.net/browse/MODORDERS-1408) - Deleting a holding results in another referenced holding being silently deleted
+* [MODORDERS-1397](https://folio-org.atlassian.net/browse/MODORDERS-1397) - Title cannot be updated if the POL number contains long alphabetical prefix and suffix
+* [MODORDERS-1386](https://folio-org.atlassian.net/browse/MODORDERS-1386) - Duplicated instances with holdings are created despite item creation failure
+* [MODORDERS-1378](https://folio-org.atlassian.net/browse/MODORDERS-1378) - POL creation is slow when adding an excessive number of product IDs 
+* [MODORDERS-1370](https://folio-org.atlassian.net/browse/MODORDERS-1370) - mod-orders becomes unavailable after removing Fund distribution from POL
+* [MODORDERS-1369](https://folio-org.atlassian.net/browse/MODORDERS-1369) - Exclude Instances Marked "Set for Deletion" in Matching Logic
+* [MODORDERS-1366](https://folio-org.atlassian.net/browse/MODORDERS-1366) - Received piece cannot be edited when it was received via Full screen after creating a new holding
+* [MODORDERS-1365](https://folio-org.atlassian.net/browse/MODORDERS-1365) - ECS | Order with two locations from the same member tenant cannot be opened
+* [MODORDERS-1359](https://folio-org.atlassian.net/browse/MODORDERS-1359) - Encumbrance is pending after unopen-open
+* [MODORDERS-1354](https://folio-org.atlassian.net/browse/MODORDERS-1354) - Total fields display incorrect paid amounts for orders in foreign currency with Treasury provider
+* [MODORDERS-1328](https://folio-org.atlassian.net/browse/MODORDERS-1328) - Do not update existing item statuses in case of new bind item failure
+* [MODORDERS-1322](https://folio-org.atlassian.net/browse/MODORDERS-1322) - Receiving piece expected date not populating from POL
+* [MODORDERS-1316](https://folio-org.atlassian.net/browse/MODORDERS-1316) - Editing receiving piece when related item is suppressed from discovery unsuppresses the item
+* [MODORDERS-1308](https://folio-org.atlassian.net/browse/MODORDERS-1308) - Convert invoice and encumbrance currencies for total amounts
+* [MODORDERS-1297](https://folio-org.atlassian.net/browse/MODORDERS-1297) - Holding remains after changing instance connection when piece was received in a new location
+* [MODORDERS-1296](https://folio-org.atlassian.net/browse/MODORDERS-1296) - Intermittent order receiving issue - wrong name in audit record, nullPointer logged
+* [MODORDERS-1295](https://folio-org.atlassian.net/browse/MODORDERS-1295) - Not received pieces in statuses different from "Expected" are not deleted after unopen
+* [MODORDERS-1283](https://folio-org.atlassian.net/browse/MODORDERS-1283) - Fixed bug with encumbrances when unopening/reopening an order
+* [MODINVOICE-616](https://folio-org.atlassian.net/browse/MODINVOICE-616) - Fix incomplete transaction matching on encumbrance unrelease
+* [MODFIN-434](https://folio-org.atlassian.net/browse/MODFIN-434) - Update Treasury exchange rate provider handler to allow using the same rate in both directions
+
+### Dependencies
+* Bump `vert.x` to `5.0.8`
+* Bump `data-import-processing-core` to `5.0.0`
+* Replaced `net.mguenther.kafka:kafka-junit` with `kafka-native` testcontainers `3.8.0`
+* Multiple prod/dev dependency updates via Dependabot
 
 ## 13.0.0 - Released (Sunflower R1 2025)
 The primary focus of this release was to enhance multi-tenant functionality, improve piece management, and implement various inventory and order processing features.
