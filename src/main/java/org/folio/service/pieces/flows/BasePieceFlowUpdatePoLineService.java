@@ -34,21 +34,20 @@ public abstract class BasePieceFlowUpdatePoLineService<T extends BasePieceFlowHo
     if (skipUpdatingPoLine(holder.getOriginPoLine())) {
       return Future.succeededFuture();
     }
-    boolean isLineUpdated = poLineUpdateCost(holder);
-    holder.setLineUpdated(isLineUpdated);
-    if (isLineUpdated) {
+    boolean costUpdated = poLineUpdateCost(holder);
+    holder.setLineUpdated(holder.getLineUpdated() || costUpdated);
+    if (costUpdated) {
       return receivingEncumbranceStrategy.processEncumbrances(holder.getPurchaseOrderToSave(), holder.getPurchaseOrderToSave(), requestContext);
     }
     return Future.succeededFuture();
   }
 
   public Future<Void> updateLocationsAndSavePoLine(T holder, RequestContext requestContext) {
-    if (skipUpdatingPoLine(holder.getOriginPoLine())) {
-      return Future.succeededFuture();
+    if (!skipUpdatingPoLine(holder.getOriginPoLine())) {
+      boolean lineUpdated2 = poLineUpdateLocations(holder);
+      holder.setLineUpdated(holder.getLineUpdated() || lineUpdated2 ||
+        !Objects.equals(holder.getOriginPoLine().getInstanceId(), holder.getPoLineToSave().getInstanceId()));
     }
-    boolean lineUpdated2 = poLineUpdateLocations(holder);
-    holder.setLineUpdated(holder.getLineUpdated() || lineUpdated2 ||
-      !Objects.equals(holder.getOriginPoLine().getInstanceId(), holder.getPoLineToSave().getInstanceId()));
     if (holder.getLineUpdated()) {
       return purchaseOrderLineService.saveOrderLine(holder.getPoLineToSave(), getPieceLocations(holder), requestContext);
     }
