@@ -1,5 +1,10 @@
 package org.folio.service.pieces;
 
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.util.Date;
+import java.util.List;
+import java.util.UUID;
 import org.folio.CopilotGenerated;
 import org.folio.models.pieces.PieceBatchStatusUpdateHolder;
 import org.folio.rest.jaxrs.model.Physical;
@@ -10,12 +15,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
-import java.util.Date;
-import java.util.List;
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
-
 @CopilotGenerated(model = "Claude Sonnet 4", partiallyGenerated = true)
 public class PieceUtilTest {
 
@@ -24,7 +23,8 @@ public class PieceUtilTest {
     Piece piece = new Piece().withReceivingStatus(Piece.ReceivingStatus.EXPECTED);
     Piece.ReceivingStatus newStatus = Piece.ReceivingStatus.RECEIVED;
 
-    boolean statusChanged = PieceUtil.updatePieceStatus(piece, piece.getReceivingStatus(), newStatus);
+    boolean statusChanged =
+        PieceUtil.updatePieceStatus(piece, piece.getReceivingStatus(), newStatus);
 
     assertTrue(statusChanged);
     assertSame(newStatus, piece.getReceivingStatus());
@@ -36,7 +36,8 @@ public class PieceUtilTest {
     Piece piece = new Piece().withReceivingStatus(Piece.ReceivingStatus.EXPECTED);
     Piece.ReceivingStatus newStatus = Piece.ReceivingStatus.EXPECTED;
 
-    boolean statusChanged = PieceUtil.updatePieceStatus(piece, piece.getReceivingStatus(), newStatus);
+    boolean statusChanged =
+        PieceUtil.updatePieceStatus(piece, piece.getReceivingStatus(), newStatus);
 
     assertFalse(statusChanged);
     assertSame(newStatus, piece.getReceivingStatus());
@@ -45,8 +46,14 @@ public class PieceUtilTest {
   @Test
   void testUpdatePieceStatusWithHolder() {
     Piece piece = new Piece().withReceivingStatus(Piece.ReceivingStatus.EXPECTED);
-    PieceBatchStatusUpdateHolder holder = new PieceBatchStatusUpdateHolder(Piece.ReceivingStatus.RECEIVED,
-      30, "internal", "external", List.of(piece), UUID.randomUUID().toString());
+    PieceBatchStatusUpdateHolder holder =
+        new PieceBatchStatusUpdateHolder(
+            Piece.ReceivingStatus.RECEIVED,
+            30,
+            "internal",
+            "external",
+            List.of(piece),
+            UUID.randomUUID().toString());
 
     boolean statusChanged = PieceUtil.updatePieceStatus(piece, holder);
 
@@ -61,8 +68,14 @@ public class PieceUtilTest {
   @Test
   void testUpdatePieceStatusWithHolderSameStatus() {
     Piece piece = new Piece().withReceivingStatus(Piece.ReceivingStatus.EXPECTED);
-    PieceBatchStatusUpdateHolder holder = new PieceBatchStatusUpdateHolder(Piece.ReceivingStatus.EXPECTED,
-      30, "internal", "external", List.of(piece), UUID.randomUUID().toString());
+    PieceBatchStatusUpdateHolder holder =
+        new PieceBatchStatusUpdateHolder(
+            Piece.ReceivingStatus.EXPECTED,
+            30,
+            "internal",
+            "external",
+            List.of(piece),
+            UUID.randomUUID().toString());
 
     boolean statusChanged = PieceUtil.updatePieceStatus(piece, holder);
 
@@ -74,8 +87,11 @@ public class PieceUtilTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = Piece.Format.class, names = { "PHYSICAL", "OTHER" })
-  void returnsExpectedReceiptDateWhenPieceFormatIsPhysicalOrOtherAndPhysicalIsPresent(Piece.Format format) {
+  @EnumSource(
+      value = Piece.Format.class,
+      names = {"PHYSICAL", "OTHER"})
+  void returnsExpectedReceiptDateWhenPieceFormatIsPhysicalOrOtherAndPhysicalIsPresent(
+      Piece.Format format) {
     PoLine poLine = new PoLine().withPhysical(new Physical().withExpectedReceiptDate(new Date()));
 
     Date result = PieceUtil.getExpectedReceiptDate(format, poLine);
@@ -116,10 +132,11 @@ public class PieceUtilTest {
     String locationId = UUID.randomUUID().toString();
     String tenantId = "test-tenant";
 
-    Piece piece = new Piece()
-      .withHoldingId(holdingId)
-      .withLocationId(locationId)
-      .withReceivingTenantId(tenantId);
+    Piece piece =
+        new Piece()
+            .withHoldingId(holdingId)
+            .withLocationId(locationId)
+            .withReceivingTenantId(tenantId);
 
     List<Piece> pieces = List.of(piece);
 
@@ -131,5 +148,4 @@ public class PieceUtilTest {
     assertEquals(locationId, location.getLocationId());
     assertEquals(tenantId, location.getTenantId());
   }
-
 }

@@ -10,37 +10,41 @@ import io.restassured.http.Headers;
 import io.restassured.response.Response;
 import io.vertx.core.json.JsonObject;
 
-
 enum ProtectedOperations {
-
-  CREATE(201,  APPLICATION_JSON) {
+  CREATE(201, APPLICATION_JSON) {
     @Override
-    Response process(String url, String body, Headers headers, String expectedContentType, int expectedCode) {
+    Response process(
+        String url, String body, Headers headers, String expectedContentType, int expectedCode) {
       return verifyPostResponse(url, body, headers, expectedContentType, expectedCode);
     }
   },
   READ(200, APPLICATION_JSON) {
     @Override
-    Response process(String url, String body, Headers headers, String expectedContentType, int expectedCode) {
+    Response process(
+        String url, String body, Headers headers, String expectedContentType, int expectedCode) {
       JsonObject obj = new JsonObject(body);
       String id = obj.getString("id");
       return verifyGet(String.format("%s/%s", url, id), headers, expectedContentType, expectedCode);
-      }
-    },
+    }
+  },
   UPDATE(204) {
     @Override
-    Response process(String url, String body, Headers headers, String expectedContentType, int expectedCode) {
+    Response process(
+        String url, String body, Headers headers, String expectedContentType, int expectedCode) {
       JsonObject obj = new JsonObject(body);
       String id = obj.getString("id");
-      return verifyPut(String.format("%s/%s", url, id), body, headers, expectedContentType, expectedCode);
+      return verifyPut(
+          String.format("%s/%s", url, id), body, headers, expectedContentType, expectedCode);
     }
   },
   DELETE(204) {
     @Override
-    Response process(String url, String body, Headers headers, String expectedContentType, int expectedCode) {
+    Response process(
+        String url, String body, Headers headers, String expectedContentType, int expectedCode) {
       JsonObject obj = new JsonObject(body);
       String id = obj.getString("id");
-      return verifyDeleteResponse(String.format("%s/%s", url, id), headers, expectedContentType, expectedCode);
+      return verifyDeleteResponse(
+          String.format("%s/%s", url, id), headers, expectedContentType, expectedCode);
     }
   };
 
@@ -51,6 +55,7 @@ enum ProtectedOperations {
     this.code = code;
     this.contentType = contentType;
   }
+
   ProtectedOperations(int code) {
     this(code, "");
   }
@@ -63,7 +68,6 @@ enum ProtectedOperations {
     return contentType;
   }
 
-  abstract Response process(String url, String body, Headers headers, String expectedContentType, int expectedCode);
-
-
+  abstract Response process(
+      String url, String body, Headers headers, String expectedContentType, int expectedCode);
 }

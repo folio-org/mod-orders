@@ -1,8 +1,17 @@
 package org.folio.service.consortium;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.rest.acq.model.Setting;
 import org.folio.rest.core.RestClient;
@@ -18,34 +27,20 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
-
 public class ConsortiumConfigurationServiceTest {
 
-  @InjectMocks
-  private ConsortiumConfigurationService consortiumConfigurationService;
+  @InjectMocks private ConsortiumConfigurationService consortiumConfigurationService;
 
-  @Mock
-  private RestClient restClient;
+  @Mock private RestClient restClient;
 
-  @Mock
-  private RequestContext requestContext;
+  @Mock private RequestContext requestContext;
 
-  @Mock
-  private SettingsRetriever settingsRetriever;
+  @Mock private SettingsRetriever settingsRetriever;
 
   private AutoCloseable mockitoMocks;
 
   @BeforeEach
-  public void initMocks(){
+  public void initMocks() {
     mockitoMocks = MockitoAnnotations.openMocks(this);
     consortiumConfigurationService.init();
   }
@@ -58,16 +53,21 @@ public class ConsortiumConfigurationServiceTest {
   @Test
   void testCloneRequestContextIfNeeded() {
     // given
-    JsonObject consortiumConfiguration = new JsonObject(Map.of(
-      "userTenants", new JsonArray(List.of(
-        new JsonObject(Map.of("consortiumId", "cid", "centralTenantId", "ctid"))
-      ))
-    ));
+    JsonObject consortiumConfiguration =
+        new JsonObject(
+            Map.of(
+                "userTenants",
+                new JsonArray(
+                    List.of(
+                        new JsonObject(
+                            Map.of("consortiumId", "cid", "centralTenantId", "ctid"))))));
     when(restClient.getAsJsonObject(any(RequestEntry.class), any()))
-      .thenReturn(Future.succeededFuture(consortiumConfiguration));
+        .thenReturn(Future.succeededFuture(consortiumConfiguration));
 
     // when
-    Future<RequestContext> future = consortiumConfigurationService.cloneRequestContextIfNeeded(requestContext, new Location().withTenantId("tenantId"));
+    Future<RequestContext> future =
+        consortiumConfigurationService.cloneRequestContextIfNeeded(
+            requestContext, new Location().withTenantId("tenantId"));
 
     // then
     assertEquals("tenantId", future.result().getHeaders().get(XOkapiHeaders.TENANT));
@@ -77,14 +77,14 @@ public class ConsortiumConfigurationServiceTest {
   @Test
   void overrideContextToCentralTenantIfNeeded_withEmptyConsortiumConfiguration() {
     // given
-    JsonObject consortiumConfiguration = new JsonObject(Map.of(
-      "userTenants", new JsonArray(List.of())
-    ));
+    JsonObject consortiumConfiguration =
+        new JsonObject(Map.of("userTenants", new JsonArray(List.of())));
     when(restClient.getAsJsonObject(any(RequestEntry.class), any()))
-      .thenReturn(Future.succeededFuture(consortiumConfiguration));
+        .thenReturn(Future.succeededFuture(consortiumConfiguration));
 
     // when
-    Future<RequestContext> future = consortiumConfigurationService.overrideContextToCentralTenantIfNeeded(requestContext);
+    Future<RequestContext> future =
+        consortiumConfigurationService.overrideContextToCentralTenantIfNeeded(requestContext);
 
     // then
     assertEquals(requestContext, future.result());
@@ -95,17 +95,21 @@ public class ConsortiumConfigurationServiceTest {
   @Test
   void overrideContextToCentralTenantIdNeeded_withSameTenantIf() {
     // given
-    JsonObject consortiumConfiguration = new JsonObject(Map.of(
-      "userTenants", new JsonArray(List.of(
-        new JsonObject(Map.of("consortiumId", "cid", "centralTenantId", "tenantId"))
-      ))
-    ));
+    JsonObject consortiumConfiguration =
+        new JsonObject(
+            Map.of(
+                "userTenants",
+                new JsonArray(
+                    List.of(
+                        new JsonObject(
+                            Map.of("consortiumId", "cid", "centralTenantId", "tenantId"))))));
     when(restClient.getAsJsonObject(any(RequestEntry.class), any()))
-      .thenReturn(Future.succeededFuture(consortiumConfiguration));
+        .thenReturn(Future.succeededFuture(consortiumConfiguration));
     when(requestContext.getHeaders()).thenReturn(Map.of(XOkapiHeaders.TENANT, "tenantId"));
 
     // when
-    Future<RequestContext> future = consortiumConfigurationService.overrideContextToCentralTenantIfNeeded(requestContext);
+    Future<RequestContext> future =
+        consortiumConfigurationService.overrideContextToCentralTenantIfNeeded(requestContext);
 
     // then
     assertEquals(requestContext, future.result());
@@ -116,19 +120,24 @@ public class ConsortiumConfigurationServiceTest {
   @Test
   void overrideContextToCentralTenantIdNeeded_withCentralOrderingEnabled() {
     // given
-    JsonObject consortiumConfiguration = new JsonObject(Map.of(
-      "userTenants", new JsonArray(List.of(
-        new JsonObject(Map.of("consortiumId", "cid", "centralTenantId", "centralTenantId"))
-      ))
-    ));
+    JsonObject consortiumConfiguration =
+        new JsonObject(
+            Map.of(
+                "userTenants",
+                new JsonArray(
+                    List.of(
+                        new JsonObject(
+                            Map.of(
+                                "consortiumId", "cid", "centralTenantId", "centralTenantId"))))));
     when(restClient.getAsJsonObject(any(RequestEntry.class), any()))
-      .thenReturn(Future.succeededFuture(consortiumConfiguration));
+        .thenReturn(Future.succeededFuture(consortiumConfiguration));
     when(requestContext.getHeaders()).thenReturn(Map.of(XOkapiHeaders.TENANT, "tenantId"));
     when(settingsRetriever.getSettingByKey(any(SettingKey.class), any(RequestContext.class)))
-      .thenReturn(Future.succeededFuture(Optional.of(new Setting().withValue("true"))));
+        .thenReturn(Future.succeededFuture(Optional.of(new Setting().withValue("true"))));
 
     // when
-    Future<RequestContext> future = consortiumConfigurationService.overrideContextToCentralTenantIfNeeded(requestContext);
+    Future<RequestContext> future =
+        consortiumConfigurationService.overrideContextToCentralTenantIfNeeded(requestContext);
 
     // then
     assertEquals("centralTenantId", future.result().getHeaders().get(XOkapiHeaders.TENANT));
@@ -139,19 +148,24 @@ public class ConsortiumConfigurationServiceTest {
   @Test
   void overrideContextToCentralTenantIdNeeded_withCentralOrderingDisabled() {
     // given
-    JsonObject consortiumConfiguration = new JsonObject(Map.of(
-      "userTenants", new JsonArray(List.of(
-        new JsonObject(Map.of("consortiumId", "cid", "centralTenantId", "centralTenantId"))
-      ))
-    ));
+    JsonObject consortiumConfiguration =
+        new JsonObject(
+            Map.of(
+                "userTenants",
+                new JsonArray(
+                    List.of(
+                        new JsonObject(
+                            Map.of(
+                                "consortiumId", "cid", "centralTenantId", "centralTenantId"))))));
     when(restClient.getAsJsonObject(any(RequestEntry.class), any()))
-      .thenReturn(Future.succeededFuture(consortiumConfiguration));
+        .thenReturn(Future.succeededFuture(consortiumConfiguration));
     when(requestContext.getHeaders()).thenReturn(Map.of(XOkapiHeaders.TENANT, "tenantId"));
     when(settingsRetriever.getSettingByKey(any(SettingKey.class), any(RequestContext.class)))
-      .thenReturn(Future.succeededFuture(Optional.of(new Setting().withValue("false"))));
+        .thenReturn(Future.succeededFuture(Optional.of(new Setting().withValue("false"))));
 
     // when
-    Future<RequestContext> future = consortiumConfigurationService.overrideContextToCentralTenantIfNeeded(requestContext);
+    Future<RequestContext> future =
+        consortiumConfigurationService.overrideContextToCentralTenantIfNeeded(requestContext);
 
     // then
     assertEquals(requestContext, future.result());

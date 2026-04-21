@@ -19,13 +19,15 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import io.vertx.core.Vertx;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverError;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverErrorCollection;
 import org.folio.rest.core.RestClient;
@@ -40,17 +42,11 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
-import io.vertx.core.Vertx;
-import io.vertx.junit5.VertxExtension;
-import io.vertx.junit5.VertxTestContext;
-
 @ExtendWith(VertxExtension.class)
 public class LedgerRolloverErrorServiceTest {
 
-  @InjectMocks
-  private LedgerRolloverErrorService ledgerRolloverErrorService;
-  @Mock
-  private RestClient restClient;
+  @InjectMocks private LedgerRolloverErrorService ledgerRolloverErrorService;
+  @Mock private RestClient restClient;
   private RequestContext requestContext;
 
   @BeforeEach
@@ -66,104 +62,157 @@ public class LedgerRolloverErrorServiceTest {
 
   @Test
   void testShouldRetrieveRolloverErrorsByRolloverId(VertxTestContext vertxTestContext) {
-    //Given
+    // Given
     String rolloverId = UUID.randomUUID().toString();
     String rolloverErrorId = UUID.randomUUID().toString();
 
-    var rolloverError = new LedgerFiscalYearRolloverError().withId(rolloverErrorId).withLedgerRolloverId(rolloverId)
-      .withErrorType(LedgerFiscalYearRolloverError.ErrorType.ORDER_ROLLOVER).withFailedAction("Overall order rollover")
-      .withErrorMessage("Error when retrieving exchange rate provider");
-    var errorCollection = new LedgerFiscalYearRolloverErrorCollection()
-      .withLedgerFiscalYearRolloverErrors(List.of(rolloverError)).withTotalRecords(1);
+    var rolloverError =
+        new LedgerFiscalYearRolloverError()
+            .withId(rolloverErrorId)
+            .withLedgerRolloverId(rolloverId)
+            .withErrorType(LedgerFiscalYearRolloverError.ErrorType.ORDER_ROLLOVER)
+            .withFailedAction("Overall order rollover")
+            .withErrorMessage("Error when retrieving exchange rate provider");
+    var errorCollection =
+        new LedgerFiscalYearRolloverErrorCollection()
+            .withLedgerFiscalYearRolloverErrors(List.of(rolloverError))
+            .withTotalRecords(1);
 
-    doReturn(succeededFuture(errorCollection)).when(restClient).get(any(RequestEntry.class),
-      eq(LedgerFiscalYearRolloverErrorCollection.class), eq(requestContext));
+    doReturn(succeededFuture(errorCollection))
+        .when(restClient)
+        .get(
+            any(RequestEntry.class),
+            eq(LedgerFiscalYearRolloverErrorCollection.class),
+            eq(requestContext));
 
-    //When
-    var future = ledgerRolloverErrorService.getRolloverErrorsByRolloverId(rolloverId, requestContext);
-    vertxTestContext.assertComplete(future)
-      .onComplete(result -> {
-        //Then
-        assertEquals(result.result(), errorCollection);
+    // When
+    var future =
+        ledgerRolloverErrorService.getRolloverErrorsByRolloverId(rolloverId, requestContext);
+    vertxTestContext
+        .assertComplete(future)
+        .onComplete(
+            result -> {
+              // Then
+              assertEquals(result.result(), errorCollection);
 
-        ArgumentCaptor<RequestEntry> argumentCaptor = ArgumentCaptor.forClass(RequestEntry.class);
-        verify(restClient).get(argumentCaptor.capture(), eq(LedgerFiscalYearRolloverErrorCollection.class), eq(requestContext));
+              ArgumentCaptor<RequestEntry> argumentCaptor =
+                  ArgumentCaptor.forClass(RequestEntry.class);
+              verify(restClient)
+                  .get(
+                      argumentCaptor.capture(),
+                      eq(LedgerFiscalYearRolloverErrorCollection.class),
+                      eq(requestContext));
 
-        RequestEntry requestEntry = argumentCaptor.getValue();
-        assertEquals(resourcesPath(LEDGER_FY_ROLLOVER_ERRORS), requestEntry.getBaseEndpoint());
-        assertThat(URLDecoder.decode(requestEntry.buildEndpoint(), StandardCharsets.UTF_8), containsString("ledgerRolloverId==" + rolloverId));
-        vertxTestContext.completeNow();
-      });
+              RequestEntry requestEntry = argumentCaptor.getValue();
+              assertEquals(
+                  resourcesPath(LEDGER_FY_ROLLOVER_ERRORS), requestEntry.getBaseEndpoint());
+              assertThat(
+                  URLDecoder.decode(requestEntry.buildEndpoint(), StandardCharsets.UTF_8),
+                  containsString("ledgerRolloverId==" + rolloverId));
+              vertxTestContext.completeNow();
+            });
   }
 
   @Test
   void testShouldSaveRolloverError(VertxTestContext vertxTestContext) {
-    //Given
+    // Given
     String rolloverId = UUID.randomUUID().toString();
     String rolloverErrorId = UUID.randomUUID().toString();
 
-    var rolloverError = new LedgerFiscalYearRolloverError().withId(rolloverErrorId).withLedgerRolloverId(rolloverId)
-      .withErrorType(LedgerFiscalYearRolloverError.ErrorType.ORDER_ROLLOVER).withFailedAction("Overall order rollover")
-      .withErrorMessage("Error when retrieving exchange rate provider");
+    var rolloverError =
+        new LedgerFiscalYearRolloverError()
+            .withId(rolloverErrorId)
+            .withLedgerRolloverId(rolloverId)
+            .withErrorType(LedgerFiscalYearRolloverError.ErrorType.ORDER_ROLLOVER)
+            .withFailedAction("Overall order rollover")
+            .withErrorMessage("Error when retrieving exchange rate provider");
 
     Throwable throwable = new RuntimeException("Error when retrieving exchange rate provider");
 
-    doReturn(succeededFuture(rolloverError)).when(restClient).post(any(RequestEntry.class),
-      any(LedgerFiscalYearRolloverError.class), eq(LedgerFiscalYearRolloverError.class), eq(requestContext));
+    doReturn(succeededFuture(rolloverError))
+        .when(restClient)
+        .post(
+            any(RequestEntry.class),
+            any(LedgerFiscalYearRolloverError.class),
+            eq(LedgerFiscalYearRolloverError.class),
+            eq(requestContext));
 
-    //When
-    var future = ledgerRolloverErrorService.saveRolloverError(rolloverId, throwable,
-      LedgerFiscalYearRolloverError.ErrorType.ORDER_ROLLOVER, "Overall order rollover", requestContext);
-    vertxTestContext.assertComplete(future)
-      .onComplete(result -> {
-        //Then
-        assertEquals(result.result(), rolloverError);
+    // When
+    var future =
+        ledgerRolloverErrorService.saveRolloverError(
+            rolloverId,
+            throwable,
+            LedgerFiscalYearRolloverError.ErrorType.ORDER_ROLLOVER,
+            "Overall order rollover",
+            requestContext);
+    vertxTestContext
+        .assertComplete(future)
+        .onComplete(
+            result -> {
+              // Then
+              assertEquals(result.result(), rolloverError);
 
-        ArgumentCaptor<RequestEntry> errorCaptor = ArgumentCaptor.forClass(RequestEntry.class);
-        ArgumentCaptor<LedgerFiscalYearRolloverError> rolloverErrorCaptor =
-          ArgumentCaptor.forClass(LedgerFiscalYearRolloverError.class);
-        verify(restClient).post(errorCaptor.capture(), rolloverErrorCaptor.capture(),
-          eq(LedgerFiscalYearRolloverError.class), eq(requestContext));
+              ArgumentCaptor<RequestEntry> errorCaptor =
+                  ArgumentCaptor.forClass(RequestEntry.class);
+              ArgumentCaptor<LedgerFiscalYearRolloverError> rolloverErrorCaptor =
+                  ArgumentCaptor.forClass(LedgerFiscalYearRolloverError.class);
+              verify(restClient)
+                  .post(
+                      errorCaptor.capture(),
+                      rolloverErrorCaptor.capture(),
+                      eq(LedgerFiscalYearRolloverError.class),
+                      eq(requestContext));
 
-        RequestEntry requestEntry = errorCaptor.getValue();
-        LedgerFiscalYearRolloverError rolloverErrorAfterCapture = rolloverErrorCaptor.getValue();
+              RequestEntry requestEntry = errorCaptor.getValue();
+              LedgerFiscalYearRolloverError rolloverErrorAfterCapture =
+                  rolloverErrorCaptor.getValue();
 
-        assertNull(rolloverErrorAfterCapture.getId());
-        assertNotEquals(rolloverError, rolloverErrorAfterCapture);
-        assertEquals(resourcesPath(LEDGER_FY_ROLLOVER_ERRORS), requestEntry.buildEndpoint());
-        vertxTestContext.completeNow();
-      });
+              assertNull(rolloverErrorAfterCapture.getId());
+              assertNotEquals(rolloverError, rolloverErrorAfterCapture);
+              assertEquals(resourcesPath(LEDGER_FY_ROLLOVER_ERRORS), requestEntry.buildEndpoint());
+              vertxTestContext.completeNow();
+            });
   }
 
   @Test
   void testShouldDeleteRolloverErrors(VertxTestContext vertxTestContext) {
-    //Given
+    // Given
     String rolloverId = UUID.randomUUID().toString();
     String rolloverErrorId = UUID.randomUUID().toString();
 
-    var rolloverError = new LedgerFiscalYearRolloverError().withId(rolloverErrorId).withLedgerRolloverId(rolloverId)
-      .withErrorType(LedgerFiscalYearRolloverError.ErrorType.ORDER_ROLLOVER).withFailedAction("Overall order rollover")
-      .withErrorMessage("Error when retrieving exchange rate provider");
+    var rolloverError =
+        new LedgerFiscalYearRolloverError()
+            .withId(rolloverErrorId)
+            .withLedgerRolloverId(rolloverId)
+            .withErrorType(LedgerFiscalYearRolloverError.ErrorType.ORDER_ROLLOVER)
+            .withFailedAction("Overall order rollover")
+            .withErrorMessage("Error when retrieving exchange rate provider");
 
     LedgerRolloverErrorService spy = Mockito.spy(ledgerRolloverErrorService);
-    doReturn(succeededFuture()).when(restClient).delete(any(RequestEntry.class), eq(requestContext));
+    doReturn(succeededFuture())
+        .when(restClient)
+        .delete(any(RequestEntry.class), eq(requestContext));
 
-    //When
+    // When
     var future = spy.deleteRolloverErrors(List.of(rolloverError), requestContext);
-    vertxTestContext.assertComplete(future)
-      .onComplete(result -> {
-        //Then
-        ArgumentCaptor<RequestEntry> errorCaptor = ArgumentCaptor.forClass(RequestEntry.class);
+    vertxTestContext
+        .assertComplete(future)
+        .onComplete(
+            result -> {
+              // Then
+              ArgumentCaptor<RequestEntry> errorCaptor =
+                  ArgumentCaptor.forClass(RequestEntry.class);
 
-        verify(restClient).delete(errorCaptor.capture(), eq(requestContext));
-        verify(restClient, times(1)).delete(any(RequestEntry.class), eq(requestContext));
-        verify(spy, times(1)).deleteRolloverError(rolloverErrorId, requestContext);
+              verify(restClient).delete(errorCaptor.capture(), eq(requestContext));
+              verify(restClient, times(1)).delete(any(RequestEntry.class), eq(requestContext));
+              verify(spy, times(1)).deleteRolloverError(rolloverErrorId, requestContext);
 
-        RequestEntry requestEntry = errorCaptor.getValue();
+              RequestEntry requestEntry = errorCaptor.getValue();
 
-        assertEquals("/finance/ledger-rollovers-errors/" + rolloverErrorId, requestEntry.buildEndpoint());
-        vertxTestContext.completeNow();
-      });
+              assertEquals(
+                  "/finance/ledger-rollovers-errors/" + rolloverErrorId,
+                  requestEntry.buildEndpoint());
+              vertxTestContext.completeNow();
+            });
   }
-
 }

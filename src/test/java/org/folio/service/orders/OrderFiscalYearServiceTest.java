@@ -8,17 +8,17 @@ import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
+import io.vertx.core.Future;
+import io.vertx.junit5.VertxExtension;
 import java.util.Collections;
 import java.util.List;
-
-import io.vertx.junit5.VertxExtension;
 import org.folio.CopilotGenerated;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Transaction;
-import org.folio.rest.jaxrs.model.FiscalYearsHolder;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.FiscalYearsHolder;
 import org.folio.service.finance.FiscalYearService;
 import org.folio.service.finance.FundService;
 import org.folio.service.finance.transaction.TransactionService;
@@ -28,28 +28,20 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-
-import io.vertx.core.Future;
 import org.mockito.MockitoAnnotations;
 
 @ExtendWith(VertxExtension.class)
 @CopilotGenerated(model = "Claude Sonnet 4")
 public class OrderFiscalYearServiceTest {
 
-  @Mock
-  private TransactionService transactionService;
-  @Mock
-  private FiscalYearService fiscalYearService;
-  @Mock
-  private FundService fundService;
-  @Mock
-  private PurchaseOrderStorageService purchaseOrderStorageService;
-  @Mock
-  private RequestContext requestContext;
+  @Mock private TransactionService transactionService;
+  @Mock private FiscalYearService fiscalYearService;
+  @Mock private FundService fundService;
+  @Mock private PurchaseOrderStorageService purchaseOrderStorageService;
+  @Mock private RequestContext requestContext;
   private AutoCloseable openMocks;
 
-  @InjectMocks
-  private OrderFiscalYearService orderFiscalYearService;
+  @InjectMocks private OrderFiscalYearService orderFiscalYearService;
 
   private static final String ORDER_ID = "test-order-id";
   private static final String FISCAL_YEAR_ID_1 = "fiscal-year-1";
@@ -63,7 +55,9 @@ public class OrderFiscalYearServiceTest {
   @BeforeEach
   void setUp() {
     openMocks = MockitoAnnotations.openMocks(this);
-    orderFiscalYearService = new OrderFiscalYearService(transactionService, fiscalYearService, fundService, purchaseOrderStorageService);
+    orderFiscalYearService =
+        new OrderFiscalYearService(
+            transactionService, fiscalYearService, fundService, purchaseOrderStorageService);
   }
 
   @AfterEach
@@ -76,9 +70,12 @@ public class OrderFiscalYearServiceTest {
   @Test
   void testGetAvailableFiscalYears_WithCurrentFiscalYearsFromLedgers_ReturnsSeparatedFiscalYears() {
     // Given - Transactions with fund IDs that have current fiscal years via ledgers
-    Transaction transaction1 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withFromFundId(FUND_ID_1);
-    Transaction transaction2 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_2).withFromFundId(FUND_ID_2);
-    Transaction transaction3 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_3).withFromFundId("other-fund");
+    Transaction transaction1 =
+        new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withFromFundId(FUND_ID_1);
+    Transaction transaction2 =
+        new Transaction().withFiscalYearId(FISCAL_YEAR_ID_2).withFromFundId(FUND_ID_2);
+    Transaction transaction3 =
+        new Transaction().withFiscalYearId(FISCAL_YEAR_ID_3).withFromFundId("other-fund");
     List<Transaction> transactions = List.of(transaction1, transaction2, transaction3);
 
     FiscalYear fy1 = new FiscalYear().withId(FISCAL_YEAR_ID_1).withName("FY2022");
@@ -96,16 +93,17 @@ public class OrderFiscalYearServiceTest {
 
     mockServices(transactions, fiscalYears, funds);
     when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_1, requestContext))
-      .thenReturn(Future.succeededFuture(currentFy1));
+        .thenReturn(Future.succeededFuture(currentFy1));
     when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_2, requestContext))
-      .thenReturn(Future.succeededFuture(currentFy2));
+        .thenReturn(Future.succeededFuture(currentFy2));
     when(fiscalYearService.getPlannedFiscalYear(LEDGER_ID_1, requestContext))
-      .thenReturn(Future.succeededFuture(null));
+        .thenReturn(Future.succeededFuture(null));
     when(fiscalYearService.getPlannedFiscalYear(LEDGER_ID_2, requestContext))
-      .thenReturn(Future.succeededFuture(null));
+        .thenReturn(Future.succeededFuture(null));
 
     // When
-    Future<FiscalYearsHolder> result = orderFiscalYearService.getAvailableFiscalYears(ORDER_ID, requestContext);
+    Future<FiscalYearsHolder> result =
+        orderFiscalYearService.getAvailableFiscalYears(ORDER_ID, requestContext);
 
     // Then
     assertTrue(result.succeeded());
@@ -126,8 +124,10 @@ public class OrderFiscalYearServiceTest {
   @Test
   void testGetAvailableFiscalYears_NoCurrentFiscalYearsFromLedgers_OnlyPreviousReturned() {
     // Given - Ledgers don't have current fiscal years
-    Transaction transaction1 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withFromFundId(FUND_ID_1);
-    Transaction transaction2 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_2).withFromFundId(FUND_ID_2);
+    Transaction transaction1 =
+        new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withFromFundId(FUND_ID_1);
+    Transaction transaction2 =
+        new Transaction().withFiscalYearId(FISCAL_YEAR_ID_2).withFromFundId(FUND_ID_2);
     List<Transaction> transactions = List.of(transaction1, transaction2);
 
     FiscalYear fy1 = new FiscalYear().withId(FISCAL_YEAR_ID_1).withName("FY2023");
@@ -140,16 +140,17 @@ public class OrderFiscalYearServiceTest {
 
     mockServices(transactions, fiscalYears, funds);
     when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_1, requestContext))
-      .thenReturn(Future.failedFuture(new RuntimeException("No current fiscal year")));
+        .thenReturn(Future.failedFuture(new RuntimeException("No current fiscal year")));
     when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_2, requestContext))
-      .thenReturn(Future.failedFuture(new RuntimeException("No current fiscal year")));
+        .thenReturn(Future.failedFuture(new RuntimeException("No current fiscal year")));
     when(fiscalYearService.getPlannedFiscalYear(LEDGER_ID_1, requestContext))
-      .thenReturn(Future.succeededFuture(null));
+        .thenReturn(Future.succeededFuture(null));
     when(fiscalYearService.getPlannedFiscalYear(LEDGER_ID_2, requestContext))
-      .thenReturn(Future.succeededFuture(null));
+        .thenReturn(Future.succeededFuture(null));
 
     // When
-    Future<FiscalYearsHolder> result = orderFiscalYearService.getAvailableFiscalYears(ORDER_ID, requestContext);
+    Future<FiscalYearsHolder> result =
+        orderFiscalYearService.getAvailableFiscalYears(ORDER_ID, requestContext);
 
     // Then
     assertTrue(result.succeeded());
@@ -167,8 +168,10 @@ public class OrderFiscalYearServiceTest {
   @Test
   void testGetAvailableFiscalYears_PlannedFiscalYearExistsInTransactions_MovesToCurrent() {
     // Given - No current fiscal year but planned fiscal year exists in transactions
-    Transaction transaction1 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withFromFundId(FUND_ID_1);
-    Transaction transaction2 = new Transaction().withFiscalYearId("planned-fiscal-year").withFromFundId(FUND_ID_2);
+    Transaction transaction1 =
+        new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withFromFundId(FUND_ID_1);
+    Transaction transaction2 =
+        new Transaction().withFiscalYearId("planned-fiscal-year").withFromFundId(FUND_ID_2);
     List<Transaction> transactions = List.of(transaction1, transaction2);
 
     FiscalYear fy1 = new FiscalYear().withId(FISCAL_YEAR_ID_1).withName("FY2022");
@@ -181,16 +184,17 @@ public class OrderFiscalYearServiceTest {
 
     mockServices(transactions, fiscalYears, funds);
     when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_1, requestContext))
-      .thenReturn(Future.failedFuture(new RuntimeException("No current fiscal year")));
+        .thenReturn(Future.failedFuture(new RuntimeException("No current fiscal year")));
     when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_2, requestContext))
-      .thenReturn(Future.failedFuture(new RuntimeException("No current fiscal year")));
+        .thenReturn(Future.failedFuture(new RuntimeException("No current fiscal year")));
     when(fiscalYearService.getPlannedFiscalYear(LEDGER_ID_1, requestContext))
-      .thenReturn(Future.succeededFuture(null));
+        .thenReturn(Future.succeededFuture(null));
     when(fiscalYearService.getPlannedFiscalYear(LEDGER_ID_2, requestContext))
-      .thenReturn(Future.succeededFuture(plannedFy)); // This planned FY exists in transactions
+        .thenReturn(Future.succeededFuture(plannedFy)); // This planned FY exists in transactions
 
     // When
-    Future<FiscalYearsHolder> result = orderFiscalYearService.getAvailableFiscalYears(ORDER_ID, requestContext);
+    Future<FiscalYearsHolder> result =
+        orderFiscalYearService.getAvailableFiscalYears(ORDER_ID, requestContext);
 
     // Then
     assertTrue(result.succeeded());
@@ -206,10 +210,13 @@ public class OrderFiscalYearServiceTest {
   }
 
   @Test
-  void testGetAvailableFiscalYears_CurrentFiscalYearFromLedgerExistsInTransactions_MovesToCurrent() {
+  void
+      testGetAvailableFiscalYears_CurrentFiscalYearFromLedgerExistsInTransactions_MovesToCurrent() {
     // Given - Current fiscal year from ledger already exists in transaction fiscal years
-    Transaction transaction1 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withFromFundId(FUND_ID_1);
-    Transaction transaction2 = new Transaction().withFiscalYearId("current-fiscal-year").withFromFundId(FUND_ID_2);
+    Transaction transaction1 =
+        new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withFromFundId(FUND_ID_1);
+    Transaction transaction2 =
+        new Transaction().withFiscalYearId("current-fiscal-year").withFromFundId(FUND_ID_2);
     List<Transaction> transactions = List.of(transaction1, transaction2);
 
     FiscalYear fy1 = new FiscalYear().withId(FISCAL_YEAR_ID_1).withName("FY2022");
@@ -222,16 +229,19 @@ public class OrderFiscalYearServiceTest {
 
     mockServices(transactions, fiscalYears, funds);
     when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_1, requestContext))
-      .thenReturn(Future.succeededFuture(null));
+        .thenReturn(Future.succeededFuture(null));
     when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_2, requestContext))
-      .thenReturn(Future.succeededFuture(currentFy)); // This ledger has the current FY that's also in transactions
+        .thenReturn(
+            Future.succeededFuture(
+                currentFy)); // This ledger has the current FY that's also in transactions
     when(fiscalYearService.getPlannedFiscalYear(LEDGER_ID_1, requestContext))
-      .thenReturn(Future.succeededFuture(null));
+        .thenReturn(Future.succeededFuture(null));
     when(fiscalYearService.getPlannedFiscalYear(LEDGER_ID_2, requestContext))
-      .thenReturn(Future.succeededFuture(null));
+        .thenReturn(Future.succeededFuture(null));
 
     // When
-    Future<FiscalYearsHolder> result = orderFiscalYearService.getAvailableFiscalYears(ORDER_ID, requestContext);
+    Future<FiscalYearsHolder> result =
+        orderFiscalYearService.getAvailableFiscalYears(ORDER_ID, requestContext);
 
     // Then
     assertTrue(result.succeeded());
@@ -260,7 +270,8 @@ public class OrderFiscalYearServiceTest {
     mockServices(transactions, fiscalYears, List.of());
 
     // When
-    Future<FiscalYearsHolder> result = orderFiscalYearService.getAvailableFiscalYears(ORDER_ID, requestContext);
+    Future<FiscalYearsHolder> result =
+        orderFiscalYearService.getAvailableFiscalYears(ORDER_ID, requestContext);
 
     // Then
     assertTrue(result.succeeded());
@@ -278,8 +289,10 @@ public class OrderFiscalYearServiceTest {
   @Test
   void testGetAvailableFiscalYears_FundsWithoutLedgerIds_AllArePrevious() {
     // Given - Funds exist but have no ledger IDs
-    Transaction transaction1 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withFromFundId(FUND_ID_1);
-    Transaction transaction2 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_2).withFromFundId(FUND_ID_2);
+    Transaction transaction1 =
+        new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withFromFundId(FUND_ID_1);
+    Transaction transaction2 =
+        new Transaction().withFiscalYearId(FISCAL_YEAR_ID_2).withFromFundId(FUND_ID_2);
     List<Transaction> transactions = List.of(transaction1, transaction2);
 
     FiscalYear fy1 = new FiscalYear().withId(FISCAL_YEAR_ID_1).withName("FY2023");
@@ -293,7 +306,8 @@ public class OrderFiscalYearServiceTest {
     mockServices(transactions, fiscalYears, funds);
 
     // When
-    Future<FiscalYearsHolder> result = orderFiscalYearService.getAvailableFiscalYears(ORDER_ID, requestContext);
+    Future<FiscalYearsHolder> result =
+        orderFiscalYearService.getAvailableFiscalYears(ORDER_ID, requestContext);
 
     // Then
     assertTrue(result.succeeded());
@@ -314,7 +328,8 @@ public class OrderFiscalYearServiceTest {
     mockServices(Collections.emptyList(), null, null);
 
     // When
-    Future<FiscalYearsHolder> result = orderFiscalYearService.getAvailableFiscalYears(ORDER_ID, requestContext);
+    Future<FiscalYearsHolder> result =
+        orderFiscalYearService.getAvailableFiscalYears(ORDER_ID, requestContext);
 
     // Then
     assertTrue(result.succeeded());
@@ -349,16 +364,17 @@ public class OrderFiscalYearServiceTest {
 
     mockServices(transactions, fiscalYears, funds);
     when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_1, requestContext))
-      .thenReturn(Future.succeededFuture(currentFy1));
+        .thenReturn(Future.succeededFuture(currentFy1));
     when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_2, requestContext))
-      .thenReturn(Future.succeededFuture(currentFy2));
+        .thenReturn(Future.succeededFuture(currentFy2));
     when(fiscalYearService.getPlannedFiscalYear(LEDGER_ID_1, requestContext))
-      .thenReturn(Future.succeededFuture(null));
+        .thenReturn(Future.succeededFuture(null));
     when(fiscalYearService.getPlannedFiscalYear(LEDGER_ID_2, requestContext))
-      .thenReturn(Future.succeededFuture(null));
+        .thenReturn(Future.succeededFuture(null));
 
     // When
-    Future<FiscalYearsHolder> result = orderFiscalYearService.getAvailableFiscalYears(ORDER_ID, requestContext);
+    Future<FiscalYearsHolder> result =
+        orderFiscalYearService.getAvailableFiscalYears(ORDER_ID, requestContext);
 
     // Then
     assertTrue(result.succeeded());
@@ -371,7 +387,8 @@ public class OrderFiscalYearServiceTest {
 
     // Verify previous array is sorted descending by name
     assertEquals(4, holder.getPrevious().size());
-    assertEquals("FY2024", holder.getPrevious().get(0).getName()); // FY2024 > FY2023 > FY2022 > FY2021
+    assertEquals(
+        "FY2024", holder.getPrevious().get(0).getName()); // FY2024 > FY2023 > FY2022 > FY2021
     assertEquals("FY2023", holder.getPrevious().get(1).getName());
     assertEquals("FY2022", holder.getPrevious().get(2).getName());
     assertEquals("FY2021", holder.getPrevious().get(3).getName());
@@ -381,12 +398,13 @@ public class OrderFiscalYearServiceTest {
   void testGetAvailableFiscalYears_ServiceFailures_PropagateErrors() {
     // Given - Transaction service failure
     when(purchaseOrderStorageService.getCompositeOrderById(ORDER_ID, requestContext))
-      .thenReturn(Future.succeededFuture(new CompositePurchaseOrder()));
+        .thenReturn(Future.succeededFuture(new CompositePurchaseOrder()));
     when(transactionService.getTransactions(anyString(), any(RequestContext.class)))
-      .thenReturn(Future.failedFuture(new RuntimeException("Transaction service error")));
+        .thenReturn(Future.failedFuture(new RuntimeException("Transaction service error")));
 
     // When
-    Future<FiscalYearsHolder> result = orderFiscalYearService.getAvailableFiscalYears(ORDER_ID, requestContext);
+    Future<FiscalYearsHolder> result =
+        orderFiscalYearService.getAvailableFiscalYears(ORDER_ID, requestContext);
 
     // Then
     assertTrue(result.failed());
@@ -397,12 +415,18 @@ public class OrderFiscalYearServiceTest {
   @Test
   void testGetAvailableFiscalYears_DifferentSeriesFiscalYears_SeparatedCorrectly() {
     // Given - Current fiscal year and a fiscal year with different series
-    Transaction transaction1 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withFromFundId(FUND_ID_1);
-    Transaction transaction2 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_2).withFromFundId(FUND_ID_2);
+    Transaction transaction1 =
+        new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withFromFundId(FUND_ID_1);
+    Transaction transaction2 =
+        new Transaction().withFiscalYearId(FISCAL_YEAR_ID_2).withFromFundId(FUND_ID_2);
     List<Transaction> transactions = List.of(transaction1, transaction2);
 
     FiscalYear fy1 = new FiscalYear().withId(FISCAL_YEAR_ID_1).withName("EE2025").withSeries("EE");
-    FiscalYear fy2 = new FiscalYear().withId(FISCAL_YEAR_ID_2).withName("FY2025").withSeries("FY"); // Different series
+    FiscalYear fy2 =
+        new FiscalYear()
+            .withId(FISCAL_YEAR_ID_2)
+            .withName("FY2025")
+            .withSeries("FY"); // Different series
     List<FiscalYear> fiscalYears = List.of(fy1, fy2);
 
     Fund fund1 = new Fund().withId(FUND_ID_1).withLedgerId(LEDGER_ID_1);
@@ -411,16 +435,17 @@ public class OrderFiscalYearServiceTest {
 
     mockServices(transactions, fiscalYears, funds);
     when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_1, requestContext))
-      .thenReturn(Future.succeededFuture(fy1)); // EE2025 is current
+        .thenReturn(Future.succeededFuture(fy1)); // EE2025 is current
     when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_2, requestContext))
-      .thenReturn(Future.succeededFuture(null)); // FY2025 ledger has no current
+        .thenReturn(Future.succeededFuture(null)); // FY2025 ledger has no current
     when(fiscalYearService.getPlannedFiscalYear(LEDGER_ID_1, requestContext))
-      .thenReturn(Future.succeededFuture(null));
+        .thenReturn(Future.succeededFuture(null));
     when(fiscalYearService.getPlannedFiscalYear(LEDGER_ID_2, requestContext))
-      .thenReturn(Future.succeededFuture(null));
+        .thenReturn(Future.succeededFuture(null));
 
     // When
-    Future<FiscalYearsHolder> result = orderFiscalYearService.getAvailableFiscalYears(ORDER_ID, requestContext);
+    Future<FiscalYearsHolder> result =
+        orderFiscalYearService.getAvailableFiscalYears(ORDER_ID, requestContext);
 
     // Then
     assertTrue(result.succeeded());
@@ -438,8 +463,10 @@ public class OrderFiscalYearServiceTest {
   @Test
   void testGetAvailableFiscalYears_LedgerServiceFailures_ContinuesGracefully() {
     // Given - Some ledger fiscal year service calls fail
-    Transaction transaction1 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withFromFundId(FUND_ID_1);
-    Transaction transaction2 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_2).withFromFundId(FUND_ID_2);
+    Transaction transaction1 =
+        new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withFromFundId(FUND_ID_1);
+    Transaction transaction2 =
+        new Transaction().withFiscalYearId(FISCAL_YEAR_ID_2).withFromFundId(FUND_ID_2);
     List<Transaction> transactions = List.of(transaction1, transaction2);
 
     FiscalYear fy1 = new FiscalYear().withId(FISCAL_YEAR_ID_1).withName("FY2023");
@@ -454,16 +481,19 @@ public class OrderFiscalYearServiceTest {
 
     mockServices(transactions, fiscalYears, funds);
     when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_1, requestContext))
-      .thenReturn(Future.succeededFuture(currentFy)); // This succeeds
+        .thenReturn(Future.succeededFuture(currentFy)); // This succeeds
     when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_2, requestContext))
-      .thenReturn(Future.failedFuture(new RuntimeException("Ledger service error"))); // This fails but is handled
+        .thenReturn(
+            Future.failedFuture(
+                new RuntimeException("Ledger service error"))); // This fails but is handled
     when(fiscalYearService.getPlannedFiscalYear(LEDGER_ID_1, requestContext))
-      .thenReturn(Future.succeededFuture(null));
+        .thenReturn(Future.succeededFuture(null));
     when(fiscalYearService.getPlannedFiscalYear(LEDGER_ID_2, requestContext))
-      .thenReturn(Future.succeededFuture(null));
+        .thenReturn(Future.succeededFuture(null));
 
     // When
-    Future<FiscalYearsHolder> result = orderFiscalYearService.getAvailableFiscalYears(ORDER_ID, requestContext);
+    Future<FiscalYearsHolder> result =
+        orderFiscalYearService.getAvailableFiscalYears(ORDER_ID, requestContext);
 
     // Then
     assertTrue(result.succeeded());
@@ -482,8 +512,10 @@ public class OrderFiscalYearServiceTest {
   @Test
   void testGetAvailableFiscalYears_FallbackToPlannedFiscalYear_WhenCurrentFails() {
     // Given - getCurrentFiscalYear fails but getPlannedFiscalYear succeeds
-    Transaction transaction1 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withFromFundId(FUND_ID_1);
-    Transaction transaction2 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_2).withFromFundId(FUND_ID_2);
+    Transaction transaction1 =
+        new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withFromFundId(FUND_ID_1);
+    Transaction transaction2 =
+        new Transaction().withFiscalYearId(FISCAL_YEAR_ID_2).withFromFundId(FUND_ID_2);
     List<Transaction> transactions = List.of(transaction1, transaction2);
 
     FiscalYear fy1 = new FiscalYear().withId(FISCAL_YEAR_ID_1).withName("FY2023");
@@ -494,23 +526,26 @@ public class OrderFiscalYearServiceTest {
     Fund fund2 = new Fund().withId(FUND_ID_2).withLedgerId(LEDGER_ID_2);
     List<Fund> funds = List.of(fund1, fund2);
 
-    FiscalYear plannedFy1 = new FiscalYear().withId(FISCAL_YEAR_ID_1).withName("FY2023"); // Same as transaction FY
+    FiscalYear plannedFy1 =
+        new FiscalYear().withId(FISCAL_YEAR_ID_1).withName("FY2023"); // Same as transaction FY
     FiscalYear plannedFy2 = new FiscalYear().withId("planned-fy-2").withName("FY2024");
 
     mockServices(transactions, fiscalYears, funds);
     // getCurrentFiscalYear fails for both ledgers
     when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_1, requestContext))
-      .thenReturn(Future.failedFuture(new RuntimeException("No current fiscal year")));
+        .thenReturn(Future.failedFuture(new RuntimeException("No current fiscal year")));
     when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_2, requestContext))
-      .thenReturn(Future.failedFuture(new RuntimeException("No current fiscal year")));
+        .thenReturn(Future.failedFuture(new RuntimeException("No current fiscal year")));
     // getPlannedFiscalYear succeeds with one matching transaction fiscal year
     when(fiscalYearService.getPlannedFiscalYear(LEDGER_ID_1, requestContext))
-      .thenReturn(Future.succeededFuture(plannedFy1)); // This matches FISCAL_YEAR_ID_1 in transactions
+        .thenReturn(
+            Future.succeededFuture(plannedFy1)); // This matches FISCAL_YEAR_ID_1 in transactions
     when(fiscalYearService.getPlannedFiscalYear(LEDGER_ID_2, requestContext))
-      .thenReturn(Future.succeededFuture(plannedFy2)); // This doesn't match any transaction
+        .thenReturn(Future.succeededFuture(plannedFy2)); // This doesn't match any transaction
 
     // When
-    Future<FiscalYearsHolder> result = orderFiscalYearService.getAvailableFiscalYears(ORDER_ID, requestContext);
+    Future<FiscalYearsHolder> result =
+        orderFiscalYearService.getAvailableFiscalYears(ORDER_ID, requestContext);
 
     // Then
     assertTrue(result.succeeded());
@@ -528,8 +563,10 @@ public class OrderFiscalYearServiceTest {
   @Test
   void testGetAvailableFiscalYears_DuplicateCurrentFiscalYears_DeduplicatedInResult() {
     // Given - Two ledgers both returning the same current fiscal year
-    Transaction transaction1 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withFromFundId(FUND_ID_1);
-    Transaction transaction2 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withFromFundId(FUND_ID_2);
+    Transaction transaction1 =
+        new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withFromFundId(FUND_ID_1);
+    Transaction transaction2 =
+        new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withFromFundId(FUND_ID_2);
     List<Transaction> transactions = List.of(transaction1, transaction2);
 
     FiscalYear fy = new FiscalYear().withId(FISCAL_YEAR_ID_1).withName("FY2025");
@@ -540,13 +577,18 @@ public class OrderFiscalYearServiceTest {
     List<Fund> funds = List.of(fund1, fund2);
 
     mockServices(transactions, fiscalYears, funds);
-    when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_1, requestContext)).thenReturn(Future.succeededFuture(fy));
-    when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_2, requestContext)).thenReturn(Future.succeededFuture(fy));
-    when(fiscalYearService.getPlannedFiscalYear(LEDGER_ID_1, requestContext)).thenReturn(Future.succeededFuture(null));
-    when(fiscalYearService.getPlannedFiscalYear(LEDGER_ID_2, requestContext)).thenReturn(Future.succeededFuture(null));
+    when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_1, requestContext))
+        .thenReturn(Future.succeededFuture(fy));
+    when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_2, requestContext))
+        .thenReturn(Future.succeededFuture(fy));
+    when(fiscalYearService.getPlannedFiscalYear(LEDGER_ID_1, requestContext))
+        .thenReturn(Future.succeededFuture(null));
+    when(fiscalYearService.getPlannedFiscalYear(LEDGER_ID_2, requestContext))
+        .thenReturn(Future.succeededFuture(null));
 
     // When
-    Future<FiscalYearsHolder> result = orderFiscalYearService.getAvailableFiscalYears(ORDER_ID, requestContext);
+    Future<FiscalYearsHolder> result =
+        orderFiscalYearService.getAvailableFiscalYears(ORDER_ID, requestContext);
 
     // Then
     assertTrue(result.succeeded());
@@ -560,18 +602,19 @@ public class OrderFiscalYearServiceTest {
     assertTrue(holder.getPrevious().isEmpty());
   }
 
-  private void mockServices(List<Transaction> transactions, List<FiscalYear> fiscalYears, List<Fund> funds) {
+  private void mockServices(
+      List<Transaction> transactions, List<FiscalYear> fiscalYears, List<Fund> funds) {
     when(purchaseOrderStorageService.getCompositeOrderById(ORDER_ID, requestContext))
-      .thenReturn(Future.succeededFuture(new CompositePurchaseOrder()));
+        .thenReturn(Future.succeededFuture(new CompositePurchaseOrder()));
     when(transactionService.getTransactions(anyString(), any(RequestContext.class)))
-      .thenReturn(Future.succeededFuture(transactions));
+        .thenReturn(Future.succeededFuture(transactions));
     if (fiscalYears != null) {
       when(fiscalYearService.getAllFiscalYears(anyCollection(), any(RequestContext.class)))
-        .thenReturn(Future.succeededFuture(fiscalYears));
+          .thenReturn(Future.succeededFuture(fiscalYears));
     }
     if (funds != null) {
       when(fundService.getAllFunds(anyCollection(), any(RequestContext.class)))
-        .thenReturn(Future.succeededFuture(funds));
+          .thenReturn(Future.succeededFuture(funds));
     }
   }
 }

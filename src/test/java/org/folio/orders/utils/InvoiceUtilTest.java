@@ -1,13 +1,12 @@
 package org.folio.orders.utils;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import java.util.List;
 import org.folio.CopilotGenerated;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
 import org.folio.rest.acq.model.invoice.InvoiceLine.InvoiceLineStatus;
 import org.junit.jupiter.api.Test;
-
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @CopilotGenerated
 public class InvoiceUtilTest {
@@ -47,5 +46,4 @@ public class InvoiceUtilTest {
 
     assertEquals(2, result.size());
   }
-
 }
