@@ -581,6 +581,8 @@
             "inventory-storage.instance-types.collection.get",
             "inventory-storage.instance-statuses.collection.get",
             "inventory-storage.contributor-name-types.collection.get",
+            "finance.funds.budget.item.get",
+            "finance.fiscal-years.item.get",
             "finance.transactions.batch.execute",
             "finance-storage.ledgers.collection.get",
             "orders-storage.pieces.item.get",
