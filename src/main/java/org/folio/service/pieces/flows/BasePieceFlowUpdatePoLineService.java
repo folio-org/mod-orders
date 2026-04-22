@@ -16,6 +16,7 @@ import org.folio.service.pieces.validators.PieceValidatorUtil;
 import io.vertx.core.Future;
 
 import java.util.List;
+import java.util.Objects;
 
 public abstract class BasePieceFlowUpdatePoLineService<T extends BasePieceFlowHolder> implements PoLineUpdateQuantityService<T> {
   protected final PurchaseOrderStorageService purchaseOrderStorageService;
@@ -29,16 +30,26 @@ public abstract class BasePieceFlowUpdatePoLineService<T extends BasePieceFlowHo
     this.receivingEncumbranceStrategy = receivingEncumbranceStrategy;
   }
 
-  public Future<Void> updatePoLine(T holder, RequestContext requestContext) {
-    boolean isLineUpdated = poLineUpdateQuantity(holder);
-    if (isLineUpdated) {
-      return receivingEncumbranceStrategy
-        .processEncumbrances(holder.getPurchaseOrderToSave(), holder.getPurchaseOrderToSave(), requestContext)
-        .map(aVoid -> {
-          updateEstimatedPrice(holder.getPoLineToSave());
-          return null;
-        })
-        .compose(v -> purchaseOrderLineService.saveOrderLine(holder.getPoLineToSave(), getPieceLocations(holder), requestContext));
+  public Future<Void> updatePoLineCostAndProcessEncumbrances(T holder, RequestContext requestContext) {
+    if (skipUpdatingPoLine(holder.getOriginPoLine())) {
+      return Future.succeededFuture();
+    }
+    boolean costUpdated = poLineUpdateCost(holder);
+    holder.setLineUpdated(holder.getLineUpdated() || costUpdated);
+    if (costUpdated) {
+      return receivingEncumbranceStrategy.processEncumbrances(holder.getPurchaseOrderToSave(), holder.getPurchaseOrderToSave(), requestContext);
+    }
+    return Future.succeededFuture();
+  }
+
+  public Future<Void> updateLocationsAndSavePoLine(T holder, RequestContext requestContext) {
+    if (!skipUpdatingPoLine(holder.getOriginPoLine())) {
+      boolean lineUpdated2 = poLineUpdateLocations(holder);
+      holder.setLineUpdated(holder.getLineUpdated() || lineUpdated2 ||
+        !Objects.equals(holder.getOriginPoLine().getInstanceId(), holder.getPoLineToSave().getInstanceId()));
+    }
+    if (holder.getLineUpdated()) {
+      return purchaseOrderLineService.saveOrderLine(holder.getPoLineToSave(), getPieceLocations(holder), requestContext);
     }
     return Future.succeededFuture();
   }
@@ -54,5 +65,9 @@ public abstract class BasePieceFlowUpdatePoLineService<T extends BasePieceFlowHo
   protected boolean isLocationUpdateRequired(Piece piece, PoLine lineToSave) {
     return (piece.getHoldingId() != null || piece.getLocationId() != null) ||
                       PieceValidatorUtil.isLocationRequired(piece.getFormat(), lineToSave);
+  }
+
+  private boolean skipUpdatingPoLine(PoLine poLine) {
+    return Boolean.TRUE.equals(poLine.getIsPackage()) || Boolean.TRUE.equals(poLine.getCheckinItems());
   }
 }
