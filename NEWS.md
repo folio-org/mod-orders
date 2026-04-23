@@ -1,3 +1,13 @@
+## 13.1.1 - Released (Trillium R2 2025)
+This release focused on fixing holdings and items creation/deletion logic when budget or ledger restrictions prevent operation
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v13.0.0...v13.1.1)
+
+### Bug Fixes
+* [MODORDERS-1435](https://folio-org.atlassian.net/browse/MODORDERS-1435) - Changing a piece format: encumbrance not updated
+* [MODORDERS-1434](https://folio-org.atlassian.net/browse/MODORDERS-1434) - Batch create pieces: encumbrance is not updated
+* [MODORDERS-1415](https://folio-org.atlassian.net/browse/MODORDERS-1415) - Fix holdings and items creation/deletion logic when budget or ledger restrictions prevent operation
+
 ## 13.1.0 - Released (Trillium R2 2025)
 This release focused on upgrading to Vert.x 5.0, improving holdings/instance connection handling, enhancing fiscal year and encumbrance logic, piece/receiving improvements, and a large round of bug fixes across the acquisitions flow.
 
