@@ -3,6 +3,7 @@ package org.folio.service.orders.utils;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.jaxrs.model.CloseReason;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLine.PaymentStatus;
@@ -18,6 +19,8 @@ import static org.folio.helper.CheckinReceivePiecesHelper.EXPECTED_STATUSES;
 import static org.folio.helper.CheckinReceivePiecesHelper.RECEIVED_STATUSES;
 import static org.folio.orders.utils.HelperUtils.REASON_CANCELLED;
 import static org.folio.orders.utils.HelperUtils.REASON_COMPLETE;
+import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.CLOSED;
+import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.PARTIALLY_RECEIVED;
@@ -31,6 +34,11 @@ public class StatusUtils {
   public static boolean isStatusChanged(PoLine compOrderLine, PoLine lineFromStorage) {
     return !StringUtils.equals(lineFromStorage.getReceiptStatus().value(), compOrderLine.getReceiptStatus().value()) ||
       !StringUtils.equals(lineFromStorage.getPaymentStatus().value(), compOrderLine.getPaymentStatus().value());
+  }
+
+  public static boolean shouldTriggerOrderStatusUpdate(CompositePurchaseOrder compOrder, PoLine poLine, PoLine lineFromStorage) {
+    return (compOrder.getWorkflowStatus() == CLOSED && isCompletedPoLine(lineFromStorage) && !isCompletedPoLine(poLine)) ||
+      (compOrder.getWorkflowStatus() == OPEN && !isCompletedPoLine(lineFromStorage) && isCompletedPoLine(poLine));
   }
 
   public static boolean areAllPoLinesCanceled(List<PoLine> poLines) {
@@ -73,17 +81,12 @@ public class StatusUtils {
 
   private static boolean toBeReopened(PurchaseOrder purchaseOrder, List<PoLine> poLines) {
     return isOrderClosed(purchaseOrder)
-      && poLines.stream().anyMatch(StatusUtils::isNonResolutionPoLine);
+      && poLines.stream().anyMatch(line -> !isCompletedPoLine(line));
   }
 
   private static boolean isCompletedPoLine(PoLine line) {
     return resolutionPaymentStatus.contains(line.getPaymentStatus().value())
       && resolutionReceiptStatus.contains(line.getReceiptStatus().value());
-  }
-
-  private static boolean isNonResolutionPoLine(PoLine line) {
-    return !resolutionPaymentStatus.contains(line.getPaymentStatus().value())
-      && !resolutionReceiptStatus.contains(line.getReceiptStatus().value());
   }
 
   private static boolean isCancelledPoLine(PoLine poLine) {
