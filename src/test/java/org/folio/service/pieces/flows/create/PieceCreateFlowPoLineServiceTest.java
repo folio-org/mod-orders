@@ -32,7 +32,6 @@ import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.acq.Location;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
@@ -126,7 +125,9 @@ public class PieceCreateFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
 
     //When
-    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
+    pieceCreateFlowPoLineService.updatePoLineCostAndProcessEncumbrances(incomingUpdateHolder, requestContext);
+    pieceCreateFlowPoLineService.updateLocationsAndSavePoLine(incomingUpdateHolder, requestContext);
+
     //Then
     PoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityPhysical());
@@ -168,7 +169,8 @@ public class PieceCreateFlowPoLineServiceTest {
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
     //When
-    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
+    pieceCreateFlowPoLineService.updatePoLineCostAndProcessEncumbrances(incomingUpdateHolder, requestContext);
+    pieceCreateFlowPoLineService.updateLocationsAndSavePoLine(incomingUpdateHolder, requestContext);
 
     PoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityElectronic());
@@ -223,7 +225,7 @@ public class PieceCreateFlowPoLineServiceTest {
     holder.withOrderInformation(purchaseOrder, poLine);
 
     // When
-    pieceCreateFlowPoLineService.poLineUpdateQuantity(holder);
+    pieceCreateFlowPoLineService.poLineUpdateLocations(holder);
 
     // Then
     var poLineToSave = holder.getPoLineToSave();
@@ -255,8 +257,11 @@ public class PieceCreateFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
+
     //When
-    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
+    pieceCreateFlowPoLineService.updatePoLineCostAndProcessEncumbrances(incomingUpdateHolder, requestContext);
+    pieceCreateFlowPoLineService.updateLocationsAndSavePoLine(incomingUpdateHolder, requestContext);
+
     //Then
     PoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityElectronic());
@@ -297,7 +302,9 @@ public class PieceCreateFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
 
     //When
-    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
+    pieceCreateFlowPoLineService.updatePoLineCostAndProcessEncumbrances(incomingUpdateHolder, requestContext);
+    pieceCreateFlowPoLineService.updateLocationsAndSavePoLine(incomingUpdateHolder, requestContext);
+
     //Then
     PoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityPhysical());
@@ -339,7 +346,9 @@ public class PieceCreateFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
 
     //When
-    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
+    pieceCreateFlowPoLineService.updatePoLineCostAndProcessEncumbrances(incomingUpdateHolder, requestContext);
+    pieceCreateFlowPoLineService.updateLocationsAndSavePoLine(incomingUpdateHolder, requestContext);
+
     //Then
     PoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityPhysical());
@@ -384,7 +393,9 @@ public class PieceCreateFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
 
     //When
-    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
+    pieceCreateFlowPoLineService.updatePoLineCostAndProcessEncumbrances(incomingUpdateHolder, requestContext);
+    pieceCreateFlowPoLineService.updateLocationsAndSavePoLine(incomingUpdateHolder, requestContext);
+
     //Then
     PoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertEquals(1, poLineToSave.getLocations().size());
@@ -429,7 +440,9 @@ public class PieceCreateFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
 
     //When
-    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
+    pieceCreateFlowPoLineService.updatePoLineCostAndProcessEncumbrances(incomingUpdateHolder, requestContext);
+    pieceCreateFlowPoLineService.updateLocationsAndSavePoLine(incomingUpdateHolder, requestContext);
+
     //Then
     PoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertEquals(1, poLineToSave.getLocations().size());
@@ -474,7 +487,9 @@ public class PieceCreateFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
 
     //When
-    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
+    pieceCreateFlowPoLineService.updatePoLineCostAndProcessEncumbrances(incomingUpdateHolder, requestContext);
+    pieceCreateFlowPoLineService.updateLocationsAndSavePoLine(incomingUpdateHolder, requestContext);
+
     //Then
     PoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertEquals(1, poLineToSave.getLocations().size());
@@ -519,7 +534,9 @@ public class PieceCreateFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
 
     //When
-    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
+    pieceCreateFlowPoLineService.updatePoLineCostAndProcessEncumbrances(incomingUpdateHolder, requestContext);
+    pieceCreateFlowPoLineService.updateLocationsAndSavePoLine(incomingUpdateHolder, requestContext);
+
     //Then
     PoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertEquals(1, poLineToSave.getLocations().size());
@@ -562,7 +579,9 @@ public class PieceCreateFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
 
     //When
-    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
+    pieceCreateFlowPoLineService.updatePoLineCostAndProcessEncumbrances(incomingUpdateHolder, requestContext);
+    pieceCreateFlowPoLineService.updateLocationsAndSavePoLine(incomingUpdateHolder, requestContext);
+
     //Then
     PoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertEquals(0, poLineToSave.getLocations().size());
@@ -607,12 +626,14 @@ public class PieceCreateFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
 
     //When
-    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
+    pieceCreateFlowPoLineService.updatePoLineCostAndProcessEncumbrances(incomingUpdateHolder, requestContext);
+    pieceCreateFlowPoLineService.updateLocationsAndSavePoLine(incomingUpdateHolder, requestContext);
+
     //Then
     PoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityPhysical());
     assertEquals(expQty, poLineToSave.getCost().getQuantityElectronic());
-    assertEquals(expEstimatedPrice, poLineToSave.getCost().getPoLineEstimatedPrice());
+    // the estimated price is updated when distributeFunds() is called withing processEncumbrances() - it is mocked here
     assertEquals(3, poLineToSave.getLocations().size());
     Location actLoc1 = poLineToSave.getLocations().stream().filter(loc -> locationId1.equals(loc.getLocationId())).findFirst().get();
     Location actLoc2 = poLineToSave.getLocations().stream().filter(loc -> locationId2.equals(loc.getLocationId())).findFirst().get();
@@ -667,12 +688,14 @@ public class PieceCreateFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
 
     //When
-    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
+    pieceCreateFlowPoLineService.updatePoLineCostAndProcessEncumbrances(incomingUpdateHolder, requestContext);
+    pieceCreateFlowPoLineService.updateLocationsAndSavePoLine(incomingUpdateHolder, requestContext);
+
     //Then
     PoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityElectronic());
     assertEquals(expQty, poLineToSave.getCost().getQuantityPhysical());
-    assertEquals(expEstimatedPrice, poLineToSave.getCost().getPoLineEstimatedPrice());
+    // the estimated price is updated when distributeFunds() is called withing processEncumbrances() - it is mocked here
     assertEquals(3, poLineToSave.getLocations().size());
     Location actLoc1 = poLineToSave.getLocations().stream().filter(loc -> locationId1.equals(loc.getLocationId())).findFirst().get();
     Location actLoc2 = poLineToSave.getLocations().stream().filter(loc -> locationId2.equals(loc.getLocationId())).findFirst().get();

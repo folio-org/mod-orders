@@ -83,8 +83,10 @@ public class PieceUpdateFlowManager {
       .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithTitleInformation(holder, requestContext))
       .compose(v -> asFuture(() -> defaultPieceFlowsValidator.isPieceRequestValid(pieceToUpdate, holder.getOriginPurchaseOrder(), holder.getOriginPoLine(), holder.getTitle(), 0, createItem)))
       .compose(title -> protectionService.isOperationRestricted(holder.getTitle().getAcqUnitIds(), UPDATE, requestContext))
+      .compose(v -> updatePoLineReceiptStatus(holder, List.of(holder.getPieceToUpdate()), requestContext))
+      .compose(v -> updatePoLineService.updatePoLineCostAndProcessEncumbrances(holder, requestContext))
       .compose(v -> pieceUpdateFlowInventoryManager.processInventory(holder, requestContext))
-      .compose(v -> updatePoLine(holder, requestContext))
+      .compose(v -> updatePoLineService.updateLocationsAndSavePoLine(holder, requestContext))
       .map(v -> updatePieceStatus(holder.getPieceToUpdate(), holder.getPieceFromStorage().getReceivingStatus(), holder.getPieceToUpdate().getReceivingStatus()))
       .compose(verifyReceiptStatus -> pieceStorageService.updatePiece(holder.getPieceToUpdate(), requestContext).map(verifyReceiptStatus))
       .compose(verifyReceiptStatus -> asFuture(() -> {
@@ -106,7 +108,8 @@ public class PieceUpdateFlowManager {
       .map(piecesByPoLineId -> piecesByPoLineId.entrySet().stream()
         .map(entry -> new PieceBatchStatusUpdateHolder(newStatus, claimingInterval, internalNote, externalNote, entry.getValue(), entry.getKey()))
         .map(holder -> basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext)
-          .compose(v -> updatePoLine(holder, requestContext))
+          .compose(v -> updatePoLineReceiptStatus(holder, holder.getPieces(), requestContext))
+          .compose(v -> savePoLineIfNeeded(holder, requestContext))
           .compose(v -> updatePiecesStatusesByPoLine(holder, requestContext)))
         .toList())
       .compose(HelperUtils::collectResultsOnSuccess)
@@ -115,39 +118,37 @@ public class PieceUpdateFlowManager {
       .mapEmpty();
   }
 
-  protected Future<Void> updatePoLine(PieceUpdateHolder holder, RequestContext requestContext) {
-    return updatePoLine(holder, List.of(holder.getPieceToUpdate()), requestContext)
-      .compose(v -> !Boolean.TRUE.equals(holder.getOriginPoLine().getIsPackage()) && !Boolean.TRUE.equals(holder.getOriginPoLine().getCheckinItems())
-        ? updatePoLineService.updatePoLine(holder, requestContext)
-        : Future.succeededFuture());
-  }
-
-  protected Future<Void> updatePoLine(PieceBatchStatusUpdateHolder holder, RequestContext requestContext) {
-    return updatePoLine(holder, holder.getPieces(), requestContext);
-  }
-
-  private <T extends BasePieceFlowHolder> Future<Void> updatePoLine(T holder, List<Piece> piecesToUpdate, RequestContext requestContext) {
+  private <T extends BasePieceFlowHolder> Future<Void> updatePoLineReceiptStatus(T holder, List<Piece> piecesToUpdate,
+      RequestContext requestContext) {
     var originPurchaseOrder = holder.getOriginPurchaseOrder();
     if (originPurchaseOrder.getOrderType() != OrderType.ONE_TIME || originPurchaseOrder.getWorkflowStatus() != WorkflowStatus.OPEN) {
       return Future.succeededFuture();
     }
-
     var originPoLine = holder.getOriginPoLine();
     var poLineToSave = holder.getPoLineToSave();
-    var pieceIds = piecesToUpdate.stream().map(Piece::getId).toList();
     return pieceStorageService.getPiecesByLineId(originPoLine.getId(), requestContext)
-      .compose(pieces -> {
+      .map(pieces -> {
         if (PoLineCommonUtil.isCancelledOrOngoingStatus(poLineToSave)) {
           log.info("updatePoLine:: Skip updating PoLine: '{}' with status: '{}'", poLineToSave.getId(), poLineToSave.getReceiptStatus());
         } else {
           var newStatus = calculatePoLineReceiptStatus(poLineToSave.getId(), pieces, piecesToUpdate);
           poLineToSave.setReceiptStatus(PoLine.ReceiptStatus.fromValue(newStatus.value()));
+          holder.setLineUpdated(true);
         }
-        var locations = getPieceLocations(piecesToUpdate, poLineToSave);
-        return purchaseOrderLineService.saveOrderLine(poLineToSave, locations, requestContext);
-      })
-      .onSuccess(v -> log.info("updatePoLine:: PoLine with id: '{}' is updated for pieceIds: {}", originPoLine.getId(), pieceIds))
-      .onFailure(t -> log.error("Failed to update PO line with id: '{}' for pieceIds: {}", originPoLine.getId(), pieceIds, t));
+        return null;
+      });
+  }
+
+  private Future<Void> savePoLineIfNeeded(PieceBatchStatusUpdateHolder holder, RequestContext requestContext) {
+    if (!holder.getLineUpdated()) {
+      return Future.succeededFuture();
+    }
+    PoLine poLineToSave = holder.getPoLineToSave();
+    var pieceIds = holder.getPieces().stream().map(Piece::getId).toList();
+    return purchaseOrderLineService.saveOrderLine(poLineToSave, getPieceLocations(holder.getPieces(),
+        holder.getPoLineToSave()), requestContext)
+      .onSuccess(v -> log.info("updatePoLine:: PoLine with id: '{}' is updated for pieceIds: {}", poLineToSave.getId(), pieceIds))
+      .onFailure(t -> log.error("Failed to update PO line with id: '{}' for pieceIds: {}", poLineToSave.getId(), pieceIds, t));
   }
 
   private Future<Void> isOperationRestricted(List<String> pieceIds, RequestContext requestContext) {

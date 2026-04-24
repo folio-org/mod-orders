@@ -40,8 +40,9 @@ public class PieceCreateFlowManager {
       .compose(v -> basePieceFlowHolderBuilder.updateHolderWithTitleInformation(holder, requestContext))
       .compose(v -> asFuture(() -> defaultPieceFlowsValidator.isPieceRequestValid(pieceToCreate, holder.getOriginPurchaseOrder(), holder.getOriginPoLine(), holder.getTitle(), createItem)))
       .compose(v -> protectionService.isOperationRestricted(holder.getTitle().getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext))
+      .compose(v -> pieceCreateFlowPoLineService.updatePoLineCostAndProcessEncumbrances(holder, requestContext))
       .compose(v -> processInventory(holder, requestContext))
-      .compose(v -> updatePoLine(holder, requestContext))
+      .compose(v -> pieceCreateFlowPoLineService.updateLocationsAndSavePoLine(holder, requestContext))
       .compose(v -> titlesService.generateNextSequenceNumbers(List.of(holder.getPieceToCreate()), holder.getTitle(), requestContext))
       .compose(pieces -> pieceStorageService.insertPiece(pieces.getFirst(), requestContext));
   }
@@ -57,8 +58,9 @@ public class PieceCreateFlowManager {
       .compose(v -> basePieceFlowHolderBuilder.updateHolderWithTitleInformation(holder, requestContext))
       .compose(v -> asFuture(() -> defaultPieceFlowsValidator.isPieceBatchRequestValid(holder.getPiecesToCreate(), holder.getOriginPurchaseOrder(), holder.getOriginPoLine(), holder.getTitle(), createItem)))
       .compose(v -> protectionService.isOperationRestricted(holder.getTitle().getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext))
-      .compose(v -> processInventory(holder, requestContext))
-      .compose(v -> updatePoLine(holder, requestContext))
+      .compose(v -> pieceCreateFlowPoLineService.updatePoLineBatch(holder, requestContext))
+      .compose(v -> processInventoryBatch(holder, requestContext))
+      .compose(v -> pieceCreateFlowPoLineService.updateLocationsAndSavePoLineBatch(holder, requestContext))
       .compose(v -> titlesService.generateNextSequenceNumbers(holder.getPiecesToCreate(), holder.getTitle(), requestContext))
       .compose(pieces -> pieceStorageService.insertPiecesBatch(pieces, requestContext));
   }
@@ -68,44 +70,12 @@ public class PieceCreateFlowManager {
       holder.getPoLineToSave(), holder.getPieceToCreate(), holder.isCreateItem(), requestContext);
   }
 
-  private Future<Void> processInventory(PieceBatchCreationHolder holder, RequestContext requestContext) {
+  private Future<Void> processInventoryBatch(PieceBatchCreationHolder holder, RequestContext requestContext) {
     var futures = holder.getPiecesToCreate().stream()
       .map(piece -> pieceCreateFlowInventoryManager.processInventory(holder.getPurchaseOrderToSave(),
         holder.getPoLineToSave(), piece, holder.isCreateItem(), requestContext))
       .toList();
     return collectResultsOnSuccess(futures).mapEmpty();
-  }
-
-  protected Future<Void> updatePoLine(PieceBatchCreationHolder holder, RequestContext requestContext) {
-    var pieceCreationHolderList = createPieceCreationHolderList(holder);
-    var futures = pieceCreationHolderList.stream()
-      .map(pieceCreationHolder -> updatePoLine(pieceCreationHolder, requestContext))
-      .toList();
-    return collectResultsOnSuccess(futures).mapEmpty();
-  }
-
-  private List<PieceCreationHolder> createPieceCreationHolderList(PieceBatchCreationHolder holder) {
-    return holder.getPiecesToCreate().stream()
-      .map(piece -> createPieceCreationHolder(piece, holder))
-      .toList();
-  }
-
-  private PieceCreationHolder createPieceCreationHolder(Piece piece, PieceBatchCreationHolder holder) {
-    var pieceCreationHolder = new PieceCreationHolder()
-      .withPieceToCreate(piece)
-      .withCreateItem(holder.isCreateItem());
-    pieceCreationHolder
-      .withTitleInformation(holder.getTitle())
-      .withPoLineOnly(holder.getPoLineToSave())
-      .withOrderInformation(holder.getPurchaseOrderToSave());
-    return pieceCreationHolder;
-  }
-
-  protected Future<Void> updatePoLine(PieceCreationHolder holder, RequestContext requestContext) {
-    if (!Boolean.TRUE.equals(holder.getOriginPoLine().getIsPackage()) && !Boolean.TRUE.equals(holder.getOriginPoLine().getCheckinItems())) {
-      return pieceCreateFlowPoLineService.updatePoLine(holder, requestContext);
-    }
-    return Future.succeededFuture();
   }
 
 }
