@@ -189,49 +189,45 @@ public class InventoryItemManager {
       return Future.succeededFuture(Collections.emptyList());
     }
 
-    // Search for already existing items
-    return searchStorageExistingItems(poLine.getId(), location.getHoldingId(), piecesWithItemsQty, requestContext)
-      .compose(existingItems -> {
-        List<Future<List<Piece>>> pieces = new ArrayList<>(Piece.Format.values().length);
+    // Clone the request context once for the location's tenant, used for both item search and creation
+    return consortiumConfigurationService.cloneRequestContextIfNeeded(requestContext, location)
+      .compose(locationContext -> searchStorageExistingItems(poLine.getId(), location.getHoldingId(), piecesWithItemsQty, locationContext)
+        .compose(existingItems -> {
+          List<Future<List<Piece>>> pieces = new ArrayList<>(Piece.Format.values().length);
 
-        for (Map.Entry<Piece.Format, Integer> pieceEntry : piecesWithItemsQuantities.entrySet()) {
-          Piece.Format pieceFormat = pieceEntry.getKey();
-          Integer expectedQuantity = pieceEntry.getValue();
+          for (Map.Entry<Piece.Format, Integer> pieceEntry : piecesWithItemsQuantities.entrySet()) {
+            Piece.Format pieceFormat = pieceEntry.getKey();
+            Integer expectedQuantity = pieceEntry.getValue();
 
-          // The expected quantity might be zero for particular piece format if the PO Line's order format is P/E Mix
-          if (expectedQuantity > 0) {
-            // Depending on piece format get already existing existingItemIds and send requests to create missing existingItemIds
-            Piece pieceWithHoldingId = new Piece().withHoldingId(location.getHoldingId());
+            // The expected quantity might be zero for particular piece format if the PO Line's order format is P/E Mix
+            if (expectedQuantity > 0) {
+              // Depending on piece format get already existing existingItemIds and send requests to create missing existingItemIds
+              Piece pieceWithHoldingId = new Piece().withHoldingId(location.getHoldingId());
 
-            var future = consortiumConfigurationService.cloneRequestContextIfNeeded(requestContext, location)
-              .compose(updatedRequestContext -> {
-                List<String> existingItemIds;
-                if (pieceFormat == Piece.Format.ELECTRONIC) {
-                  existingItemIds = getElectronicItemIds(poLine, existingItems);
-                  return createMissingElectronicItems(comPO, poLine, pieceWithHoldingId,
-                    expectedQuantity - existingItemIds.size(), updatedRequestContext)
-                    .map(createdItemIds -> buildPieces(location, poLine, pieceFormat, createdItemIds, existingItemIds));
-                } else {
-                  existingItemIds = getPhysicalItemIds(poLine, existingItems);
-                  return createMissingPhysicalItems(comPO, poLine, pieceWithHoldingId,
-                    expectedQuantity - existingItemIds.size(), updatedRequestContext)
-                    .map(createdItemIds -> buildPieces(location, poLine, pieceFormat, createdItemIds, existingItemIds));
-                }
-              });
-            // Build piece records once new existingItemIds are created
-            pieces.add(future);
+              List<String> existingItemIds;
+              if (pieceFormat == Piece.Format.ELECTRONIC) {
+                existingItemIds = getElectronicItemIds(poLine, existingItems);
+                pieces.add(createMissingElectronicItems(comPO, poLine, pieceWithHoldingId,
+                  expectedQuantity - existingItemIds.size(), locationContext)
+                  .map(createdItemIds -> buildPieces(location, poLine, pieceFormat, createdItemIds, existingItemIds)));
+              } else {
+                existingItemIds = getPhysicalItemIds(poLine, existingItems);
+                pieces.add(createMissingPhysicalItems(comPO, poLine, pieceWithHoldingId,
+                  expectedQuantity - existingItemIds.size(), locationContext)
+                  .map(createdItemIds -> buildPieces(location, poLine, pieceFormat, createdItemIds, existingItemIds)));
+              }
+            }
           }
-        }
 
-        // Wait for all items to be created and corresponding pieces are built
-        return collectResultsOnSuccess(pieces)
-          .map(results -> {
-            validateItemsCreation(poLine.getId(), pieces.size(), results.size());
-            return results.stream()
-              .flatMap(List::stream)
-              .collect(toList());
-          });
-      });
+          // Wait for all items to be created and corresponding pieces are built
+          return collectResultsOnSuccess(pieces)
+            .map(results -> {
+              validateItemsCreation(poLine.getId(), pieces.size(), results.size());
+              return results.stream()
+                .flatMap(List::stream)
+                .collect(toList());
+            });
+        }));
   }
 
   private Future<List<JsonObject>> searchStorageExistingItems(String poLineId, String holdingId, int expectedQuantity,
