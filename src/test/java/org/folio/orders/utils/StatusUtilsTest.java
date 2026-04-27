@@ -65,7 +65,7 @@ public class StatusUtilsTest {
     value = {"Closed,Fully Paid,Awaiting Receipt,Awaiting Payment,Awaiting Receipt,false",
       "Closed,Awaiting Payment,Fully Received,Awaiting Payment,Awaiting Receipt,false",
       "Closed,Awaiting Payment,Awaiting Receipt,Fully Paid,Awaiting Receipt,false",
-      "Closed,Awaiting Payment,Fully Received,Awaiting Payment,Awaiting Receipt,false",
+      "Closed,Awaiting Payment,Awaiting Receipt,Awaiting Payment,Fully Received,false",
       "Closed,Awaiting Payment,Fully Received,Fully Paid,Fully Received,true",
       "Closed,Fully Paid,Awaiting Receipt,Fully Paid,Fully Received,true",
       "Open,Fully Paid,Awaiting Receipt,Fully Paid,Fully Received,false",
