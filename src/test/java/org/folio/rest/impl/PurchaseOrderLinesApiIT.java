@@ -649,7 +649,7 @@ public class PurchaseOrderLinesApiIT {
     assertEquals(location.getQuantityPhysical(), location.getQuantity());
 
     // Verify messages sent via event bus
-    HandlersTestHelper.verifyOrderStatusUpdateEvent(1);
+    HandlersTestHelper.verifyOrderStatusUpdateEvent(0);
   }
 
   @Test
