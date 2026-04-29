@@ -8,7 +8,6 @@ import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.Pair;
 import org.folio.models.PoLineLocationsPair;
 import org.folio.models.pieces.PieceUpdateHolder;
 import org.folio.models.pieces.PiecesHolder;
@@ -86,6 +85,8 @@ import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_NOT_RETRIEVED;
 import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_POL_MISMATCH;
 import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_UPDATE_FAILED;
 import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_PERMISSIONS;
+import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.CLOSED;
+import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.CLAIM_DELAYED;
 import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.CLAIM_SENT;
 import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.EXPECTED;
@@ -161,14 +162,15 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
    * @param requestContext The request context that holds the headers needed proper query resolution
    * @return A pair consistigng of a purchase order and its order line
    */
-  public Future<Void> findAndSetPurchaseOrderPoLinePair(String poLineId, PiecesHolder holder, RequestContext requestContext) {
+  public Future<Void> findAndSetPurchaseOrderAndPoLine(String poLineId, PiecesHolder holder, RequestContext requestContext) {
     return purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
       .compose(poLine -> purchaseOrderStorageService.getPurchaseOrderByIdAsJson(poLine.getPurchaseOrderId(), requestContext)
         .map(HelperUtils::convertToCompositePurchaseOrder)
         .map(purchaseOrder -> {
           logger.info("findAndSetPurchaseOrderPoLinePair:: Found purchase order & poLine, order id: {}, poLineId: {}",
             purchaseOrder.getId(), poLine.getId());
-          holder.withPurchaseOrderPoLinePair(Pair.of(purchaseOrder, poLine));
+          holder.withPurchaseOrder(purchaseOrder)
+            .withPoLine(poLine);
           return null;
         }));
   }
@@ -459,6 +461,23 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     }
     // If pieces were rolled-back to Expected we check if there is any Received piece in the storage
     return receivedPiecesQuantity == 0 ? AWAITING_RECEIPT : PARTIALLY_RECEIVED;
+  }
+
+  protected boolean skipOrderStatusUpdate(CompositePurchaseOrder compPo, List<PoLine> poLines, Map<String, List<Piece>> piecesGroupedByPoLine) {
+    if (CollectionUtils.isEmpty(poLines)) {
+      logger.info("updateOrderStatus::poLines empty, returning");
+      return true;
+    }
+    List<Piece> pieces = piecesGroupedByPoLine.values().stream().flatMap(List::stream).toList();
+    if (compPo.getWorkflowStatus() == CLOSED && pieces.stream().allMatch(piece -> piece.getReceivingStatus() == RECEIVED)) {
+      logger.info("updateOrderStatus::pieces are received and order is already closed, skip order status update");
+      return true;
+    }
+    if (compPo.getWorkflowStatus() == OPEN && pieces.stream().allMatch(piece -> piece.getReceivingStatus() == EXPECTED)) {
+      logger.info("updateOrderStatus::pieces are expected and order is already open, skip order status update");
+      return true;
+    }
+    return false;
   }
 
   //-------------------------------------------------------------------------------------
