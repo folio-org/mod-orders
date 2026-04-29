@@ -1,4 +1,12 @@
-## 13.1.1 - Released (Trillium R2 2025)
+## 13.1.2 - Released (Trillium R1 2026)
+This release focused on fixing issue when received pieces are not counted, causing extra expected pieces to be created after opening previously unopened synchronized order.
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v13.1.1...v13.1.2)
+
+### Bug Fixes
+* [MODORDERS-1421](https://folio-org.atlassian.net/browse/MODORDERS-1421) - ECS | Received pieces are not counted, causing extra expected pieces to be created after opening previously unopened synchronized order
+
+## 13.1.1 - Released (Trillium R1 2026)
 This release focused on fixing holdings and items creation/deletion logic when budget or ledger restrictions prevent operation
 
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v13.0.0...v13.1.1)
@@ -8,7 +16,7 @@ This release focused on fixing holdings and items creation/deletion logic when b
 * [MODORDERS-1434](https://folio-org.atlassian.net/browse/MODORDERS-1434) - Batch create pieces: encumbrance is not updated
 * [MODORDERS-1415](https://folio-org.atlassian.net/browse/MODORDERS-1415) - Fix holdings and items creation/deletion logic when budget or ledger restrictions prevent operation
 
-## 13.1.0 - Released (Trillium R2 2025)
+## 13.1.0 - Released (Trillium R1 2026)
 This release focused on upgrading to Vert.x 5.0, improving holdings/instance connection handling, enhancing fiscal year and encumbrance logic, piece/receiving improvements, and a large round of bug fixes across the acquisitions flow.
 
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v13.0.0...v13.1.0)
