@@ -97,6 +97,7 @@ import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.PARTIALLY_RECEIVED;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_HOLDINGS_RECORD_ID;
+import static org.folio.service.orders.utils.StatusUtils.poLinePaymentStatusIsFinal;
 
 public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
 
@@ -469,6 +470,10 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       return true;
     }
     List<Piece> pieces = piecesGroupedByPoLine.values().stream().flatMap(List::stream).toList();
+    if (compPo.getWorkflowStatus() == CLOSED && poLines.stream().anyMatch(poLine -> !poLinePaymentStatusIsFinal(poLine))) {
+      logger.info("updateOrderStatus::order is closed and a payment status is non-final, skip order status update");
+      return true;
+    }
     if (compPo.getWorkflowStatus() == CLOSED && pieces.stream().allMatch(piece -> piece.getReceivingStatus() == RECEIVED)) {
       logger.info("updateOrderStatus::pieces are received and order is already closed, skip order status update");
       return true;

@@ -69,6 +69,10 @@ public class StatusUtils {
     return false;
   }
 
+  public static boolean poLinePaymentStatusIsFinal(PoLine poLine) {
+    return resolutionPaymentStatus.contains(poLine.getPaymentStatus().value());
+  }
+
   private static boolean toBeClosed(PurchaseOrder purchaseOrder, List<PoLine> poLines) {
     return isOrderOpen(purchaseOrder)
       && poLines.stream().allMatch(StatusUtils::isCompletedPoLine);
