@@ -6,13 +6,13 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import java.util.EnumSet;
 import one.util.streamex.StreamEx;
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.models.pieces.PiecesHolder;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ProcessingStatus;
@@ -35,6 +35,8 @@ import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.EXPECTED;
+import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.RECEIVED;
 
 public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
 
@@ -71,7 +73,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   private Future<ReceivingResults> processReceiveItems(ReceivingCollection receivingCollection, RequestContext requestContext) {
     PiecesHolder holder = new PiecesHolder();
     // 1. Get purchase order and poLine from storage
-    return findAndSetPurchaseOrderPoLinePair(extractPoLineId(receivingCollection), holder, requestContext)
+    return findAndSetPurchaseOrderAndPoLine(extractPoLineId(receivingCollection), holder, requestContext)
       // 2. Get piece records from storage
       .compose(voidResult -> retrievePieceRecords(requestContext))
       // 3. Filter locationId
@@ -85,40 +87,33 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       .map(this::updatePieceRecordsWithoutItems)
       // 6. Update received piece records in the storage
       .compose(piecesByPoLineIds -> storeUpdatedPieceRecords(piecesByPoLineIds, requestContext))
-      // 7. Update PO Line status
-      .compose(piecesByPoLineIds -> updateOrderAndPoLinesStatus(holder.getPiecesFromStorage(), piecesByPoLineIds, requestContext))
+      // 7. Update PO Line and order status
+      .compose(piecesByPoLineIds -> updateOrderAndPoLinesStatus(holder, piecesByPoLineIds, requestContext))
       // 8. Return results to the client
       .map(piecesGroupedByPoLine -> prepareResponseBody(receivingCollection, piecesGroupedByPoLine));
   }
 
-  private Future<Map<String, List<Piece>>> updateOrderAndPoLinesStatus(Map<String, List<Piece>> piecesFromStorage,
+  private Future<Map<String, List<Piece>>> updateOrderAndPoLinesStatus(PiecesHolder holder,
                                                                        Map<String, List<Piece>> piecesGroupedByPoLine,
                                                                        RequestContext requestContext) {
+    CompositePurchaseOrder compPo = holder.getPurchaseOrder();
+    Map<String, List<Piece>> piecesFromStorage = holder.getPiecesFromStorage();
     return updateOrderAndPoLinesStatus(
       piecesFromStorage,
       piecesGroupedByPoLine,
       requestContext,
-      poLines -> updateOrderStatus(poLines, requestContext)
+      poLines -> updateOrderStatus(compPo, poLines, piecesGroupedByPoLine, requestContext)
     );
   }
 
-  private void updateOrderStatus(List<PoLine> poLines, RequestContext requestContext) {
-    if (CollectionUtils.isEmpty(poLines)) {
-      logger.info("updateOrderStatus::poLines empty, returning");
+  private void updateOrderStatus(CompositePurchaseOrder compPo, List<PoLine> poLines, Map<String, List<Piece>> piecesGroupedByPoLine,
+      RequestContext requestContext) {
+    if (skipOrderStatusUpdate(compPo, poLines, piecesGroupedByPoLine)) {
       return;
     }
-    logger.debug("updateOrderStatus::Sending event to verify order status");
-
-    // Collect order ids which should be processed
-    List<JsonObject> poIds = StreamEx
-      .of(poLines)
-      .map(PoLine::getPurchaseOrderId)
-      .distinct()
-      .map(orderId -> new JsonObject().put(ORDER_ID, orderId))
-      .toList();
-
+    logger.debug("updateOrderStatus::Sending event to verify order status for {}", compPo.getId());
+    List<JsonObject> poIds = List.of(new JsonObject().put(ORDER_ID, compPo.getId()));
     sendMessage(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, new JsonArray(poIds), requestContext);
-
     logger.debug("updateOrderStatus::Event to verify order status - sent");
   }
 
@@ -234,10 +229,10 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
     // Piece record might be received or rolled-back to Expected if item status is "On-order" or "Order Closed"
     if (isOnOrderItemStatus(receivedItem)) {
       piece.setReceivedDate(null);
-      piece.setReceivingStatus(Piece.ReceivingStatus.EXPECTED);
+      piece.setReceivingStatus(EXPECTED);
     } else {
       piece.setReceivedDate(new Date());
-      piece.setReceivingStatus(Piece.ReceivingStatus.RECEIVED);
+      piece.setReceivingStatus(RECEIVED);
     }
   }
 
@@ -258,7 +253,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
 
   @Override
   protected boolean isRevertToOnOrder(Piece piece) {
-    return piece.getReceivingStatus() == Piece.ReceivingStatus.RECEIVED && isOnOrderItemStatus(getByPiece(piece));
+    return piece.getReceivingStatus() == RECEIVED && isOnOrderItemStatus(getByPiece(piece));
   }
 
   private boolean isOnOrderItemStatus(ReceivedItem receivedItem) {

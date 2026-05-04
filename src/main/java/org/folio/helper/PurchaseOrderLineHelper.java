@@ -24,6 +24,7 @@ import static org.folio.service.finance.EncumbranceUtils.collectAllowedEncumbran
 import static org.folio.service.orders.utils.StatusUtils.areAllPoLinesCanceled;
 import static org.folio.service.orders.utils.StatusUtils.isStatusCanceledCompositePoLine;
 import static org.folio.service.orders.utils.StatusUtils.isStatusChanged;
+import static org.folio.service.orders.utils.StatusUtils.shouldTriggerOrderStatusUpdate;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -281,14 +282,14 @@ public class PurchaseOrderLineHelper {
           .compose(v -> validateAccessProviders(poLine, requestContext))
           .compose(v -> poLineValidationService.validateUserUnaffiliatedLocations(poLine.getId(), poLine.getLocations(), requestContext))
           .compose(v -> expenseClassValidationService.validateExpenseClassesForOpenedOrder(compOrder, Collections.singletonList(poLine), requestContext))
-          .compose(v -> processPoLineEncumbrances(compOrder, poLine, poLineFromStorage, requestContext)))
-        .map(v -> poLine.withPoLineNumber(poLineFromStorage.getPoLineNumber())) // PoLine number must not be modified during PoLine update, set original value
-        .map(v -> new PoLineInvoiceLineHolder(poLine, poLineFromStorage))
-        .compose(v -> createShadowInstanceIfNeeded(poLine, requestContext))
-        .compose(v -> updateOrderLineInStorage(poLine, requestContext))
-        .compose(v -> updateEncumbranceStatus(poLine, poLineFromStorage, requestContext))
-        .compose(v -> updateInventoryItemStatus(poLine, poLineFromStorage, requestContext))
-        .compose(v -> updateOrderStatusIfNeeded(poLine, poLineFromStorage, requestContext)));
+          .compose(v -> processPoLineEncumbrances(compOrder, poLine, poLineFromStorage, requestContext))
+          .map(v -> poLine.withPoLineNumber(poLineFromStorage.getPoLineNumber())) // PoLine number must not be modified during PoLine update, set original value
+          .map(v -> new PoLineInvoiceLineHolder(poLine, poLineFromStorage))
+          .compose(v -> createShadowInstanceIfNeeded(poLine, requestContext))
+          .compose(v -> updateOrderLineInStorage(poLine, requestContext))
+          .compose(v -> updateEncumbranceStatus(poLine, poLineFromStorage, requestContext))
+          .compose(v -> updateInventoryItemStatus(poLine, poLineFromStorage, requestContext))
+          .compose(v -> updateOrderStatusIfNeeded(compOrder, poLine, poLineFromStorage, requestContext))));
   }
 
   private Future<Void> updateEncumbranceStatus(PoLine compOrderLine, PoLine poLineFromStorage, RequestContext requestContext) {
@@ -651,9 +652,9 @@ public class PurchaseOrderLineHelper {
       });
   }
 
-  public Future<Void> updateOrderStatusIfNeeded(PoLine compOrderLine, PoLine poLineFromStorage, RequestContext requestContext) {
-    // See MODORDERS-218
-    if (isStatusChanged(compOrderLine, poLineFromStorage)) {
+  public Future<Void> updateOrderStatusIfNeeded(CompositePurchaseOrder compOrder, PoLine compOrderLine, PoLine poLineFromStorage,
+      RequestContext requestContext) {
+    if (shouldTriggerOrderStatusUpdate(compOrder, compOrderLine, poLineFromStorage)) {
       var updateOrderMessage = JsonObject.of(EVENT_PAYLOAD, JsonArray.of(JsonObject.of(ORDER_ID, compOrderLine.getPurchaseOrderId())));
       HelperUtils.sendEvent(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, updateOrderMessage, requestContext);
     }

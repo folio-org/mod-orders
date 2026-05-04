@@ -12,12 +12,15 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import org.folio.CopilotGenerated;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.service.orders.utils.StatusUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 @CopilotGenerated(partiallyGenerated = true)
 public class StatusUtilsTest {
@@ -55,6 +58,34 @@ public class StatusUtilsTest {
     poLine1.setPaymentStatus(PoLine.PaymentStatus.PENDING);
 
     assertFalse(StatusUtils.isStatusChanged(compOrderLine, poLine1));
+  }
+
+  @ParameterizedTest
+  @CsvSource(
+    value = {"Closed,Fully Paid,Awaiting Receipt,Awaiting Payment,Awaiting Receipt,false",
+      "Closed,Awaiting Payment,Fully Received,Awaiting Payment,Awaiting Receipt,false",
+      "Closed,Awaiting Payment,Awaiting Receipt,Fully Paid,Awaiting Receipt,false",
+      "Closed,Awaiting Payment,Awaiting Receipt,Awaiting Payment,Fully Received,false",
+      "Closed,Awaiting Payment,Fully Received,Fully Paid,Fully Received,true",
+      "Closed,Fully Paid,Awaiting Receipt,Fully Paid,Fully Received,true",
+      "Open,Fully Paid,Awaiting Receipt,Fully Paid,Fully Received,false",
+      "Open,Awaiting Payment,Fully Received,Fully Paid,Fully Received,false",
+      "Open,Fully Paid,Fully Received,Fully Paid,Awaiting Receipt,true",
+      "Open,Fully Paid,Fully Received,Awaiting Payment,Fully Received,true"
+    },
+    delimiterString = ",")
+  void shouldTriggerOrderStatusUpdateTest(String workflowStatus, String paymentStatus, String receiptStatus,
+      String storagePaymentStatus, String storageReceiptStatus, boolean expectedResult) {
+    CompositePurchaseOrder compOrder = new CompositePurchaseOrder()
+      .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.fromValue(workflowStatus));
+    PoLine poLine = new PoLine()
+      .withPaymentStatus(PoLine.PaymentStatus.fromValue(paymentStatus))
+      .withReceiptStatus(PoLine.ReceiptStatus.fromValue(receiptStatus));
+    PoLine lineFromStorage = new PoLine()
+      .withPaymentStatus(PoLine.PaymentStatus.fromValue(storagePaymentStatus))
+      .withReceiptStatus(PoLine.ReceiptStatus.fromValue(storageReceiptStatus));
+    boolean result = StatusUtils.shouldTriggerOrderStatusUpdate(compOrder, poLine, lineFromStorage);
+    assertEquals(expectedResult, result);
   }
 
   @Test

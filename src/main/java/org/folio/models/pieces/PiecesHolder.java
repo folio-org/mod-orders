@@ -16,7 +16,8 @@ import java.util.Set;
 
 public class PiecesHolder {
 
-  private Pair<CompositePurchaseOrder, PoLine> purchaseOrderPoLinePair;
+  private CompositePurchaseOrder purchaseOrder;
+  private PoLine poLine;
   private Map<String, List<Piece>> piecesFromStorage;
   private Map<String, List<PiecePoLineDto>> itemsToRecreate;
   private Map<Pair<String, String>, Set<String>> piecesByHoldingIds;
@@ -66,8 +67,12 @@ public class PiecesHolder {
     }
   }
 
-  public Pair<CompositePurchaseOrder, PoLine> getPurchaseOrderPoLinePair() {
-    return purchaseOrderPoLinePair;
+  public CompositePurchaseOrder getPurchaseOrder() {
+    return purchaseOrder;
+  }
+
+  public PoLine getPoLine() {
+    return poLine;
   }
 
   public Map<String, List<Piece>> getPiecesFromStorage() {
@@ -86,8 +91,13 @@ public class PiecesHolder {
     return processedHoldingIds;
   }
 
-  public PiecesHolder withPurchaseOrderPoLinePair(Pair<CompositePurchaseOrder, PoLine> purchaseOrderPoLinePair) {
-    this.purchaseOrderPoLinePair = purchaseOrderPoLinePair;
+  public PiecesHolder withPurchaseOrder(CompositePurchaseOrder purchaseOrder) {
+    this.purchaseOrder = purchaseOrder;
+    return this;
+  }
+
+  public PiecesHolder withPoLine(PoLine poLine) {
+    this.poLine = poLine;
     return this;
   }
 
@@ -115,4 +125,5 @@ public class PiecesHolder {
     this.piecesByHoldingIds = piecesByHoldingIds;
     return this;
   }
+
 }

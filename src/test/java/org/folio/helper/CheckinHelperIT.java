@@ -33,7 +33,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-import org.apache.commons.lang3.tuple.Pair;
 import org.folio.ApiTestSuiteIT;
 import org.folio.models.pieces.PiecesHolder;
 import org.folio.rest.core.exceptions.ErrorCodes;
@@ -267,7 +266,7 @@ public class CheckinHelperIT {
             .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     PoLine poLine = new PoLine().withId(poLineId).withPurchaseOrderId(purchaseOrderId);
     PiecesHolder pieceHolder =
-        new PiecesHolder().withPurchaseOrderPoLinePair(Pair.of(purchaseOrder, poLine));
+        new PiecesHolder().withPurchaseOrder(purchaseOrder).withPoLine(poLine);
     CheckinCollection checkinCollection = getCheckinCollection(poLineId, pieceId);
     when(inventoryItemManager.updateItem(any(JsonObject.class), any(RequestContext.class)))
         .thenReturn(Future.succeededFuture());
@@ -298,7 +297,7 @@ public class CheckinHelperIT {
             .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     PoLine poLine = new PoLine().withId(poLineId).withPurchaseOrderId(purchaseOrderId);
     PiecesHolder pieceHolder =
-        new PiecesHolder().withPurchaseOrderPoLinePair(Pair.of(purchaseOrder, poLine));
+        new PiecesHolder().withPurchaseOrder(purchaseOrder).withPoLine(poLine);
     CheckinCollection checkinCollection = getCheckinCollection(poLineId, pieceId);
     when(inventoryItemManager.updateItem(any(JsonObject.class), any(RequestContext.class)))
         .thenReturn(
@@ -336,7 +335,7 @@ public class CheckinHelperIT {
             .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     PoLine poLine = new PoLine().withId(poLineId).withPurchaseOrderId(purchaseOrderId);
     PiecesHolder pieceHolder =
-        new PiecesHolder().withPurchaseOrderPoLinePair(Pair.of(purchaseOrder, poLine));
+        new PiecesHolder().withPurchaseOrder(purchaseOrder).withPoLine(poLine);
     CheckinCollection checkinCollection = getCheckinCollection(poLineId, pieceId);
     when(inventoryItemManager.updateItem(any(JsonObject.class), any(RequestContext.class)))
         .thenReturn(Future.failedFuture(new HttpException(500, "Service failure")));
