@@ -139,6 +139,16 @@ public class RestClient {
     return promise.future();
   }
 
+  private <T> void handleGetMethodErrorResponse(Promise<T> promise, Throwable t, boolean skipError404, String endpoint) {
+    if (skipError404 && t instanceof HttpException httpException && httpException.getCode() == 404) {
+      log.warn(t);
+      promise.complete();
+    } else {
+      log.error("handleGetMethodErrorResponse:: failed to call {}", endpoint, t);
+      promise.fail(t);
+    }
+  }
+
   private <T> void handleGetMethodErrorResponse(Promise<T> promise, Throwable t, boolean skipError404) {
     if (skipError404 && t instanceof HttpException httpException && httpException.getCode() == 404) {
       log.warn(t);
@@ -186,7 +196,7 @@ public class RestClient {
       .map(HttpResponse::bodyAsJsonObject)
       .map(jsonObject -> jsonObject.mapTo(responseType))
       .onSuccess(promise::complete)
-      .onFailure(t -> handleGetMethodErrorResponse(promise, t, skipError404));
+      .onFailure(t -> handleGetMethodErrorResponse(promise, t, skipError404, endpoint));
 
     return promise.future();
   }
