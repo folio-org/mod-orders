@@ -44,6 +44,7 @@ public class KafkaAdminClientServiceTest {
 
   @Before
   public void setUp() {
+    System.setProperty("ENV", "test-env");
     vertx = mock(Vertx.class);
     mockClient = mock(KafkaAdminClient.class);
     ordersKafkaTopicService = mock(OrdersKafkaTopicService.class);
