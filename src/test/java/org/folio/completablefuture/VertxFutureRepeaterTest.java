@@ -6,12 +6,12 @@ import static org.folio.completablefuture.VertxFutureRepeater.repeat;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-
-import io.vertx.core.Future;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Supplier;
+
 import org.junit.jupiter.api.Test;
+import io.vertx.core.Future;
 
 public class VertxFutureRepeaterTest {
 
