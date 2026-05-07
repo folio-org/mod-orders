@@ -1,13 +1,14 @@
 package org.folio.orders.utils;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class StreamUtilsTest {
 
@@ -73,4 +74,5 @@ public class StreamUtilsTest {
     assertEquals(List.of("1", "3"), map.get(1));
     assertEquals(List.of("22"), map.get(2));
   }
+
 }

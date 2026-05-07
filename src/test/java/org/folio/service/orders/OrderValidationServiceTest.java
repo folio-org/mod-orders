@@ -1,5 +1,24 @@
 package org.folio.service.orders;
 
+import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
+import org.folio.helper.PurchaseOrderLineHelper;
+import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Ongoing;
+import org.folio.service.caches.CommonSettingsCache;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+
+import java.util.List;
+
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_ONGOING;
@@ -14,32 +33,20 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 
-import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
-import java.util.List;
-import org.folio.helper.PurchaseOrderLineHelper;
-import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Ongoing;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.service.caches.CommonSettingsCache;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-
 public class OrderValidationServiceTest {
 
-  @InjectMocks private OrderValidationService orderValidationService;
-  @Mock private PoLineValidationService poLineValidationService;
-  @Mock private PurchaseOrderLineHelper purchaseOrderLineHelper;
-  @Mock private PurchaseOrderLineService purchaseOrderLineService;
-  @Mock private CommonSettingsCache commonSettingsCache;
-  @Mock private RequestContext requestContext;
+  @InjectMocks
+  private OrderValidationService orderValidationService;
+  @Mock
+  private PoLineValidationService poLineValidationService;
+  @Mock
+  private PurchaseOrderLineHelper purchaseOrderLineHelper;
+  @Mock
+  private PurchaseOrderLineService purchaseOrderLineService;
+  @Mock
+  private CommonSettingsCache commonSettingsCache;
+  @Mock
+  private RequestContext requestContext;
   private AutoCloseable mockitoMocks;
 
   @BeforeEach
@@ -47,11 +54,9 @@ public class OrderValidationServiceTest {
     mockitoMocks = MockitoAnnotations.openMocks(this);
 
     doReturn(succeededFuture(null))
-        .when(purchaseOrderLineHelper)
-        .setTenantDefaultCreateInventoryValues(any(PoLine.class), any(JsonObject.class));
+      .when(purchaseOrderLineHelper).setTenantDefaultCreateInventoryValues(any(PoLine.class), any(JsonObject.class));
     doReturn(succeededFuture(List.of()))
-        .when(poLineValidationService)
-        .validatePoLine(any(PoLine.class), eq(requestContext));
+      .when(poLineValidationService).validatePoLine(any(PoLine.class), eq(requestContext));
   }
 
   @AfterEach
@@ -69,8 +74,7 @@ public class OrderValidationServiceTest {
     compPO.setOngoing(new Ongoing());
 
     // When
-    Future<List<Error>> future =
-        orderValidationService.validateOrderForPost(compPO, tenantConfig, requestContext);
+    Future<List<Error>> future = orderValidationService.validateOrderForPost(compPO, tenantConfig, requestContext);
 
     // Then
     if (future.failed()) {
@@ -90,8 +94,7 @@ public class OrderValidationServiceTest {
     compPO.setOrderType(ONGOING);
 
     // When
-    Future<List<Error>> future =
-        orderValidationService.validateOrderForPost(compPO, tenantConfig, requestContext);
+    Future<List<Error>> future = orderValidationService.validateOrderForPost(compPO, tenantConfig, requestContext);
 
     // Then
     if (future.failed()) {
@@ -112,12 +115,10 @@ public class OrderValidationServiceTest {
     compPO.setOngoing(new Ongoing());
 
     doReturn(succeededFuture(tenantConfig))
-        .when(commonSettingsCache)
-        .loadSettings(eq(requestContext));
+      .when(commonSettingsCache).loadSettings(eq(requestContext));
 
     // When
-    Future<List<Error>> future =
-        orderValidationService.validateOrderForPut(compPO.getId(), compPO, requestContext);
+    Future<List<Error>> future = orderValidationService.validateOrderForPut(compPO.getId(), compPO, requestContext);
 
     // Then
     if (future.failed()) {
@@ -137,12 +138,10 @@ public class OrderValidationServiceTest {
     compPO.setOrderType(ONGOING);
 
     doReturn(succeededFuture(tenantConfig))
-        .when(commonSettingsCache)
-        .loadSettings(eq(requestContext));
+      .when(commonSettingsCache).loadSettings(eq(requestContext));
 
     // When
-    Future<List<Error>> future =
-        orderValidationService.validateOrderForPut(compPO.getId(), compPO, requestContext);
+    Future<List<Error>> future = orderValidationService.validateOrderForPut(compPO.getId(), compPO, requestContext);
 
     // Then
     if (future.failed()) {
