@@ -1,16 +1,17 @@
 package org.folio.orders.utils;
 
-import static org.folio.orders.utils.QueryUtils.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import java.util.Collection;
-import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.CopilotGenerated;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
+
+import java.util.Collection;
+import java.util.List;
+
+import static org.folio.orders.utils.QueryUtils.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @CopilotGenerated(partiallyGenerated = true)
 public class QueryUtilsTest {
@@ -51,9 +52,7 @@ public class QueryUtilsTest {
 
   @Test
   void testCombineCqlExpressionsWithSortBy() {
-    var result =
-        combineCqlExpressions(
-            "or", "field1==value1", "field2==value2 sortBy field3/sort.ascending");
+    var result = combineCqlExpressions("or", "field1==value1", "field2==value2 sortBy field3/sort.ascending");
     assertEquals(result, "(field1==value1) or (field2==value2) sortBy field3/sort.ascending");
   }
 
@@ -72,9 +71,7 @@ public class QueryUtilsTest {
   }
 
   @ParameterizedTest
-  @CsvSource(
-      value = {"true,==", "false,="},
-      delimiterString = ",")
+  @CsvSource(value = {"true,==", "false,="}, delimiterString = ",")
   void testConvertFieldListToCqlQuery(boolean strictMatch, String expectedOperator) {
     var values = List.of("value1", "value2");
     var result = convertFieldListToCqlQuery(values, "fieldName", strictMatch);
@@ -82,9 +79,7 @@ public class QueryUtilsTest {
   }
 
   @ParameterizedTest
-  @CsvSource(
-      value = {"true,==", "false,="},
-      delimiterString = ",")
+  @CsvSource(value = {"true,==", "false,="}, delimiterString = ",")
   void testConvertTagListToCqlQueryWithStrictMatch(boolean strictMatch, String expectedOperator) {
     Collection<String> values = List.of("tag1", "tag2");
     String result = convertTagListToCqlQuery(values, "tagField", strictMatch);
@@ -96,4 +91,5 @@ public class QueryUtilsTest {
     var result = getCqlExpressionForFieldNullValue("fieldName");
     assertEquals(result, "cql.allRecords=1 NOT fieldName=\"\"");
   }
+
 }
