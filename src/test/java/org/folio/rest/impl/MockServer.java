@@ -60,6 +60,7 @@ import static org.folio.orders.utils.QueryUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITION_METHODS;
+import static org.folio.orders.utils.ResourcePathResolver.BATCH_TRACKING;
 import static org.folio.orders.utils.ResourcePathResolver.BUDGETS;
 import static org.folio.orders.utils.ResourcePathResolver.CONFIGURATION_ENTRIES;
 import static org.folio.orders.utils.ResourcePathResolver.CURRENT_BUDGET;
@@ -89,7 +90,7 @@ import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE
 import static org.folio.orders.utils.ResourcePathResolver.REASONS_FOR_CLOSURE;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
 import static org.folio.orders.utils.ResourcePathResolver.ROUTING_LISTS;
-import static org.folio.orders.utils.ResourcePathResolver.SETTINGS_ENTRIES;
+import static org.folio.orders.utils.ResourcePathResolver.LOCALE;
 import static org.folio.orders.utils.ResourcePathResolver.SUFFIXES;
 import static org.folio.orders.utils.ResourcePathResolver.TAGS;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
@@ -104,20 +105,20 @@ import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_IS_INACTIVE;
 import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
 import static org.folio.rest.core.exceptions.ErrorCodes.FUND_CANNOT_BE_PAID;
 import static org.folio.rest.core.exceptions.ErrorCodes.LEDGER_NOT_FOUND_FOR_TRANSACTION;
-import static org.folio.rest.impl.PoNumberApiTest.EXISTING_PO_NUMBER;
-import static org.folio.rest.impl.PoNumberApiTest.NONEXISTING_PO_NUMBER;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_VENDOR_ID;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.ID_FOR_PRINT_MONOGRAPH_ORDER;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.INACTIVE_VENDOR_ID;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.ITEMS_NOT_FOUND;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.LISTED_PRINT_MONOGRAPH_PATH;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.MOD_VENDOR_INTERNAL_ERROR_ID;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.NON_EXIST_VENDOR_ID;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.ORDER_DELETE_ERROR_TENANT;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.ORGANIZATION_NOT_VENDOR;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.PURCHASE_ORDER_ID;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.VENDOR_WITH_BAD_CONTENT;
-import static org.folio.rest.impl.ReceivingHistoryApiTest.RECEIVING_HISTORY_PURCHASE_ORDER_ID;
+import static org.folio.rest.impl.PoNumberApiIT.EXISTING_PO_NUMBER;
+import static org.folio.rest.impl.PoNumberApiIT.NONEXISTING_PO_NUMBER;
+import static org.folio.rest.impl.PurchaseOrdersApiIT.ACTIVE_VENDOR_ID;
+import static org.folio.rest.impl.PurchaseOrdersApiIT.ID_FOR_PRINT_MONOGRAPH_ORDER;
+import static org.folio.rest.impl.PurchaseOrdersApiIT.INACTIVE_VENDOR_ID;
+import static org.folio.rest.impl.PurchaseOrdersApiIT.ITEMS_NOT_FOUND;
+import static org.folio.rest.impl.PurchaseOrdersApiIT.LISTED_PRINT_MONOGRAPH_PATH;
+import static org.folio.rest.impl.PurchaseOrdersApiIT.MOD_VENDOR_INTERNAL_ERROR_ID;
+import static org.folio.rest.impl.PurchaseOrdersApiIT.NON_EXIST_VENDOR_ID;
+import static org.folio.rest.impl.PurchaseOrdersApiIT.ORDER_DELETE_ERROR_TENANT;
+import static org.folio.rest.impl.PurchaseOrdersApiIT.ORGANIZATION_NOT_VENDOR;
+import static org.folio.rest.impl.PurchaseOrdersApiIT.PURCHASE_ORDER_ID;
+import static org.folio.rest.impl.PurchaseOrdersApiIT.VENDOR_WITH_BAD_CONTENT;
+import static org.folio.rest.impl.ReceivingHistoryApiIT.RECEIVING_HISTORY_PURCHASE_ORDER_ID;
 import static org.folio.rest.impl.crud.CrudTestEntities.PREFIX;
 import static org.folio.rest.impl.crud.CrudTestEntities.REASON_FOR_CLOSURE;
 import static org.folio.rest.impl.crud.CrudTestEntities.SUFFIX;
@@ -126,11 +127,11 @@ import static org.folio.service.inventory.InventoryItemManager.ITEM_PURCHASE_ORD
 import static org.folio.service.inventory.InventoryUtils.HOLDINGS_RECORDS;
 import static org.folio.service.inventory.InventoryUtils.ITEMS;
 import static org.folio.service.inventory.InventoryUtils.REQUESTS;
-import static org.folio.service.inventory.InventoryManagerTest.HOLDING_INSTANCE_ID_2_HOLDING;
-import static org.folio.service.inventory.InventoryManagerTest.NEW_LOCATION_ID;
-import static org.folio.service.inventory.InventoryManagerTest.NON_EXISTED_NEW_HOLDING_ID;
-import static org.folio.service.inventory.InventoryManagerTest.OLD_LOCATION_ID;
-import static org.folio.service.inventory.InventoryManagerTest.ONLY_NEW_HOLDING_EXIST_ID;
+import static org.folio.service.inventory.InventoryManagerIT.HOLDING_INSTANCE_ID_2_HOLDING;
+import static org.folio.service.inventory.InventoryManagerIT.NEW_LOCATION_ID;
+import static org.folio.service.inventory.InventoryManagerIT.NON_EXISTED_NEW_HOLDING_ID;
+import static org.folio.service.inventory.InventoryManagerIT.OLD_LOCATION_ID;
+import static org.folio.service.inventory.InventoryManagerIT.ONLY_NEW_HOLDING_EXIST_ID;
 
 import io.vertx.core.MultiMap;
 
@@ -170,6 +171,7 @@ import org.folio.Organization;
 import org.folio.OrganizationCollection;
 import org.folio.helper.BaseHelper;
 import org.folio.rest.RestVerticle;
+import org.folio.rest.acq.model.BatchTracking;
 import org.folio.rest.acq.model.OrderInvoiceRelationshipCollection;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
@@ -248,7 +250,7 @@ public class MockServer {
   public static final String BASE_MOCK_DATA_PATH = "mockdata/";
   private static final String CONTRIBUTOR_NAME_TYPES_PATH = BASE_MOCK_DATA_PATH + "contributorNameTypes/contributorPersonalNameType.json";
   public static final String CONFIG_MOCK_PATH = BASE_MOCK_DATA_PATH + "configurations.entries/%s.json";
-  public static final String SETTINGS_MOCK_PATH = BASE_MOCK_DATA_PATH + "settings.entries/%s.json";
+  public static final String LOCALE_MOCK_PATH = BASE_MOCK_DATA_PATH + "locale/locale.json";
   public static final String ORDER_SETTINGS_MOCK_PATH = BASE_MOCK_DATA_PATH + "order-settings/%s.json";
   public static final String EXPORT_CONFIG_MOCK_PATH = BASE_MOCK_DATA_PATH + "data-export-spring/export-config.json";
   public static final String LOAN_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "loanTypes/";
@@ -626,6 +628,7 @@ public class MockServer {
     router.post(resourcesPath(TAGS)).handler(ctx -> handlePostGenericSubObj(ctx, TAGS));
     router.post(resourcesPath(DATA_EXPORT_SPRING_CREATE_JOB)).handler(ctx -> handlePostGenericSubObj(ctx, DATA_EXPORT_SPRING_CREATE_JOB));
     router.post(resourcesPath(DATA_EXPORT_SPRING_EXECUTE_JOB)).handler(ctx -> handlePostGenericSubObj(ctx, DATA_EXPORT_SPRING_EXECUTE_JOB));
+    router.post(resourcesPath(BATCH_TRACKING)).handler(ctx -> handlePostGenericSubObj(ctx, BATCH_TRACKING));
     // GET
     router.get(resourcePath(PURCHASE_ORDER_STORAGE)).handler(this::handleGetPurchaseOrderById);
     router.get(resourcesPath(PURCHASE_ORDER_STORAGE)).handler(this::handleGetPurchaseOrderByQuery);
@@ -699,7 +702,7 @@ public class MockServer {
     router.get(resourcesPath(WRAPPER_PIECES_STORAGE) + "/:id").handler(ctx -> handleGetJsonResource(ctx, MOCK_DATA_WRAPPER_PIECES_BY_ID_JSON));
     router.get(resourcesPath(CONFIGURATION_ENTRIES)).handler(ctx -> handleConfigurationOrSettingResponse(CONFIG_MOCK_PATH, ctx));
     router.get(resourcesPath(ORDER_SETTINGS)).handler(ctx -> handleConfigurationOrSettingResponse(ORDER_SETTINGS_MOCK_PATH, ctx));
-    router.get(resourcesPath(SETTINGS_ENTRIES)).handler(this::handleSettingResponse);
+    router.get(resourcesPath(LOCALE)).handler(ctx -> handleGetJsonResource(ctx, LOCALE_MOCK_PATH));
     router.get(resourcesPath(DATA_EXPORT_SPRING_CONFIGURATIONS)).handler(this::handleExportConfigsResponse);
     // PUT
     router.put(resourcePath(PURCHASE_ORDER_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER_STORAGE));
@@ -1667,15 +1670,6 @@ public class MockServer {
     }
   }
 
-  private void handleSettingResponse(RoutingContext ctx) {
-    try {
-      var mockData = getMockData(SETTINGS_MOCK_PATH.formatted(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10.getValue()));
-      serverResponse(ctx, 200, APPLICATION_JSON, mockData);
-    } catch (IOException e) {
-      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
-    }
-  }
-
   private void handleExportConfigsResponse(RoutingContext ctx) {
     try {
       var config = new JsonObject(getMockData(EXPORT_CONFIG_MOCK_PATH));
@@ -2514,6 +2508,7 @@ public class MockServer {
       case SUFFIXES -> Suffix.class;
       case TAGS -> Tag.class;
       case DATA_EXPORT_SPRING_CREATE_JOB, DATA_EXPORT_SPRING_EXECUTE_JOB -> Object.class;
+      case BATCH_TRACKING -> BatchTracking.class;
       default -> {
         fail("The sub-object is unknown");
         yield null;

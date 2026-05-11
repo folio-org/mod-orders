@@ -9,13 +9,19 @@ import org.folio.rest.jaxrs.model.Piece;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class PiecesHolder {
-  private Pair<CompositePurchaseOrder, PoLine> purchaseOrderPoLinePair;
+
+  private CompositePurchaseOrder purchaseOrder;
+  private PoLine poLine;
   private Map<String, List<Piece>> piecesFromStorage;
   private Map<String, List<PiecePoLineDto>> itemsToRecreate;
+  private Map<Pair<String, String>, Set<String>> piecesByHoldingIds;
+  private final Set<String> processedHoldingIds = new HashSet<>();
 
   public static class PiecePoLineDto {
     private final String poLineId;
@@ -61,8 +67,12 @@ public class PiecesHolder {
     }
   }
 
-  public Pair<CompositePurchaseOrder, PoLine> getPurchaseOrderPoLinePair() {
-    return purchaseOrderPoLinePair;
+  public CompositePurchaseOrder getPurchaseOrder() {
+    return purchaseOrder;
+  }
+
+  public PoLine getPoLine() {
+    return poLine;
   }
 
   public Map<String, List<Piece>> getPiecesFromStorage() {
@@ -73,8 +83,21 @@ public class PiecesHolder {
     return this.itemsToRecreate;
   }
 
-  public PiecesHolder withPurchaseOrderPoLinePair(Pair<CompositePurchaseOrder, PoLine> purchaseOrderPoLinePair) {
-    this.purchaseOrderPoLinePair = purchaseOrderPoLinePair;
+  public Map<Pair<String, String>, Set<String>> getPiecesByHoldingIds() {
+    return piecesByHoldingIds;
+  }
+
+  public Set<String> getProcessedHoldingIds() {
+    return processedHoldingIds;
+  }
+
+  public PiecesHolder withPurchaseOrder(CompositePurchaseOrder purchaseOrder) {
+    this.purchaseOrder = purchaseOrder;
+    return this;
+  }
+
+  public PiecesHolder withPoLine(PoLine poLine) {
+    this.poLine = poLine;
     return this;
   }
 
@@ -97,4 +120,10 @@ public class PiecesHolder {
     this.itemsToRecreate = itemsToRecreate;
     return this;
   }
+
+  public PiecesHolder withPiecesByHoldingIds(Map<Pair<String, String>, Set<String>> piecesByHoldingIds) {
+    this.piecesByHoldingIds = piecesByHoldingIds;
+    return this;
+  }
+
 }

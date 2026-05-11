@@ -159,6 +159,7 @@ public class DataImportKafkaHandlerTest {
           DataImportEventPayload payload = invocation.getArgument(0);
           // Verify headers were populated into context
           assertEquals(userId, payload.getContext().get(RestVerticle.OKAPI_USERID_HEADER));
+          assertEquals(userId, payload.getContext().get(DataImportKafkaHandler.USER_ID_KEY));
           assertEquals(requestId, payload.getContext().get(RestVerticle.OKAPI_REQUESTID_HEADER));
           assertEquals(permissions, payload.getContext().get(CreateOrderEventHandler.OKAPI_PERMISSIONS_HEADER));
           return CompletableFuture.completedFuture(payload);

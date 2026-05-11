@@ -24,7 +24,7 @@ import static org.folio.TestUtils.getMockData;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.impl.MockServer.CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL;
 import static org.folio.rest.impl.MockServer.ECS_CONSORTIUM_PIECES_JSON;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
+import static org.folio.rest.impl.PurchaseOrdersApiIT.X_OKAPI_TENANT;
 import static org.folio.service.inventory.InventoryItemManager.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;

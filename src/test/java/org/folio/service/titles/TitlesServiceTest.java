@@ -188,7 +188,7 @@ public class TitlesServiceTest {
     when(inventoryItemManager.getItemsByHoldingId(eq(HOLDING_ID_1), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture(List.of(item)));
     when(inventoryItemManager.deleteItems(eq(Collections.singletonList(ITEM_ID_1)), eq(true), any(RequestContext.class)))
-      .thenReturn(Future.succeededFuture(Collections.emptyList()));
+      .thenReturn(Future.succeededFuture());
     when(pieceStorageService.deletePiecesByIds(eq(Collections.singletonList(PIECE_ID_1)), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture());
     when(inventoryHoldingManager.deleteHoldingById(eq(HOLDING_ID_1), eq(true), any(RequestContext.class)))
@@ -224,7 +224,7 @@ public class TitlesServiceTest {
     when(inventoryItemManager.getItemsByHoldingId(eq(HOLDING_ID_1), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture(List.of(item)));
     when(inventoryItemManager.deleteItems(eq(Collections.singletonList(ITEM_ID_1)), eq(true), any(RequestContext.class)))
-      .thenReturn(Future.succeededFuture(Collections.emptyList()));
+      .thenReturn(Future.succeededFuture());
     when(pieceStorageService.deletePiecesByIds(eq(Collections.singletonList(PIECE_ID_1)), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture());
     when(inventoryHoldingManager.deleteHoldingById(eq(HOLDING_ID_1), eq(true), any(RequestContext.class)))
@@ -261,7 +261,7 @@ public class TitlesServiceTest {
     when(inventoryItemManager.getItemsByHoldingId(eq(HOLDING_ID_1), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture(List.of(item)));
     when(inventoryItemManager.deleteItems(eq(Collections.singletonList(ITEM_ID_1)), eq(true), any(RequestContext.class)))
-      .thenReturn(Future.succeededFuture(Collections.emptyList()));
+      .thenReturn(Future.succeededFuture());
     when(pieceStorageService.deletePiecesByIds(eq(Collections.singletonList(PIECE_ID_1)), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture());
     doReturn(Future.succeededFuture()).when(restClient).delete(eq(DELETE_TITLE_ENDPOINT), any(RequestContext.class));
@@ -303,7 +303,7 @@ public class TitlesServiceTest {
     when(inventoryItemManager.getItemsByHoldingId(eq(HOLDING_ID_3), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture(List.of()));
     when(inventoryItemManager.deleteItems(eq(Collections.singletonList(ITEM_ID_1)), eq(true), any(RequestContext.class)))
-      .thenReturn(Future.succeededFuture(Collections.emptyList()));
+      .thenReturn(Future.succeededFuture());
     when(pieceStorageService.deletePiecesByIds(eq(List.of(PIECE_ID_1, PIECE_ID_2, PIECE_ID_3)), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture());
     when(inventoryHoldingManager.deleteHoldingById(eq(HOLDING_ID_3), eq(true), any(RequestContext.class)))

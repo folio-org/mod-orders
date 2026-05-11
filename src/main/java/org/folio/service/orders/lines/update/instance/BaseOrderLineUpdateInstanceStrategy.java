@@ -7,13 +7,12 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
 import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.acq.Location;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.lines.update.OrderLineUpdateInstanceStrategy;
 
-import java.util.Collections;
 import java.util.List;
 
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccessNonNull;

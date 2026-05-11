@@ -186,13 +186,11 @@ public class OpenCompositeOrderManager {
       .toList();
     return Future.all(futures).mapEmpty();
   }
-  
+
   private Future<Void> rollbackInventoryAndDeleteOrphanedInstances(CompositePurchaseOrder compPO,
                                                                      Set<String> createdInstanceIds,
                                                                      RequestContext requestContext) {
     return unOpenCompositeOrderManager.rollbackInventory(compPO, requestContext)
-      .onSuccess(v -> logger.info("Successfully rolled back inventory changes, order id={}", compPO.getId()))
-      .onFailure(t -> logger.error("Error when trying to rollback inventory changes, order id={}", compPO.getId(), t))
       .compose(v -> deleteOrphanedInstancesForOrder(compPO, createdInstanceIds, requestContext));
   }
 

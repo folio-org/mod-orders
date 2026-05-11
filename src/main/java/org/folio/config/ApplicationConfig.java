@@ -20,6 +20,7 @@ import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.CirculationRequestsRetriever;
 import org.folio.service.ExportHistoryService;
 import org.folio.service.FundsDistributionService;
+import org.folio.service.HoldingDeletionService;
 import org.folio.service.OrderTemplatesService;
 import org.folio.service.PrefixService;
 import org.folio.service.ProtectionService;
@@ -27,9 +28,11 @@ import org.folio.service.ReasonForClosureService;
 import org.folio.service.SuffixService;
 import org.folio.service.TagService;
 import org.folio.service.UserService;
+import org.folio.service.batch.BatchTrackingService;
 import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.caches.ExportConfigsCache;
 import org.folio.service.caches.InventoryCache;
+import org.folio.service.consortium.ConsortiumUserTenantService;
 import org.folio.service.dataexport.ExportConfigsRetriever;
 import org.folio.service.orders.HoldingDetailService;
 import org.folio.service.settings.CommonSettingsRetriever;
@@ -425,13 +428,11 @@ public class ApplicationConfig {
   }
 
   @Bean
-  HoldingDetailService holdingsDetailService(ConsortiumConfigurationService consortiumConfigurationService,
-                                             ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever,
+  HoldingDetailService holdingsDetailService(ConsortiumUserTenantService consortiumUserTenantService,
                                              PurchaseOrderLineService purchaseOrderLineService,
                                              PieceStorageService pieceStorageService,
                                              InventoryItemManager inventoryItemManager) {
-    return new HoldingDetailService(consortiumConfigurationService, consortiumUserTenantsRetriever,
-                                    purchaseOrderLineService, pieceStorageService, inventoryItemManager);
+    return new HoldingDetailService(consortiumUserTenantService, purchaseOrderLineService, pieceStorageService, inventoryItemManager);
   }
 
   @Bean
@@ -595,11 +596,11 @@ public class ApplicationConfig {
                                                           InventoryItemManager inventoryItemManager,
                                                           InventoryHoldingManager inventoryHoldingManager,
                                                           PieceStorageService pieceStorageService,
-                                                          PurchaseOrderStorageService purchaseOrderStorageService,
-                                                          ProtectionService protectionService,
-                                                          CirculationRequestsRetriever circulationRequestsRetriever) {
+                                                          CirculationRequestsRetriever circulationRequestsRetriever,
+                                                          HoldingDeletionService holdingDeletionService) {
     return new UnOpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory, inventoryItemManager,
-      inventoryHoldingManager, pieceStorageService, purchaseOrderStorageService, protectionService, circulationRequestsRetriever);
+                                           inventoryHoldingManager, pieceStorageService, circulationRequestsRetriever,
+                                           holdingDeletionService);
   }
 
   @Bean
@@ -618,10 +619,27 @@ public class ApplicationConfig {
   }
 
   @Bean
-  PieceUpdateInventoryService pieceUpdateInventoryService(InventoryItemManager inventoryItemManager,
-                                                          InventoryHoldingManager inventoryHoldingManager,
-                                                          PieceStorageService pieceStorageService) {
-    return new PieceUpdateInventoryService(inventoryItemManager, inventoryHoldingManager, pieceStorageService);
+  ConsortiumUserTenantService consortiumUserTenantService(ConsortiumConfigurationService consortiumConfigurationService,
+                                                          ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever) {
+    return new ConsortiumUserTenantService(consortiumConfigurationService, consortiumUserTenantsRetriever);
+  }
+
+  @Bean
+  HoldingDeletionService holdingDeletionService(ConsortiumUserTenantService consortiumUserTenantService,
+                                                InventoryHoldingManager inventoryHoldingManager,
+                                                InventoryItemManager inventoryItemManager,
+                                                PieceStorageService pieceStorageService,
+                                                PurchaseOrderLineService purchaseOrderLineService) {
+    return new HoldingDeletionService(consortiumUserTenantService,
+                                      inventoryHoldingManager, inventoryItemManager,
+                                      pieceStorageService, purchaseOrderLineService);
+  }
+
+  @Bean
+  PieceUpdateInventoryService pieceUpdateInventoryService(InventoryHoldingManager inventoryHoldingManager,
+                                                          InventoryItemManager inventoryItemManager,
+                                                          HoldingDeletionService holdingDeletionService) {
+    return new PieceUpdateInventoryService(inventoryHoldingManager, inventoryItemManager, holdingDeletionService);
   }
 
   @Bean
@@ -744,14 +762,15 @@ public class ApplicationConfig {
                                           ProtectionService protectionService, InventoryItemStatusSyncService itemStatusSyncService,
                                           OpenCompositeOrderManager openCompositeOrderManager, PurchaseOrderStorageService purchaseOrderStorageService,
                                           CommonSettingsCache commonSettingsCache, PoNumberHelper poNumberHelper,
-                                          OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator, ReOpenCompositeOrderManager reOpenCompositeOrderManager,
-                                          OrderValidationService orderValidationService, PoLineValidationService poLineValidationService) {
+                                          ReOpenCompositeOrderManager reOpenCompositeOrderManager,
+                                          OrderValidationService orderValidationService, PoLineValidationService poLineValidationService,
+                                          UnOpenCompositeOrderManager unOpenCompositeOrderManager) {
     return new PurchaseOrderHelper(purchaseOrderLineHelper, orderLinesSummaryPopulateService, encumbranceService,
       combinedPopulateService, encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, tagService,
       purchaseOrderLineService, titlesService, protectionService, itemStatusSyncService,
       openCompositeOrderManager, purchaseOrderStorageService, commonSettingsCache,
-      poNumberHelper, openCompositeOrderFlowValidator, reOpenCompositeOrderManager,
-      orderValidationService, poLineValidationService);
+      poNumberHelper, reOpenCompositeOrderManager,
+      orderValidationService, poLineValidationService, unOpenCompositeOrderManager);
   }
 
   @Bean
@@ -849,9 +868,10 @@ public class ApplicationConfig {
                                                                              InventoryItemManager inventoryItemManager,
                                                                              InventoryHoldingManager inventoryHoldingManager,
                                                                              PieceStorageService pieceStorageService,
-                                                                             PurchaseOrderLineService purchaseOrderLineService) {
+                                                                             BatchTrackingService batchTrackingService,
+                                                                             HoldingDeletionService holdingDeletionService) {
     return new WithHoldingOrderLineUpdateInstanceStrategy(inventoryInstanceManager, inventoryItemManager,
-      inventoryHoldingManager, pieceStorageService, purchaseOrderLineService);
+      inventoryHoldingManager, pieceStorageService, batchTrackingService, holdingDeletionService);
   }
 
   @Bean
@@ -921,5 +941,10 @@ public class ApplicationConfig {
   OrderFiscalYearService orderFiscalYearService(TransactionService transactionService, FiscalYearService fiscalYearService,
     FundService fundService, PurchaseOrderStorageService purchaseOrderStorageService) {
     return new OrderFiscalYearService(transactionService, fiscalYearService, fundService, purchaseOrderStorageService);
+  }
+
+  @Bean
+  BatchTrackingService batchTrackingService(RestClient restClient) {
+    return new BatchTrackingService(restClient);
   }
 }

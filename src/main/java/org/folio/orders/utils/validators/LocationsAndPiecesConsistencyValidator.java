@@ -14,9 +14,9 @@ import java.util.Optional;
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceCollection;
+import org.folio.rest.jaxrs.model.acq.Location;
 
 public class LocationsAndPiecesConsistencyValidator {
 

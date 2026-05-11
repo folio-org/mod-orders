@@ -8,7 +8,6 @@ import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.Pair;
 import org.folio.models.PoLineLocationsPair;
 import org.folio.models.pieces.PieceUpdateHolder;
 import org.folio.models.pieces.PiecesHolder;
@@ -24,7 +23,6 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
@@ -38,6 +36,7 @@ import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
 import org.folio.rest.jaxrs.model.ToBeReceived;
+import org.folio.rest.jaxrs.model.acq.Location;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.ProtectionService;
 import org.folio.service.inventory.InventoryHoldingManager;
@@ -86,6 +85,8 @@ import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_NOT_RETRIEVED;
 import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_POL_MISMATCH;
 import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_UPDATE_FAILED;
 import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_PERMISSIONS;
+import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.CLOSED;
+import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.CLAIM_DELAYED;
 import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.CLAIM_SENT;
 import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.EXPECTED;
@@ -96,6 +97,7 @@ import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.PARTIALLY_RECEIVED;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_HOLDINGS_RECORD_ID;
+import static org.folio.service.orders.utils.StatusUtils.poLinePaymentStatusIsFinal;
 
 public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
 
@@ -161,14 +163,15 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
    * @param requestContext The request context that holds the headers needed proper query resolution
    * @return A pair consistigng of a purchase order and its order line
    */
-  public Future<Void> findAndSetPurchaseOrderPoLinePair(String poLineId, PiecesHolder holder, RequestContext requestContext) {
+  public Future<Void> findAndSetPurchaseOrderAndPoLine(String poLineId, PiecesHolder holder, RequestContext requestContext) {
     return purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
       .compose(poLine -> purchaseOrderStorageService.getPurchaseOrderByIdAsJson(poLine.getPurchaseOrderId(), requestContext)
         .map(HelperUtils::convertToCompositePurchaseOrder)
         .map(purchaseOrder -> {
           logger.info("findAndSetPurchaseOrderPoLinePair:: Found purchase order & poLine, order id: {}, poLineId: {}",
             purchaseOrder.getId(), poLine.getId());
-          holder.withPurchaseOrderPoLinePair(Pair.of(purchaseOrder, poLine));
+          holder.withPurchaseOrder(purchaseOrder)
+            .withPoLine(poLine);
           return null;
         }));
   }
@@ -461,6 +464,27 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     return receivedPiecesQuantity == 0 ? AWAITING_RECEIPT : PARTIALLY_RECEIVED;
   }
 
+  protected boolean skipOrderStatusUpdate(CompositePurchaseOrder compPo, List<PoLine> poLines, Map<String, List<Piece>> piecesGroupedByPoLine) {
+    if (CollectionUtils.isEmpty(poLines)) {
+      logger.info("updateOrderStatus::poLines empty, returning");
+      return true;
+    }
+    List<Piece> pieces = piecesGroupedByPoLine.values().stream().flatMap(List::stream).toList();
+    if (compPo.getWorkflowStatus() == CLOSED && poLines.stream().anyMatch(poLine -> !poLinePaymentStatusIsFinal(poLine))) {
+      logger.info("updateOrderStatus::order is closed and a payment status is non-final, skip order status update");
+      return true;
+    }
+    if (compPo.getWorkflowStatus() == CLOSED && pieces.stream().allMatch(piece -> piece.getReceivingStatus() == RECEIVED)) {
+      logger.info("updateOrderStatus::pieces are received and order is already closed, skip order status update");
+      return true;
+    }
+    if (compPo.getWorkflowStatus() == OPEN && pieces.stream().allMatch(piece -> piece.getReceivingStatus() == EXPECTED)) {
+      logger.info("updateOrderStatus::pieces are expected and order is already open, skip order status update");
+      return true;
+    }
+    return false;
+  }
+
   //-------------------------------------------------------------------------------------
   /*
   filterMissingLocations
@@ -538,7 +562,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     List<String> poLineIds = new ArrayList<>(piecesGroupedByPoLine.keySet());
 
     return getPoLineAndTitleById(poLineIds, requestContext)
-      .compose(poLineAndTitleById -> processHoldingsUpdate(piecesGroupedByPoLine, poLineAndTitleById, requestContext)
+      .compose(poLineAndTitleById -> processHoldingsUpdate(piecesGroupedByPoLine, holder, poLineAndTitleById, requestContext)
         .compose(voidResult -> recreateItemRecords(piecesGroupedByPoLine, holder, requestContext))
         .compose(voidResult -> getItemRecords(piecesGroupedByPoLine, piecesByItemId, requestContext))
         .compose(items -> processItemsUpdate(piecesGroupedByPoLine, holder, piecesByItemId, items, poLineAndTitleById, requestContext))
@@ -618,6 +642,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   }
 
   private Future<Void> processHoldingsUpdate(Map<String, List<Piece>> piecesGroupedByPoLine,
+                                             PiecesHolder holder,
                                              PoLineAndTitleById poLinesAndTitlesById,
                                              RequestContext requestContext) {
     List<Future<Boolean>> futuresForHoldingsUpdates = new ArrayList<>();
@@ -641,7 +666,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
         logger.info("processHoldingsUpdate:: Updating piece holding, pieceId: {}, itemId: {}, locationId: {}, holdingId: {}, updateHoldingRequired: {}",
           piece.getId(), piece.getItemId(), getLocationId(piece), getHoldingId(piece), updateRequired);
         if (updateRequired) {
-          futuresForHoldingsUpdates.add(createHoldingsForChangedLocations(piece, title.getInstanceId(), requestContext));
+          futuresForHoldingsUpdates.add(createHoldingsForChangedLocations(piece, title.getInstanceId(), holder, requestContext));
         }
       });
 
@@ -657,7 +682,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       .mapEmpty();
   }
 
-  private Future<Boolean> createHoldingsForChangedLocations(Piece piece, String instanceId, RequestContext requestContext) {
+  private Future<Boolean> createHoldingsForChangedLocations(Piece piece, String instanceId, PiecesHolder holder, RequestContext requestContext) {
     if (!ifHoldingNotProcessed(piece.getId()) || isRevertToOnOrder(piece)) {
       return Future.succeededFuture(true);
     }
@@ -677,6 +702,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
           logger.info("createHoldingsForChangedLocations:: Saving newly created or found holding, pieceId: {}, itemId: {}, locationId: {}, old holdingId: {}, new holdingId: {}",
             piece.getId(), piece.getItemId(), piece.getLocationId(), piece.getHoldingId(), createdHoldingId);
           piece.withLocationId(null).setHoldingId(createdHoldingId);
+          holder.getProcessedHoldingIds().add(createdHoldingId);
         }
         return Future.succeededFuture(true);
       })
@@ -770,7 +796,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
                                                               PoLineAndTitleById poLinesAndTitlesById,
                                                               RequestContext requestContext) {
     List<Future<Boolean>> futuresForItemsUpdates = new ArrayList<>();
-
     if (piecesByItemId.isEmpty()) {
       return Future.succeededFuture(piecesGroupedByPoLine);
     }
@@ -998,5 +1023,4 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     itemResult.setProcessingStatus(status);
     result.getReceivingItemResults().add(itemResult);
   }
-
 }

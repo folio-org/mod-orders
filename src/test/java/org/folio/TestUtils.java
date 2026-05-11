@@ -11,7 +11,7 @@ import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.serverRqRs;
-import static org.folio.rest.impl.TitlesApiTest.SAMPLE_TITLE_ID;
+import static org.folio.rest.impl.TitlesApiIT.SAMPLE_TITLE_ID;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
@@ -43,7 +43,6 @@ import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -51,6 +50,7 @@ import org.folio.rest.jaxrs.model.ReceivedItem;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
 import org.folio.rest.jaxrs.model.ToBeReceived;
+import org.folio.rest.jaxrs.model.acq.Location;
 
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
@@ -274,8 +274,7 @@ public final class TestUtils {
   public static <T, C> T callPrivateMethod(C object, String methodName, Class<T> returnType, Class<?>[] paramTypes, Object[] params)
     throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
 
-    var method = object.getClass()
-      .getDeclaredMethod(methodName, paramTypes);
+    var method = object.getClass().getDeclaredMethod(methodName, paramTypes);
     method.setAccessible(true);
     return returnType.cast(method.invoke(object, params));
   }

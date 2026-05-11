@@ -22,6 +22,7 @@ public class ResourcePathResolver {
   public static final String ACQUISITIONS_UNITS = "acquisitionsUnits";
   public static final String ACQUISITION_METHODS = "acquisitionMethods";
   public static final String ACQUISITIONS_MEMBERSHIPS = "acquisitionsMemberships";
+  public static final String BATCH_TRACKING = "batchTracking";
   public static final String PURCHASE_ORDER_STORAGE = "purchaseOrder";
   public static final String PIECES_STORAGE = "pieces";
   public static final String PIECES_STORAGE_BATCH = "pieces-batch";
@@ -47,7 +48,7 @@ public class ResourcePathResolver {
   public static final String FINANCE_EXCHANGE_RATE = "finance/exchange-rate";
   public static final String EXPENSE_CLASSES_URL = "finance.expense-classes";
   public static final String CONFIGURATION_ENTRIES = "configurations.entries";
-  public static final String SETTINGS_ENTRIES = "settings.entries";
+  public static final String LOCALE = "locale";
   public static final String LEDGER_FY_ROLLOVERS = "finance.ledger-rollovers";
   public static final String LEDGER_FY_ROLLOVER_ERRORS = "finance.ledger-rollovers-errors";
   public static final String LEDGER_CURRENT_FISCAL_YEAR = "finance.ledger.current-fiscal-year";
@@ -73,6 +74,7 @@ public class ResourcePathResolver {
     apis.put(ACQUISITIONS_UNITS, "/acquisitions-units-storage/units");
     apis.put(ACQUISITION_METHODS, "/orders-storage/acquisition-methods");
     apis.put(ACQUISITIONS_MEMBERSHIPS, "/acquisitions-units-storage/memberships");
+    apis.put(BATCH_TRACKING, "/orders-storage/batch-tracking");
     apis.put(PO_LINES_STORAGE, "/orders-storage/po-lines");
     apis.put(PO_LINES_BATCH_STORAGE, "/orders-storage/po-lines-batch");
     apis.put(PO_LINES_BUSINESS, "/orders/order-lines");
@@ -103,7 +105,7 @@ public class ResourcePathResolver {
     apis.put(FINANCE_EXCHANGE_RATE, "/finance/exchange-rate");
     apis.put(EXPENSE_CLASSES_URL, "/finance/expense-classes");
     apis.put(CONFIGURATION_ENTRIES, "/configurations/entries");
-    apis.put(SETTINGS_ENTRIES, "/settings/entries");
+    apis.put(LOCALE, "/locale");
     apis.put(LEDGER_FY_ROLLOVERS, "/finance/ledger-rollovers");
     apis.put(LEDGER_FY_ROLLOVER_ERRORS, "/finance/ledger-rollovers-errors");
     apis.put(LEDGER_CURRENT_FISCAL_YEAR, "/finance/ledgers/{id}/current-fiscal-year");

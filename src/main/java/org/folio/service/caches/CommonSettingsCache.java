@@ -13,17 +13,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import static org.folio.orders.utils.CacheUtils.buildAsyncCache;
+import static org.folio.orders.utils.ResourcePathResolver.LOCALE;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_SETTINGS;
-import static org.folio.orders.utils.ResourcePathResolver.SETTINGS_ENTRIES;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
 @Log4j2
 @Component
 @RequiredArgsConstructor
 public class CommonSettingsCache extends AbstractConfigCache {
-
-  public static final String GLOBAL_SETTINGS_QUERY = "(scope==stripes-core.prefs.manage and key==tenantLocaleSettings)";
-  public static final String TENANT_LOCALE_SETTINGS = "tenantLocaleSettings";
 
   private final CommonSettingsRetriever commonSettingsRetriever;
   private AsyncCache<String, JsonObject> settingsCache;
@@ -49,12 +46,12 @@ public class CommonSettingsCache extends AbstractConfigCache {
   }
 
   public Future<String> getSystemCurrency(RequestContext requestContext) {
-    return cacheData(resourcesPath(SETTINGS_ENTRIES), GLOBAL_SETTINGS_QUERY, systemCurrencyCache,
+    return cacheData(resourcesPath(LOCALE), null, systemCurrencyCache,
       commonSettingsRetriever::getSystemCurrency, byPassCache, requestContext);
   }
 
   public Future<String> getSystemTimeZone(RequestContext requestContext) {
-    return cacheData(resourcesPath(SETTINGS_ENTRIES), GLOBAL_SETTINGS_QUERY, systemTimezoneCache,
+    return cacheData(resourcesPath(LOCALE), null, systemTimezoneCache,
       commonSettingsRetriever::getSystemTimeZone, byPassCache, requestContext);
   }
 

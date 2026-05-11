@@ -32,8 +32,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.models.pieces.OpenOrderPieceHolder;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.acq.Location;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.PieceUtil;
 

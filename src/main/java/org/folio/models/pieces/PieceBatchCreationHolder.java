@@ -18,11 +18,6 @@ public class PieceBatchCreationHolder extends BasePieceFlowHolder {
     return createItem;
   }
 
-  public PieceBatchCreationHolder withPieceToCreate(List<Piece> piecesToCreate) {
-    this.piecesToCreate = piecesToCreate;
-    return this;
-  }
-
   public PieceBatchCreationHolder withPieceToCreate(PieceCollection pieceCollection) {
     this.piecesToCreate = pieceCollection.getPieces();
     return this;

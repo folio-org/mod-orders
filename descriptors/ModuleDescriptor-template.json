@@ -29,7 +29,7 @@
             "orders.item.post"
           ],
           "permissionsDesired": [
-            "orders.acquisitions-units-assignments.assign",
+            "orders.acquisitions-units-assignments.create.execute",
             "orders.item.approve"
           ],
           "modulePermissions": [
@@ -57,7 +57,7 @@
             "orders-storage.titles.collection.get",
             "orders-storage.order-invoice-relationships.collection.get",
             "orders-storage.settings.collection.get",
-            "mod-settings.global.read.stripes-core.prefs.manage",
+            "locale.item.get",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
             "invoice.invoices.collection.get",
@@ -83,7 +83,7 @@
             "orders.item.put"
           ],
           "permissionsDesired": [
-            "orders.acquisitions-units-assignments.manage",
+            "orders.acquisitions-units-assignments.manage.execute",
             "orders.item.approve",
             "orders.item.unopen",
             "orders.item.reopen"
@@ -192,7 +192,7 @@
             "orders-storage.po-lines.collection.get",
             "orders-storage.po-lines.item.post",
             "orders-storage.settings.collection.get",
-            "mod-settings.global.read.stripes-core.prefs.manage",
+            "locale.item.get",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
             "inventory.instances.item.get",
@@ -219,7 +219,7 @@
             "orders-storage.purchase-orders.item.get",
             "orders-storage.titles.collection.get",
             "orders-storage.settings.collection.get",
-            "mod-settings.global.read.stripes-core.prefs.manage",
+            "locale.item.get",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get"
           ]
@@ -264,7 +264,7 @@
             "orders-storage.purchase-orders.item.put",
             "orders-storage.titles.collection.get",
             "orders-storage.settings.collection.get",
-            "mod-settings.global.read.stripes-core.prefs.manage",
+            "locale.item.get",
             "inventory-storage.identifier-types.collection.get",
             "inventory.items.item.put",
             "inventory.items.collection.get",
@@ -326,10 +326,11 @@
             "orders-storage.po-lines.item.get",
             "orders-storage.po-lines.item.put",
             "orders-storage.pieces.collection.get",
+            "orders-storage.batch-tracking.item.post",
             "user-tenants.collection.get",
             "consortia.sharing-instances.item.post",
             "orders-storage.settings.collection.get",
-            "mod-settings.global.read.stripes-core.prefs.manage"
+            "locale.item.get"
           ]
         },
         {
@@ -418,7 +419,7 @@
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
             "orders-storage.settings.collection.get",
-            "mod-settings.global.read.stripes-core.prefs.manage",
+            "locale.item.get",
             "inventory.instances.item.get",
             "inventory.instances.item.post",
             "inventory.instances.collection.get",
@@ -514,7 +515,7 @@
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
             "orders-storage.settings.collection.get",
-            "mod-settings.global.read.stripes-core.prefs.manage",
+            "locale.item.get",
             "inventory.items.item.put",
             "inventory.items.collection.get",
             "inventory-storage.holdings-sources.collection.get",
@@ -562,7 +563,7 @@
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
             "orders-storage.settings.collection.get",
-            "mod-settings.global.read.stripes-core.prefs.manage",
+            "locale.item.get",
             "inventory.instances.collection.get",
             "inventory.instances.item.get",
             "inventory.instances.item.post",
@@ -580,6 +581,8 @@
             "inventory-storage.instance-types.collection.get",
             "inventory-storage.instance-statuses.collection.get",
             "inventory-storage.contributor-name-types.collection.get",
+            "finance.funds.budget.item.get",
+            "finance.fiscal-years.item.get",
             "finance.transactions.batch.execute",
             "finance-storage.ledgers.collection.get",
             "orders-storage.pieces.item.get",
@@ -637,7 +640,7 @@
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
             "orders-storage.settings.collection.get",
-            "mod-settings.global.read.stripes-core.prefs.manage",
+            "locale.item.get",
             "inventory.items.item.put",
             "inventory.items.collection.get",
             "inventory-storage.holdings-sources.collection.get",
@@ -904,7 +907,7 @@
           "methods": ["POST"],
           "pathPattern": "/orders/titles",
           "permissionsRequired": ["orders.titles.item.post"],
-          "permissionsDesired": ["titles.acquisitions-units-assignments.assign"],
+          "permissionsDesired": ["titles.acquisitions-units-assignments.create.execute"],
           "modulePermissions": [
             "orders-storage.titles.collection.get",
             "orders-storage.titles.item.post",
@@ -920,7 +923,7 @@
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
             "orders-storage.settings.collection.get",
-            "mod-settings.global.read.stripes-core.prefs.manage"
+            "locale.item.get"
           ]
         },
         {
@@ -933,7 +936,7 @@
           "methods": ["PUT"],
           "pathPattern": "/orders/titles/{id}",
           "permissionsRequired": ["orders.titles.item.put"],
-          "permissionsDesired": ["titles.acquisitions-units-assignments.manage"],
+          "permissionsDesired": ["titles.acquisitions-units-assignments.manage.execute"],
           "modulePermissions": [
             "orders-storage.titles.item.get",
             "orders-storage.titles.item.put",
@@ -945,7 +948,7 @@
             "inventory-storage.contributor-name-types.collection.get",
             "user-tenants.collection.get",
             "orders-storage.settings.collection.get",
-            "mod-settings.global.read.stripes-core.prefs.manage",
+            "locale.item.get",
             "consortia.sharing-instances.item.post",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get"
@@ -966,7 +969,7 @@
             "inventory-storage.items.collection.get",
             "inventory-storage.items.collection.delete",
             "orders-storage.settings.collection.get",
-            "mod-settings.global.read.stripes-core.prefs.manage",
+            "locale.item.get",
             "orders-storage.settings.collection.get",
             "user-tenants.collection.get",
             "acquisitions-units-storage.units.collection.get",
@@ -1105,7 +1108,7 @@
           ],
           "modulePermissions": [
             "orders-storage.settings.collection.get",
-            "mod-settings.global.read.stripes-core.prefs.manage",
+            "locale.item.get",
             "finance-storage.funds.collection.get",
             "finance.exchange-rate.item.get",
             "finance.transactions.batch.execute",
@@ -1296,7 +1299,7 @@
             "pieces.send-claims.collection.post"
           ],
           "modulePermissions": [
-            "mod-settings.global.read.stripes-core.prefs.manage",
+            "locale.item.get",
             "orders-storage.pieces.collection.get",
             "orders-storage.pieces.item.put",
             "orders-storage.po-lines.item.get",
@@ -1353,8 +1356,8 @@
       "version": "1.0"
     },
     {
-      "id": "settings",
-      "version": "1.2"
+      "id": "locale",
+      "version": "1.0"
     },
     {
       "id": "configuration",
@@ -1482,6 +1485,10 @@
     },
     {
       "id": "orders-storage.settings",
+      "version": "1.0"
+    },
+    {
+      "id": "orders-storage.batch-tracking",
       "version": "1.0"
     },
     {
@@ -1868,41 +1875,45 @@
       "replaces": ["orders.bypass-acquisition-units"]
     },
     {
-      "permissionName": "orders.acquisitions-units-assignments.assign",
+      "permissionName": "orders.acquisitions-units-assignments.create.execute",
       "displayName": "Acquisitions unit assignment - create unit assignment",
-      "description": "Assign new order to acquisitions units"
+      "description": "Assign new order to acquisitions units",
+      "replaces": ["orders.acquisitions-units-assignments.assign"]
     },
     {
-      "permissionName": "orders.acquisitions-units-assignments.manage",
+      "permissionName": "orders.acquisitions-units-assignments.manage.execute",
       "displayName": "Acquisitions units assignment - manage unit assignments",
-      "description": "Manage unit assignments during orders update"
+      "description": "Manage unit assignments during orders update",
+      "replaces": ["orders.acquisitions-units-assignments.manage"]
     },
     {
       "permissionName": "orders.acquisitions-units-assignments.all",
       "displayName": "All order acquisitions-unit-assignments permissions",
       "description": "All permissions for the acquisitions-unit-assignments",
       "subPermissions": [
-        "orders.acquisitions-units-assignments.assign",
-        "orders.acquisitions-units-assignments.manage"
+        "orders.acquisitions-units-assignments.create.execute",
+        "orders.acquisitions-units-assignments.manage.execute"
       ]
     },
     {
-      "permissionName": "titles.acquisitions-units-assignments.assign",
+      "permissionName": "titles.acquisitions-units-assignments.create.execute",
       "displayName": "Acquisitions units assignment - create title unit assignments",
-      "description": "Assign new title to acquisition units"
+      "description": "Assign new title to acquisition units",
+      "replaces": ["titles.acquisitions-units-assignments.assign"]
     },
     {
-      "permissionName": "titles.acquisitions-units-assignments.manage",
+      "permissionName": "titles.acquisitions-units-assignments.manage.execute",
       "displayName": "Acquisitions units assignment - manage title unit assignments",
-      "description": "Manage acq unit assignments during title update"
+      "description": "Manage acq unit assignments during title update",
+      "replaces": ["titles.acquisitions-units-assignments.manage"]
     },
     {
       "permissionName": "titles.acquisitions-units-assignments.all",
       "displayName": "All titles acquisitions-unit-assignments permissions",
       "description": "All permissions for the title acquisitions-unit-assignments",
       "subPermissions": [
-        "titles.acquisitions-units-assignments.assign",
-        "titles.acquisitions-units-assignments.manage"
+        "titles.acquisitions-units-assignments.create.execute",
+        "titles.acquisitions-units-assignments.manage.execute"
       ]
     },
     {
@@ -2263,7 +2274,7 @@
         "orders-storage.titles.item.get",
         "orders-storage.order-invoice-relationships.collection.get",
         "orders-storage.settings.collection.get",
-        "mod-settings.global.read.stripes-core.prefs.manage",
+        "locale.item.get",
         "finance.funds.budget.item.get",
         "finance.funds.collection.get",
         "finance.funds.item.get",
@@ -2333,7 +2344,7 @@
         "orders-storage.po-lines.item.get",
         "orders-storage.purchase-orders.item.get",
         "orders-storage.settings.collection.get",
-        "mod-settings.global.read.stripes-core.prefs.manage",
+        "locale.item.get",
         "finance.funds.budget.item.get",
         "finance.funds.collection.get",
         "finance.budgets.collection.get",
@@ -2397,7 +2408,7 @@
       "permissions": [
         "converter-storage.jobprofilesnapshots.get",
         "orders-storage.settings.collection.get",
-        "mod-settings.global.read.stripes-core.prefs.manage",
+        "locale.item.get",
         "finance-storage.fiscal-years.item.get",
         "acquisitions-units.memberships.collection.get",
         "acquisitions-units.units.collection.get",

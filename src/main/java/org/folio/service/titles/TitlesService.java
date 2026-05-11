@@ -331,7 +331,7 @@ public class TitlesService {
       return Future.succeededFuture();
     }
 
-    List<Future<List<Void>>> deleteItemFutures = holdingIds.stream()
+    List<Future<Void>> deleteItemFutures = holdingIds.stream()
       .map(holdingId -> inventoryItemManager.getItemsByHoldingId(holdingId, tenantContext)
         .compose(items -> {
           if (items.isEmpty()) {

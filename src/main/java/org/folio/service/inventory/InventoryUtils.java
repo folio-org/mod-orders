@@ -273,12 +273,11 @@ public class InventoryUtils {
   }
 
   private static boolean isOrderClosedOrPoLineCancelled(PiecesHolder holder) {
-    var orderPoLinePair = holder.getPurchaseOrderPoLinePair();
-    if (Objects.isNull(orderPoLinePair)) {
+    var purchaseOrder = holder.getPurchaseOrder();
+    if (Objects.isNull(purchaseOrder)) {
       return false;
     }
-    var purchaseOrder = orderPoLinePair.getKey();
-    var poLine = orderPoLinePair.getValue();
+    var poLine = holder.getPoLine();
     return isPurchaseOrderClosedOrPoLineCancelled(purchaseOrder, poLine);
   }
 

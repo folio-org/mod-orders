@@ -5,7 +5,6 @@ import java.util.List;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
 
@@ -15,6 +14,7 @@ public abstract class BasePieceFlowHolder {
 
   private PoLine compositePoLineToSave;
   private Title title;
+  private boolean lineUpdated = false;
 
   public BasePieceFlowHolder() {
 
@@ -32,6 +32,12 @@ public abstract class BasePieceFlowHolder {
     return this;
   }
 
+  public BasePieceFlowHolder withOrderInformation(CompositePurchaseOrder originPurchaseOrder, CompositePurchaseOrder purchaseOrderToSave) {
+    this.originPurchaseOrder = originPurchaseOrder;
+    this.purchaseOrderToSave =  purchaseOrderToSave;
+    return this;
+  }
+
   public BasePieceFlowHolder withPoLineOnly(PoLine compositePoLineToSave) {
     this.compositePoLineToSave = compositePoLineToSave;
     return this;
@@ -40,6 +46,10 @@ public abstract class BasePieceFlowHolder {
   public BasePieceFlowHolder withTitleInformation(Title title) {
     this.title = title;
     return this;
+  }
+
+  public void setLineUpdated(boolean lineUpdated) {
+    this.lineUpdated = lineUpdated;
   }
 
   public CompositePurchaseOrder getOriginPurchaseOrder() {
@@ -69,4 +79,7 @@ public abstract class BasePieceFlowHolder {
     return title;
   }
 
+  public boolean getLineUpdated() {
+    return lineUpdated;
+  }
 }

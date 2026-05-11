@@ -31,9 +31,9 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Physical;
+import org.folio.rest.jaxrs.model.acq.Location;
 import org.folio.rest.tools.parser.JsonPathParser;
 
 import io.vertx.core.json.JsonArray;
@@ -62,9 +62,8 @@ public final class PoLineCommonUtil {
     return poNumber + DASH_SEPARATOR + sequence;
   }
 
-  public static List<PoLine> sortPoLinesByPoLineNumber(List<PoLine> poLines) {
+  public static void sortPoLinesByPoLineNumber(List<PoLine> poLines) {
     poLines.sort(PoLineCommonUtil::comparePoLinesByPoLineNumber);
-    return poLines;
   }
 
   private static int comparePoLinesByPoLineNumber(PoLine poLine1, PoLine poLine2) {
