@@ -309,4 +309,25 @@ public class FiscalYearServiceTest {
         vertxTestContext.completeNow();
       });
   }
+
+    @Test
+  void extractCurrentFiscalYearIdShouldReturnFirstYearWhenConditionsNotMet() {
+    // TestMate-351f61f7028d5280e6e44dba3d350624
+    // Given
+    String firstYearId = "11111111-1111-1111-1111-111111111111";
+    String secondYearId = "22222222-2222-2222-2222-222222222222";
+    FiscalYear firstYear = new FiscalYear()
+      .withId(firstYearId)
+      .withPeriodStart(Date.from(Instant.parse("2020-01-01T00:00:00Z")))
+      .withPeriodEnd(Date.from(Instant.parse("2030-12-31T23:59:59Z")));
+    FiscalYear secondYear = new FiscalYear()
+      .withId(secondYearId)
+      .withPeriodStart(Date.from(Instant.parse("2035-01-01T00:00:00Z")))
+      .withPeriodEnd(Date.from(Instant.parse("2035-12-31T23:59:59Z")));
+    List<FiscalYear> fiscalYears = List.of(firstYear, secondYear);
+    // When
+    String resultId = fiscalYearService.extractCurrentFiscalYearId(fiscalYears);
+    // Then
+    assertEquals(firstYearId, resultId);
+  }
 }
