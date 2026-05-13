@@ -111,4 +111,52 @@ public class ExceptionUtilTest {
     boolean act = ExceptionUtil.isAffiliationMissedError(errorMsg);
     assertFalse(act);
   }
+
+    @Test
+  void testConvertToErrorsWhenFolioHttpExceptionHasJsonMessageShouldParseJson() {
+    // TestMate-e0e8d6988b140a7ed20e198a79a6728a
+    // Given
+    String jsonMessage = "{\"message\":\"A\",\"code\":\"B\",\"parameters\":[]}";
+    Error inputError = new Error().withMessage(jsonMessage);
+    HttpException httpException = new HttpException(400, inputError);
+    // When
+    Errors actualErrors = ExceptionUtil.convertToErrors(httpException);
+    // Then
+    assertEquals(1, actualErrors.getTotalRecords());
+    Error resultError = actualErrors.getErrors().get(0);
+    assertEquals("B", resultError.getCode());
+    assertEquals("A", resultError.getMessage());
+    assertTrue(resultError.getParameters().isEmpty());
+  }
+
+    @Test
+  void testConvertToErrorsWhenGenericExceptionShouldReturnGenericErrorWithCause() {
+    // TestMate-0a92871808248f8b2cb33da2a6393679
+    // Given
+    String exceptionMessage = "Unexpected failure";
+    RuntimeException inputException = new RuntimeException(exceptionMessage);
+    // When
+    Errors actualErrors = ExceptionUtil.convertToErrors(inputException);
+    // Then
+    assertEquals(1, actualErrors.getTotalRecords());
+    assertEquals(1, actualErrors.getErrors().size());
+    Error error = actualErrors.getErrors().get(0);
+    assertEquals(GENERIC_ERROR_CODE.getCode(), error.getCode());
+    assertEquals(exceptionMessage, error.getAdditionalProperties().get("cause"));
+  }
+
+    @Test
+  void testConvertToErrorsWhenExceptionHasCauseShouldUseInnerException() {
+    // TestMate-869d817bcabb24ef1c81d3a78d8ffdb9
+    // Given
+    io.vertx.ext.web.handler.HttpException innerException = new io.vertx.ext.web.handler.HttpException(401, "Unauthorized");
+    RuntimeException outerException = new RuntimeException("Wrapper exception", innerException);
+    // When
+    Errors actualErrors = ExceptionUtil.convertToErrors(outerException);
+    // Then
+    assertEquals(1, actualErrors.getTotalRecords());
+    Error resultError = actualErrors.getErrors().get(0);
+    assertEquals("401", resultError.getCode());
+    assertEquals("Unauthorized", resultError.getMessage());
+  }
 }
