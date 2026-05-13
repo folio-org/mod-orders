@@ -21,6 +21,8 @@ import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
 import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @CopilotGenerated(partiallyGenerated = true)
 public class PieceValidatorUtilTest {
@@ -170,5 +172,42 @@ public class PieceValidatorUtilTest {
     PoLine poLine = new PoLine().withCheckinItems(false);
     List<Error> errorList = PieceValidatorUtil.validatePieceRelatedOrder(order, poLine);
     assertEquals(0, errorList.size());
+  }
+
+    @Test
+  void testIsLocationRequiredWhenElectronicPieceAndEresourceIsNullShouldReturnFalse() {
+    // TestMate-3cf4ce6c2a39a3b5afc16a5eadc2dc8e
+    // Given
+    Piece.Format pieceFormat = Piece.Format.ELECTRONIC;
+    PoLine poLine = new PoLine().withEresource(null);
+    // When
+    boolean result = PieceValidatorUtil.isLocationRequired(pieceFormat, poLine);
+    // Then
+    assertFalse(result);
+  }
+
+    @Test
+  void testIsLocationRequiredWhenPhysicalPieceAndPhysicalIsNullShouldReturnFalse() {
+    // TestMate-bb597e4759f4f1237d04edaa699e4c41
+    // Given
+    Piece.Format pieceFormat = Piece.Format.PHYSICAL;
+    PoLine poLine = new PoLine().withPhysical(null);
+    // When
+    boolean result = PieceValidatorUtil.isLocationRequired(pieceFormat, poLine);
+    // Then
+    assertFalse(result);
+  }
+
+    @Test
+  void testIsLocationRequiredWhenOtherPieceFormatShouldBeTreatedAsPhysical() {
+    // TestMate-5b7a9b1830b2c10f808a70c6b3398ded
+    // Given
+    Piece.Format pieceFormat = Piece.Format.OTHER;
+    Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING);
+    PoLine poLine = new PoLine().withPhysical(physical);
+    // When
+    boolean result = PieceValidatorUtil.isLocationRequired(pieceFormat, poLine);
+    // Then
+    assertTrue(result);
   }
 }
