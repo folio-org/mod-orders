@@ -10,7 +10,8 @@ public enum POProtectedFields {
   APPROVED("approved"),
   ORDER_TYPE("orderType"),
   RE_ENCUMBER("reEncumber"),
-  TEMPLATE("template");
+  TEMPLATE("template"),
+  NEXT_POL_NUMBER("nextPolNumber");
 
   POProtectedFields(String field) {
     this.field = field;
