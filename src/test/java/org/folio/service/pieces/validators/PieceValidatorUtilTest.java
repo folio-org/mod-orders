@@ -7,22 +7,22 @@ import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.ELECTRONIC_RESOURCE;
 import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.PHYSICAL_RESOURCE;
 import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.P_E_MIX;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.UUID;
-
 import org.folio.CopilotGenerated;
+import org.folio.TestMate;
 import org.folio.rest.core.exceptions.ErrorCodes;
-import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @CopilotGenerated(partiallyGenerated = true)
 public class PieceValidatorUtilTest {
@@ -174,9 +174,9 @@ public class PieceValidatorUtilTest {
     assertEquals(0, errorList.size());
   }
 
-    @Test
+  @Test
+  @TestMate(name = "TestMate-3cf4ce6c2a39a3b5afc16a5eadc2dc8e")
   void testIsLocationRequiredWhenElectronicPieceAndEresourceIsNullShouldReturnFalse() {
-    // TestMate-3cf4ce6c2a39a3b5afc16a5eadc2dc8e
     // Given
     Piece.Format pieceFormat = Piece.Format.ELECTRONIC;
     PoLine poLine = new PoLine().withEresource(null);
@@ -186,9 +186,9 @@ public class PieceValidatorUtilTest {
     assertFalse(result);
   }
 
-    @Test
+  @Test
+  @TestMate(name = "TestMate-bb597e4759f4f1237d04edaa699e4c41")
   void testIsLocationRequiredWhenPhysicalPieceAndPhysicalIsNullShouldReturnFalse() {
-    // TestMate-bb597e4759f4f1237d04edaa699e4c41
     // Given
     Piece.Format pieceFormat = Piece.Format.PHYSICAL;
     PoLine poLine = new PoLine().withPhysical(null);
@@ -198,9 +198,9 @@ public class PieceValidatorUtilTest {
     assertFalse(result);
   }
 
-    @Test
+  @Test
+  @TestMate(name = "TestMate-5b7a9b1830b2c10f808a70c6b3398ded")
   void testIsLocationRequiredWhenOtherPieceFormatShouldBeTreatedAsPhysical() {
-    // TestMate-5b7a9b1830b2c10f808a70c6b3398ded
     // Given
     Piece.Format pieceFormat = Piece.Format.OTHER;
     Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING);
