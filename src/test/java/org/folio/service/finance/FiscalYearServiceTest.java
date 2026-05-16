@@ -40,6 +40,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
+import java.util.Collections;
 
 @CopilotGenerated(partiallyGenerated = true)
 @ExtendWith(VertxExtension.class)
@@ -308,5 +309,80 @@ public class FiscalYearServiceTest {
         assertTrue(expectedException.cause().getMessage().contains("Network error"));
         vertxTestContext.completeNow();
       });
+  }
+
+    @Test
+  void extractCurrentFiscalYearIdShouldReturnNullWhenListIsEmpty() {
+    // TestMate-e21692b9cd8e81d826670de16ac5015d
+    // Given
+    List<FiscalYear> fiscalYears = Collections.emptyList();
+    // When
+    String result = fiscalYearService.extractCurrentFiscalYearId(fiscalYears);
+    // Then
+    assertNull(result);
+  }
+
+    @Test
+  void extractCurrentFiscalYearIdShouldReturnTheOnlyIdWhenListHasOneElement() {
+    // TestMate-50149490ca055a147990762b880eeda5
+    // Given
+    String expectedId = "00000000-0000-4000-8000-000000000001";
+    FiscalYear fiscalYear = new FiscalYear().withId(expectedId);
+    List<FiscalYear> fiscalYears = List.of(fiscalYear);
+    // When
+    String result = fiscalYearService.extractCurrentFiscalYearId(fiscalYears);
+    // Then
+    assertEquals(expectedId, result);
+  }
+
+    @Test
+  void extractCurrentFiscalYearIdShouldHandleOverlappingFiscalYears() {
+    // TestMate-84a3ff3ccbdade263f79b241b15a8400
+    // Given
+    String firstYearId = UUID.randomUUID().toString();
+    String secondYearId = UUID.randomUUID().toString();
+    // The method under test uses 'new Date()' to determine the current time.
+    // To ensure the test logic for overlapping active years is triggered,
+    // we must define the fiscal year periods relative to the actual system time.
+    Instant now = Instant.now();
+    Date fiveDaysAgo = Date.from(now.minus(5, ChronoUnit.DAYS));
+    Date twoDaysAgo = Date.from(now.minus(2, ChronoUnit.DAYS));
+    Date fiveDaysFromNow = Date.from(now.plus(5, ChronoUnit.DAYS));
+    Date tenDaysFromNow = Date.from(now.plus(10, ChronoUnit.DAYS));
+    FiscalYear firstYear = new FiscalYear()
+      .withId(firstYearId)
+      .withPeriodStart(fiveDaysAgo)
+      .withPeriodEnd(fiveDaysFromNow);
+    FiscalYear secondYear = new FiscalYear()
+      .withId(secondYearId)
+      .withPeriodStart(twoDaysAgo)
+      .withPeriodEnd(tenDaysFromNow);
+    List<FiscalYear> fiscalYears = List.of(firstYear, secondYear);
+    // When
+    String result = fiscalYearService.extractCurrentFiscalYearId(fiscalYears);
+    // Then
+    assertEquals(secondYearId, result);
+  }
+
+    @Test
+  void extractCurrentFiscalYearIdShouldDefaultToFirstWhenOnlyOneInOverlapActive() {
+    // TestMate-71812d5cbd371fe4a0fbae44bc59aacd
+    // Given
+    String firstYearId = "00000000-0000-4000-8000-000000000001";
+    String secondYearId = "00000000-0000-4000-8000-000000000002";
+    Instant now = Instant.now();
+    FiscalYear firstYear = new FiscalYear()
+      .withId(firstYearId)
+      .withPeriodStart(Date.from(now.minus(5, ChronoUnit.DAYS)))
+      .withPeriodEnd(Date.from(now.plus(5, ChronoUnit.DAYS)));
+    FiscalYear secondYear = new FiscalYear()
+      .withId(secondYearId)
+      .withPeriodStart(Date.from(now.plus(1, ChronoUnit.DAYS)))
+      .withPeriodEnd(Date.from(now.plus(10, ChronoUnit.DAYS)));
+    List<FiscalYear> fiscalYears = List.of(firstYear, secondYear);
+    // When
+    String result = fiscalYearService.extractCurrentFiscalYearId(fiscalYears);
+    // Then
+    assertEquals(firstYearId, result);
   }
 }
