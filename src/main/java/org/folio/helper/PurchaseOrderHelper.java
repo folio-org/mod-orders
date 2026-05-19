@@ -1,6 +1,7 @@
 package org.folio.helper;
 
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
+import static org.folio.orders.utils.HelperUtils.NEXT_POL_NUMBER;
 import static org.folio.orders.utils.HelperUtils.PO_LINES;
 import static org.folio.orders.utils.HelperUtils.REASON_CANCELLED;
 import static org.folio.orders.utils.HelperUtils.WORKFLOW_STATUS;
@@ -338,6 +339,7 @@ public class PurchaseOrderHelper {
 
   public JsonObject validateIfPOProtectedAndOngoingFieldsChanged(CompositePurchaseOrder compPO,
                                                                  JsonObject compPOFromStorageJson) {
+    compPO.setNextPolNumber(compPOFromStorageJson.getInteger(NEXT_POL_NUMBER)); // UIOR-1544 workaround; ignore any change of nextPolNumber
     WorkflowStatus storagePOWorkflowStatus = WorkflowStatus.fromValue(compPOFromStorageJson.getString(WORKFLOW_STATUS));
     if (!PENDING.equals(storagePOWorkflowStatus)) {
       verifyProtectedFieldsChanged(getFieldNames(), compPOFromStorageJson, JsonObject.mapFrom(compPO));
