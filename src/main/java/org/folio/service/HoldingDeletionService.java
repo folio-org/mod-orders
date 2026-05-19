@@ -47,7 +47,7 @@ public class HoldingDeletionService {
     if (Objects.isNull(holding) || holding.isEmpty()) {
       return Future.succeededFuture(Pair.of(false, new JsonObject()));
     }
-    log.info("getHoldingLinkedData:: Exclusion config, mode={}", exclusionConfig.mode());
+    log.info("getHoldingLinkedData:: Exclusion config mode={}", exclusionConfig.mode());
 
     var holdingId = holding.getString(ID);
     return consortiumUserTenantService.getUserTenantsIfNeeded(requestContext)

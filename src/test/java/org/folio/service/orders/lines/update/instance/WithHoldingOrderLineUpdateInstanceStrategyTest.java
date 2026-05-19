@@ -431,7 +431,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     when(inventoryItemManager.batchUpdatePartialItems(any(), eq(requestContext))).thenReturn(succeededFuture(null));
     when(pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext)).thenReturn(succeededFuture(List.of(new Piece().withHoldingId(usedHoldingId))));
     when(purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext)).thenReturn(succeededFuture(List.of(new PoLine().withLocations(List.of(new Location().withHoldingId(usedHoldingId))))));
-    // getPiecesByHoldingId (singular) is called per-holding in deleteAbandonedHoldingsAndUpdateHolder to build excludePieceIds for HoldingDataExclusionConfig (4-arg constructor, ERM-3619 / PO_LINE_CHANGE_INSTANCE mode)
+    // getPiecesByHoldingId (singular) is called per-holding in deleteAbandonedHoldingsAndUpdateHolder to build excludePieceIds for HoldingDataExclusionConfig (4-arg constructor, PO_LINE_CHANGE_INSTANCE mode)
     when(pieceStorageService.getPiecesByHoldingId(eq(holdingIds.get(0)), any(RequestContext.class))).thenReturn(succeededFuture(List.of()));
     when(pieceStorageService.getPiecesByHoldingId(eq(holdingIds.get(1)), any(RequestContext.class))).thenReturn(succeededFuture(List.of()));
     when(pieceStorageService.getPiecesByHoldingId(eq(usedHoldingId), any(RequestContext.class))).thenReturn(succeededFuture(List.of(new Piece().withId(UUID.randomUUID().toString()).withHoldingId(usedHoldingId))));
