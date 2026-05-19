@@ -1,3 +1,11 @@
+## 13.1.3 - Released (Trillium R1 2026)
+This release focused on updaing acq-models schemas to fix issues with nextPoLineNumber and nextInvoiceLineNumber.
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v13.1.2...v13.1.3)
+
+### Bug Fixes
+* [MODINVOICE-647](https://folio-org.atlassian.net/browse/MODINVOICE-647) - Invoice line number is reused after deletion
+
 ## 13.1.2 - Released (Trillium R1 2026)
 This release focused on fixing issue when received pieces are not counted, causing extra expected pieces to be created after opening previously unopened synchronized order.
 
