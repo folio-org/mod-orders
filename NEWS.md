@@ -1,3 +1,11 @@
+## 13.1.4 - Released (Trillium R1 2026)
+This release focused on resolving issue with deleting abandoned holding if related piece exists.
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v13.1.3...v13.1.4)
+
+### Bug Fixes
+* [MODORDERS-1443](https://folio-org.atlassian.net/browse/MODORDERS-1443) - Abandoned holding is not deleted after changing instance connection if related piece exists
+
 ## 13.1.3 - Released (Trillium R1 2026)
 This release focused on updaing acq-models schemas to fix issues with nextPoLineNumber and nextInvoiceLineNumber.
 
