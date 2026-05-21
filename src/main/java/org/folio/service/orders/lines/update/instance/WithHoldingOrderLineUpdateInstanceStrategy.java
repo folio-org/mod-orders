@@ -282,15 +282,18 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
     for (var location : uniqueLocations) {
       var holdingId = location.getHoldingId();
       var locationContext = createContextWithNewTenantId(requestContext, location.getTenantId());
-      var exclusionConfig = new HoldingDataExclusionConfig(HoldingDataExclusionMode.PO_LINE_CHANGE_INSTANCE, Set.of(holder.getStoragePoLine().getId()), Set.of());
       var future = inventoryHoldingManager.getHoldingById(holdingId, true, locationContext)
-        .compose(holding -> holdingDeletionService.getHoldingLinkedData(holding, exclusionConfig, requestContext, locationContext)
-          .compose(deletableHoldings -> holdingDeletionService.deleteHoldingIfPossible(deletableHoldings, locationContext).map(deletableHoldings))
-          .compose(deletableHoldings -> asFuture(() -> {
-            var deletedHoldings = getDeletedHoldings(deletableHoldings);
-            holder.getDeletedHoldingIds().addAll(deletedHoldings);
-          }))
-        );
+        .compose(holding -> pieceStorageService.getPiecesByHoldingId(holdingId, requestContext)
+          .map(pieces -> Pair.of(holding, pieces.stream().map(Piece::getId).collect(Collectors.toSet()))))
+        .compose(holdingAndPieces -> {
+          var exclusionConfig = new HoldingDataExclusionConfig(HoldingDataExclusionMode.PO_LINE_CHANGE_INSTANCE, Set.of(holder.getStoragePoLine().getId()), Set.of(), holdingAndPieces.getRight());
+          return holdingDeletionService.getHoldingLinkedData(holdingAndPieces.getLeft(), exclusionConfig, requestContext, locationContext)
+            .compose(deletableHoldings -> holdingDeletionService.deleteHoldingIfPossible(deletableHoldings, locationContext).map(deletableHoldings))
+            .compose(deletableHoldings -> asFuture(() -> {
+              var deletedHoldings = getDeletedHoldings(deletableHoldings);
+              holder.getDeletedHoldingIds().addAll(deletedHoldings);
+            }));
+        });
       futures.add(future);
     }
     return collectResultsOnSuccess(futures)
