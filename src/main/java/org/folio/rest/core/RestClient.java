@@ -270,10 +270,10 @@ public class RestClient {
       .onFailure(t -> log.error("error occurred invoking POST {}", endpoint));
   }
 
-  private static <T> Future<HttpResponse<T>> convertHttpResponse(HttpResponse<T> response) {
+  static <T> Future<HttpResponse<T>> convertHttpResponse(HttpResponse<T> response) {
     return HttpResponseExpectation.SC_SUCCESS.test(response)
       ? Future.succeededFuture(response)
-      : Future.failedFuture(new HttpException(response.statusCode(), response.bodyAsString()));
+      : Future.failedFuture(getHttpException(response.statusCode(), response.bodyAsString()));
   }
 
 }
