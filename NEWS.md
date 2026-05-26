@@ -1,3 +1,11 @@
+## 13.1.5 - Released (Trillium R1 2026)
+This release focused on resolving issue with restoring typed error propagation from downstream modules.
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v13.1.4...v13.1.5)
+
+### Bug Fixes
+* [MODORDERS-1452](https://folio-org.atlassian.net/browse/MODORDERS-1452) - Restore typed error propagation from mod-finance/mod-invoice in mod-orders after Vert.x 5 upgrade
+
 ## 13.1.4 - Released (Trillium R1 2026)
 This release focused on resolving issue with deleting abandoned holding if related piece exists.
 
