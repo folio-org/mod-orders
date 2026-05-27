@@ -5,6 +5,7 @@ import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.commons.lang.StringUtils;
+import org.folio.TestMate;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.ReEncumbranceHolder;
 import org.folio.rest.acq.model.finance.Budget;
@@ -334,50 +335,54 @@ public class FinanceHoldersBuilderTest {
     verify(fundService, never()).getAllFunds(anyCollection(), any());
   }
 
-    @Test
-void testGetLedgerIdsShouldHandleDuplicateFundIdsEfficiently() {
-  // TestMate-d3ea99a44af1eb10c06c87c554583a4d
-  // Given
-  String sharedFundId = UUID.fromString("00000000-0000-0000-0000-000000000001").toString();
-  String sharedLedgerId = UUID.fromString("ffffffff-ffff-ffff-ffff-ffffffffffff").toString();
-  FundDistribution distribution1 = new FundDistribution().withFundId(sharedFundId);
-  PoLine line1 = new PoLine().withId(UUID.randomUUID().toString()).withFundDistribution(List.of(distribution1));
-  EncumbranceRelationsHolder holderA = new EncumbranceRelationsHolder()
-    .withPoLine(line1)
-    .withFundDistribution(distribution1);
-  FundDistribution distribution2 = new FundDistribution().withFundId(sharedFundId);
-  PoLine line2 = new PoLine().withId(UUID.randomUUID().toString()).withFundDistribution(List.of(distribution2));
-  EncumbranceRelationsHolder holderB = new EncumbranceRelationsHolder()
-    .withPoLine(line2)
-    .withFundDistribution(distribution2);
-  List<EncumbranceRelationsHolder> holders = List.of(holderA, holderB);
-  Fund fund = new Fund().withId(sharedFundId).withLedgerId(sharedLedgerId);
-  when(fundService.getAllFunds(any(), eq(requestContext)))
-    .thenReturn(Future.succeededFuture(List.of(fund)));
-  // When
-  List<String> resultLedgerIds = financeHoldersBuilder.getLedgerIds(holders, requestContext).result();
-  // Then
-  assertThat(resultLedgerIds, hasSize(1));
-  assertThat(resultLedgerIds, contains(sharedLedgerId));
-  @SuppressWarnings("unchecked")
-  ArgumentCaptor<List<String>> fundIdsCaptor = ArgumentCaptor.forClass(List.class);
-  verify(fundService, times(1)).getAllFunds(fundIdsCaptor.capture(), eq(requestContext));
-  List<String> capturedFundIds = fundIdsCaptor.getValue();
-  assertThat(capturedFundIds, hasSize(1));
-  assertEquals(sharedFundId, capturedFundIds.get(0));
-  assertEquals(sharedLedgerId, holderA.getLedgerId());
-  assertEquals(sharedLedgerId, holderB.getLedgerId());
-}
+  @Test
+  @TestMate(name = "TestMate-d3ea99a44af1eb10c06c87c554583a4d")
+  void testGetLedgerIdsShouldHandleDuplicateFundIdsEfficiently() {
+    // Given
+    String sharedFundId = UUID.fromString("00000000-0000-0000-0000-000000000001").toString();
+    String sharedLedgerId = UUID.fromString("ffffffff-ffff-ffff-ffff-ffffffffffff").toString();
+    FundDistribution distribution1 = new FundDistribution().withFundId(sharedFundId);
+    PoLine line1 = new PoLine().withId(UUID.randomUUID().toString()).withFundDistribution(List.of(distribution1));
+    EncumbranceRelationsHolder holderA = new EncumbranceRelationsHolder()
+      .withPoLine(line1)
+      .withFundDistribution(distribution1);
+    FundDistribution distribution2 = new FundDistribution().withFundId(sharedFundId);
+    PoLine line2 = new PoLine().withId(UUID.randomUUID().toString()).withFundDistribution(List.of(distribution2));
+    EncumbranceRelationsHolder holderB = new EncumbranceRelationsHolder()
+      .withPoLine(line2)
+      .withFundDistribution(distribution2);
+    List<EncumbranceRelationsHolder> holders = List.of(holderA, holderB);
+    Fund fund = new Fund().withId(sharedFundId).withLedgerId(sharedLedgerId);
+    when(fundService.getAllFunds(any(), eq(requestContext)))
+      .thenReturn(Future.succeededFuture(List.of(fund)));
 
-    @Test
+    // When
+    List<String> resultLedgerIds = financeHoldersBuilder.getLedgerIds(holders, requestContext).result();
+
+    // Then
+    assertThat(resultLedgerIds, hasSize(1));
+    assertThat(resultLedgerIds, contains(sharedLedgerId));
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<List<String>> fundIdsCaptor = ArgumentCaptor.forClass(List.class);
+    verify(fundService, times(1)).getAllFunds(fundIdsCaptor.capture(), eq(requestContext));
+    List<String> capturedFundIds = fundIdsCaptor.getValue();
+    assertThat(capturedFundIds, hasSize(1));
+    assertEquals(sharedFundId, capturedFundIds.getFirst());
+    assertEquals(sharedLedgerId, holderA.getLedgerId());
+    assertEquals(sharedLedgerId, holderB.getLedgerId());
+  }
+
+  @Test
+  @TestMate(name = "TestMate-3692795f08922f068f89b7dc871d7bc1")
   void testGetLedgerIdsShouldPropagateFailureFromFundService(VertxTestContext vertxTestContext) {
-    // TestMate-3692795f08922f068f89b7dc871d7bc1
     // Given
     HttpException expectedException = new HttpException(500, "Service Unavailable");
     when(fundService.getAllFunds(anyCollection(), eq(requestContext)))
       .thenReturn(failedFuture(expectedException));
+
     // When
     Future<List<String>> future = financeHoldersBuilder.getLedgerIds(List.of(holder1), requestContext);
+
     // Then
     vertxTestContext.assertFailure(future)
       .onComplete(result -> {
@@ -389,32 +394,34 @@ void testGetLedgerIdsShouldHandleDuplicateFundIdsEfficiently() {
       });
   }
 
-    @Test
-void testGetLedgerIdsShouldHandleMixedNullAndValidFundIds() {
-  // TestMate-9f7bf3acef982a80bc2412f8e658c55f
-  // Given
-  String validFundId = "00000000-0000-0000-0000-000000000001";
-  String validLedgerId = "ffffffff-ffff-ffff-ffff-ffffffffffff";
-  EncumbranceRelationsHolder holderWithFund = new EncumbranceRelationsHolder()
-    .withFundDistribution(new FundDistribution().withFundId(validFundId));
-  EncumbranceRelationsHolder holderWithNullFund = new EncumbranceRelationsHolder()
-    .withFundDistribution(new FundDistribution().withFundId(null));
-  List<EncumbranceRelationsHolder> holders = List.of(holderWithFund, holderWithNullFund);
-  Fund fund = new Fund().withId(validFundId).withLedgerId(validLedgerId);
-  when(fundService.getAllFunds(anyCollection(), any()))
-    .thenReturn(succeededFuture(List.of(fund)));
-  // When
-  List<String> resultLedgerIds = financeHoldersBuilder.getLedgerIds(holders, requestContext).result();
-  // Then
-  assertThat(resultLedgerIds, hasSize(1));
-  assertThat(resultLedgerIds, contains(validLedgerId));
-  @SuppressWarnings("unchecked")
-  ArgumentCaptor<List<String>> fundIdsCaptor = ArgumentCaptor.forClass(List.class);
-  verify(fundService, times(1)).getAllFunds(fundIdsCaptor.capture(), eq(requestContext));
-  List<String> capturedFundIds = fundIdsCaptor.getValue();
-  assertThat(capturedFundIds, hasSize(1));
-  assertEquals(validFundId, capturedFundIds.get(0));
-  assertThat(holderWithFund.getLedgerId(), is(validLedgerId));
-  assertThat(holderWithNullFund.getLedgerId(), nullValue());
-}
+  @Test
+  @TestMate(name = "TestMate-9f7bf3acef982a80bc2412f8e658c55f")
+  void testGetLedgerIdsShouldHandleMixedNullAndValidFundIds() {
+    // Given
+    String validFundId = "00000000-0000-0000-0000-000000000001";
+    String validLedgerId = "ffffffff-ffff-ffff-ffff-ffffffffffff";
+    EncumbranceRelationsHolder holderWithFund = new EncumbranceRelationsHolder()
+      .withFundDistribution(new FundDistribution().withFundId(validFundId));
+    EncumbranceRelationsHolder holderWithNullFund = new EncumbranceRelationsHolder()
+      .withFundDistribution(new FundDistribution().withFundId(null));
+    List<EncumbranceRelationsHolder> holders = List.of(holderWithFund, holderWithNullFund);
+    Fund fund = new Fund().withId(validFundId).withLedgerId(validLedgerId);
+    when(fundService.getAllFunds(anyCollection(), any()))
+      .thenReturn(succeededFuture(List.of(fund)));
+
+    // When
+    List<String> resultLedgerIds = financeHoldersBuilder.getLedgerIds(holders, requestContext).result();
+
+    // Then
+    assertThat(resultLedgerIds, hasSize(1));
+    assertThat(resultLedgerIds, contains(validLedgerId));
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<List<String>> fundIdsCaptor = ArgumentCaptor.forClass(List.class);
+    verify(fundService, times(1)).getAllFunds(fundIdsCaptor.capture(), eq(requestContext));
+    List<String> capturedFundIds = fundIdsCaptor.getValue();
+    assertThat(capturedFundIds, hasSize(1));
+    assertEquals(validFundId, capturedFundIds.getFirst());
+    assertThat(holderWithFund.getLedgerId(), is(validLedgerId));
+    assertThat(holderWithNullFund.getLedgerId(), nullValue());
+  }
 }
