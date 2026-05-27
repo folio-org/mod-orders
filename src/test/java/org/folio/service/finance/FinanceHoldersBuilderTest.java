@@ -415,6 +415,7 @@ public class FinanceHoldersBuilderTest {
     // Then
     assertThat(resultLedgerIds, hasSize(1));
     assertThat(resultLedgerIds, contains(validLedgerId));
+
     @SuppressWarnings("unchecked")
     ArgumentCaptor<List<String>> fundIdsCaptor = ArgumentCaptor.forClass(List.class);
     verify(fundService, times(1)).getAllFunds(fundIdsCaptor.capture(), eq(requestContext));
