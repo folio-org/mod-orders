@@ -9,6 +9,7 @@ import java.util.List;
 import javax.money.MonetaryAmount;
 import javax.money.convert.CurrencyConversion;
 
+import org.folio.TestMate;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
@@ -23,7 +24,6 @@ import static org.mockito.Mockito.mock;
 import javax.money.CurrencyUnit;
 import javax.money.Monetary;
 import org.javamoney.moneta.Money;
-import static javax.money.Monetary.getDefaultRounding;
 
 public class FundsDistributionServiceTest {
 
@@ -178,9 +178,9 @@ public class FundsDistributionServiceTest {
     assertEquals(0.8, resultHolders.get(2).getNewEncumbrance().getAmount());
   }
 
-    @Test
+  @Test
+  @TestMate(name = "TestMate-b939619a2e1dc436abd7d563ec379ad4")
   void testDistributeFundsShouldUseFixedAmountsWhenDistributionTypeIsAmount() {
-    // TestMate-b939619a2e1dc436abd7d563ec379ad4
     // Given
     CurrencyConversion conversion = mock(ManualCurrencyConversion.class);
     when(conversion.apply(any(MonetaryAmount.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -206,20 +206,21 @@ public class FundsDistributionServiceTest {
       .withCurrency("USD")
       .withPoLineToFyConversion(conversion);
     List<EncumbranceRelationsHolder> holders = List.of(holder);
+
     // When
     List<EncumbranceRelationsHolder> resultHolders = distributionService.distributeFunds(holders);
+
     // Then
-    Transaction resultTransaction = resultHolders.get(0).getNewEncumbrance();
+    Transaction resultTransaction = resultHolders.getFirst().getNewEncumbrance();
     assertEquals(25.0, resultTransaction.getEncumbrance().getInitialAmountEncumbered());
     assertEquals(25.0, resultTransaction.getAmount());
-    assertEquals(100.0, resultHolders.get(0).getPoLine().getCost().getPoLineEstimatedPrice());
+    assertEquals(100.0, resultHolders.getFirst().getPoLine().getCost().getPoLineEstimatedPrice());
   }
 
-    @Test
+  @Test
+  @TestMate(name = "TestMate-f9f7fc72cd8231b613bd9dd88ce94e1f")
   void testDistributeFundsShouldAdjustForRoundingRemainderByAddingToPercentageDistributions() {
-    // TestMate-f9f7fc72cd8231b613bd9dd88ce94e1f
     // Given
-    FundsDistributionService distributionService = new FundsDistributionService();
     CurrencyConversion conversion = mock(ManualCurrencyConversion.class);
     when(conversion.apply(any(MonetaryAmount.class))).thenAnswer(invocation -> invocation.getArgument(0));
     Cost cost = new Cost()
@@ -257,8 +258,10 @@ public class FundsDistributionServiceTest {
       .withCurrency("USD")
       .withPoLineToFyConversion(conversion);
     List<EncumbranceRelationsHolder> holders = List.of(holder1, holder2, holder3);
+
     // When
     List<EncumbranceRelationsHolder> resultHolders = distributionService.distributeFunds(holders);
+
     // Then
     // Expected total is 1.00. 33.33% of 1.00 is 0.33.
     // 0.33 + 0.33 + 0.33 = 0.99. Remainder is +0.01.
@@ -273,68 +276,69 @@ public class FundsDistributionServiceTest {
       .mapToDouble(h -> h.getNewEncumbrance().getAmount())
       .sum();
     assertEquals(1.00, totalEncumbered, 0.0001);
-    assertEquals(1.00, resultHolders.get(0).getPoLine().getCost().getPoLineEstimatedPrice());
+    assertEquals(1.00, resultHolders.getFirst().getPoLine().getCost().getPoLineEstimatedPrice());
   }
 
-    @Test
-void testDistributeFundsShouldSubtractRoundingRemainderWhenCalculatedTotalExceedsExpected() {
-  // TestMate-4598a1a226ee1a2e5ec8c29091c6b5f1
-  // Given
-  CurrencyConversion conversion = mock(ManualCurrencyConversion.class);
-  when(conversion.apply(any(MonetaryAmount.class))).thenAnswer(invocation -> invocation.getArgument(0));
-  Cost cost = new Cost()
-    .withCurrency("USD")
-    .withListUnitPrice(1.00)
-    .withQuantityPhysical(1);
-  PoLine poLine = new PoLine()
-    .withCost(cost);
-  // 50.005% of 1.00 is 0.50005. Standard rounding (HALF_EVEN/HALF_UP) for USD (2 digits) results in 0.51.
-  // 0.51 + 0.51 = 1.02. Expected total is 1.00. Remainder is -0.02.
-  // When remainder is negative, the iterator starts from the beginning (index 0).
-  FundDistribution fd1 = new FundDistribution()
-    .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
-    .withValue(50.005);
-  FundDistribution fd2 = new FundDistribution()
-    .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
-    .withValue(50.005);
-  poLine.setFundDistribution(List.of(fd1, fd2));
-  EncumbranceRelationsHolder holder1 = new EncumbranceRelationsHolder()
-    .withPoLine(poLine)
-    .withFundDistribution(fd1)
-    .withNewEncumbrance(new Transaction().withEncumbrance(new Encumbrance()))
-    .withCurrency("USD")
-    .withPoLineToFyConversion(conversion);
-  EncumbranceRelationsHolder holder2 = new EncumbranceRelationsHolder()
-    .withPoLine(poLine)
-    .withFundDistribution(fd2)
-    .withNewEncumbrance(new Transaction().withEncumbrance(new Encumbrance()))
-    .withCurrency("USD")
-    .withPoLineToFyConversion(conversion);
-  List<EncumbranceRelationsHolder> holders = List.of(holder1, holder2);
-  // When
-  List<EncumbranceRelationsHolder> resultHolders = distributionService.distributeFunds(holders);
-  // Then
-  assertEquals(1.00, resultHolders.get(0).getPoLine().getCost().getPoLineEstimatedPrice());
-  // Initial rounded sum: 0.51 + 0.51 = 1.02. Remainder -0.02.
-  // Smallest unit is -0.01.
-  // Iterator starts at index 0.
-  // Holder 1: 0.51 + (-0.01) = 0.50. Remainder becomes -0.01.
-  // Holder 2: 0.51 + (-0.01) = 0.50. Remainder becomes 0.
-  assertEquals(0.50, resultHolders.get(0).getNewEncumbrance().getAmount());
-  assertEquals(0.50, resultHolders.get(1).getNewEncumbrance().getAmount());
-  assertEquals(0.50, resultHolders.get(0).getNewEncumbrance().getEncumbrance().getInitialAmountEncumbered());
-  assertEquals(0.50, resultHolders.get(1).getNewEncumbrance().getEncumbrance().getInitialAmountEncumbered());
-  double totalEncumbered = resultHolders.stream()
-    .mapToDouble(h -> h.getNewEncumbrance().getAmount())
-    .sum();
-  assertEquals(1.00, totalEncumbered, 0.0001);
-}
-
-    @Test
-  void testDistributeFundsShouldCalculateEffectiveAmountBySubtractingExpendedAndAwaitingPayment() {
-    // TestMate-3537db648ea6bec780238fc600053bf7
+  @Test
+  @TestMate(name = "TestMate-4598a1a226ee1a2e5ec8c29091c6b5f1")
+  void testDistributeFundsShouldSubtractRoundingRemainderWhenCalculatedTotalExceedsExpected() {
     // Given
-    FundsDistributionService distributionService = new FundsDistributionService();
+    CurrencyConversion conversion = mock(ManualCurrencyConversion.class);
+    when(conversion.apply(any(MonetaryAmount.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    Cost cost = new Cost()
+      .withCurrency("USD")
+      .withListUnitPrice(1.00)
+      .withQuantityPhysical(1);
+    PoLine poLine = new PoLine()
+      .withCost(cost);
+    // 50.005% of 1.00 is 0.50005. Standard rounding (HALF_EVEN/HALF_UP) for USD (2 digits) results in 0.51.
+    // 0.51 + 0.51 = 1.02. Expected total is 1.00. Remainder is -0.02.
+    // When remainder is negative, the iterator starts from the beginning (index 0).
+    FundDistribution fd1 = new FundDistribution()
+      .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
+      .withValue(50.005);
+    FundDistribution fd2 = new FundDistribution()
+      .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
+      .withValue(50.005);
+    poLine.setFundDistribution(List.of(fd1, fd2));
+    EncumbranceRelationsHolder holder1 = new EncumbranceRelationsHolder()
+      .withPoLine(poLine)
+      .withFundDistribution(fd1)
+      .withNewEncumbrance(new Transaction().withEncumbrance(new Encumbrance()))
+      .withCurrency("USD")
+      .withPoLineToFyConversion(conversion);
+    EncumbranceRelationsHolder holder2 = new EncumbranceRelationsHolder()
+      .withPoLine(poLine)
+      .withFundDistribution(fd2)
+      .withNewEncumbrance(new Transaction().withEncumbrance(new Encumbrance()))
+      .withCurrency("USD")
+      .withPoLineToFyConversion(conversion);
+    List<EncumbranceRelationsHolder> holders = List.of(holder1, holder2);
+
+    // When
+    List<EncumbranceRelationsHolder> resultHolders = distributionService.distributeFunds(holders);
+
+    // Then
+    assertEquals(1.00, resultHolders.get(0).getPoLine().getCost().getPoLineEstimatedPrice());
+    // Initial rounded sum: 0.51 + 0.51 = 1.02. Remainder -0.02.
+    // Smallest unit is -0.01.
+    // Iterator starts at index 0.
+    // Holder 1: 0.51 + (-0.01) = 0.50. Remainder becomes -0.01.
+    // Holder 2: 0.51 + (-0.01) = 0.50. Remainder becomes 0.
+    assertEquals(0.50, resultHolders.get(0).getNewEncumbrance().getAmount());
+    assertEquals(0.50, resultHolders.get(1).getNewEncumbrance().getAmount());
+    assertEquals(0.50, resultHolders.get(0).getNewEncumbrance().getEncumbrance().getInitialAmountEncumbered());
+    assertEquals(0.50, resultHolders.get(1).getNewEncumbrance().getEncumbrance().getInitialAmountEncumbered());
+    double totalEncumbered = resultHolders.stream()
+      .mapToDouble(h -> h.getNewEncumbrance().getAmount())
+      .sum();
+    assertEquals(1.00, totalEncumbered, 0.0001);
+  }
+
+  @Test
+  @TestMate(name = "TestMate-3537db648ea6bec780238fc600053bf7")
+  void testDistributeFundsShouldCalculateEffectiveAmountBySubtractingExpendedAndAwaitingPayment() {
+    // Given
     CurrencyConversion conversion = mock(CurrencyConversion.class);
     when(conversion.apply(any(MonetaryAmount.class))).thenAnswer(invocation -> invocation.getArgument(0));
     Cost cost = new Cost()
@@ -359,22 +363,23 @@ void testDistributeFundsShouldSubtractRoundingRemainderWhenCalculatedTotalExceed
       .withCurrency("USD")
       .withPoLineToFyConversion(conversion);
     List<EncumbranceRelationsHolder> holders = List.of(holder);
+
     // When
     List<EncumbranceRelationsHolder> resultHolders = distributionService.distributeFunds(holders);
+
     // Then
-    Transaction resultTransaction = resultHolders.get(0).getNewEncumbrance();
+    Transaction resultTransaction = resultHolders.getFirst().getNewEncumbrance();
     Encumbrance resultEncumbrance = resultTransaction.getEncumbrance();
     // Initial (100.0) - Expended (20.0) + Credited (5.0) - AwaitingPayment (10.0) = 75.0
     assertEquals(100.0, resultEncumbrance.getInitialAmountEncumbered());
     assertEquals(75.0, resultTransaction.getAmount());
-    assertEquals(100.0, resultHolders.get(0).getPoLine().getCost().getPoLineEstimatedPrice());
+    assertEquals(100.0, resultHolders.getFirst().getPoLine().getCost().getPoLineEstimatedPrice());
   }
 
-    @Test
+  @Test
+  @TestMate(name = "TestMate-94a2b2bc47ecd47e24d5b116a3af6453")
   void testDistributeFundsShouldHandleCurrencyConversionWhenPoLineAndFiscalYearCurrenciesDiffer() {
-    // TestMate-94a2b2bc47ecd47e24d5b116a3af6453
     // Given
-    FundsDistributionService distributionService = new FundsDistributionService();
     CurrencyUnit usdCurrency = Monetary.getCurrency("USD");
     double exchangeRate = 1.1;
     CurrencyConversion conversion = mock(CurrencyConversion.class);
@@ -403,10 +408,12 @@ void testDistributeFundsShouldSubtractRoundingRemainderWhenCalculatedTotalExceed
       .withCurrency("USD")
       .withPoLineToFyConversion(conversion);
     List<EncumbranceRelationsHolder> holders = List.of(holder);
+
     // When
     List<EncumbranceRelationsHolder> resultHolders = distributionService.distributeFunds(holders);
+
     // Then
-    EncumbranceRelationsHolder resultHolder = resultHolders.get(0);
+    EncumbranceRelationsHolder resultHolder = resultHolders.getFirst();
     Transaction resultTransaction = resultHolder.getNewEncumbrance();
     // 100.0 EUR * 1.1 = 110.0 USD
     assertEquals(110.0, resultTransaction.getEncumbrance().getInitialAmountEncumbered());
@@ -414,11 +421,10 @@ void testDistributeFundsShouldSubtractRoundingRemainderWhenCalculatedTotalExceed
     assertEquals(100.0, resultHolder.getPoLine().getCost().getPoLineEstimatedPrice());
   }
 
-    @Test
+  @Test
+  @TestMate(name = "TestMate-c40ba8427eec13af84c6e6af3d6f92e2")
   void testDistributeFundsShouldFilterOutHoldersWithNullPoLine() {
-    // TestMate-c40ba8427eec13af84c6e6af3d6f92e2
     // Given
-    FundsDistributionService distributionService = new FundsDistributionService();
     CurrencyConversion conversion = mock(CurrencyConversion.class);
     when(conversion.apply(any(MonetaryAmount.class))).thenAnswer(invocation -> invocation.getArgument(0));
     // Valid Holder Setup
@@ -436,7 +442,7 @@ void testDistributeFundsShouldSubtractRoundingRemainderWhenCalculatedTotalExceed
         .withAmountExpended(0.0)
         .withAmountCredited(0.0)
         .withAmountAwaitingPayment(0.0));
-    
+
     EncumbranceRelationsHolder holderA = new EncumbranceRelationsHolder()
       .withPoLine(poLine)
       .withFundDistribution(fd)
@@ -457,20 +463,19 @@ void testDistributeFundsShouldSubtractRoundingRemainderWhenCalculatedTotalExceed
     // Holder A should be processed
     assertEquals(100.0, holderA.getNewEncumbrance().getAmount());
     assertEquals(100.0, holderA.getNewEncumbrance().getEncumbrance().getInitialAmountEncumbered());
-    
+
     // Holder B should be ignored (values remain unchanged)
     assertEquals(0.0, holderB.getNewEncumbrance().getAmount());
     assertEquals(0.0, holderB.getNewEncumbrance().getEncumbrance().getInitialAmountEncumbered());
-    
+
     // The list size remains the same as filtering happens during processing, not on the returned collection
     assertEquals(2, resultHolders.size());
   }
 
-    @Test
+  @Test
+  @TestMate(name = "TestMate-9250da82dffede2293b4180696e0edde")
   void testDistributeFundsShouldHandleNegativeEstimatedPrice() {
-    // TestMate-9250da82dffede2293b4180696e0edde
     // Given
-    FundsDistributionService distributionService = new FundsDistributionService();
     CurrencyConversion conversion = mock(CurrencyConversion.class);
     when(conversion.apply(any(MonetaryAmount.class))).thenAnswer(invocation -> invocation.getArgument(0));
     Cost cost = new Cost()
@@ -499,11 +504,13 @@ void testDistributeFundsShouldSubtractRoundingRemainderWhenCalculatedTotalExceed
       .withCurrency("USD")
       .withPoLineToFyConversion(conversion);
     List<EncumbranceRelationsHolder> holders = List.of(holder1, holder2);
+
     // When
     List<EncumbranceRelationsHolder> resultHolders = distributionService.distributeFunds(holders);
+
     // Then
     // The PoLineEstimatedPrice is calculated as -100.0
-    assertEquals(-100.0, resultHolders.get(0).getPoLine().getCost().getPoLineEstimatedPrice());
+    assertEquals(-100.0, resultHolders.getFirst().getPoLine().getCost().getPoLineEstimatedPrice());
     // Based on FinanceUtils.calculateEncumbranceEffectiveAmount, the effective amount (Transaction.amount)
     // is floored at 0.0 if the calculation (initial - expended + credited - awaiting) is negative.
     // Initial amount is -50.0, so the effective amount must be 0.0.
@@ -521,9 +528,9 @@ void testDistributeFundsShouldSubtractRoundingRemainderWhenCalculatedTotalExceed
     assertEquals(-100.0, totalInitialEncumbered, 0.0001);
   }
 
-    @Test
+  @Test
+  @TestMate(name = "TestMate-f67959340606de93512de75cf3840b75")
   void testDistributeFundsShouldSkipAdjustmentWhenAllDistributionsAreAmountType() {
-    // TestMate-f67959340606de93512de75cf3840b75
     // Given
     CurrencyConversion conversion = mock(ManualCurrencyConversion.class);
     when(conversion.apply(any(MonetaryAmount.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -549,10 +556,12 @@ void testDistributeFundsShouldSubtractRoundingRemainderWhenCalculatedTotalExceed
       .withCurrency("USD")
       .withPoLineToFyConversion(conversion);
     List<EncumbranceRelationsHolder> holders = List.of(holder);
+
     // When
     List<EncumbranceRelationsHolder> resultHolders = distributionService.distributeFunds(holders);
+
     // Then
-    EncumbranceRelationsHolder resultHolder = resultHolders.get(0);
+    EncumbranceRelationsHolder resultHolder = resultHolders.getFirst();
     Transaction resultTransaction = resultHolder.getNewEncumbrance();
     assertEquals(1, resultHolders.size());
     assertEquals(99.99, resultTransaction.getEncumbrance().getInitialAmountEncumbered(), 0.0001);
@@ -560,11 +569,10 @@ void testDistributeFundsShouldSubtractRoundingRemainderWhenCalculatedTotalExceed
     assertEquals(100.0, resultHolder.getPoLine().getCost().getPoLineEstimatedPrice(), 0.0001);
   }
 
-    @Test
+  @Test
+  @TestMate(name = "TestMate-025592f8516c1eaf37ce59a4e7495a55")
   void testDistributeFundsShouldHandleZeroEstimatedPrice() {
-    // TestMate-025592f8516c1eaf37ce59a4e7495a55
     // Given
-    FundsDistributionService distributionService = new FundsDistributionService();
     CurrencyConversion conversion = mock(CurrencyConversion.class);
     when(conversion.apply(any(MonetaryAmount.class))).thenAnswer(invocation -> invocation.getArgument(0));
     Cost cost = new Cost()
@@ -585,11 +593,13 @@ void testDistributeFundsShouldSubtractRoundingRemainderWhenCalculatedTotalExceed
       .withCurrency("USD")
       .withPoLineToFyConversion(conversion);
     List<EncumbranceRelationsHolder> holders = List.of(holder);
+
     // When
     List<EncumbranceRelationsHolder> resultHolders = distributionService.distributeFunds(holders);
+
     // Then
     assertEquals(1, resultHolders.size());
-    EncumbranceRelationsHolder resultHolder = resultHolders.get(0);
+    EncumbranceRelationsHolder resultHolder = resultHolders.getFirst();
     Transaction resultTransaction = resultHolder.getNewEncumbrance();
     Encumbrance resultEncumbrance = resultTransaction.getEncumbrance();
     assertEquals(0.0, resultEncumbrance.getInitialAmountEncumbered(), 0.0001);
@@ -597,75 +607,75 @@ void testDistributeFundsShouldSubtractRoundingRemainderWhenCalculatedTotalExceed
     assertEquals(0.0, resultHolder.getPoLine().getCost().getPoLineEstimatedPrice(), 0.0001);
   }
 
-    @Test
-void testDistributeFundsShouldGroupHoldersByPoLineAndProcessEachGroup() {
-  // TestMate-ef59d7a6e8d347002cc6e3683f96f0c1
-  // Given
-  FundsDistributionService distributionService = new FundsDistributionService();
-  CurrencyConversion conversion = mock(CurrencyConversion.class);
-  when(conversion.apply(any(MonetaryAmount.class))).thenAnswer(invocation -> invocation.getArgument(0));
-  PoLine poLineA = new PoLine()
-    .withCost(new Cost()
+  @Test
+  @TestMate(name = "TestMate-ef59d7a6e8d347002cc6e3683f96f0c1")
+  void testDistributeFundsShouldGroupHoldersByPoLineAndProcessEachGroup() {
+    // Given
+    CurrencyConversion conversion = mock(CurrencyConversion.class);
+    when(conversion.apply(any(MonetaryAmount.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    PoLine poLineA = new PoLine()
+      .withCost(new Cost()
+        .withCurrency("USD")
+        .withListUnitPrice(100.0)
+        .withQuantityPhysical(1));
+    FundDistribution fd1 = new FundDistribution()
+      .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
+      .withValue(50.0);
+    FundDistribution fd2 = new FundDistribution()
+      .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
+      .withValue(50.0);
+    poLineA.setFundDistribution(List.of(fd1, fd2));
+    PoLine poLineB = new PoLine()
+      .withCost(new Cost()
+        .withCurrency("USD")
+        .withListUnitPrice(200.0)
+        .withQuantityPhysical(1));
+    FundDistribution fd3 = new FundDistribution()
+      .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
+      .withValue(50.0);
+    FundDistribution fd4 = new FundDistribution()
+      .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
+      .withValue(50.0);
+    poLineB.setFundDistribution(List.of(fd3, fd4));
+    EncumbranceRelationsHolder holder1 = new EncumbranceRelationsHolder()
+      .withPoLine(poLineA)
+      .withFundDistribution(fd1)
+      .withNewEncumbrance(new Transaction().withEncumbrance(new Encumbrance()))
       .withCurrency("USD")
-      .withListUnitPrice(100.0)
-      .withQuantityPhysical(1));
-  FundDistribution fd1 = new FundDistribution()
-    .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
-    .withValue(50.0);
-  FundDistribution fd2 = new FundDistribution()
-    .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
-    .withValue(50.0);
-  poLineA.setFundDistribution(List.of(fd1, fd2));
-  PoLine poLineB = new PoLine()
-    .withCost(new Cost()
+      .withPoLineToFyConversion(conversion);
+    EncumbranceRelationsHolder holder2 = new EncumbranceRelationsHolder()
+      .withPoLine(poLineA)
+      .withFundDistribution(fd2)
+      .withNewEncumbrance(new Transaction().withEncumbrance(new Encumbrance()))
       .withCurrency("USD")
-      .withListUnitPrice(200.0)
-      .withQuantityPhysical(1));
-  FundDistribution fd3 = new FundDistribution()
-    .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
-    .withValue(50.0);
-  FundDistribution fd4 = new FundDistribution()
-    .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
-    .withValue(50.0);
-  poLineB.setFundDistribution(List.of(fd3, fd4));
-  EncumbranceRelationsHolder holder1 = new EncumbranceRelationsHolder()
-    .withPoLine(poLineA)
-    .withFundDistribution(fd1)
-    .withNewEncumbrance(new Transaction().withEncumbrance(new Encumbrance()))
-    .withCurrency("USD")
-    .withPoLineToFyConversion(conversion);
-  EncumbranceRelationsHolder holder2 = new EncumbranceRelationsHolder()
-    .withPoLine(poLineA)
-    .withFundDistribution(fd2)
-    .withNewEncumbrance(new Transaction().withEncumbrance(new Encumbrance()))
-    .withCurrency("USD")
-    .withPoLineToFyConversion(conversion);
-  EncumbranceRelationsHolder holder3 = new EncumbranceRelationsHolder()
-    .withPoLine(poLineB)
-    .withFundDistribution(fd3)
-    .withNewEncumbrance(new Transaction().withEncumbrance(new Encumbrance()))
-    .withCurrency("USD")
-    .withPoLineToFyConversion(conversion);
-  EncumbranceRelationsHolder holder4 = new EncumbranceRelationsHolder()
-    .withPoLine(poLineB)
-    .withFundDistribution(fd4)
-    .withNewEncumbrance(new Transaction().withEncumbrance(new Encumbrance()))
-    .withCurrency("USD")
-    .withPoLineToFyConversion(conversion);
-  List<EncumbranceRelationsHolder> holders = List.of(holder1, holder2, holder3, holder4);
-  // When
-  List<EncumbranceRelationsHolder> resultHolders = distributionService.distributeFunds(holders);
-  // Then
-  assertEquals(100.0, poLineA.getCost().getPoLineEstimatedPrice(), 0.0001);
-  assertEquals(50.0, holder1.getNewEncumbrance().getEncumbrance().getInitialAmountEncumbered(), 0.0001);
-  assertEquals(50.0, holder1.getNewEncumbrance().getAmount(), 0.0001);
-  assertEquals(50.0, holder2.getNewEncumbrance().getEncumbrance().getInitialAmountEncumbered(), 0.0001);
-  assertEquals(50.0, holder2.getNewEncumbrance().getAmount(), 0.0001);
-  assertEquals(200.0, poLineB.getCost().getPoLineEstimatedPrice(), 0.0001);
-  assertEquals(100.0, holder3.getNewEncumbrance().getEncumbrance().getInitialAmountEncumbered(), 0.0001);
-  assertEquals(100.0, holder3.getNewEncumbrance().getAmount(), 0.0001);
-  assertEquals(100.0, holder4.getNewEncumbrance().getEncumbrance().getInitialAmountEncumbered(), 0.0001);
-  assertEquals(100.0, holder4.getNewEncumbrance().getAmount(), 0.0001);
-}
+      .withPoLineToFyConversion(conversion);
+    EncumbranceRelationsHolder holder3 = new EncumbranceRelationsHolder()
+      .withPoLine(poLineB)
+      .withFundDistribution(fd3)
+      .withNewEncumbrance(new Transaction().withEncumbrance(new Encumbrance()))
+      .withCurrency("USD")
+      .withPoLineToFyConversion(conversion);
+    EncumbranceRelationsHolder holder4 = new EncumbranceRelationsHolder()
+      .withPoLine(poLineB)
+      .withFundDistribution(fd4)
+      .withNewEncumbrance(new Transaction().withEncumbrance(new Encumbrance()))
+      .withCurrency("USD")
+      .withPoLineToFyConversion(conversion);
+    List<EncumbranceRelationsHolder> holders = List.of(holder1, holder2, holder3, holder4);
 
+    // When
+    distributionService.distributeFunds(holders);
+
+    // Then
+    assertEquals(100.0, poLineA.getCost().getPoLineEstimatedPrice(), 0.0001);
+    assertEquals(50.0, holder1.getNewEncumbrance().getEncumbrance().getInitialAmountEncumbered(), 0.0001);
+    assertEquals(50.0, holder1.getNewEncumbrance().getAmount(), 0.0001);
+    assertEquals(50.0, holder2.getNewEncumbrance().getEncumbrance().getInitialAmountEncumbered(), 0.0001);
+    assertEquals(50.0, holder2.getNewEncumbrance().getAmount(), 0.0001);
+    assertEquals(200.0, poLineB.getCost().getPoLineEstimatedPrice(), 0.0001);
+    assertEquals(100.0, holder3.getNewEncumbrance().getEncumbrance().getInitialAmountEncumbered(), 0.0001);
+    assertEquals(100.0, holder3.getNewEncumbrance().getAmount(), 0.0001);
+    assertEquals(100.0, holder4.getNewEncumbrance().getEncumbrance().getInitialAmountEncumbered(), 0.0001);
+    assertEquals(100.0, holder4.getNewEncumbrance().getAmount(), 0.0001);
+  }
 }
