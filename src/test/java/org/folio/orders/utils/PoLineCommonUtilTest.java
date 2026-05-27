@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vertx.core.json.JsonObject;
 import org.folio.CopilotGenerated;
+import org.folio.TestMate;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Details;
@@ -31,7 +32,6 @@ import java.util.Map;
 import org.folio.rest.jaxrs.model.Error;
 import static org.hamcrest.Matchers.contains;
 import io.vertx.core.json.JsonArray;
-import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import java.util.Collections;
 import org.folio.rest.jaxrs.model.Ongoing;
@@ -266,9 +266,9 @@ public class PoLineCommonUtilTest {
     assertTrue(result.contains(locations.get(1)));
   }
 
-    @Test
+  @Test
+  @TestMate(name = "TestMate-fcee0817e0fb477dda0345cf59133ea1")
   void testVerifyProtectedFieldsChangedShouldDetectScalarFieldChange() {
-    // TestMate-fcee0817e0fb477dda0345cf59133ea1
     // Given
     List<String> protectedFields = List.of("poLineNumber", "isPackage");
     JsonObject objectFromStorage = new JsonObject()
@@ -287,18 +287,18 @@ public class PoLineCommonUtilTest {
     assertEquals(PROHIBITED_FIELD_CHANGING.getCode(), error.getCode());
     Map<String, Object> additionalProperties = error.getAdditionalProperties();
     Object modifiedFields = additionalProperties.get("protectedAndModifiedFields");
-    
+
     assertThat((Collection<String>) modifiedFields, containsInAnyOrder("poLineNumber", "isPackage"));
   }
 
-    @Test
+  @Test
+  @TestMate(name = "TestMate-7c59c6e9741685700ad64171c7f676d6")
   void testVerifyProtectedFieldsChangedShouldDetectArraySizeDecrease() {
-    // TestMate-7c59c6e9741685700ad64171c7f676d6
     // Given
     String protectedField = "details.productIds";
     List<String> protectedFields = List.of(protectedField);
     String productIdType = UUID.randomUUID().toString();
-    
+
     ProductId firstProductId = new ProductId()
       .withProductId("9780735245341")
       .withProductIdType(productIdType);
@@ -309,29 +309,29 @@ public class PoLineCommonUtilTest {
     PoLine lineFromStorage = new PoLine()
       .withId(poLineId)
       .withDetails(new Details().withProductIds(List.of(firstProductId, secondProductId)));
-    
+
     PoLine requestObject = new PoLine()
       .withId(poLineId)
       .withDetails(new Details().withProductIds(List.of(firstProductId)));
     JsonObject lineFromStorageJson = JsonObject.mapFrom(lineFromStorage);
     JsonObject requestObjectJson = JsonObject.mapFrom(requestObject);
     // When
-    HttpException exception = assertThrows(HttpException.class, () -> 
+    HttpException exception = assertThrows(HttpException.class, () ->
       PoLineCommonUtil.verifyProtectedFieldsChanged(protectedFields, lineFromStorageJson, requestObjectJson)
     );
     // Then
     assertEquals(400, exception.getCode());
     Error error = exception.getError();
     assertEquals(PROHIBITED_FIELD_CHANGING.getCode(), error.getCode());
-    
+
     Map<String, Object> additionalProperties = error.getAdditionalProperties();
     Object modifiedFields = additionalProperties.get("protectedAndModifiedFields");
     assertThat((Collection<String>) modifiedFields, contains(protectedField));
   }
 
-    @Test
+  @Test
+  @TestMate(name = "TestMate-557f9017f8ed07ba36247fa5b6b84c6b")
   void testVerifyProtectedFieldsChangedShouldDetectArrayContentMismatchSameSize() {
-    // TestMate-557f9017f8ed07ba36247fa5b6b84c6b
     // Given
     String protectedField = "tags.tagList";
     List<String> protectedFields = List.of(protectedField);
@@ -354,9 +354,9 @@ public class PoLineCommonUtilTest {
     assertThat((Collection<String>) modifiedFields, contains(protectedField));
   }
 
-    @Test
+  @Test
+  @TestMate(name = "TestMate-2cf9247ee4f691a5aa390dbf1d481c14")
   void testVerifyProtectedFieldsChangedShouldIgnoreUnprotectedFieldChanges() {
-    // TestMate-2cf9247ee4f691a5aa390dbf1d481c14
     // Given
     List<String> protectedFields = List.of("id");
     String id = "11111111-1111-1111-1111-111111111111";
@@ -372,9 +372,9 @@ public class PoLineCommonUtilTest {
     assertEquals(objectFromStorage, result);
   }
 
-    @Test
+  @Test
+  @TestMate(name = "TestMate-defcd112d0e57c836878823cedcaef6c")
   void testVerifyProtectedFieldsChangedShouldHandleNestedFieldPaths() {
-    // TestMate-defcd112d0e57c836878823cedcaef6c
     // Given
     String protectedFieldPath = "cost.currency";
     List<String> protectedFields = List.of(protectedFieldPath);
@@ -399,18 +399,18 @@ public class PoLineCommonUtilTest {
     assertThat((Collection<String>) modifiedFields, contains(protectedFieldPath));
   }
 
-    @Test
+  @Test
+  @TestMate(name = "TestMate-69d03db6b9de005e4433ca20ca1445ee")
   void testVerifyProtectedFieldsChangedShouldHandleEmptyProtectedFieldsList() {
-    // TestMate-69d03db6b9de005e4433ca20ca1445ee
     // Given
     List<String> protectedFields = Collections.emptyList();
     String id = "00000000-0000-0000-0000-000000000001";
-    
+
     JsonObject objectFromStorage = new JsonObject()
       .put("id", id)
       .put("name", "Original Name")
       .put("status", "Pending");
-      
+
     JsonObject requestObject = new JsonObject()
       .put("id", UUID.fromString("00000000-0000-0000-0000-000000000002").toString())
       .put("name", "Changed Name")
@@ -421,9 +421,9 @@ public class PoLineCommonUtilTest {
     assertEquals(objectFromStorage, result);
   }
 
-    @Test
+  @Test
+  @TestMate(name = "TestMate-a9add8ed0d1f7a0fe476f740af1ee27e")
   void testVerifyProtectedFieldsChangedShouldDetectChangesInMultipleProtectedFields() {
-    // TestMate-a9add8ed0d1f7a0fe476f740af1ee27e
     // Given
     List<String> protectedFields = List.of("id", "source");
     JsonObject objectFromStorage = new JsonObject()
@@ -447,13 +447,13 @@ public class PoLineCommonUtilTest {
     assertThat((Collection<String>) modifiedFields, containsInAnyOrder("id", "source"));
   }
 
-    @ParameterizedTest
+  @ParameterizedTest
+  @TestMate(name = "TestMate-1e7f8d73471208534f55a8712f35d569")
   @CsvSource(value = {
     "reviewDate|2024-01-01T00:00:00Z",
     "manualRenewal|true"
   }, delimiter = '|')
   void testVerifyOngoingFieldsChangedShouldThrowExceptionWhenSubscriptionFieldsModified(String fieldName, String newValue) {
-    // TestMate-1e7f8d73471208534f55a8712f35d569
     // Given
     JsonObject ongoingStorage = new JsonObject()
       .put("isSubscription", true)
@@ -490,7 +490,8 @@ public class PoLineCommonUtilTest {
     assertEquals(expectedValue, parameter.getValue());
   }
 
-    @ParameterizedTest
+  @ParameterizedTest
+  @TestMate(name = "TestMate-6800fce4f0684e383b323eea15366367")
   @CsvSource(value = {
     "interval|10",
     "renewalDate|2024-01-15T10:30:00Z",
@@ -498,7 +499,6 @@ public class PoLineCommonUtilTest {
     "manualRenewal|true"
   }, delimiter = '|')
   void testVerifyOngoingFieldsChangedShouldThrowExceptionWhenNonSubscriptionFieldsModified(String fieldName, String newValue) {
-    // TestMate-6800fce4f0684e383b323eea15366367
     //given
     JsonObject ongoingStorage = new JsonObject()
       .put("isSubscription", false)
@@ -537,10 +537,10 @@ public class PoLineCommonUtilTest {
     assertEquals(expectedValue, parameter.getValue());
   }
 
-    @ParameterizedTest
+  @ParameterizedTest
+  @TestMate(name = "TestMate-495401ee096d3b81e566755f6a634940")
   @ValueSource(booleans = {true, false})
   void testVerifyOngoingFieldsChangedShouldSucceedWhenAllowedFieldsModified(boolean isSubscription) {
-    // TestMate-495401ee096d3b81e566755f6a634940
     // Given
     JsonObject ongoingStorage = new JsonObject()
       .put("isSubscription", isSubscription)
