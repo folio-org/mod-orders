@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.folio.TestConstants;
+import org.folio.TestMate;
 import org.folio.models.ItemStatus;
 import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
 import org.folio.rest.core.exceptions.ErrorCodes;
@@ -997,9 +998,9 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     verify(inventoryItemManager, times(1)).batchUpdatePartialItems(any(), eq(requestContext));
   }
 
-    @Test
+  @Test
+  @TestMate(name = "TestMate-a23ac7ff68d7df16378fe40380351580")
   void processHoldingsShouldCreateShadowInstanceInTargetTenantBeforeHoldingOperations() {
-    // TestMate-a23ac7ff68d7df16378fe40380351580
     // Given
     String orderLineId = "5097457a-977a-42c9-9430-8456f913d8f1";
     String newInstanceId = "cd3288a4-898c-4347-a003-2d810ef70f03";
@@ -1043,9 +1044,9 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     );
   }
 
-    @Test
+  @Test
+  @TestMate(name = "TestMate-e4aae478702bb711b8841cf677e35e99")
   void processHoldingsMoveShouldStripUnrecognizedFieldsFromHoldings() {
-    // TestMate-e4aae478702bb711b8841cf677e35e99
     // Given
     String orderLineId = UUID.fromString("5097457a-977a-42c9-9430-8456f913d8f1").toString();
     String newInstanceId = UUID.fromString("cd3288a4-898c-4347-a003-2d810ef70f03").toString();
@@ -1084,16 +1085,16 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     verify(inventoryHoldingManager).updateInstanceForHoldingRecords(holdingCaptor.capture(), eq(newInstanceId), any(RequestContext.class));
     List<JsonObject> capturedHoldings = holdingCaptor.getValue();
     assertThat(capturedHoldings).hasSize(1);
-    
+
     JsonObject cleanHolding = capturedHoldings.get(0);
     assertThat(cleanHolding.getString(ID)).isEqualTo(holdingId);
     assertThat(cleanHolding.containsKey("holdingsItems")).isFalse();
     assertThat(cleanHolding.containsKey("bareHoldingsItems")).isFalse();
   }
 
-    @Test
+  @Test
+  @TestMate(name = "TestMate-7953e0eba0a857901e3c19340404cf02")
   void processHoldingsShouldSkipAlreadyProcessedHoldings() {
-    // TestMate-7953e0eba0a857901e3c19340404cf02
     // Given
     String orderLineId = "5097457a-977a-42c9-9430-8456f913d8f1";
     String newInstanceId = "cd3288a4-898c-4347-a003-2d810ef70f03";
@@ -1141,13 +1142,13 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     // Verify the state of the holder
     List<StorageReplaceOrderLineHoldingRefs> holdingRefs = holder.getStoragePatchOrderLineRequest().getReplaceInstanceRef().getHoldings();
     assertThat(holdingRefs).hasSize(1);
-    assertThat(holdingRefs.get(0).getFromHoldingId()).isEqualTo(sharedHoldingId);
-    assertThat(holdingRefs.get(0).getToHoldingId()).isEqualTo(newHoldingId);
+    assertThat(holdingRefs.getFirst().getFromHoldingId()).isEqualTo(sharedHoldingId);
+    assertThat(holdingRefs.getFirst().getToHoldingId()).isEqualTo(newHoldingId);
   }
 
-    @Test
+  @Test
+  @TestMate(name = "TestMate-db2786eb40a9fb7340af1990aaec6cce")
   void processHoldingsShouldDeleteAbandonedHoldingsInCorrectTenantContext() {
-    // TestMate-db2786eb40a9fb7340af1990aaec6cce
     // Given
     String orderLineId = UUID.fromString("5097457a-977a-42c9-9430-8456f913d8f1").toString();
     String newInstanceId = UUID.fromString("cd3288a4-898c-4347-a003-2d810ef70f03").toString();
@@ -1204,9 +1205,9 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     );
   }
 
-    @Test
+  @Test
+  @TestMate(name = "TestMate-bc699760ddbb253d4ad4a996345719ef")
   void processHoldingsShouldUseDefaultTenantWhenLocationTenantIdIsNull() {
-    // TestMate-bc699760ddbb253d4ad4a996345719ef
     // Given
     String orderLineId = UUID.fromString("5097457a-977a-42c9-9430-8456f913d8f1").toString();
     String newInstanceId = UUID.fromString("cd3288a4-898c-4347-a003-2d810ef70f03").toString();
@@ -1254,7 +1255,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     );
     List<StorageReplaceOrderLineHoldingRefs> holdingRefs = holder.getStoragePatchOrderLineRequest().getReplaceInstanceRef().getHoldings();
     assertThat(holdingRefs).hasSize(1);
-    assertThat(holdingRefs.get(0).getFromHoldingId()).isEqualTo(originalHoldingId);
-    assertThat(holdingRefs.get(0).getToHoldingId()).isEqualTo(newHoldingId);
+    assertThat(holdingRefs.getFirst().getFromHoldingId()).isEqualTo(originalHoldingId);
+    assertThat(holdingRefs.getFirst().getToHoldingId()).isEqualTo(newHoldingId);
   }
 }
