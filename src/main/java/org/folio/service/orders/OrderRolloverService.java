@@ -172,7 +172,7 @@ public class OrderRolloverService {
     var fundIdsIterator = FutureIterator.chunk(FutureIterator.fromIterator(fundIds.listIterator()), MAX_IDS_FOR_GET_RQ_15);
     var posIteratorIterator = FutureIterator.applyFunction(fundIdsIterator,
       fundIdsChunk -> {
-        String baseQuery = buildBaseOrderQuery(fundIdsChunk, openOrders, ledgerFYRollover);
+        String baseQuery = buildBaseOrderQuery(fundIdsChunk, openOrders);
         return succeededFuture(purchaseOrderStorageService.getPurchaseOrderIterator(baseQuery, requestContext));
       });
     var poIterator = FutureIterator.dechunk(FutureIterator.flatten(posIteratorIterator));
@@ -188,7 +188,7 @@ public class OrderRolloverService {
     });
   }
 
-  protected String buildBaseOrderQuery(List<String> fundIds, boolean openOrders, LedgerFiscalYearRollover ledgerFYRollover) {
+  protected String buildBaseOrderQuery(List<String> fundIds, boolean openOrders) {
     StringBuilder resultQuery = new StringBuilder();
     resultQuery.append("(").append(buildOrderStatusQuery(openOrders)).append(")")
       .append(AND)
