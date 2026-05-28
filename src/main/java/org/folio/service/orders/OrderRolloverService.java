@@ -154,7 +154,7 @@ public class OrderRolloverService {
     // Rollover the orders by funds without ever loading all orders or all order lines into memory.
     // Batches are optimized to avoid processing too few or too many at a time.
     logger.info("rolloverOrders(openOrders={}):: start", openOrders);
-    var poIdIterator = getOrderIds(fundIds, ledgerFYRollover, openOrders, requestContext);
+    var poIdIterator = getOrderIds(fundIds, openOrders, requestContext);
     var poLinesIterator = getPoLines(poIdIterator, requestContext);
     var lineHolderIterator = getEncumbrances(poLinesIterator, ledgerFYRollover, requestContext);
     var modifiedPoLineIterator = FutureIterator.applyFunction(lineHolderIterator,
@@ -167,8 +167,7 @@ public class OrderRolloverService {
   /**
    * Get the order ids from orders matching the funds, without loading all orders into memory
    */
-  private FutureIterator<String> getOrderIds(List<String> fundIds, LedgerFiscalYearRollover ledgerFYRollover,
-      boolean openOrders, RequestContext requestContext) {
+  private FutureIterator<String> getOrderIds(List<String> fundIds, boolean openOrders, RequestContext requestContext) {
     var fundIdsIterator = FutureIterator.chunk(FutureIterator.fromIterator(fundIds.listIterator()), MAX_IDS_FOR_GET_RQ_15);
     var posIteratorIterator = FutureIterator.applyFunction(fundIdsIterator,
       fundIdsChunk -> {
