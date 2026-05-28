@@ -762,10 +762,10 @@ public class OrderRolloverServiceTest {
 
   private static Stream<Arguments> testBuildOrderQueryArgs() {
     return Stream.of(
-      Arguments.of("(orderType == One-Time) and (workflowStatus==Open) and (poLine.fundDistribution =/@fundId (%s))",
+      Arguments.of("(workflowStatus==Open) and (poLine.fundDistribution =/@fundId (%s))",
         true,
         List.of(new EncumbranceRollover().withOrderType(EncumbranceRollover.OrderType.ONE_TIME).withBasedOn(EncumbranceRollover.BasedOn.INITIAL_AMOUNT).withIncreaseBy(0d))),
-      Arguments.of("(orderType == One-Time) and (workflowStatus<>Open) and (poLine.fundDistribution =/@fundId (%s)) and (poLine.fundDistribution == \"*\\\"encumbrance\\\": \\\"*\")",
+      Arguments.of("(workflowStatus<>Open) and (poLine.fundDistribution =/@fundId (%s)) and (poLine.fundDistribution == \"*\\\"encumbrance\\\": \\\"*\")",
         false,
         List.of(new EncumbranceRollover().withOrderType(EncumbranceRollover.OrderType.ONE_TIME).withBasedOn(EncumbranceRollover.BasedOn.INITIAL_AMOUNT).withIncreaseBy(0d)))
     );
