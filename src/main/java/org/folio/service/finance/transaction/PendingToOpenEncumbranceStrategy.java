@@ -91,6 +91,9 @@ public class PendingToOpenEncumbranceStrategy implements EncumbranceWorkflowStra
   }
 
   private Future<Void> withInvoiceWithReleaseEncumbrance(String fiscalYearId, List<EncumbranceRelationsHolder> holders, RequestContext requestContext) {
+    if (holders.isEmpty()) {
+      return Future.succeededFuture();
+    }
     List<String> polIds = holders.stream()
       .map(EncumbranceRelationsHolder::getPoLineId)
       .distinct()
