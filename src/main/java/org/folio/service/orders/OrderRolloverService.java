@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import javax.money.Monetary;
 import javax.money.MonetaryAmount;
@@ -41,12 +40,10 @@ import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Cost;
-import org.folio.rest.jaxrs.model.EncumbranceRollover;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.FundDistribution.DistributionType;
 import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
 import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.RolloverStatus;
 import org.folio.service.caches.CommonSettingsCache;
 import org.folio.service.exchange.CacheableExchangeRateService;
@@ -69,7 +66,6 @@ public class OrderRolloverService {
   // Following cql query filters orders whose po lines do not contain 'encumbrance' value in the entire fundDistribution array.
   // That condition skips orders already processed in previous fiscal years.
   private static final String PO_LINE_NON_EMPTY_ENCUMBRANCE_QUERY = "poLine.fundDistribution == \"*\\\"encumbrance\\\": \\\"*\"";
-  private static final String ORDER_TYPE_QUERY = "orderType == %s";
   private static final String ENCUMBR_FY_QUERY = "fiscalYearId == \"%s\"";
   private static final String OR = " or ";
   private static final String AND = " and ";
@@ -194,9 +190,6 @@ public class OrderRolloverService {
 
   protected String buildBaseOrderQuery(List<String> fundIds, boolean openOrders, LedgerFiscalYearRollover ledgerFYRollover) {
     StringBuilder resultQuery = new StringBuilder();
-    if (!ledgerFYRollover.getEncumbrancesRollover().isEmpty()) {
-      resultQuery.append("(").append(buildOrderTypesQuery(ledgerFYRollover)).append(")").append(AND);
-    }
     resultQuery.append("(").append(buildOrderStatusQuery(openOrders)).append(")")
       .append(AND)
       .append("(").append(buildFundIdQuery(fundIds)).append(")");
@@ -205,22 +198,6 @@ public class OrderRolloverService {
       resultQuery.append(AND).append("(").append(PO_LINE_NON_EMPTY_ENCUMBRANCE_QUERY).append(")");
     }
     return resultQuery.toString();
-  }
-
-  private String buildOrderTypesQuery(LedgerFiscalYearRollover ledgerFYRollover) {
-    return ledgerFYRollover.getEncumbrancesRollover().stream()
-      .map(encumbrancesRollover -> convertToOrderType(encumbrancesRollover.getOrderType()))
-      .map(PurchaseOrder.OrderType::toString)
-      .distinct()
-      .map(orderType -> String.format(ORDER_TYPE_QUERY, orderType))
-      .collect(Collectors.joining(OR));
-  }
-
-  private PurchaseOrder.OrderType convertToOrderType(EncumbranceRollover.OrderType encumberRolloverType) {
-    if (EncumbranceRollover.OrderType.ONE_TIME == encumberRolloverType) {
-      return PurchaseOrder.OrderType.ONE_TIME;
-    }
-    return PurchaseOrder.OrderType.ONGOING;
   }
 
   private String buildOrderStatusQuery(boolean openOrders) {
