@@ -1,5 +1,12 @@
 ## 13.1.0 - Unreleased
 
+## 13.0.11 - Released (Sunflower R1 2025 Bug Fix)
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v13.0.10...v13.0.11)
+
+### Bug Fixes
+* [MODFISTO-559](https://folio-org.atlassian.net/browse/MODFISTO-559) - Fix ledger rollover logic to handle encumbrances correctly when only one type is selected
+
 ## 13.0.10 - Released (Sunflower R1 2025 Bug Fix)
 
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v13.0.9...v13.0.10)
