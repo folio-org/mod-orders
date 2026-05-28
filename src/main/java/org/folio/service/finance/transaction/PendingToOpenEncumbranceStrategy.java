@@ -118,7 +118,7 @@ public class PendingToOpenEncumbranceStrategy implements EncumbranceWorkflowStra
   private String queryToGetRelatedInvoiceLinesByPoLineIds(String fiscalYearId, List<String> poLineIds) {
     return "invoiceLineStatus == (Approved OR Paid)" + AND +
       "releaseEncumbrance == true" + AND +
-      (fiscalYearId == null ? "" : "invoices.fiscalYearId == " + fiscalYearId + AND) +
+      "invoices.fiscalYearId == " + fiscalYearId + AND +
       convertIdsToCqlQuery(poLineIds, "poLineId");
   }
 }
