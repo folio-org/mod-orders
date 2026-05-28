@@ -10,6 +10,7 @@ import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -75,6 +76,18 @@ public class InvoiceLineService {
     return collectResultsOnSuccess(futures)
       .map(listList -> listList.stream().flatMap(Collection::stream).collect(toList()))
       .map(invoiceLines -> invoiceLines.stream().distinct().collect(Collectors.toList()));
+  }
+
+  public Future<List<InvoiceLine>> getInvoiceLinesByIdsAndQuery(List<String> ids,
+      Function<List<String>, String> queryFunction, RequestContext requestContext) {
+    List<Future<List<InvoiceLine>>> futureList = StreamEx
+      .ofSubLists(ids, MAX_IDS_FOR_GET_RQ_15)
+      .map(queryFunction)
+      .map(query -> retrieveInvoiceLines(query, requestContext))
+      .toList();
+
+    return collectResultsOnSuccess(futureList)
+      .map(col -> col.stream().flatMap(List::stream).toList());
   }
 
   public Future<Void> removeEncumbranceLinks(List<InvoiceLine> invoiceLines, List<String> transactionIds, RequestContext requestContext) {

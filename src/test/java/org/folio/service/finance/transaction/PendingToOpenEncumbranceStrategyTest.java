@@ -118,7 +118,7 @@ public class PendingToOpenEncumbranceStrategyTest {
       pendingPaymentService);
     pendingToOpenEncumbranceStrategy = new PendingToOpenEncumbranceStrategy(encumbranceService,
       fundsDistributionService, budgetRestrictionService, encumbranceRelationsHoldersBuilder,
-      encumbrancesProcessingHolderBuilder, polInvoiceLineRelationService);
+      encumbrancesProcessingHolderBuilder, polInvoiceLineRelationService, invoiceLineService);
   }
 
   @Test
@@ -185,7 +185,8 @@ public class PendingToOpenEncumbranceStrategyTest {
       .withFiscalYearId(fiscalYearId);
     InvoiceLine invoiceLine = new InvoiceLine()
       .withId(invoiceLineId)
-      .withInvoiceLineStatus(InvoiceLine.InvoiceLineStatus.CANCELLED);
+      .withInvoiceLineStatus(InvoiceLine.InvoiceLineStatus.CANCELLED)
+      .withPoLineId(poLine.getId());
 
     doReturn(Future.succeededFuture(exchangeRate))
       .when(cacheableExchangeRateService).getExchangeRate(any(), any(), any(), eq(requestContext));
@@ -193,6 +194,8 @@ public class PendingToOpenEncumbranceStrategyTest {
       .when(invoiceService).getInvoicesByOrderId(nullable(String.class), eq(requestContext));
     doReturn(succeededFuture(List.of(invoiceLine)))
       .when(invoiceLineService).getInvoiceLinesByOrderLineIds(anyList(), eq(requestContext));
+    doReturn(succeededFuture(List.of(invoiceLine)))
+      .when(invoiceLineService).getInvoiceLinesByIdsAndQuery(anyList(), any(), eq(requestContext));
     doReturn(succeededFuture(singletonList(released)))
       .when(transactionService).getTransactionsByIds(argThat(list -> list.size() == 1), eq(requestContext));
     doReturn(succeededFuture(null))
@@ -256,7 +259,8 @@ public class PendingToOpenEncumbranceStrategyTest {
       .withFiscalYearId(fiscalYearId);
     InvoiceLine invoiceLine = new InvoiceLine()
       .withId(invoiceLineId)
-      .withInvoiceLineStatus(InvoiceLine.InvoiceLineStatus.CANCELLED);
+      .withInvoiceLineStatus(InvoiceLine.InvoiceLineStatus.CANCELLED)
+      .withPoLineId(poLine.getId());
     List<InvoiceLine> invoiceLines = List.of(invoiceLine);
 
     Transaction pendingPayment = new Transaction()
@@ -277,6 +281,8 @@ public class PendingToOpenEncumbranceStrategyTest {
     doReturn(succeededFuture(invoiceLines))
       .doReturn(succeededFuture(invoiceLines))
       .when(invoiceLineService).getInvoiceLinesByOrderLineIds(anyList(), eq(requestContext));
+    doReturn(succeededFuture(invoiceLines))
+      .when(invoiceLineService).getInvoiceLinesByIdsAndQuery(anyList(), any(), eq(requestContext));
     String expectedQuery = "awaitingPayment.encumbranceId==(" + encumbranceId + ")";
     doReturn(succeededFuture(pendingPayments))
       .when(transactionService).getTransactions(expectedQuery, requestContext);
@@ -352,6 +358,8 @@ public class PendingToOpenEncumbranceStrategyTest {
 
     doReturn(succeededFuture(null))
       .when(invoiceService).getInvoicesByOrderId(nullable(String.class), eq(requestContext));
+    doReturn(succeededFuture(List.of()))
+      .when(invoiceLineService).getInvoiceLinesByIdsAndQuery(anyList(), any(), eq(requestContext));
     doReturn(succeededFuture(List.of()))
       .when(invoiceLineService).getInvoiceLinesByOrderLineIds(anyList(), eq(requestContext));
     doReturn(succeededFuture(singletonList(released)))
@@ -431,6 +439,8 @@ public class PendingToOpenEncumbranceStrategyTest {
       .when(cacheableExchangeRateService).getExchangeRate(any(), any(), any(), eq(requestContext));
     doReturn(Future.succeededFuture(List.of(transaction)))
       .when(transactionService).getTransactionsByIds(anyList(), eq(requestContext));
+    doReturn(succeededFuture(List.of()))
+      .when(invoiceLineService).getInvoiceLinesByIdsAndQuery(anyList(), any(), eq(requestContext));
 
     // When
     Future<List<EncumbranceRelationsHolder>> future = pendingToOpenEncumbranceStrategy

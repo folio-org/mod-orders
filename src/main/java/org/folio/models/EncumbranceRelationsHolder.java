@@ -24,6 +24,7 @@ public class EncumbranceRelationsHolder {
   private Transaction oldEncumbrance;
   private String ledgerId;
   private boolean restrictEncumbrance;
+  private boolean invoiceWithReleaseEncumbrance;
 
   public EncumbranceRelationsHolder withNewEncumbrance(Transaction transaction) {
     this.newEncumbrance = transaction;
@@ -152,5 +153,14 @@ public class EncumbranceRelationsHolder {
 
   public String getCurrentFiscalYearId() {
     return currentFiscalYearId;
+  }
+
+  public EncumbranceRelationsHolder withInvoiceWithReleaseEncumbrance(boolean invoiceWithReleaseEncumbrance) {
+    this.invoiceWithReleaseEncumbrance = invoiceWithReleaseEncumbrance;
+    return this;
+  }
+
+  public boolean getInvoiceWithReleaseEncumbrance() {
+    return invoiceWithReleaseEncumbrance;
   }
 }
