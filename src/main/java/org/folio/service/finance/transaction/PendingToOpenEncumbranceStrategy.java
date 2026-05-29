@@ -99,7 +99,7 @@ public class PendingToOpenEncumbranceStrategy implements EncumbranceWorkflowStra
       .distinct()
       .toList();
     return invoiceLineService.getInvoiceLinesByIdsAndQuery(polIds,
-        ids -> queryToGetRelatedInvoiceLinesByPoLineIds(fiscalYearId, polIds), requestContext)
+        ids -> queryToGetRelatedInvoiceLinesByPoLineIds(fiscalYearId, ids), requestContext)
       .map(invoiceLines -> {
         Map<String, List<InvoiceLine>> polIdToInvoiceLine = invoiceLines.stream()
           .collect(groupingBy(InvoiceLine::getPoLineId));
