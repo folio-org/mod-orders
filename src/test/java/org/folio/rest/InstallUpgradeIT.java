@@ -39,7 +39,7 @@ public class InstallUpgradeIT {
 
   @Container
   private static final KafkaContainer KAFKA =
-    new KafkaContainer(DockerImageName.parse("apache/kafka-native:3.8.0"))
+    new KafkaContainer(DockerImageName.parse("apache/kafka-native:4.2.0"))
       .withNetwork(NETWORK)
       .withNetworkAliases("mykafka");
 

@@ -63,7 +63,7 @@
     <buildDate>${maven.build.timestamp}</buildDate>
 
     <!--Dependency Management Properties-->
-    <vertx.version>5.0.8</vertx.version>
+    <vertx.version>5.0.12</vertx.version>
     <jackson-bom.version>2.21.1</jackson-bom.version>
     <log4j.version>2.25.3</log4j.version>
     <testcontainers-bom.version>2.0.3</testcontainers-bom.version>
@@ -82,7 +82,7 @@
     <folio-di-support.version>4.0.0</folio-di-support.version>
     <mod-di-converter-storage-client.version>2.4.3</mod-di-converter-storage-client.version>
     <data-import-processing-core.version>5.0.0</data-import-processing-core.version>
-    <folio-kafka-wrapper.version>4.0.0</folio-kafka-wrapper.version>
+    <folio-kafka-wrapper.version>4.1.0-SNAPSHOT</folio-kafka-wrapper.version>
 
     <!--Maven plugin dependencies-->
     <build-helper-maven-plugin.version>3.6.1</build-helper-maven-plugin.version>
