@@ -254,50 +254,31 @@ public class EncumbranceUtilsTest {
     assertEquals(expected, invokeHasReleaseEncumbranceFalseAndIsApprovedOrPaid(payment, List.of(invoiceLine)));
   }
 
-  // 5. allowEncumbranceToUnrelease & allowEncumbranceToReleaseOnReopen (public)
+  // 5. allowEncumbranceToUnrelease (public)
   @ParameterizedTest
   @CsvSource({
-    // allowEncumbranceToUnrelease
-    "RELEASED,0,0,0,true",
-    "RELEASED,1,0,0,false",
-    "RELEASED,0,1,0,false",
-    "RELEASED,0,0,1,false",
-    "PENDING,0,0,0,false",
-    // allowEncumbranceToReleaseOnReopen
-    "PENDING,1,0,0,true",
-    "PENDING,0,1,0,true",
-    "PENDING,0,0,1,true",
-    "PENDING,0,0,0,false",
-    "RELEASED,1,0,0,false"
+    "0,0,0,true",
+    "1,0,0,false",
+    "0,1,0,false",
+    "0,0,1,false"
   })
-  void testAllowEncumbranceToUnrelease_and_ReleaseOnReopen(
-    Encumbrance.Status status,
+  void testAllowEncumbranceToUnrelease(
     double amountExpended,
     double amountCredited,
     double amountAwaitingPayment,
     boolean expected
   ) {
     var encumbrance = mock(Encumbrance.class);
-    when(encumbrance.getStatus()).thenReturn(status);
+    when(encumbrance.getStatus()).thenReturn(Encumbrance.Status.RELEASED);
     when(encumbrance.getAmountExpended()).thenReturn(amountExpended);
     when(encumbrance.getAmountCredited()).thenReturn(amountCredited);
     when(encumbrance.getAmountAwaitingPayment()).thenReturn(amountAwaitingPayment);
 
     var transaction = mock(Transaction.class);
     when(transaction.getEncumbrance()).thenReturn(encumbrance);
-    // Test allowEncumbranceToUnrelease
-    var allowUnrelease = EncumbranceUtils.allowEncumbranceToUnrelease(transaction);
-    if (status == Encumbrance.Status.RELEASED) {
-      assertEquals(expected, allowUnrelease);
-    }
 
-    // Test allowEncumbranceToReleaseOnReopen
-    var allowRelease = EncumbranceUtils.allowEncumbranceToReleaseOnReopen(encumbrance);
-    if (status == Encumbrance.Status.PENDING) {
-      assertEquals(expected, allowRelease);
-    } else {
-      assertFalse(allowRelease);
-    }
+    var allowUnrelease = EncumbranceUtils.allowEncumbranceToUnrelease(transaction);
+    assertEquals(expected, allowUnrelease);
   }
 
   // Reflection helpers for private methods

@@ -29,7 +29,8 @@ import org.folio.service.finance.budget.BudgetService;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
-import static org.folio.service.finance.EncumbranceUtils.allowEncumbranceToReleaseOnReopen;
+import static org.folio.rest.acq.model.finance.Encumbrance.Status.PENDING;
+import static org.folio.rest.acq.model.finance.Encumbrance.Status.RELEASED;
 
 public class EncumbranceRelationsHoldersBuilder extends FinanceHoldersBuilder {
 
@@ -165,9 +166,8 @@ public class EncumbranceRelationsHoldersBuilder extends FinanceHoldersBuilder {
           .withAmountExpended(existingEncumbrance.getAmountExpended())
           .withAmountCredited(existingEncumbrance.getAmountCredited())
           .withAmountAwaitingPayment(existingEncumbrance.getAmountAwaitingPayment());
-        // release if encumbrance amountExpended + amountCredited + amountAwaitingPayment > 0 (if we have approved/paid invoices)
-        if (existingEncumbrance.getStatus() == Encumbrance.Status.RELEASED || allowEncumbranceToReleaseOnReopen(existingEncumbrance))
-          newTransaction.getEncumbrance().setStatus(Encumbrance.Status.RELEASED);
+        if (existingEncumbrance.getStatus() == RELEASED || (existingEncumbrance.getStatus() == PENDING && holder.getInvoiceWithReleaseEncumbrance()))
+          newTransaction.getEncumbrance().setStatus(RELEASED);
       }));
   }
 

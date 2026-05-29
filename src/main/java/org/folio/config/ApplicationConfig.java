@@ -319,13 +319,12 @@ public class ApplicationConfig {
   }
 
   @Bean
-  EncumbranceWorkflowStrategy pendingToOpenEncumbranceStrategy(EncumbranceService encumbranceService,
-          FundsDistributionService fundsDistributionService, BudgetRestrictionService budgetRestrictionService,
-          EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder,
-          EncumbrancesProcessingHolderBuilder encumbrancesProcessingHolderBuilder, POLInvoiceLineRelationService polInvoiceLineRelationService) {
-    return new PendingToOpenEncumbranceStrategy(encumbranceService, fundsDistributionService,
-                                                budgetRestrictionService, encumbranceRelationsHoldersBuilder,
-                                                encumbrancesProcessingHolderBuilder, polInvoiceLineRelationService);
+  EncumbranceWorkflowStrategy pendingToOpenEncumbranceStrategy(EncumbranceService encumbranceService, FundsDistributionService fundsDistributionService,
+      BudgetRestrictionService budgetRestrictionService, EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder,
+      EncumbrancesProcessingHolderBuilder encumbrancesProcessingHolderBuilder, POLInvoiceLineRelationService polInvoiceLineRelationService,
+      InvoiceLineService invoiceLineService) {
+    return new PendingToOpenEncumbranceStrategy(encumbranceService, fundsDistributionService, budgetRestrictionService,
+      encumbranceRelationsHoldersBuilder, encumbrancesProcessingHolderBuilder, polInvoiceLineRelationService, invoiceLineService);
   }
 
   @Bean

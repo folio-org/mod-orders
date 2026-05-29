@@ -1,5 +1,7 @@
 package org.folio.service.invoice;
 
+import static io.vertx.core.Future.succeededFuture;
+import static org.folio.orders.utils.QueryUtils.encodeQuery;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -27,6 +29,7 @@ import org.folio.rest.core.models.RequestEntry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -197,5 +200,26 @@ public class InvoiceLineServiceTest {
 
     assertTrue(result.succeeded());
     assertEquals("enc1", invoiceLine.getFundDistributions().get(0).getEncumbrance());
+  }
+
+  @Test
+  public void testGetInvoiceLinesByIdsAndQuery() {
+    List<String> ids = List.of("id1", "id2");
+    List<InvoiceLine> invoiceLines = List.of(new InvoiceLine());
+    InvoiceLineCollection invoiceLineCollection = new InvoiceLineCollection()
+      .withInvoiceLines(invoiceLines)
+      .withTotalRecords(1);
+
+    ArgumentCaptor<RequestEntry> requestEntryCaptor = ArgumentCaptor.forClass(RequestEntry.class);
+    when(restClient.get(requestEntryCaptor.capture(), eq(InvoiceLineCollection.class), eq(requestContextMock)))
+      .thenReturn(succeededFuture(invoiceLineCollection));
+
+    Future<List<InvoiceLine>> future = invoiceLineService.getInvoiceLinesByIdsAndQuery(ids, Object::toString, requestContextMock);
+
+    assertTrue(future.succeeded());
+    verify(restClient, times(1)).get(any(RequestEntry.class), any(), any(RequestContext.class));
+    List<RequestEntry> requestEntries = requestEntryCaptor.getAllValues();
+    assertEquals(encodeQuery(ids.toString()), requestEntries.getFirst().getQueryParams().get("query"));
+    assertEquals(invoiceLines, future.result());
   }
 }
