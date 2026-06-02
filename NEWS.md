@@ -1,3 +1,10 @@
+## 13.1.6 - Released (Trillium R1 2026 Bug Fix)
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v13.1.5...v13.1.6)
+
+### Bug Fixes
+* [MODFISTO-560](https://folio-org.atlassian.net/browse/MODFISTO-560) - Fix ledger rollover logic to handle encumbrances correctly when only one type is selected
+
 ## 13.1.5 - Released (Trillium R1 2026)
 This release focused on resolving issue with restoring typed error propagation from downstream modules.
 
