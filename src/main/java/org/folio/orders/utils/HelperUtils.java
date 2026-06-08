@@ -65,6 +65,7 @@ public class HelperUtils {
   public static final String PO_LINES_LIMIT_PROPERTY = "poLines-limit";
   public static final String LANG = "lang";
   public static final String WORKFLOW_STATUS = "workflowStatus";
+  public static final String NEXT_POL_NUMBER = "nextPolNumber";
 
   private HelperUtils() {
   }

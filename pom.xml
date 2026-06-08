@@ -58,9 +58,12 @@
     <raml-module-builder.version>36.0.0</raml-module-builder.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <pitest.reportsDirectory>${project.build.directory}/pit-reports/${buildDate}</pitest.reportsDirectory>
+    <maven.build.timestamp.format>yyyy-MM-dd_HH-mm</maven.build.timestamp.format>
+    <buildDate>${maven.build.timestamp}</buildDate>
 
     <!--Dependency Management Properties-->
-    <vertx.version>5.0.8</vertx.version>
+    <vertx.version>5.0.12</vertx.version>
     <jackson-bom.version>2.21.1</jackson-bom.version>
     <log4j.version>2.25.3</log4j.version>
     <testcontainers-bom.version>2.0.3</testcontainers-bom.version>
@@ -79,7 +82,7 @@
     <folio-di-support.version>4.0.0</folio-di-support.version>
     <mod-di-converter-storage-client.version>2.4.3</mod-di-converter-storage-client.version>
     <data-import-processing-core.version>5.0.0</data-import-processing-core.version>
-    <folio-kafka-wrapper.version>4.0.0</folio-kafka-wrapper.version>
+    <folio-kafka-wrapper.version>4.1.0-SNAPSHOT</folio-kafka-wrapper.version>
 
     <!--Maven plugin dependencies-->
     <build-helper-maven-plugin.version>3.6.1</build-helper-maven-plugin.version>
@@ -926,6 +929,35 @@
             </goals>
           </execution>
         </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.pitest</groupId>
+        <artifactId>pitest-maven</artifactId>
+        <version>1.22.0</version>
+        <dependencies>
+          <dependency>
+            <groupId>org.pitest</groupId>
+            <artifactId>pitest-junit5-plugin</artifactId>
+            <version>1.2.3</version>
+          </dependency>
+        </dependencies>
+        <configuration>
+          <timestampedReports>false</timestampedReports>
+          <reportsDirectory>${project.build.directory}/pit-reports/${buildDate}</reportsDirectory>
+          <targetClasses>
+            <param>org.folio.*</param>
+          </targetClasses>
+          <targetTests>
+            <param>org.folio.*Test</param>
+          </targetTests>
+          <mutators>STRONGER</mutators>
+          <threads>4</threads>
+          <outputFormats>
+            <param>HTML</param>
+            <param>XML</param>
+          </outputFormats>
+        </configuration>
       </plugin>
 
     </plugins>

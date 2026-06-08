@@ -7,11 +7,14 @@ import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.ELECTRONIC_RESOURCE;
 import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.PHYSICAL_RESOURCE;
 import static org.folio.rest.jaxrs.model.PoLine.OrderFormat.P_E_MIX;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.UUID;
 
 import org.folio.CopilotGenerated;
+import org.folio.TestMate;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -170,5 +173,42 @@ public class PieceValidatorUtilTest {
     PoLine poLine = new PoLine().withCheckinItems(false);
     List<Error> errorList = PieceValidatorUtil.validatePieceRelatedOrder(order, poLine);
     assertEquals(0, errorList.size());
+  }
+
+  @Test
+  @TestMate(name = "TestMate-3cf4ce6c2a39a3b5afc16a5eadc2dc8e")
+  void testIsLocationRequiredWhenElectronicPieceAndEresourceIsNullShouldReturnFalse() {
+    // Given
+    Piece.Format pieceFormat = Piece.Format.ELECTRONIC;
+    PoLine poLine = new PoLine().withEresource(null);
+    // When
+    boolean result = PieceValidatorUtil.isLocationRequired(pieceFormat, poLine);
+    // Then
+    assertFalse(result);
+  }
+
+  @Test
+  @TestMate(name = "TestMate-bb597e4759f4f1237d04edaa699e4c41")
+  void testIsLocationRequiredWhenPhysicalPieceAndPhysicalIsNullShouldReturnFalse() {
+    // Given
+    Piece.Format pieceFormat = Piece.Format.PHYSICAL;
+    PoLine poLine = new PoLine().withPhysical(null);
+    // When
+    boolean result = PieceValidatorUtil.isLocationRequired(pieceFormat, poLine);
+    // Then
+    assertFalse(result);
+  }
+
+  @Test
+  @TestMate(name = "TestMate-5b7a9b1830b2c10f808a70c6b3398ded")
+  void testIsLocationRequiredWhenOtherPieceFormatShouldBeTreatedAsPhysical() {
+    // Given
+    Piece.Format pieceFormat = Piece.Format.OTHER;
+    Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING);
+    PoLine poLine = new PoLine().withPhysical(physical);
+    // When
+    boolean result = PieceValidatorUtil.isLocationRequired(pieceFormat, poLine);
+    // Then
+    assertTrue(result);
   }
 }

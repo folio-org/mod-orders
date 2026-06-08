@@ -37,7 +37,7 @@ public final class TestConfig {
   private static final String KAFKA_ENV_VALUE = "test-env";
 
   private static MockServer mockServer;
-  public static final DockerImageName KAFKA_IMAGE_NAME = DockerImageName.parse("apache/kafka-native:3.8.0");
+  public static final DockerImageName KAFKA_IMAGE_NAME = DockerImageName.parse("apache/kafka-native:4.2.0");
   public static final KafkaContainer kafkaContainer = getKafkaContainer();
   public static final Vertx vertx = Vertx.vertx();
 

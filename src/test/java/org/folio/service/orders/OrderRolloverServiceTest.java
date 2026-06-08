@@ -762,27 +762,6 @@ public class OrderRolloverServiceTest {
 
   private static Stream<Arguments> testBuildOrderQueryArgs() {
     return Stream.of(
-      Arguments.of("(orderType == One-Time) and (workflowStatus==Open) and (poLine.fundDistribution =/@fundId (%s))",
-        true,
-        List.of(new EncumbranceRollover().withOrderType(EncumbranceRollover.OrderType.ONE_TIME).withBasedOn(EncumbranceRollover.BasedOn.INITIAL_AMOUNT).withIncreaseBy(0d))),
-      Arguments.of("(orderType == One-Time) and (workflowStatus<>Open) and (poLine.fundDistribution =/@fundId (%s)) and (poLine.fundDistribution = encumbrance)",
-        false,
-        List.of(new EncumbranceRollover().withOrderType(EncumbranceRollover.OrderType.ONE_TIME).withBasedOn(EncumbranceRollover.BasedOn.INITIAL_AMOUNT).withIncreaseBy(0d)))
-    );
-  }
-
-  @ParameterizedTest
-  @MethodSource("testBuildOrderQueryArgs")
-  void testBuildOrderQuery(String expectedQueryTemplate, boolean openOrders, List<EncumbranceRollover> encumbranceRollovers) {
-    var fundId = UUID.randomUUID().toString();
-    var ledgerFiscalYearRollover = new LedgerFiscalYearRollover().withId(UUID.randomUUID().toString()).withEncumbrancesRollover(encumbranceRollovers);
-    var expectedQuery = String.format(expectedQueryTemplate, fundId);
-    var actualQuery = orderRolloverService.buildBaseOrderQuery(List.of(fundId), openOrders, ledgerFiscalYearRollover);
-    Assertions.assertEquals(expectedQuery, actualQuery);
-  }
-
-  private static Stream<Arguments> testBuildOrderQueryWithoutSettingsArgs() {
-    return Stream.of(
       Arguments.of("(workflowStatus==Open) and (poLine.fundDistribution =/@fundId (%s))",
         true),
       Arguments.of("(workflowStatus<>Open) and (poLine.fundDistribution =/@fundId (%s)) and (poLine.fundDistribution = encumbrance)",
@@ -791,12 +770,11 @@ public class OrderRolloverServiceTest {
   }
 
   @ParameterizedTest
-  @MethodSource("testBuildOrderQueryWithoutSettingsArgs")
-  void testBuildOrderQueryWithoutSettings(String expectedQueryTemplate, boolean openOrders) {
+  @MethodSource("testBuildOrderQueryArgs")
+  void testBuildOrderQuery(String expectedQueryTemplate, boolean openOrders) {
     var fundId = UUID.randomUUID().toString();
-    var ledgerFiscalYearRollover = new LedgerFiscalYearRollover().withId(UUID.randomUUID().toString()).withEncumbrancesRollover(List.of());
     var expectedQuery = String.format(expectedQueryTemplate, fundId);
-    var actualQuery = orderRolloverService.buildBaseOrderQuery(List.of(fundId), openOrders, ledgerFiscalYearRollover);
+    var actualQuery = orderRolloverService.buildBaseOrderQuery(List.of(fundId), openOrders);
     Assertions.assertEquals(expectedQuery, actualQuery);
   }
 }

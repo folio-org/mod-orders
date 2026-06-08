@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.folio.TestConstants;
+import org.folio.TestMate;
 import org.folio.models.ItemStatus;
 import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
 import org.folio.rest.core.exceptions.ErrorCodes;
@@ -63,6 +64,13 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import java.util.Collections;
+import java.util.Map;
+import org.folio.okapi.common.XOkapiHeaders;
+import static org.assertj.core.api.Assertions.assertThat;
+import org.mockito.ArgumentCaptor;
+import io.vertx.core.json.JsonArray;
+import org.folio.rest.acq.model.StorageReplaceOrderLineHoldingRefs;
 
 @ExtendWith(VertxExtension.class)
 public class WithHoldingOrderLineUpdateInstanceStrategyTest {
@@ -431,6 +439,10 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     when(inventoryItemManager.batchUpdatePartialItems(any(), eq(requestContext))).thenReturn(succeededFuture(null));
     when(pieceStorageService.getPiecesByHoldingIds(holdingIds, requestContext)).thenReturn(succeededFuture(List.of(new Piece().withHoldingId(usedHoldingId))));
     when(purchaseOrderLineService.getPoLinesByHoldingIds(holdingIds, requestContext)).thenReturn(succeededFuture(List.of(new PoLine().withLocations(List.of(new Location().withHoldingId(usedHoldingId))))));
+    // getPiecesByHoldingId (singular) is called per-holding in deleteAbandonedHoldingsAndUpdateHolder to build excludePieceIds for HoldingDataExclusionConfig (4-arg constructor, PO_LINE_CHANGE_INSTANCE mode)
+    when(pieceStorageService.getPiecesByHoldingId(eq(holdingIds.get(0)), any(RequestContext.class))).thenReturn(succeededFuture(List.of()));
+    when(pieceStorageService.getPiecesByHoldingId(eq(holdingIds.get(1)), any(RequestContext.class))).thenReturn(succeededFuture(List.of()));
+    when(pieceStorageService.getPiecesByHoldingId(eq(usedHoldingId), any(RequestContext.class))).thenReturn(succeededFuture(List.of(new Piece().withId(UUID.randomUUID().toString()).withHoldingId(usedHoldingId))));
     when(batchTrackingService.createBatchTrackingRecord(anyString(), anyInt(), eq(requestContext))).thenReturn(succeededFuture());
     // Mock HoldingDeletionService methods
     when(holdingDeletionService.getHoldingLinkedData(any(), any(), any(), any())).thenAnswer(invocation -> {
@@ -984,5 +996,266 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
 
     // then
     verify(inventoryItemManager, times(1)).batchUpdatePartialItems(any(), eq(requestContext));
+  }
+
+  @Test
+  @TestMate(name = "TestMate-a23ac7ff68d7df16378fe40380351580")
+  void processHoldingsShouldCreateShadowInstanceInTargetTenantBeforeHoldingOperations() {
+    // Given
+    String orderLineId = "5097457a-977a-42c9-9430-8456f913d8f1";
+    String newInstanceId = "cd3288a4-898c-4347-a003-2d810ef70f03";
+    String originalHoldingId = "12345678-1234-1234-1234-123456789012";
+    String newHoldingId = "87654321-4321-4321-4321-210987654321";
+    String targetTenantId = "member-tenant-1";
+    Location location = new Location()
+      .withHoldingId(originalHoldingId)
+      .withTenantId(targetTenantId)
+      .withQuantity(1)
+      .withQuantityPhysical(1);
+    PoLine poLine = new PoLine()
+      .withId(orderLineId)
+      .withLocations(List.of(location));
+    ReplaceInstanceRef replaceInstanceRef = new ReplaceInstanceRef()
+      .withNewInstanceId(newInstanceId)
+      .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.CREATE)
+      .withDeleteAbandonedHoldings(false);
+    PatchOrderLineRequest patchOrderLineRequest = new PatchOrderLineRequest()
+      .withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
+      .withReplaceInstanceRef(replaceInstanceRef);
+    OrderLineUpdateInstanceHolder holder = new OrderLineUpdateInstanceHolder()
+      .withStoragePoLine(poLine)
+      .withPathOrderLineRequest(patchOrderLineRequest);
+    doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByPoLineId(any(), any());
+    doReturn(succeededFuture()).when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(newInstanceId), any(RequestContext.class));
+    doReturn(succeededFuture(newHoldingId)).when(inventoryHoldingManager).createHolding(eq(newInstanceId), eq(location), any(RequestContext.class));
+    doReturn(succeededFuture(Collections.emptyList())).when(inventoryItemManager).getItemsByHoldingIdAndOrderLineId(anyString(), anyString(), any(RequestContext.class));
+    doReturn(succeededFuture()).when(batchTrackingService).createBatchTrackingRecord(anyString(), anyInt(), any(RequestContext.class));
+    // When
+    withHoldingOrderLineUpdateInstanceStrategy.processHoldings(holder, requestContext).result();
+    // Then
+    verify(inventoryInstanceManager, times(1)).createShadowInstanceIfNeeded(
+      eq(newInstanceId),
+      argThat(ctx -> targetTenantId.equals(ctx.getHeaders().get(XOkapiHeaders.TENANT)))
+    );
+    verify(inventoryHoldingManager, times(1)).createHolding(
+      eq(newInstanceId),
+      eq(location),
+      argThat(ctx -> targetTenantId.equals(ctx.getHeaders().get(XOkapiHeaders.TENANT)))
+    );
+  }
+
+  @Test
+  @TestMate(name = "TestMate-e4aae478702bb711b8841cf677e35e99")
+  void processHoldingsMoveShouldStripUnrecognizedFieldsFromHoldings() {
+    // Given
+    String orderLineId = UUID.fromString("5097457a-977a-42c9-9430-8456f913d8f1").toString();
+    String newInstanceId = UUID.fromString("cd3288a4-898c-4347-a003-2d810ef70f03").toString();
+    String holdingId = UUID.fromString("12345678-1234-1234-1234-123456789012").toString();
+    Location location = new Location()
+      .withHoldingId(holdingId)
+      .withQuantity(1)
+      .withQuantityPhysical(1);
+    PoLine poLine = new PoLine()
+      .withId(orderLineId)
+      .withLocations(List.of(location));
+    ReplaceInstanceRef replaceInstanceRef = new ReplaceInstanceRef()
+      .withNewInstanceId(newInstanceId)
+      .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.MOVE)
+      .withDeleteAbandonedHoldings(false);
+    PatchOrderLineRequest patchOrderLineRequest = new PatchOrderLineRequest()
+      .withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
+      .withReplaceInstanceRef(replaceInstanceRef);
+    OrderLineUpdateInstanceHolder holder = new OrderLineUpdateInstanceHolder()
+      .withStoragePoLine(poLine)
+      .withPathOrderLineRequest(patchOrderLineRequest);
+    JsonObject dirtyHolding = new JsonObject()
+      .put(ID, holdingId)
+      .put("instanceId", UUID.randomUUID().toString())
+      .put("holdingsItems", new JsonArray().add(new JsonObject()))
+      .put("bareHoldingsItems", new JsonArray().add(new JsonObject()));
+    doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByPoLineId(poLine, requestContext);
+    doReturn(succeededFuture(List.of(dirtyHolding))).when(inventoryHoldingManager).getHoldingsByIds(eq(List.of(holdingId)), any(RequestContext.class));
+    doReturn(succeededFuture()).when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(newInstanceId), any(RequestContext.class));
+    doReturn(succeededFuture()).when(inventoryHoldingManager).updateInstanceForHoldingRecords(any(), eq(newInstanceId), any(RequestContext.class));
+    // When
+    withHoldingOrderLineUpdateInstanceStrategy.processHoldings(holder, requestContext).result();
+    // Then
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<List<JsonObject>> holdingCaptor = ArgumentCaptor.forClass(List.class);
+    verify(inventoryHoldingManager).updateInstanceForHoldingRecords(holdingCaptor.capture(), eq(newInstanceId), any(RequestContext.class));
+    List<JsonObject> capturedHoldings = holdingCaptor.getValue();
+    assertThat(capturedHoldings).hasSize(1);
+
+    JsonObject cleanHolding = capturedHoldings.get(0);
+    assertThat(cleanHolding.getString(ID)).isEqualTo(holdingId);
+    assertThat(cleanHolding.containsKey("holdingsItems")).isFalse();
+    assertThat(cleanHolding.containsKey("bareHoldingsItems")).isFalse();
+  }
+
+  @Test
+  @TestMate(name = "TestMate-7953e0eba0a857901e3c19340404cf02")
+  void processHoldingsShouldSkipAlreadyProcessedHoldings() {
+    // Given
+    String orderLineId = "5097457a-977a-42c9-9430-8456f913d8f1";
+    String newInstanceId = "cd3288a4-898c-4347-a003-2d810ef70f03";
+    String sharedHoldingId = "12345678-1234-1234-1234-123456789012";
+    String newHoldingId = "87654321-4321-4321-4321-210987654321";
+    Piece piece = new Piece()
+      .withId(UUID.randomUUID().toString())
+      .withPoLineId(orderLineId)
+      .withHoldingId(sharedHoldingId);
+    Location location = new Location()
+      .withHoldingId(sharedHoldingId)
+      .withQuantity(1)
+      .withQuantityPhysical(1);
+    PoLine poLine = new PoLine()
+      .withId(orderLineId)
+      .withLocations(List.of(location));
+    ReplaceInstanceRef replaceInstanceRef = new ReplaceInstanceRef()
+      .withNewInstanceId(newInstanceId)
+      .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.CREATE)
+      .withDeleteAbandonedHoldings(false);
+    PatchOrderLineRequest patchOrderLineRequest = new PatchOrderLineRequest()
+      .withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
+      .withReplaceInstanceRef(replaceInstanceRef);
+    OrderLineUpdateInstanceHolder holder = new OrderLineUpdateInstanceHolder()
+      .withStoragePoLine(poLine)
+      .withPathOrderLineRequest(patchOrderLineRequest);
+    // Mocking setup
+    // Ensure pieceStorageService returns the piece so that retrieveProcessableLocations finds the holdingId
+    doReturn(succeededFuture(List.of(piece))).when(pieceStorageService).getPiecesByPoLineId(any(PoLine.class), any(RequestContext.class));
+    doReturn(succeededFuture()).when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(newInstanceId), any(RequestContext.class));
+    // Use any(Location.class) because retrieveProcessableLocations creates a new Location instance from the Piece
+    doReturn(succeededFuture(newHoldingId)).when(inventoryHoldingManager).createHolding(eq(newInstanceId), any(Location.class), any(RequestContext.class));
+    // Mock item-related calls to ensure the chain completes successfully
+    doReturn(succeededFuture(Collections.emptyList())).when(inventoryItemManager).getItemsByHoldingIdAndOrderLineId(anyString(), anyString(), any(RequestContext.class));
+    doReturn(succeededFuture()).when(batchTrackingService).createBatchTrackingRecord(anyString(), anyInt(), any(RequestContext.class));
+    // Ensure batchUpdatePartialItems returns a succeeded future to avoid NPE on .otherwise() call in the strategy
+    doReturn(succeededFuture()).when(inventoryItemManager).batchUpdatePartialItems(any(), any(RequestContext.class));
+    // When
+    Future<Void> result = withHoldingOrderLineUpdateInstanceStrategy.processHoldings(holder, requestContext);
+    // Then
+    assertThat(result.succeeded()).isTrue();
+    // Verify that createHolding was called exactly once despite the holdingId being referenced in both Piece and PoLine locations
+    verify(inventoryHoldingManager, times(1)).createHolding(eq(newInstanceId), any(Location.class), any(RequestContext.class));
+    verify(inventoryInstanceManager, times(1)).createShadowInstanceIfNeeded(eq(newInstanceId), any(RequestContext.class));
+    // Verify the state of the holder
+    List<StorageReplaceOrderLineHoldingRefs> holdingRefs = holder.getStoragePatchOrderLineRequest().getReplaceInstanceRef().getHoldings();
+    assertThat(holdingRefs).hasSize(1);
+    assertThat(holdingRefs.getFirst().getFromHoldingId()).isEqualTo(sharedHoldingId);
+    assertThat(holdingRefs.getFirst().getToHoldingId()).isEqualTo(newHoldingId);
+  }
+
+  @Test
+  @TestMate(name = "TestMate-db2786eb40a9fb7340af1990aaec6cce")
+  void processHoldingsShouldDeleteAbandonedHoldingsInCorrectTenantContext() {
+    // Given
+    String orderLineId = UUID.fromString("5097457a-977a-42c9-9430-8456f913d8f1").toString();
+    String newInstanceId = UUID.fromString("cd3288a4-898c-4347-a003-2d810ef70f03").toString();
+    String originalHoldingId = UUID.fromString("12345678-1234-1234-1234-123456789012").toString();
+    String newHoldingId = UUID.fromString("87654321-4321-4321-4321-210987654321").toString();
+    String targetTenantId = "tenant-x";
+    Location location = new Location()
+      .withHoldingId(originalHoldingId)
+      .withTenantId(targetTenantId)
+      .withQuantity(1)
+      .withQuantityPhysical(1);
+    PoLine poLine = new PoLine()
+      .withId(orderLineId)
+      .withLocations(List.of(location));
+    ReplaceInstanceRef replaceInstanceRef = new ReplaceInstanceRef()
+      .withNewInstanceId(newInstanceId)
+      .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.CREATE)
+      .withDeleteAbandonedHoldings(true);
+    PatchOrderLineRequest patchOrderLineRequest = new PatchOrderLineRequest()
+      .withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
+      .withReplaceInstanceRef(replaceInstanceRef);
+    OrderLineUpdateInstanceHolder holder = new OrderLineUpdateInstanceHolder()
+      .withStoragePoLine(poLine)
+      .withPathOrderLineRequest(patchOrderLineRequest);
+    JsonObject holdingJsonObject = new JsonObject().put("id", originalHoldingId);
+    doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByPoLineId(any(), any());
+    doReturn(succeededFuture()).when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(newInstanceId), any(RequestContext.class));
+    doReturn(succeededFuture(newHoldingId)).when(inventoryHoldingManager).createHolding(eq(newInstanceId), eq(location), any(RequestContext.class));
+    doReturn(succeededFuture(Collections.emptyList())).when(inventoryItemManager).getItemsByHoldingIdAndOrderLineId(anyString(), anyString(), any(RequestContext.class));
+    doReturn(succeededFuture()).when(batchTrackingService).createBatchTrackingRecord(anyString(), anyInt(), any(RequestContext.class));
+    doReturn(succeededFuture()).when(inventoryItemManager).batchUpdatePartialItems(any(), any(RequestContext.class));
+    doReturn(succeededFuture(holdingJsonObject)).when(inventoryHoldingManager).getHoldingById(eq(originalHoldingId), eq(true), any(RequestContext.class));
+    doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByHoldingId(eq(originalHoldingId), any(RequestContext.class));
+    doReturn(succeededFuture(Pair.of(true, holdingJsonObject))).when(holdingDeletionService).getHoldingLinkedData(any(), any(), any(), any());
+    doReturn(succeededFuture(Pair.of(originalHoldingId, UUID.randomUUID().toString()))).when(holdingDeletionService).deleteHoldingIfPossible(any(), any());
+    // When
+    Future<Void> result = withHoldingOrderLineUpdateInstanceStrategy.processHoldings(holder, requestContext);
+    // Then
+    assertThat(result.succeeded()).isTrue();
+    verify(inventoryHoldingManager, times(1)).getHoldingById(
+      eq(originalHoldingId),
+      eq(true),
+      argThat(ctx -> targetTenantId.equals(ctx.getHeaders().get(XOkapiHeaders.TENANT)))
+    );
+    verify(holdingDeletionService, times(1)).getHoldingLinkedData(
+      eq(holdingJsonObject),
+      any(),
+      eq(requestContext),
+      argThat(ctx -> targetTenantId.equals(ctx.getHeaders().get(XOkapiHeaders.TENANT)))
+    );
+    verify(holdingDeletionService, times(1)).deleteHoldingIfPossible(
+      argThat(pair -> pair.getKey().equals(true) && pair.getValue().equals(holdingJsonObject)),
+      argThat(ctx -> targetTenantId.equals(ctx.getHeaders().get(XOkapiHeaders.TENANT)))
+    );
+  }
+
+  @Test
+  @TestMate(name = "TestMate-bc699760ddbb253d4ad4a996345719ef")
+  void processHoldingsShouldUseDefaultTenantWhenLocationTenantIdIsNull() {
+    // Given
+    String orderLineId = UUID.fromString("5097457a-977a-42c9-9430-8456f913d8f1").toString();
+    String newInstanceId = UUID.fromString("cd3288a4-898c-4347-a003-2d810ef70f03").toString();
+    String originalHoldingId = UUID.fromString("12345678-1234-1234-1234-123456789012").toString();
+    String newHoldingId = UUID.fromString("87654321-4321-4321-4321-210987654321").toString();
+    String defaultTenantId = "diku";
+    Location location = new Location()
+      .withHoldingId(originalHoldingId)
+      .withTenantId(null)
+      .withQuantity(1)
+      .withQuantityPhysical(1);
+    PoLine poLine = new PoLine()
+      .withId(orderLineId)
+      .withLocations(List.of(location));
+    ReplaceInstanceRef replaceInstanceRef = new ReplaceInstanceRef()
+      .withNewInstanceId(newInstanceId)
+      .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.CREATE)
+      .withDeleteAbandonedHoldings(false);
+    PatchOrderLineRequest patchOrderLineRequest = new PatchOrderLineRequest()
+      .withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
+      .withReplaceInstanceRef(replaceInstanceRef);
+    OrderLineUpdateInstanceHolder holder = new OrderLineUpdateInstanceHolder()
+      .withStoragePoLine(poLine)
+      .withPathOrderLineRequest(patchOrderLineRequest);
+    when(requestContext.getHeaders()).thenReturn(Map.of(XOkapiHeaders.TENANT, defaultTenantId));
+    doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByPoLineId(any(), any());
+    doReturn(succeededFuture()).when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(newInstanceId), any(RequestContext.class));
+    doReturn(succeededFuture(newHoldingId)).when(inventoryHoldingManager).createHolding(eq(newInstanceId), eq(location), any(RequestContext.class));
+    doReturn(succeededFuture(Collections.emptyList())).when(inventoryItemManager).getItemsByHoldingIdAndOrderLineId(anyString(), anyString(), any(RequestContext.class));
+    doReturn(succeededFuture()).when(batchTrackingService).createBatchTrackingRecord(anyString(), anyInt(), any(RequestContext.class));
+    // Stubbing batchUpdatePartialItems to prevent NullPointerException when calling .otherwise() in the strategy
+    doReturn(succeededFuture()).when(inventoryItemManager).batchUpdatePartialItems(any(), any(RequestContext.class));
+    // When
+    Future<Void> result = withHoldingOrderLineUpdateInstanceStrategy.processHoldings(holder, requestContext);
+    // Then
+    assertThat(result.succeeded()).isTrue();
+    verify(inventoryInstanceManager, times(1)).createShadowInstanceIfNeeded(
+      eq(newInstanceId),
+      argThat(ctx -> defaultTenantId.equals(ctx.getHeaders().get(XOkapiHeaders.TENANT)))
+    );
+    verify(inventoryHoldingManager, times(1)).createHolding(
+      eq(newInstanceId),
+      eq(location),
+      argThat(ctx -> defaultTenantId.equals(ctx.getHeaders().get(XOkapiHeaders.TENANT)))
+    );
+    List<StorageReplaceOrderLineHoldingRefs> holdingRefs = holder.getStoragePatchOrderLineRequest().getReplaceInstanceRef().getHoldings();
+    assertThat(holdingRefs).hasSize(1);
+    assertThat(holdingRefs.getFirst().getFromHoldingId()).isEqualTo(originalHoldingId);
+    assertThat(holdingRefs.getFirst().getToHoldingId()).isEqualTo(newHoldingId);
   }
 }
