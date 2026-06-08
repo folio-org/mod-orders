@@ -551,6 +551,4 @@ public class BudgetRestrictionServiceTest {
     assertDoesNotThrow(() -> restrictionService.checkEncumbranceRestrictions(holders));
   }
 
-
-
 }

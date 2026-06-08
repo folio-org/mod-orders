@@ -51,6 +51,9 @@ public class POLInvoiceLineRelationService {
     var forDelete = processingHolder.getEncumbrancesForDelete().stream()
       .map(EncumbranceRelationsHolder::getOldEncumbrance)
       .toList();
+    if (forDelete.isEmpty()) {
+      return Future.succeededFuture(processingHolder);
+    }
     var forCreate = processingHolder.getEncumbrancesForCreate().stream()
       .map(EncumbranceRelationsHolder::getNewEncumbrance)
       .toList();
@@ -63,10 +66,7 @@ public class POLInvoiceLineRelationService {
          invoiceLineService.getInvoiceLinesByOrderLineIds(poLineIds, requestContext)
           .compose(invoiceLines -> {
             validateInvoiceLineStatuses(invoiceLines);
-            if (forCreate.isEmpty() && forDelete.isEmpty()) {
-              return Future.succeededFuture(processingHolder);
-            }
-            if (!forCreate.isEmpty() && !forDelete.isEmpty()) {
+            if (!forCreate.isEmpty()) {
               var currency = getCurrency(processingHolder);
               var invoiceFiscalYearId = invoices.stream()
                 .filter(Objects::nonNull)
@@ -74,11 +74,7 @@ public class POLInvoiceLineRelationService {
                 .findFirst().orElse("");
               var matchingReleaseYear = StringUtils.equals(processingHolder.getCurrentFiscalYearId(), invoiceFiscalYearId);
               copyAmountsAndRecalculateNewEncumbrance(matchingReleaseYear, forCreate, forDelete, invoiceLines, currency);
-            }
-            if (forDelete.isEmpty()) {
-              return Future.succeededFuture(processingHolder);
-            }
-            if (forCreate.isEmpty()) {
+            } else {
               forDelete.forEach(TransactionValidator::validateEncumbranceForDeletion);
             }
             var encumbranceForDeleteIds = forDelete.stream()
