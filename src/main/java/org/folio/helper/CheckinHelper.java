@@ -7,7 +7,6 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import java.util.Objects;
 import one.util.streamex.StreamEx;
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.folio.models.pieces.PiecesHolder;
@@ -16,6 +15,7 @@ import org.folio.orders.utils.StreamUtils;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CheckinCollection;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ProcessingStatus;
@@ -73,7 +73,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   private Future<ReceivingResults> processCheckInPieces(CheckinCollection checkinCollection, boolean deleteHoldings, RequestContext requestContext) {
     PiecesHolder holder = new PiecesHolder();
     // 1. Get purchase order and poLine from storage
-    return findAndSetPurchaseOrderPoLinePair(extractPoLineId(checkinCollection), holder, requestContext)
+    return findAndSetPurchaseOrderAndPoLine(extractPoLineId(checkinCollection), holder, requestContext)
       // 2. Get piece records from storage
       .compose(voidResult -> createItemsWithPieceUpdate(checkinCollection, holder, requestContext))
       // 3. Filter locationId
@@ -84,8 +84,8 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       .map(this::updatePieceRecordsWithoutItems)
       // 6. Update received piece records in the storage
       .compose(piecesGroupedByPoLine -> storeUpdatedPieceRecords(piecesGroupedByPoLine, requestContext))
-      // 7. Update PO Line status
-      .compose(piecesGroupedByPoLine -> updateOrderAndPoLinesStatus(holder.getPiecesFromStorage(), piecesGroupedByPoLine, checkinCollection, requestContext))
+      // 7. Update PO Line and order status
+      .compose(piecesGroupedByPoLine -> updateOrderAndPoLinesStatus(holder, piecesGroupedByPoLine, checkinCollection, requestContext))
       // 8. Delete abandoned holdings
       .compose(piecesGroupedByPoLine -> {
         var pieceByHoldingIds = holder.getPiecesByHoldingIds();
@@ -114,8 +114,8 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
           .forEach(checkInPiece -> pieces.forEach(piece -> {
             var srcTenantId = piece.getReceivingTenantId();
             var dstTenantId = checkInPiece.getReceivingTenantId();
-            var purchaseOrder = holder.getPurchaseOrderPoLinePair().getKey();
-            var poLine = holder.getPurchaseOrderPoLinePair().getValue();
+            var purchaseOrder = holder.getPurchaseOrder();
+            var poLine = holder.getPoLine();
             if (checkInPiece.getId().equals(piece.getId()) && Boolean.TRUE.equals(checkInPiece.getCreateItem())) {
               pieceFutures.add(pieceCreateFlowInventoryManager.processInventory(purchaseOrder, poLine, piece, checkInPiece.getCreateItem(), requestContext)
                 .map(voidResult -> new PiecesHolder.PiecePoLineDto(poLineId, piece)));
@@ -293,20 +293,22 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       });
   }
 
-  private Future<Map<String, List<Piece>>> updateOrderAndPoLinesStatus(Map<String, List<Piece>> piecesFromStorage,
+  private Future<Map<String, List<Piece>>> updateOrderAndPoLinesStatus(PiecesHolder holder,
                                                                        Map<String, List<Piece>> piecesGroupedByPoLine,
                                                                        CheckinCollection checkinCollection, RequestContext requestContext) {
+    CompositePurchaseOrder compPo = holder.getPurchaseOrder();
+    Map<String, List<Piece>> piecesFromStorage = holder.getPiecesFromStorage();
     return updateOrderAndPoLinesStatus(
       piecesFromStorage,
       piecesGroupedByPoLine,
       requestContext,
-      poLines -> updateOrderStatus(poLines, checkinCollection, requestContext)
+      poLines -> updateOrderStatus(compPo, poLines, piecesGroupedByPoLine, checkinCollection, requestContext)
     );
   }
 
-  private void updateOrderStatus(List<PoLine> poLines, CheckinCollection checkinCollection, RequestContext requestContext) {
-    if (CollectionUtils.isEmpty(poLines)) {
-      logger.info("updateOrderStatus::poLines empty, returning");
+  private void updateOrderStatus(CompositePurchaseOrder compPo, List<PoLine> poLines, Map<String, List<Piece>> piecesGroupedByPoLine,
+      CheckinCollection checkinCollection, RequestContext requestContext) {
+    if (skipOrderStatusUpdate(compPo, poLines, piecesGroupedByPoLine)) {
       return;
     }
     logger.debug("updateOrderStatus::sending event to verify order status");

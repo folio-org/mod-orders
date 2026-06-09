@@ -358,8 +358,8 @@ public class CheckinReceivingApiIT {
       assertThat(poLine.getReceiptDate(), is(nullValue()));
     }
 
-    // Verify message is sent via event bus
-    verifyCheckinOrderStatusUpdateEvent(1);
+    // Verify message is not sent via event bus
+    verifyCheckinOrderStatusUpdateEvent(0);
   }
 
   @Test
@@ -847,8 +847,8 @@ public class CheckinReceivingApiIT {
       assertThat(poLine.getReceiptDate(), is(nullValue()));
     }
 
-    // Verify no status updated for cancelled order but is updated for other POL statuses
-    verifyOrderStatusUpdateEvent(isPoLineCancelled ? 0 : 1);
+    // No order status is needed
+    verifyOrderStatusUpdateEvent(0);
   }
 
   @Test
@@ -2146,8 +2146,8 @@ public class CheckinReceivingApiIT {
       assertThat(poLine.getReceiptDate(), is(nullValue()));
     }
 
-    // Verify messages sent via event bus
-    verifyOrderStatusUpdateEvent(1);
+    // Verify messages not sent via event bus
+    verifyOrderStatusUpdateEvent(0);
   }
 
   @Test
@@ -2200,8 +2200,8 @@ public class CheckinReceivingApiIT {
       assertThat(poLine.getReceiptDate(), is(nullValue()));
     }
 
-    // Verify messages sent via event bus
-    verifyOrderStatusUpdateEvent(1);
+    // Verify messages not sent via event bus
+    verifyOrderStatusUpdateEvent(0);
   }
 
   private void checkResultWithErrors(CheckinCollection request, int expectedNumOfErrors) {

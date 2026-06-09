@@ -42,9 +42,13 @@ import org.folio.rest.acq.model.finance.Metadata;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.invoice.Invoice;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
+import org.folio.rest.acq.model.invoice.InvoiceLine.InvoiceLineStatus;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder.OrderType;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
+import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -62,6 +66,8 @@ import org.folio.service.orders.OrderInvoiceRelationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
@@ -118,7 +124,7 @@ public class PendingToOpenEncumbranceStrategyTest {
       pendingPaymentService);
     pendingToOpenEncumbranceStrategy = new PendingToOpenEncumbranceStrategy(encumbranceService,
       fundsDistributionService, budgetRestrictionService, encumbranceRelationsHoldersBuilder,
-      encumbrancesProcessingHolderBuilder, polInvoiceLineRelationService);
+      encumbrancesProcessingHolderBuilder, polInvoiceLineRelationService, invoiceLineService);
   }
 
   @Test
@@ -130,7 +136,6 @@ public class PendingToOpenEncumbranceStrategyTest {
     String fundId1 = fd1.getFundId();
     String fundId2 = "1b6d3338-186e-4e35-9e75-1b886b0da53e";
     String encumbranceId = fd1.getEncumbrance();
-    String invoiceId = UUID.randomUUID().toString();
     String invoiceLineId = UUID.randomUUID().toString();
 
     CompositePurchaseOrder orderFromStorage = JsonObject.mapFrom(order).mapTo(CompositePurchaseOrder.class);
@@ -180,19 +185,15 @@ public class PendingToOpenEncumbranceStrategyTest {
     doReturn(Future.succeededFuture(List.of(budget1, budget2)))
       .when(budgetService).getBudgetsByQuery(anyString(), any());
 
-    Invoice invoice = new Invoice()
-      .withId(invoiceId)
-      .withFiscalYearId(fiscalYearId);
     InvoiceLine invoiceLine = new InvoiceLine()
       .withId(invoiceLineId)
-      .withInvoiceLineStatus(InvoiceLine.InvoiceLineStatus.CANCELLED);
+      .withInvoiceLineStatus(InvoiceLineStatus.CANCELLED)
+      .withPoLineId(poLine.getId());
 
     doReturn(Future.succeededFuture(exchangeRate))
       .when(cacheableExchangeRateService).getExchangeRate(any(), any(), any(), eq(requestContext));
-    doReturn(succeededFuture(List.of(invoice)))
-      .when(invoiceService).getInvoicesByOrderId(nullable(String.class), eq(requestContext));
     doReturn(succeededFuture(List.of(invoiceLine)))
-      .when(invoiceLineService).getInvoiceLinesByOrderLineIds(anyList(), eq(requestContext));
+      .when(invoiceLineService).getInvoiceLinesByIdsAndQuery(anyList(), any(), eq(requestContext));
     doReturn(succeededFuture(singletonList(released)))
       .when(transactionService).getTransactionsByIds(argThat(list -> list.size() == 1), eq(requestContext));
     doReturn(succeededFuture(null))
@@ -256,7 +257,8 @@ public class PendingToOpenEncumbranceStrategyTest {
       .withFiscalYearId(fiscalYearId);
     InvoiceLine invoiceLine = new InvoiceLine()
       .withId(invoiceLineId)
-      .withInvoiceLineStatus(InvoiceLine.InvoiceLineStatus.CANCELLED);
+      .withInvoiceLineStatus(InvoiceLineStatus.CANCELLED)
+      .withPoLineId(poLine.getId());
     List<InvoiceLine> invoiceLines = List.of(invoiceLine);
 
     Transaction pendingPayment = new Transaction()
@@ -431,6 +433,8 @@ public class PendingToOpenEncumbranceStrategyTest {
       .when(cacheableExchangeRateService).getExchangeRate(any(), any(), any(), eq(requestContext));
     doReturn(Future.succeededFuture(List.of(transaction)))
       .when(transactionService).getTransactionsByIds(anyList(), eq(requestContext));
+    doReturn(succeededFuture(List.of()))
+      .when(invoiceLineService).getInvoiceLinesByIdsAndQuery(anyList(), any(), eq(requestContext));
 
     // When
     Future<List<EncumbranceRelationsHolder>> future = pendingToOpenEncumbranceStrategy
@@ -443,6 +447,122 @@ public class PendingToOpenEncumbranceStrategyTest {
         assertEquals(1, holders.size());
         var holder = holders.getFirst();
         assertEquals(fiscalYearId, holder.getCurrentFiscalYearId());
+        vertxTestContext.completeNow();
+      }))
+      .onFailure(vertxTestContext::failNow);
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "false,false,Unreleased",
+    "false,true,Released",
+    "true,true,Released"
+  })
+  void testSettingHolderWithInvoiceWithReleaseEncumbrance(boolean releaseEncumbrance1, boolean releaseEncumbrance2,
+      String expectedStatus, VertxTestContext vertxTestContext) {
+    // Given
+    FiscalYear fiscalYear = new FiscalYear()
+      .withId(UUID.randomUUID().toString())
+      .withCurrency("USD");
+    Ledger ledger = new Ledger()
+      .withId(UUID.randomUUID().toString());
+    Fund fund = new Fund()
+      .withId(UUID.randomUUID().toString())
+      .withLedgerId(ledger.getId());
+    FundDistribution fd = new FundDistribution()
+      .withFundId(fund.getId())
+      .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
+      .withValue(100d)
+      .withCode("CODE");
+    Budget budget = new Budget()
+      .withId(UUID.randomUUID().toString())
+      .withFundId(fund.getId())
+      .withFiscalYearId(fiscalYear.getId());
+    Cost cost = new Cost()
+      .withListUnitPrice(10.0)
+      .withCurrency("USD")
+      .withQuantityPhysical(1)
+      .withPoLineEstimatedPrice(10.0);
+    PoLine poLine = new PoLine()
+      .withId(UUID.randomUUID().toString())
+      .withFundDistribution(List.of(fd))
+      .withCost(cost);
+    CompositePurchaseOrder order = new CompositePurchaseOrder()
+      .withId(UUID.randomUUID().toString())
+      .withWorkflowStatus(WorkflowStatus.OPEN)
+      .withOrderType(OrderType.ONE_TIME)
+      .withPoLines(List.of(poLine));
+    Encumbrance encumbrance = new Encumbrance()
+      .withSourcePurchaseOrderId(order.getId())
+      .withSourcePoLineId(poLine.getId())
+      .withOrderType(Encumbrance.OrderType.fromValue(order.getOrderType().value()))
+      .withInitialAmountEncumbered(10d)
+      .withOrderStatus(Encumbrance.OrderStatus.PENDING)
+      .withStatus(Encumbrance.Status.PENDING);
+    Transaction transaction = new Transaction()
+      .withTransactionType(ENCUMBRANCE)
+      .withAmount(0d)
+      .withId(UUID.randomUUID().toString())
+      .withFromFundId(fund.getId())
+      .withEncumbrance(encumbrance)
+      .withMetadata(new Metadata());
+    fd.setEncumbrance(transaction.getId());
+    Invoice invoice1 = new Invoice()
+      .withId(UUID.randomUUID().toString())
+      .withFiscalYearId(fiscalYear.getId());
+    Invoice invoice2 = new Invoice()
+      .withId(UUID.randomUUID().toString())
+      .withFiscalYearId(fiscalYear.getId());
+    InvoiceLine invoiceLine1 = new InvoiceLine()
+      .withId(UUID.randomUUID().toString())
+      .withInvoiceId(invoice1.getId())
+      .withInvoiceLineStatus(InvoiceLineStatus.APPROVED)
+      .withPoLineId(poLine.getId())
+      .withReleaseEncumbrance(releaseEncumbrance1);
+    InvoiceLine invoiceLine2 = new InvoiceLine()
+      .withId(UUID.randomUUID().toString())
+      .withInvoiceId(invoice2.getId())
+      .withInvoiceLineStatus(InvoiceLineStatus.PAID)
+      .withPoLineId(poLine.getId())
+      .withReleaseEncumbrance(releaseEncumbrance2);
+    List<InvoiceLine> invoiceLines = List.of(invoiceLine1, invoiceLine2);
+
+    CompositePurchaseOrder orderFromStorage = JsonObject.mapFrom(order)
+      .mapTo(CompositePurchaseOrder.class)
+      .withWorkflowStatus(WorkflowStatus.PENDING);
+
+    doReturn(Future.succeededFuture(List.of(fund)))
+      .when(fundService).getAllFunds(anyCollection(), any());
+    doReturn(Future.succeededFuture(List.of(ledger)))
+      .when(ledgerService).getLedgersByIds(anyCollection(), any());
+    doReturn(Future.succeededFuture(fiscalYear))
+      .when(fiscalYearService).getCurrentFiscalYear(anyString(), any());
+    doReturn(Future.succeededFuture(List.of(budget)))
+      .when(budgetService).getBudgetsByQuery(anyString(), any());
+
+    doReturn(Future.succeededFuture(exchangeRate))
+      .when(cacheableExchangeRateService).getExchangeRate(any(), any(), any(), eq(requestContext));
+    doReturn(succeededFuture(invoiceLines))
+      .when(invoiceLineService).getInvoiceLinesByIdsAndQuery(anyList(), any(), eq(requestContext));
+    doReturn(succeededFuture(singletonList(transaction)))
+      .when(transactionService).getTransactionsByIds(argThat(list -> list.size() == 1), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(transactionService).batchAllOrNothing(any(), any(), any(), any(), eq(requestContext));
+
+    // When
+    Future<Void> future = pendingToOpenEncumbranceStrategy.processEncumbrances(order, orderFromStorage, requestContext);
+
+    // Then
+    vertxTestContext.assertComplete(future)
+      .onSuccess(result -> vertxTestContext.verify(() -> {
+        verify(transactionService, times(1))
+          .batchAllOrNothing(any(), transactionListCaptor.capture(), any(), any(), eq(requestContext));
+        verify(transactionService, times(1))
+          .getTransactionsByIds(anyList(), eq(requestContext));
+        List<List<Transaction>> transactionLists = transactionListCaptor.getAllValues();
+        assertEquals(1, transactionLists.size());
+        assertEquals(1, transactionLists.getFirst().size());
+        assertEquals(Encumbrance.Status.fromValue(expectedStatus), transactionLists.getFirst().getFirst().getEncumbrance().getStatus());
         vertxTestContext.completeNow();
       }))
       .onFailure(vertxTestContext::failNow);

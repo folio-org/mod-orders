@@ -172,7 +172,7 @@ public class RoutingListServiceTest {
     vertxTestContext.assertFailure(future).onComplete(result -> {
       assertTrue(result.failed());
       var exception = result.cause().getMessage();
-      assertTrue(exception.contains("Setting is not found with key=ROUTING_USER_ADDRESS_TYPE_ID"));
+      assertTrue(exception.contains("Setting is not found with key==ROUTING_USER_ADDRESS_TYPE_ID"));
       vertxTestContext.completeNow();
     });
   }

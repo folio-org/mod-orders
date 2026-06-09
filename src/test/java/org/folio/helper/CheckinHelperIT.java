@@ -240,7 +240,7 @@ public class CheckinHelperIT {
     String pieceId = UUID.randomUUID().toString();
     CompositePurchaseOrder purchaseOrder = new CompositePurchaseOrder().withId(purchaseOrderId).withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     PoLine poLine = new PoLine().withId(poLineId).withPurchaseOrderId(purchaseOrderId);
-    PiecesHolder pieceHolder = new PiecesHolder().withPurchaseOrderPoLinePair(Pair.of(purchaseOrder, poLine));
+    PiecesHolder pieceHolder = new PiecesHolder().withPurchaseOrder(purchaseOrder).withPoLine(poLine);
     CheckinCollection checkinCollection = getCheckinCollection(poLineId, pieceId);
     when(inventoryItemManager.updateItem(any(JsonObject.class), any(RequestContext.class))).thenReturn(Future.succeededFuture());
 
@@ -261,7 +261,7 @@ public class CheckinHelperIT {
     String pieceId = UUID.randomUUID().toString();
     CompositePurchaseOrder purchaseOrder = new CompositePurchaseOrder().withId(purchaseOrderId).withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     PoLine poLine = new PoLine().withId(poLineId).withPurchaseOrderId(purchaseOrderId);
-    PiecesHolder pieceHolder = new PiecesHolder().withPurchaseOrderPoLinePair(Pair.of(purchaseOrder, poLine));
+    PiecesHolder pieceHolder = new PiecesHolder().withPurchaseOrder(purchaseOrder).withPoLine(poLine);
     CheckinCollection checkinCollection = getCheckinCollection(poLineId, pieceId);
     when(inventoryItemManager.updateItem(any(JsonObject.class), any(RequestContext.class)))
       .thenReturn(Future.failedFuture(new HttpException(500, "Barcode must be unique, 555 is already assigned to another item")));
@@ -286,7 +286,7 @@ public class CheckinHelperIT {
     String pieceId = UUID.randomUUID().toString();
     CompositePurchaseOrder purchaseOrder = new CompositePurchaseOrder().withId(purchaseOrderId).withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     PoLine poLine = new PoLine().withId(poLineId).withPurchaseOrderId(purchaseOrderId);
-    PiecesHolder pieceHolder = new PiecesHolder().withPurchaseOrderPoLinePair(Pair.of(purchaseOrder, poLine));
+    PiecesHolder pieceHolder = new PiecesHolder().withPurchaseOrder(purchaseOrder).withPoLine(poLine);
     CheckinCollection checkinCollection = getCheckinCollection(poLineId, pieceId);
     when(inventoryItemManager.updateItem(any(JsonObject.class), any(RequestContext.class)))
       .thenReturn(Future.failedFuture(new HttpException(500, "Service failure")));

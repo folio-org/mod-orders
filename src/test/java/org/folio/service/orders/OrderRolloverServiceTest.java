@@ -764,7 +764,7 @@ public class OrderRolloverServiceTest {
     return Stream.of(
       Arguments.of("(workflowStatus==Open) and (poLine.fundDistribution =/@fundId (%s))",
         true),
-      Arguments.of("(workflowStatus<>Open) and (poLine.fundDistribution =/@fundId (%s)) and (poLine.fundDistribution == \"*\\\"encumbrance\\\": \\\"*\")",
+      Arguments.of("(workflowStatus<>Open) and (poLine.fundDistribution =/@fundId (%s)) and (poLine.fundDistribution = encumbrance)",
         false)
     );
   }

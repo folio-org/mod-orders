@@ -87,15 +87,4 @@ public class EncumbranceUtils {
       && encumbrance.getAmountCredited() == 0
       && encumbrance.getAmountAwaitingPayment() == 0);
   }
-
-  public static boolean allowEncumbranceToReleaseOnReopen(Encumbrance encumbrance) {
-    if (Objects.isNull(encumbrance)) {
-      log.warn("allowEncumbranceToReleaseOnReopen:: Invalid transaction or encumbrance");
-      return false;
-    }
-    return encumbrance.getStatus() == Encumbrance.Status.PENDING
-      && (encumbrance.getAmountExpended() > 0
-      || encumbrance.getAmountCredited() > 0
-      || encumbrance.getAmountAwaitingPayment() > 0);
-  }
 }
