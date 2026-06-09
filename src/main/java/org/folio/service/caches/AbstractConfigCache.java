@@ -9,6 +9,7 @@ import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.tools.utils.TenantTool;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
 import java.util.function.BiFunction;
 
 @Log4j2
@@ -17,18 +18,30 @@ import java.util.function.BiFunction;
 public class AbstractConfigCache {
 
   private static final String UNIQUE_CACHE_KEY_PATTERN = "%s_%s";
+  public static final String BYPASS_CACHE_HEADER = "x-okapi-bypass-cache";
 
   protected <T> Future<T> cacheData(String url, String query, AsyncCache<String, T> cache,
                                     BiFunction<RequestEntry, RequestContext, Future<T>> configExtractor,
                                     boolean byPassCache, RequestContext requestContext) {
     var requestEntry = new RequestEntry(url).withQuery(query).withOffset(0).withLimit(Integer.MAX_VALUE);
     var cacheKey = buildUniqueKey(requestEntry, requestContext);
-    log.debug("loadSettingsData:: Loading setting data, url: '{}', query: '{}', bypass-cache mode: '{}'", url, query, byPassCache);
-    if (byPassCache) {
+    boolean cacheBypassRequested = isCacheBypassRequested(requestContext.getHeaders());
+    log.debug("loadSettingsData:: Loading setting data, url: '{}', query: '{}', bypass-cache mode: '{}', cache-bypass header: '{}'",
+      url, query, byPassCache, cacheBypassRequested);
+    if (byPassCache || cacheBypassRequested) {
       return extractData(configExtractor, requestContext, requestEntry);
     }
     return Future.fromCompletionStage(cache.get(cacheKey, (key, executor) ->
       extractData(configExtractor, requestContext, requestEntry).toCompletionStage().toCompletableFuture()));
+  }
+
+  private static boolean isCacheBypassRequested(Map<String, String> headers) {
+    if (headers == null) {
+      return false;
+    }
+    return headers.entrySet().stream()
+      .anyMatch(entry -> BYPASS_CACHE_HEADER.equalsIgnoreCase(entry.getKey())
+        && Boolean.parseBoolean(entry.getValue()));
   }
 
   private <T> Future<T> extractData(BiFunction<RequestEntry, RequestContext, Future<T>> extractor,
