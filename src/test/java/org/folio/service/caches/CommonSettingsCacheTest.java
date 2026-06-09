@@ -115,6 +115,24 @@ public class CommonSettingsCacheTest {
   }
 
   @Test
+  void shouldBypassCacheWhenCacheBypassHeaderIsPresent() {
+    var headersWithBypass = Map.of(
+      "x-okapi-tenant", "test-tenant",
+      "x-okapi-bypass-cache", "true"
+    );
+    when(requestContextMock.getHeaders()).thenReturn(headersWithBypass);
+
+    var config = new JsonObject().put("k", "v");
+    when(commonSettingsRetrieverMock.getLocalSettings(any(RequestEntry.class), any(RequestContext.class)))
+      .thenReturn(Future.succeededFuture(config));
+
+    commonSettingsCache.loadSettings(requestContextMock);
+    commonSettingsCache.loadSettings(requestContextMock);
+
+    verify(commonSettingsRetrieverMock, times(2)).getLocalSettings(any(RequestEntry.class), any(RequestContext.class));
+  }
+
+  @Test
   void shouldBypassCacheWhenByPassCacheIsTrue() throws Exception {
     // Arrange - Set byPassCache to true using reflection to test bypass behavior
     var byPassCacheField = CommonSettingsCache.class.getDeclaredField("byPassCache");
