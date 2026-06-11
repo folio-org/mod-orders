@@ -20,6 +20,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -225,8 +226,8 @@ public class PurchaseOrderHelperTest {
       .when(purchaseOrderStorageService).saveOrder(any(PurchaseOrder.class), eq(requestContext));
     doReturn(succeededFuture(null))
       .when(encumbranceService).updateEncumbrancesOrderStatusAndReleaseIfClosed(any(CompositePurchaseOrder.class), eq(requestContext));
-    doReturn(succeededFuture(null))
-      .when(poLineValidationService).validatePurchaseOrderHasPoLines(any());
+    doNothing()
+      .when(poLineValidationService).checkPurchaseOrderHasPoLines(any());
     doReturn(succeededFuture(null))
       .when(poLineValidationService).validateUserUnaffiliatedLocations(anyString(), any(), eq(requestContext));
 
@@ -337,8 +338,8 @@ public class PurchaseOrderHelperTest {
     doReturn(succeededFuture(null))
       .when(orderValidationService).validateOrderForUpdate(any(CompositePurchaseOrder.class), any(CompositePurchaseOrder.class),
         eq(requestContext));
-    doReturn(succeededFuture(null))
-      .when(poLineValidationService).validatePurchaseOrderHasPoLines(any());
+    doNothing()
+      .when(poLineValidationService).checkPurchaseOrderHasPoLines(any());
     doReturn(succeededFuture(null))
       .when(poLineValidationService).validateUserUnaffiliatedLocations(anyString(), any(), eq(requestContext));
     doReturn(succeededFuture(null))

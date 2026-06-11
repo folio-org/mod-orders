@@ -539,41 +539,46 @@ public class PoLineValidationServiceTest {
 
   @Test
   @CopilotGenerated(partiallyGenerated = true)
-  void shouldFailValidationWhenCompositePurchaseOrderHasNullPoLines(VertxTestContext testContext) {
+  void shouldFailValidationWhenCompositePurchaseOrderHasNullPoLines() {
     var compPO = new CompositePurchaseOrder();
     compPO.setPoLines(null);
 
-    poLineValidationService.validatePurchaseOrderHasPoLines(compPO.getPoLines())
-      .onComplete(testContext.failing(cause -> testContext.verify(() -> {
-        assertInstanceOf(HttpException.class, cause);
-        assertEquals(COMPOSITE_ORDER_MISSING_PO_LINES.getCode(), ((HttpException) cause).getError().getCode());
-        testContext.completeNow();
-      })));
+    try {
+      poLineValidationService.checkPurchaseOrderHasPoLines(compPO.getPoLines());
+      fail("Validation should not pass");
+    } catch (Exception ex) {
+      assertInstanceOf(HttpException.class, ex);
+      assertEquals(COMPOSITE_ORDER_MISSING_PO_LINES.getCode(), ((HttpException) ex).getError().getCode());
+    }
   }
 
   @Test
   @CopilotGenerated(partiallyGenerated = true)
-  void shouldFailValidationWhenCompositePurchaseOrderHasEmptyPoLines(VertxTestContext testContext) {
+  void shouldFailValidationWhenCompositePurchaseOrderHasEmptyPoLines() {
     var compPO = new CompositePurchaseOrder();
     compPO.setPoLines(Collections.emptyList());
 
-    poLineValidationService.validatePurchaseOrderHasPoLines(compPO.getPoLines())
-      .onComplete(testContext.failing(cause -> testContext.verify(() -> {
-        assertInstanceOf(HttpException.class, cause);
-        assertEquals(COMPOSITE_ORDER_MISSING_PO_LINES.getCode(), ((HttpException) cause).getError().getCode());
-        testContext.completeNow();
-      })));
+    try {
+      poLineValidationService.checkPurchaseOrderHasPoLines(compPO.getPoLines());
+      fail("Validation should not pass");
+    } catch (Exception ex) {
+      assertInstanceOf(HttpException.class, ex);
+      assertEquals(COMPOSITE_ORDER_MISSING_PO_LINES.getCode(), ((HttpException) ex).getError().getCode());
+    }
   }
 
   @Test
   @CopilotGenerated(partiallyGenerated = true)
-  void shouldPassValidationWhenCompositePurchaseOrderHasPoLines(VertxTestContext testContext) {
+  void shouldPassValidationWhenCompositePurchaseOrderHasPoLines() {
     var compPO = new CompositePurchaseOrder();
     var poLine = new PoLine();
     poLine.setId(UUID.randomUUID().toString());
     compPO.setPoLines(List.of(poLine));
 
-    poLineValidationService.validatePurchaseOrderHasPoLines(compPO.getPoLines())
-      .onComplete(testContext.succeeding(result -> testContext.verify(testContext::completeNow)));
+    try {
+      poLineValidationService.checkPurchaseOrderHasPoLines(compPO.getPoLines());
+    } catch (Exception ex) {
+      fail(ex);
+    }
   }
 }

@@ -13,7 +13,6 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 
@@ -26,16 +25,13 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public abstract class AbstractOrderStatusHandler extends BaseHelper implements Handler<Message<JsonObject>> {
-  private final EncumbranceService encumbranceService;
   private final PurchaseOrderStorageService purchaseOrderStorageService;
   private final PurchaseOrderHelper purchaseOrderHelper;
   private final PurchaseOrderLineService purchaseOrderLineService;
 
-  protected AbstractOrderStatusHandler(Context ctx, EncumbranceService encumbranceService,
-                              PurchaseOrderStorageService purchaseOrderStorageService, PurchaseOrderHelper purchaseOrderHelper,
-    PurchaseOrderLineService purchaseOrderLineService) {
+  protected AbstractOrderStatusHandler(Context ctx, PurchaseOrderStorageService purchaseOrderStorageService,
+      PurchaseOrderHelper purchaseOrderHelper, PurchaseOrderLineService purchaseOrderLineService) {
     super(ctx);
-    this.encumbranceService = encumbranceService;
     this.purchaseOrderStorageService = purchaseOrderStorageService;
     this.purchaseOrderHelper = purchaseOrderHelper;
     this.purchaseOrderLineService = purchaseOrderLineService;
@@ -81,28 +77,23 @@ public abstract class AbstractOrderStatusHandler extends BaseHelper implements H
     completeAllFutures(futures, message);
   }
 
-  protected Future<Void> updateOrderStatus(PurchaseOrder purchaseOrder, List<PoLine> poLines, RequestContext requestContext) {
-    var initialStatus = purchaseOrder.getWorkflowStatus();
-    return ctx.owner().executeBlocking(() -> changeOrderStatusForPoLineUpdate(purchaseOrder, poLines), false)
-      .compose(isStatusChanged -> {
-        if (Boolean.TRUE.equals(isStatusChanged)) {
-          return purchaseOrderHelper.handleFinalOrderItemsStatus(purchaseOrder, poLines, initialStatus.value(), requestContext)
-            .compose(aVoid -> purchaseOrderStorageService.saveOrder(purchaseOrder, requestContext))
-            .compose(purchaseOrderParam -> encumbranceService.updateEncumbrancesOrderStatusAndReleaseIfClosed(
-              convert(purchaseOrder, poLines), requestContext));
-        }
-        return Future.succeededFuture();
-      });
-  }
+  protected abstract boolean isOrdersStatusChangeSkip(PurchaseOrder purchaseOrder, JsonObject ordersPayload);
 
-  protected JsonArray messageAsJsonArray(String rootElement, Message<JsonObject> message) {
+  private JsonArray messageAsJsonArray(String rootElement, Message<JsonObject> message) {
     JsonObject body = message.body();
     return body.getJsonArray(rootElement);
   }
 
-  protected CompositePurchaseOrder convert(PurchaseOrder po, List<PoLine> poLines) {
-    return JsonObject.mapFrom(po).mapTo(CompositePurchaseOrder.class).withPoLines(poLines);
+  private Future<Void> updateOrderStatus(PurchaseOrder purchaseOrder, List<PoLine> poLines, RequestContext requestContext) {
+    CompositePurchaseOrder poFromStorage = convert(purchaseOrder, poLines);
+    if (!changeOrderStatusForPoLineUpdate(purchaseOrder, poLines)) {
+      return Future.succeededFuture();
+    }
+    CompositePurchaseOrder compPO = convert(purchaseOrder, null);
+    return purchaseOrderHelper.updateOrderWithoutValidation(compPO, poFromStorage, true, requestContext);
   }
 
-  protected abstract boolean isOrdersStatusChangeSkip(PurchaseOrder purchaseOrder, JsonObject ordersPayload);
+  private CompositePurchaseOrder convert(PurchaseOrder po, List<PoLine> poLines) {
+    return JsonObject.mapFrom(po).mapTo(CompositePurchaseOrder.class).withPoLines(poLines);
+  }
 }
