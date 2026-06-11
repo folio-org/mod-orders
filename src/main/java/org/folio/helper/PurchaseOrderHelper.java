@@ -618,7 +618,7 @@ public class PurchaseOrderHelper {
     return poLines.stream().filter(line -> !line.getIsPackage()).toList();
   }
 
-  public void setOrderApprovalDetails(CompositePurchaseOrder compPO, RequestContext requestContext) {
+  private void setOrderApprovalDetails(CompositePurchaseOrder compPO, RequestContext requestContext) {
     if (compPO.getApprovedById() == null) {
       compPO.setApprovedById(getCurrentUserId(requestContext.getHeaders()));
     }

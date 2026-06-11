@@ -77,7 +77,14 @@ public abstract class AbstractOrderStatusHandler extends BaseHelper implements H
     completeAllFutures(futures, message);
   }
 
-  protected Future<Void> updateOrderStatus(PurchaseOrder purchaseOrder, List<PoLine> poLines, RequestContext requestContext) {
+  protected abstract boolean isOrdersStatusChangeSkip(PurchaseOrder purchaseOrder, JsonObject ordersPayload);
+
+  private JsonArray messageAsJsonArray(String rootElement, Message<JsonObject> message) {
+    JsonObject body = message.body();
+    return body.getJsonArray(rootElement);
+  }
+
+  private Future<Void> updateOrderStatus(PurchaseOrder purchaseOrder, List<PoLine> poLines, RequestContext requestContext) {
     CompositePurchaseOrder poFromStorage = convert(purchaseOrder, poLines);
     if (!changeOrderStatusForPoLineUpdate(purchaseOrder, poLines)) {
       return Future.succeededFuture();
@@ -86,14 +93,7 @@ public abstract class AbstractOrderStatusHandler extends BaseHelper implements H
     return purchaseOrderHelper.updateOrderWithoutValidation(compPO, poFromStorage, true, requestContext);
   }
 
-  protected JsonArray messageAsJsonArray(String rootElement, Message<JsonObject> message) {
-    JsonObject body = message.body();
-    return body.getJsonArray(rootElement);
-  }
-
-  protected CompositePurchaseOrder convert(PurchaseOrder po, List<PoLine> poLines) {
+  private CompositePurchaseOrder convert(PurchaseOrder po, List<PoLine> poLines) {
     return JsonObject.mapFrom(po).mapTo(CompositePurchaseOrder.class).withPoLines(poLines);
   }
-
-  protected abstract boolean isOrdersStatusChangeSkip(PurchaseOrder purchaseOrder, JsonObject ordersPayload);
 }
