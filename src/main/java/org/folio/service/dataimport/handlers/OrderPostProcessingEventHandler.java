@@ -102,7 +102,7 @@ public class OrderPostProcessingEventHandler implements EventHandler {
     return purchaseOrderStorageService.getPurchaseOrderByIdAsJson(poLine.getPurchaseOrderId(), requestContext)
       .map(HelperUtils::convertToCompositePurchaseOrder)
       .map(order -> order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN))
-      .compose(order -> purchaseOrderHelper.updateOrder(order, false, requestContext));
+      .compose(order -> purchaseOrderHelper.updateOrderWithValidation(order, false, requestContext));
   }
 
   private Future<Void> ensurePoLineWithInstanceId(PoLine poLine, DataImportEventPayload dataImportEventPayload,

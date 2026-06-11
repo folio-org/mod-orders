@@ -224,8 +224,6 @@ public class OrderValidationService {
         if (isApprovalRequired && !compPO.getApproved().equals(Boolean.TRUE)) {
           throw new HttpException(400, APPROVAL_REQUIRED_TO_OPEN);
         }
-        compPO.setApprovedById(getCurrentUserId(requestContext.getHeaders()));
-        compPO.setApprovalDate(new Date());
         return null;
       });
   }

@@ -56,7 +56,6 @@ import org.folio.helper.PurchaseOrderHelper;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus;
-import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.junit.jupiter.api.AfterAll;
@@ -86,8 +85,6 @@ public class CheckInOrderStatusChangeChangeHandlerIT {
   private static Vertx vertx;
 
   @Autowired
-  private EncumbranceService encumbranceService;
-  @Autowired
   private PurchaseOrderStorageService purchaseOrderStorageService;
   @Autowired
   private PurchaseOrderHelper purchaseOrderHelper;
@@ -114,7 +111,7 @@ public class CheckInOrderStatusChangeChangeHandlerIT {
     okapiHeadersMock.put(X_OKAPI_TENANT.getName(), X_OKAPI_TENANT.getValue());
     okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
     autowireDependencies(this);
-    vertx.eventBus().consumer(MessageAddress.CHECKIN_ORDER_STATUS_UPDATE.address, new CheckInOrderStatusChangeChangeHandler(vertx, encumbranceService,
+    vertx.eventBus().consumer(MessageAddress.CHECKIN_ORDER_STATUS_UPDATE.address, new CheckInOrderStatusChangeChangeHandler(vertx,
                           purchaseOrderStorageService, purchaseOrderHelper, purchaseOrderLineService));
   }
 
@@ -135,7 +132,7 @@ public class CheckInOrderStatusChangeChangeHandlerIT {
     logger.info("=== Test case when order status update is expected from Open to Closed ===");
     sendEvent(createBody(false, PO_ID_OPEN_TO_BE_CLOSED), context.succeeding(result -> {
       assertThat(getPurchaseOrderRetrievals(), hasSize(1));
-      assertThat(getPoLineSearches(), hasSize(1));
+      assertThat(getPoLineSearches(), hasSize(2));
       assertThat(getPurchaseOrderUpdates(), hasSize(1));
 
       PurchaseOrder purchaseOrder = getPurchaseOrderUpdates().get(0).mapTo(PurchaseOrder.class);
@@ -182,7 +179,7 @@ public class CheckInOrderStatusChangeChangeHandlerIT {
     sendEvent(createBody(false, PO_ID_CLOSED_STATUS), context.succeeding(result -> {
       context.verify(() -> {
         assertThat(getPurchaseOrderRetrievals(), hasSize(1));
-        assertThat(getPoLineSearches(), hasSize(2));
+        assertThat(getPoLineSearches(), hasSize(4));
         assertThat(getPurchaseOrderUpdates(), hasSize(1));
         assertThat(getPurchaseOrderUpdates().get(0).mapTo(PurchaseOrder.class).getWorkflowStatus(), is(WorkflowStatus.OPEN));
         assertThat(result.body(), equalTo(Response.Status.OK.getReasonPhrase()));
@@ -237,7 +234,7 @@ public class CheckInOrderStatusChangeChangeHandlerIT {
     sendEvent(createBody(false, PO_ID_CLOSED_STATUS, PO_ID_OPEN_STATUS), context.succeeding(result -> {
       context.verify(() -> {
         assertThat(getPurchaseOrderRetrievals(), hasSize(2));
-        assertThat(getPoLineSearches(), hasSize(3));
+        assertThat(getPoLineSearches(), hasSize(5));
         assertThat(getPurchaseOrderUpdates(), hasSize(1));
         assertThat(getPurchaseOrderUpdates().get(0).mapTo(PurchaseOrder.class).getWorkflowStatus(), is(WorkflowStatus.OPEN));
         assertThat(result.body(), equalTo(Response.Status.OK.getReasonPhrase()));
@@ -321,7 +318,7 @@ public class CheckInOrderStatusChangeChangeHandlerIT {
 
         context.verify(() -> {
           assertThat(getPurchaseOrderRetrievals(), hasSize(1));
-          assertThat(getPoLineSearches(), hasSize(1));
+          assertThat(getPoLineSearches(), hasSize(2));
           assertThat(getPurchaseOrderUpdates(), hasSize(1));
           assertThat(result, instanceOf(ReplyException.class));
           assertThat(((ReplyException) result).failureCode(), is(500));

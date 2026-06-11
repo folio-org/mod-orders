@@ -4,7 +4,6 @@ import static org.folio.helper.CheckinHelper.IS_ITEM_ORDER_CLOSED_PRESENT;
 
 import org.folio.helper.PurchaseOrderHelper;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,9 +17,9 @@ import io.vertx.core.json.JsonObject;
 public class CheckInOrderStatusChangeChangeHandler extends AbstractOrderStatusHandler {
 
   @Autowired
-  public CheckInOrderStatusChangeChangeHandler(Vertx vertx, EncumbranceService encumbranceService,
-          PurchaseOrderStorageService purchaseOrderStorageService, PurchaseOrderHelper purchaseOrderHelper, PurchaseOrderLineService purchaseOrderLineService) {
-    super(vertx.getOrCreateContext(), encumbranceService, purchaseOrderStorageService, purchaseOrderHelper, purchaseOrderLineService);
+  public CheckInOrderStatusChangeChangeHandler(Vertx vertx, PurchaseOrderStorageService purchaseOrderStorageService,
+      PurchaseOrderHelper purchaseOrderHelper, PurchaseOrderLineService purchaseOrderLineService) {
+    super(vertx.getOrCreateContext(), purchaseOrderStorageService, purchaseOrderHelper, purchaseOrderLineService);
   }
 
   @Override
