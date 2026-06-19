@@ -188,13 +188,8 @@ public class PiecesClaimingApiIT {
     var pieceUpdates = getPieceBatchUpdates();
     var jobCreations = getDataExportSpringJobCreations();
 
-    ClaimingResults claimingResults = null;
-    try {
-      claimingResults = response.as(ClaimingResults.class);
-    } catch (Exception ignored) {
-    }
-
-    if (Objects.nonNull(claimingResults)) {
+    if (expectedResponseStatus == CREATED) {
+      var claimingResults = response.as(ClaimingResults.class);
       assertThat(pieceSearches, not(nullValue()));
       assertThat(polSearches, not(nullValue()));
       assertThat(purchaseOrderRetrievals, not(nullValue()));
@@ -226,12 +221,8 @@ public class PiecesClaimingApiIT {
 
       claimingResults.getClaimingPieceResults()
         .forEach(result -> {
-          if (expectedStatus == SUCCESS) {
-            assertThat(result.getPieceId(), not(nullValue()));
-            assertThat(result.getError(), is(nullValue()));
-          } else {
-            assertThat(result.getError(), is(notNullValue()));
-          }
+          assertThat(result.getPieceId(), not(nullValue()));
+          assertThat(result.getError(), is(nullValue()));
           assertThat(result.getStatus(), is(expectedStatus));
         });
     } else {
