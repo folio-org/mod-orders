@@ -79,12 +79,18 @@ public class OpenCompositeOrderFlowValidator {
           .mapEmpty()
       );
 
+    Future<Void> validateMultiYearPrepaymentFuture = Future.succeededFuture().map(v -> {
+      FundDistributionUtils.validateFundDistributionForMultiYear(compPO.getPoLines());
+      return null;
+    });
+
     futures.add(expenseClassValidationService.validateExpenseClasses(compPO.getPoLines(), true, requestContext));
     futures.add(checkLocationsAndPiecesConsistency(compPO.getPoLines(), requestContext));
     futures.add(validateFundDistributionTotal(compPO.getPoLines()));
     futures.add(validateFundsAndPopulateCodes(compPO.getPoLines(), requestContext));
     futures.add(validateMaterialTypesFuture);
     futures.add(validateEncumbrancesFuture);
+    futures.add(validateMultiYearPrepaymentFuture);
 
     return Future.join(futures).mapEmpty();
   }
