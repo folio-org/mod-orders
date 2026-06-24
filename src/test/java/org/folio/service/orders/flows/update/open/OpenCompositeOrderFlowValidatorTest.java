@@ -1,7 +1,7 @@
 package org.folio.service.orders.flows.update.open;
 
 import static org.folio.rest.core.exceptions.ErrorCodes.FUND_LOCATION_RESTRICTION_VIOLATION;
-import static org.folio.rest.core.exceptions.ErrorCodes.PREPAYMENT_TERM_EXCEEDS_FISCAL_YEARS;
+import static org.folio.rest.core.exceptions.ErrorCodes.FUND_DISTRIBUTION_COUNT_MISMATCH;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -28,6 +28,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
+import org.folio.rest.jaxrs.model.PaymentTerms;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.acq.Location;
 import org.folio.service.finance.FundService;
@@ -823,19 +824,20 @@ public class OpenCompositeOrderFlowValidatorTest {
 
   @Test
   public void testValidateMultiYearPrepayment_ShouldThrowWhenPrepaymentTermNotMet(VertxTestContext vertxTestContext) {
-    // given one POL with multiYearPayment=true, prepaymentTerm=2, only 1 distinct fiscal year
-    String fyId = UUID.randomUUID().toString();
+    // given one POL with multiYearPayment=true, prepaymentTerm=2, only 1 fund distribution in paymentTerms
     org.folio.rest.jaxrs.model.Cost cost = new org.folio.rest.jaxrs.model.Cost().withPoLineEstimatedPrice(null);
     PoLine poLine = new PoLine()
       .withId(UUID.randomUUID().toString())
       .withCost(cost)
       .withMultiYearPayment(true)
-      .withPrepaymentTerm(2)
-      .withFundDistribution(List.of(
-        new FundDistribution().withFundId(UUID.randomUUID().toString())
-          .withDistributionType(FundDistribution.DistributionType.PERCENTAGE).withValue(100.0)
-          .withFiscalYearId(fyId)
-      ));
+      .withPaymentTerms(new PaymentTerms()
+        .withTotalPrice(100.0)
+        .withPrepaymentTerm(2)
+        .withStartingFiscalYear("FY2025")
+        .withFundDistributions(List.of(
+          new FundDistribution().withFundId(UUID.randomUUID().toString())
+            .withDistributionType(FundDistribution.DistributionType.PERCENTAGE).withValue(100.0)
+        )));
     CompositePurchaseOrder compPO = new CompositePurchaseOrder()
       .withId(UUID.randomUUID().toString())
       .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.PENDING)
@@ -861,30 +863,29 @@ public class OpenCompositeOrderFlowValidatorTest {
         assertTrue(result.failed());
         HttpException exception = (HttpException) result.cause();
         assertEquals(422, exception.getCode());
-        assertEquals(PREPAYMENT_TERM_EXCEEDS_FISCAL_YEARS.getCode(), exception.getError().getCode());
+        assertEquals(FUND_DISTRIBUTION_COUNT_MISMATCH.getCode(), exception.getError().getCode());
         vertxTestContext.completeNow();
       });
   }
 
   @Test
   public void testValidateMultiYearPrepayment_ShouldPassWhenPrepaymentTermMet(VertxTestContext vertxTestContext) {
-    // given one POL with multiYearPayment=true, prepaymentTerm=2, 2 distinct fiscal years
-    String fyId1 = UUID.randomUUID().toString();
-    String fyId2 = UUID.randomUUID().toString();
+    // given one POL with multiYearPayment=true, prepaymentTerm=2, 2 distinct fund distributions in paymentTerms
     org.folio.rest.jaxrs.model.Cost cost = new org.folio.rest.jaxrs.model.Cost().withPoLineEstimatedPrice(null);
     PoLine poLine = new PoLine()
       .withId(UUID.randomUUID().toString())
       .withCost(cost)
       .withMultiYearPayment(true)
-      .withPrepaymentTerm(2)
-      .withFundDistribution(List.of(
-        new FundDistribution().withFundId(UUID.randomUUID().toString())
-          .withDistributionType(FundDistribution.DistributionType.PERCENTAGE).withValue(50.0)
-          .withFiscalYearId(fyId1),
-        new FundDistribution().withFundId(UUID.randomUUID().toString())
-          .withDistributionType(FundDistribution.DistributionType.PERCENTAGE).withValue(50.0)
-          .withFiscalYearId(fyId2)
-      ));
+      .withPaymentTerms(new PaymentTerms()
+        .withTotalPrice(100.0)
+        .withPrepaymentTerm(2)
+        .withStartingFiscalYear("FY2025")
+        .withFundDistributions(List.of(
+          new FundDistribution().withFundId(UUID.randomUUID().toString())
+            .withDistributionType(FundDistribution.DistributionType.PERCENTAGE).withValue(50.0),
+          new FundDistribution().withFundId(UUID.randomUUID().toString())
+            .withDistributionType(FundDistribution.DistributionType.PERCENTAGE).withValue(50.0)
+        )));
     CompositePurchaseOrder compPO = new CompositePurchaseOrder()
       .withId(UUID.randomUUID().toString())
       .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.PENDING)

@@ -3,7 +3,7 @@ package org.folio.orders.utils;
 import static java.math.RoundingMode.HALF_EVEN;
 import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_MIX_TYPES_FOR_ZERO_PRICE;
 import static org.folio.rest.core.exceptions.ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL;
-import static org.folio.rest.core.exceptions.ErrorCodes.PREPAYMENT_TERM_EXCEEDS_FISCAL_YEARS;
+import static org.folio.rest.core.exceptions.ErrorCodes.FUND_DISTRIBUTION_COUNT_MISMATCH;
 import static org.folio.rest.jaxrs.model.FundDistribution.DistributionType.AMOUNT;
 import static org.folio.rest.jaxrs.model.FundDistribution.DistributionType.PERCENTAGE;
 
@@ -17,6 +17,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
+import org.folio.rest.jaxrs.model.PaymentTerms;
 
 import com.google.common.collect.Lists;
 
@@ -97,22 +98,24 @@ public final class FundDistributionUtils {
     if (!Boolean.TRUE.equals(poLine.getMultiYearPayment())) {
       return;
     }
-    Integer prepaymentTerm = poLine.getPrepaymentTerm();
+    PaymentTerms paymentTerms = poLine.getPaymentTerms();
+    if (paymentTerms == null) {
+      return;
+    }
+    Integer prepaymentTerm = paymentTerms.getPrepaymentTerm();
     if (prepaymentTerm == null || prepaymentTerm <= 0) {
       return;
     }
-    long distinctFiscalYearCount = CollectionUtils.emptyIfNull(poLine.getFundDistribution()).stream()
-      .map(FundDistribution::getFiscalYearId)
+    long fundDistributionCount = CollectionUtils.emptyIfNull(paymentTerms.getFundDistributions()).stream()
       .filter(Objects::nonNull)
-      .distinct()
       .count();
-    if (distinctFiscalYearCount < prepaymentTerm) {
-      throwPrepaymentTermExceedsFiscalYears(prepaymentTerm, distinctFiscalYearCount);
+    if (fundDistributionCount != prepaymentTerm) {
+      throwPrepaymentTermExceedsFiscalYears(prepaymentTerm, fundDistributionCount);
     }
   }
 
   private static void throwPrepaymentTermExceedsFiscalYears(int prepaymentTerm, long distinctFiscalYearCount) {
-    throw new HttpException(422, PREPAYMENT_TERM_EXCEEDS_FISCAL_YEARS, Lists.newArrayList(
+    throw new HttpException(422, FUND_DISTRIBUTION_COUNT_MISMATCH, Lists.newArrayList(
       new Parameter().withKey(PREPAYMENT_TERM_PARAM).withValue(String.valueOf(prepaymentTerm)),
       new Parameter().withKey(DISTINCT_FISCAL_YEAR_COUNT_PARAM).withValue(String.valueOf(distinctFiscalYearCount))
     ));

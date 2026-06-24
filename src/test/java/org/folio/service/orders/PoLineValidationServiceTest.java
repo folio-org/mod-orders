@@ -40,6 +40,7 @@ import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.FundDistribution;
+import org.folio.rest.jaxrs.model.PaymentTerms;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.acq.Location;
 import org.folio.service.consortium.ConsortiumConfigurationService;
@@ -418,7 +419,10 @@ public class PoLineValidationServiceTest {
   void shouldNotReturnErrorWhenMultiYearPaymentFalse() {
     PoLine poLine = new PoLine()
       .withMultiYearPayment(false)
-      .withPrepaymentTerm(3)
+      .withPaymentTerms(new PaymentTerms()
+        .withTotalPrice(100.0)
+        .withPrepaymentTerm(3)
+        .withStartingFiscalYear("FY2025"))
       .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
       .withCost(new Cost().withQuantityPhysical(1).withListUnitPrice(10.0))
       .withLocations(List.of(new Location().withLocationId(UUID.randomUUID().toString()).withQuantityPhysical(1)));
@@ -430,24 +434,25 @@ public class PoLineValidationServiceTest {
 
     if (future.failed()) fail(future.cause());
     boolean hasPrepaymentError = future.result().stream()
-      .anyMatch(e -> PREPAYMENT_TERM_EXCEEDS_FISCAL_YEARS.getCode().equals(e.getCode()));
+      .anyMatch(e -> FUND_DISTRIBUTION_COUNT_MISMATCH.getCode().equals(e.getCode()));
     assertEquals(false, hasPrepaymentError);
   }
 
   @Test
   void shouldNotReturnErrorWhenMultiYearPaymentTrueAndPrepaymentTermMet() {
-    String fyId1 = UUID.randomUUID().toString();
-    String fyId2 = UUID.randomUUID().toString();
     PoLine poLine = new PoLine()
       .withMultiYearPayment(true)
-      .withPrepaymentTerm(2)
+      .withPaymentTerms(new PaymentTerms()
+        .withTotalPrice(100.0)
+        .withPrepaymentTerm(2)
+        .withStartingFiscalYear("FY2025")
+        .withFundDistributions(List.of(
+          new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(PERCENTAGE).withValue(50.0),
+          new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(PERCENTAGE).withValue(50.0)
+        )))
       .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
       .withCost(new Cost().withQuantityPhysical(1).withListUnitPrice(10.0))
-      .withLocations(List.of(new Location().withLocationId(UUID.randomUUID().toString()).withQuantityPhysical(1)))
-      .withFundDistribution(List.of(
-        new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(PERCENTAGE).withValue(50.0).withFiscalYearId(fyId1),
-        new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(PERCENTAGE).withValue(50.0).withFiscalYearId(fyId2)
-      ));
+      .withLocations(List.of(new Location().withLocationId(UUID.randomUUID().toString()).withQuantityPhysical(1)));
 
     doReturn(succeededFuture(null))
       .when(expenseClassValidationService).validateExpenseClasses(eq(List.of(poLine)), eq(false), eq(requestContext));
@@ -456,24 +461,25 @@ public class PoLineValidationServiceTest {
 
     if (future.failed()) fail(future.cause());
     boolean hasPrepaymentError = future.result().stream()
-      .anyMatch(e -> PREPAYMENT_TERM_EXCEEDS_FISCAL_YEARS.getCode().equals(e.getCode()));
+      .anyMatch(e -> FUND_DISTRIBUTION_COUNT_MISMATCH.getCode().equals(e.getCode()));
     assertEquals(false, hasPrepaymentError);
   }
 
   @Test
   void shouldReturnErrorWhenPrepaymentTermExceedsFiscalYears() {
-    String fyId1 = UUID.randomUUID().toString();
-    String fyId2 = UUID.randomUUID().toString();
     PoLine poLine = new PoLine()
       .withMultiYearPayment(true)
-      .withPrepaymentTerm(3)
+      .withPaymentTerms(new PaymentTerms()
+        .withTotalPrice(100.0)
+        .withPrepaymentTerm(3)
+        .withStartingFiscalYear("FY2025")
+        .withFundDistributions(List.of(
+          new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(PERCENTAGE).withValue(50.0),
+          new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(PERCENTAGE).withValue(50.0)
+        )))
       .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
       .withCost(new Cost().withQuantityPhysical(1).withListUnitPrice(10.0))
-      .withLocations(List.of(new Location().withLocationId(UUID.randomUUID().toString()).withQuantityPhysical(1)))
-      .withFundDistribution(List.of(
-        new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(PERCENTAGE).withValue(50.0).withFiscalYearId(fyId1),
-        new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(PERCENTAGE).withValue(50.0).withFiscalYearId(fyId2)
-      ));
+      .withLocations(List.of(new Location().withLocationId(UUID.randomUUID().toString()).withQuantityPhysical(1)));
 
     doReturn(succeededFuture(null))
       .when(expenseClassValidationService).validateExpenseClasses(eq(List.of(poLine)), eq(false), eq(requestContext));
@@ -482,7 +488,7 @@ public class PoLineValidationServiceTest {
 
     if (future.failed()) fail(future.cause());
     boolean hasPrepaymentError = future.result().stream()
-      .anyMatch(e -> PREPAYMENT_TERM_EXCEEDS_FISCAL_YEARS.getCode().equals(e.getCode()));
+      .anyMatch(e -> FUND_DISTRIBUTION_COUNT_MISMATCH.getCode().equals(e.getCode()));
     assertEquals(true, hasPrepaymentError);
   }
 

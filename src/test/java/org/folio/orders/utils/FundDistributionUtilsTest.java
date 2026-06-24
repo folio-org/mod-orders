@@ -2,7 +2,7 @@ package org.folio.orders.utils;
 
 import static java.util.Collections.singletonList;
 import static org.folio.rest.core.exceptions.ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL;
-import static org.folio.rest.core.exceptions.ErrorCodes.PREPAYMENT_TERM_EXCEEDS_FISCAL_YEARS;
+import static org.folio.rest.core.exceptions.ErrorCodes.FUND_DISTRIBUTION_COUNT_MISMATCH;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -16,6 +16,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.FundDistribution.DistributionType;
+import org.folio.rest.jaxrs.model.PaymentTerms;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -23,152 +24,197 @@ import org.junit.jupiter.params.provider.CsvSource;
 public class FundDistributionUtilsTest {
 
   @Test
-  void testValidatePrepaymentTerm_ShouldNotThrowWhenMultiYearPaymentFalse() {
+  void shouldNotThrow_whenMultiYearPaymentFalse() {
     PoLine poLine = new PoLine()
       .withMultiYearPayment(false)
-      .withPrepaymentTerm(3)
-      .withFundDistribution(List.of(
-        new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(100.0)
-      ));
+      .withPaymentTerms(new PaymentTerms()
+        .withTotalPrice(100.0)
+        .withPrepaymentTerm(3)
+        .withStartingFiscalYear("FY2025")
+        .withFundDistributions(List.of(
+          new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(100.0)
+        )));
 
     assertDoesNotThrow(() -> FundDistributionUtils.validatePrepaymentTerm(poLine));
   }
 
   @Test
-  void testValidatePrepaymentTerm_ShouldNotThrowWhenPrepaymentTermNull() {
+  void shouldNotThrow_whenPaymentTermsNull() {
     PoLine poLine = new PoLine()
       .withMultiYearPayment(true)
-      .withPrepaymentTerm(null)
-      .withFundDistribution(List.of());
+      .withPaymentTerms(null);
 
     assertDoesNotThrow(() -> FundDistributionUtils.validatePrepaymentTerm(poLine));
   }
 
   @Test
-  void testValidatePrepaymentTerm_ShouldNotThrowWhenPrepaymentTermZero() {
+  void shouldNotThrow_whenPrepaymentTermNull() {
     PoLine poLine = new PoLine()
       .withMultiYearPayment(true)
-      .withPrepaymentTerm(0)
-      .withFundDistribution(List.of());
+      .withPaymentTerms(new PaymentTerms()
+        .withTotalPrice(100.0)
+        .withPrepaymentTerm(null)
+        .withStartingFiscalYear("FY2025"));
 
     assertDoesNotThrow(() -> FundDistributionUtils.validatePrepaymentTerm(poLine));
   }
 
   @Test
-  void testValidatePrepaymentTerm_ShouldNotThrowWhenPrepaymentTermNegative() {
+  void shouldNotThrow_whenPrepaymentTermZero() {
     PoLine poLine = new PoLine()
       .withMultiYearPayment(true)
-      .withPrepaymentTerm(-1)
-      .withFundDistribution(List.of());
+      .withPaymentTerms(new PaymentTerms()
+        .withTotalPrice(100.0)
+        .withPrepaymentTerm(0)
+        .withStartingFiscalYear("FY2025"));
 
     assertDoesNotThrow(() -> FundDistributionUtils.validatePrepaymentTerm(poLine));
   }
 
   @Test
-  void testValidatePrepaymentTerm_ShouldNotThrowWhenExactlyRequiredDistinctFiscalYears() {
-    String fyId1 = UUID.randomUUID().toString();
-    String fyId2 = UUID.randomUUID().toString();
+  void shouldNotThrow_whenPrepaymentTermNegative() {
     PoLine poLine = new PoLine()
       .withMultiYearPayment(true)
-      .withPrepaymentTerm(2)
-      .withFundDistribution(List.of(
-        new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(50.0).withFiscalYearId(fyId1),
-        new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(50.0).withFiscalYearId(fyId2)
-      ));
+      .withPaymentTerms(new PaymentTerms()
+        .withTotalPrice(100.0)
+        .withPrepaymentTerm(-1)
+        .withStartingFiscalYear("FY2025"));
 
     assertDoesNotThrow(() -> FundDistributionUtils.validatePrepaymentTerm(poLine));
   }
 
   @Test
-  void testValidatePrepaymentTerm_ShouldNotThrowWhenMoreDistinctFiscalYearsThanRequired() {
-    String fyId1 = UUID.randomUUID().toString();
-    String fyId2 = UUID.randomUUID().toString();
-    String fyId3 = UUID.randomUUID().toString();
+  void shouldNotThrow_whenExactlyRequiredFundDistributions() {
     PoLine poLine = new PoLine()
       .withMultiYearPayment(true)
-      .withPrepaymentTerm(2)
-      .withFundDistribution(List.of(
-        new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(34.0).withFiscalYearId(fyId1),
-        new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(33.0).withFiscalYearId(fyId2),
-        new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(33.0).withFiscalYearId(fyId3)
-      ));
+      .withPaymentTerms(new PaymentTerms()
+        .withTotalPrice(100.0)
+        .withPrepaymentTerm(2)
+        .withStartingFiscalYear("FY2025")
+        .withFundDistributions(List.of(
+          new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(50.0),
+          new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(50.0)
+        )));
 
     assertDoesNotThrow(() -> FundDistributionUtils.validatePrepaymentTerm(poLine));
   }
 
   @Test
-  void testValidatePrepaymentTerm_ShouldThrowWhenFewerDistinctFiscalYearsThanPrepaymentTerm() {
-    String fyId1 = UUID.randomUUID().toString();
-    String fyId2 = UUID.randomUUID().toString();
+  void shouldThrow_whenMoreFundDistributionsThanPrepaymentTerm() {
     PoLine poLine = new PoLine()
       .withMultiYearPayment(true)
-      .withPrepaymentTerm(3)
-      .withFundDistribution(List.of(
-        new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(50.0).withFiscalYearId(fyId1),
-        new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(50.0).withFiscalYearId(fyId2)
-      ));
+      .withPaymentTerms(new PaymentTerms()
+        .withTotalPrice(100.0)
+        .withPrepaymentTerm(2)
+        .withStartingFiscalYear("FY2025")
+        .withFundDistributions(List.of(
+          new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(34.0),
+          new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(33.0),
+          new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(33.0)
+        )));
 
     var exception = assertThrows(HttpException.class,
       () -> FundDistributionUtils.validatePrepaymentTerm(poLine));
 
     assertEquals(422, exception.getCode());
-    assertEquals(PREPAYMENT_TERM_EXCEEDS_FISCAL_YEARS.getCode(), exception.getError().getCode());
+    assertEquals(FUND_DISTRIBUTION_COUNT_MISMATCH.getCode(), exception.getError().getCode());
   }
 
   @Test
-  void testValidatePrepaymentTerm_ShouldThrowWhenNoFiscalYearIdInFundDistributions() {
-    // fund distributions exist but have no fiscalYearId; count is 0
+  void shouldThrow_whenFewerFundDistributionsThanPrepaymentTerm() {
     PoLine poLine = new PoLine()
       .withMultiYearPayment(true)
-      .withPrepaymentTerm(2)
-      .withFundDistribution(List.of(
-        new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(100.0)
-      ));
+      .withPaymentTerms(new PaymentTerms()
+        .withTotalPrice(100.0)
+        .withPrepaymentTerm(3)
+        .withStartingFiscalYear("FY2025")
+        .withFundDistributions(List.of(
+          new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(50.0),
+          new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(50.0)
+        )));
 
     var exception = assertThrows(HttpException.class,
       () -> FundDistributionUtils.validatePrepaymentTerm(poLine));
 
     assertEquals(422, exception.getCode());
-    assertEquals(PREPAYMENT_TERM_EXCEEDS_FISCAL_YEARS.getCode(), exception.getError().getCode());
+    assertEquals(FUND_DISTRIBUTION_COUNT_MISMATCH.getCode(), exception.getError().getCode());
   }
 
   @Test
-  void testValidatePrepaymentTerm_ShouldThrowWhenDuplicateFiscalYearIdResultsInInsufficientDistinctCount() {
-    // two fund distributions share the same fiscalYearId, distinct count is 1
-    String sharedFyId = UUID.randomUUID().toString();
+  void shouldThrow_whenNoFundDistributionsInPaymentTerms() {
     PoLine poLine = new PoLine()
       .withMultiYearPayment(true)
-      .withPrepaymentTerm(2)
-      .withFundDistribution(List.of(
-        new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(50.0).withFiscalYearId(sharedFyId),
-        new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(50.0).withFiscalYearId(sharedFyId)
-      ));
+      .withPaymentTerms(new PaymentTerms()
+        .withTotalPrice(100.0)
+        .withPrepaymentTerm(2)
+        .withStartingFiscalYear("FY2025")
+        .withFundDistributions(List.of()));
 
     var exception = assertThrows(HttpException.class,
       () -> FundDistributionUtils.validatePrepaymentTerm(poLine));
 
     assertEquals(422, exception.getCode());
-    assertEquals(PREPAYMENT_TERM_EXCEEDS_FISCAL_YEARS.getCode(), exception.getError().getCode());
+    assertEquals(FUND_DISTRIBUTION_COUNT_MISMATCH.getCode(), exception.getError().getCode());
   }
 
   @Test
-  void testValidateFundDistributionForMultiYear_ShouldThrowOnFirstViolationWithMixedList() {
-    String fyId1 = UUID.randomUUID().toString();
+  void shouldThrow_whenPaymentTermsFundDistributionsIsEmpty() {
+    PoLine poLine = new PoLine()
+      .withMultiYearPayment(true)
+      .withPaymentTerms(new PaymentTerms()
+        .withTotalPrice(100.0)
+        .withPrepaymentTerm(1)
+        .withStartingFiscalYear("FY2025"));
+
+    var exception = assertThrows(HttpException.class,
+      () -> FundDistributionUtils.validatePrepaymentTerm(poLine));
+
+    assertEquals(422, exception.getCode());
+    assertEquals(FUND_DISTRIBUTION_COUNT_MISMATCH.getCode(), exception.getError().getCode());
+  }
+
+  @Test
+  void shouldThrowOnFirstViolation_whenValidatingListWithMixedPoLines() {
     PoLine violatingPoLine = new PoLine()
       .withMultiYearPayment(true)
-      .withPrepaymentTerm(3)
-      .withFundDistribution(List.of(
-        new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(100.0).withFiscalYearId(fyId1)
-      ));
+      .withPaymentTerms(new PaymentTerms()
+        .withTotalPrice(100.0)
+        .withPrepaymentTerm(3)
+        .withStartingFiscalYear("FY2025")
+        .withFundDistributions(List.of(
+          new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(100.0)
+        )));
     PoLine validPoLine = new PoLine()
-      .withMultiYearPayment(false)
-      .withFundDistribution(List.of());
+      .withMultiYearPayment(false);
 
     var exception = assertThrows(HttpException.class,
       () -> FundDistributionUtils.validateFundDistributionForMultiYear(List.of(violatingPoLine, validPoLine)));
 
     assertEquals(422, exception.getCode());
-    assertEquals(PREPAYMENT_TERM_EXCEEDS_FISCAL_YEARS.getCode(), exception.getError().getCode());
+    assertEquals(FUND_DISTRIBUTION_COUNT_MISMATCH.getCode(), exception.getError().getCode());
+  }
+
+  @Test
+  void shouldIncludePrepaymentTermAndCountInErrorParameters_whenThrowingValidationError() {
+    PoLine poLine = new PoLine()
+      .withMultiYearPayment(true)
+      .withPaymentTerms(new PaymentTerms()
+        .withTotalPrice(100.0)
+        .withPrepaymentTerm(3)
+        .withStartingFiscalYear("FY2025")
+        .withFundDistributions(List.of(
+          new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(100.0)
+        )));
+
+    var exception = assertThrows(HttpException.class,
+      () -> FundDistributionUtils.validatePrepaymentTerm(poLine));
+
+    var parameters = exception.getError().getParameters();
+    assertEquals(2, parameters.size());
+    assertEquals(FundDistributionUtils.PREPAYMENT_TERM_PARAM, parameters.get(0).getKey());
+    assertEquals("3", parameters.get(0).getValue());
+    assertEquals(FundDistributionUtils.DISTINCT_FISCAL_YEAR_COUNT_PARAM, parameters.get(1).getKey());
+    assertEquals("1", parameters.get(1).getValue());
   }
 
 
