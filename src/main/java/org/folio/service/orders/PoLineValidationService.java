@@ -2,6 +2,7 @@ package org.folio.service.orders;
 
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.folio.orders.utils.FundDistributionUtils.validatePrepaymentTerm;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.PoLineCommonUtil.extractUnaffiliatedLocations;
 import static org.folio.orders.utils.PoLineCommonUtil.getElectronicCostQuantity;
@@ -75,10 +76,9 @@ public class PoLineValidationService extends BaseValidationService {
       .map(v -> errors.addAll(validateReceivingWorkflowForReceiptNotRequired(poLine)))
       .map(v -> errors.addAll(validateForBinadryActive(poLine)))
       .map(b -> errors.addAll(validateLocations(poLine)))
-      .map(b -> {
-        errors.addAll(validateCostPrices(poLine));
-        return errors;
-      });
+      .map(b -> errors.addAll(validateCostPrices(poLine)))
+      .map(b -> errors.addAll(validatePrepaymentTerm(poLine)))
+      .map(b -> errors);
   }
 
   private List<Error> validatePoLineFormats(PoLine poLine) {

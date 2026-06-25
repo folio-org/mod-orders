@@ -1,14 +1,20 @@
 package org.folio.service.orders.flows.update.open;
 
 import static org.folio.rest.core.exceptions.ErrorCodes.FUND_LOCATION_RESTRICTION_VIOLATION;
+import static org.folio.rest.core.exceptions.ErrorCodes.FISCAL_YEAR_DISTRIBUTION_COUNT_MISMATCH;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
@@ -18,12 +24,22 @@ import org.folio.CopilotGenerated;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.FiscalYearDistribution;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
+import org.folio.rest.jaxrs.model.PaymentTerms;
+import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.acq.Location;
 import org.folio.service.finance.FundService;
+import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
+import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
+import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.inventory.InventoryHoldingManager;
+import org.folio.service.orders.OrderWorkflowType;
+import org.folio.service.pieces.PieceStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,6 +56,14 @@ public class OpenCompositeOrderFlowValidatorTest {
   private FundService fundService;
   @Mock
   private InventoryHoldingManager inventoryHoldingManager;
+  @Mock
+  private ExpenseClassValidationService expenseClassValidationService;
+  @Mock
+  private PieceStorageService pieceStorageService;
+  @Mock
+  private EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
+  @Mock
+  private EncumbranceWorkflowStrategy encumbranceWorkflowStrategy;
 
   @InjectMocks
   private OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator;
@@ -798,6 +822,95 @@ public class OpenCompositeOrderFlowValidatorTest {
       location.setLocationId(id);
       return location;
     }).toList();
+  }
+
+  @Test
+  public void testValidateMultiYearPrepayment_ShouldThrowWhenPrepaymentTermNotMet(VertxTestContext vertxTestContext) {
+    // given one POL with multiYearPayment=true, prepaymentTerm=2, only 1 fund distribution in paymentTerms
+    Cost cost = new Cost().withPoLineEstimatedPrice(null);
+    org.folio.rest.jaxrs.model.
+    PoLine poLine = new PoLine()
+      .withId(UUID.randomUUID().toString())
+      .withCost(cost)
+      .withMultiYearPayment(true)
+      .withPaymentTerms(new PaymentTerms()
+        .withTotalPrice(100.0)
+        .withPrepaymentTerm(2)
+        .withStartingFiscalYearId(UUID.randomUUID().toString())
+        .withFiscalYearDistributions(List.of(
+          new FiscalYearDistribution().withFiscalYearId(UUID.randomUUID().toString())
+        )));
+    CompositePurchaseOrder compPO = new CompositePurchaseOrder()
+      .withId(UUID.randomUUID().toString())
+      .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.PENDING)
+      .withPoLines(List.of(poLine));
+
+    when(expenseClassValidationService.validateExpenseClasses(anyList(), anyBoolean(), any()))
+      .thenReturn(Future.succeededFuture());
+    when(pieceStorageService.getPiecesByLineIdsByChunks(anyList(), any()))
+      .thenReturn(Future.succeededFuture(Collections.<Piece>emptyList()));
+    when(encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.PENDING_TO_OPEN))
+      .thenReturn(encumbranceWorkflowStrategy);
+    when(encumbranceWorkflowStrategy.prepareProcessEncumbrancesAndValidate(any(), any(), any()))
+      .thenReturn(Future.succeededFuture(Collections.emptyList()));
+    when(fundService.getAllFunds(anyList(), any()))
+      .thenReturn(Future.succeededFuture(Collections.emptyList()));
+
+    // when
+    Future<Void> future = openCompositeOrderFlowValidator.validate(compPO, compPO, requestContext);
+
+    // then
+    vertxTestContext.assertFailure(future)
+      .onComplete(result -> {
+        assertTrue(result.failed());
+        HttpException exception = (HttpException) result.cause();
+        assertEquals(422, exception.getCode());
+        assertEquals(FISCAL_YEAR_DISTRIBUTION_COUNT_MISMATCH.getCode(), exception.getError().getCode());
+        vertxTestContext.completeNow();
+      });
+  }
+
+  @Test
+  public void testValidateMultiYearPrepayment_ShouldPassWhenPrepaymentTermMet(VertxTestContext vertxTestContext) {
+    // given one POL with multiYearPayment=true, prepaymentTerm=2, 2 distinct fund distributions in paymentTerms
+    org.folio.rest.jaxrs.model.Cost cost = new org.folio.rest.jaxrs.model.Cost().withPoLineEstimatedPrice(null);
+    PoLine poLine = new PoLine()
+      .withId(UUID.randomUUID().toString())
+      .withCost(cost)
+      .withMultiYearPayment(true)
+      .withPaymentTerms(new PaymentTerms()
+        .withTotalPrice(100.0)
+        .withPrepaymentTerm(2)
+        .withStartingFiscalYearId(UUID.randomUUID().toString())
+        .withFiscalYearDistributions(List.of(
+          new FiscalYearDistribution().withFiscalYearId(UUID.randomUUID().toString()),
+          new FiscalYearDistribution().withFiscalYearId(UUID.randomUUID().toString())
+        )));
+    CompositePurchaseOrder compPO = new CompositePurchaseOrder()
+      .withId(UUID.randomUUID().toString())
+      .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.PENDING)
+      .withPoLines(List.of(poLine));
+
+    when(expenseClassValidationService.validateExpenseClasses(anyList(), anyBoolean(), any()))
+      .thenReturn(Future.succeededFuture());
+    when(pieceStorageService.getPiecesByLineIdsByChunks(anyList(), any()))
+      .thenReturn(Future.succeededFuture(Collections.<Piece>emptyList()));
+    when(encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.PENDING_TO_OPEN))
+      .thenReturn(encumbranceWorkflowStrategy);
+    when(encumbranceWorkflowStrategy.prepareProcessEncumbrancesAndValidate(any(), any(), any()))
+      .thenReturn(Future.succeededFuture(Collections.emptyList()));
+    when(fundService.getAllFunds(anyList(), any()))
+      .thenReturn(Future.succeededFuture(Collections.emptyList()));
+
+    // when
+    Future<Void> future = openCompositeOrderFlowValidator.validate(compPO, compPO, requestContext);
+
+    // then
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        vertxTestContext.completeNow();
+      });
   }
 
 }

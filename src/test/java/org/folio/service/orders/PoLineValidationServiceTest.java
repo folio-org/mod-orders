@@ -8,6 +8,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -38,6 +39,8 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.FiscalYearDistribution;
+import org.folio.rest.jaxrs.model.PaymentTerms;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.acq.Location;
 import org.folio.service.consortium.ConsortiumConfigurationService;
@@ -410,6 +413,83 @@ public class PoLineValidationServiceTest {
     List<Error> errors = future.result();
     assertThat(errors, hasSize(1));
     assertThat(errors.getFirst().getCode(), is(RECEIVING_WORKFLOW_INCORRECT_FOR_RECEIPT_NOT_REQUIRED.getCode()));
+  }
+
+  @Test
+  void shouldNotReturnErrorWhenMultiYearPaymentFalse() {
+    PoLine poLine = new PoLine()
+      .withMultiYearPayment(false)
+      .withPaymentTerms(new PaymentTerms()
+        .withTotalPrice(100.0)
+        .withPrepaymentTerm(3)
+        .withStartingFiscalYearId(UUID.randomUUID().toString()))
+      .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
+      .withCost(new Cost().withQuantityPhysical(1).withListUnitPrice(10.0))
+      .withLocations(List.of(new Location().withLocationId(UUID.randomUUID().toString()).withQuantityPhysical(1)));
+
+    doReturn(succeededFuture(null))
+      .when(expenseClassValidationService).validateExpenseClasses(eq(List.of(poLine)), eq(false), eq(requestContext));
+
+    Future<List<Error>> future = poLineValidationService.validatePoLine(poLine, requestContext);
+
+    if (future.failed()) fail(future.cause());
+    boolean hasPrepaymentError = future.result().stream()
+      .anyMatch(e -> FISCAL_YEAR_DISTRIBUTION_COUNT_MISMATCH.getCode().equals(e.getCode()));
+    assertFalse(hasPrepaymentError);
+  }
+
+  @Test
+  void shouldNotReturnErrorWhenMultiYearPaymentTrueAndPrepaymentTermMet() {
+    PoLine poLine = new PoLine()
+      .withMultiYearPayment(true)
+      .withPaymentTerms(new PaymentTerms()
+        .withTotalPrice(100.0)
+        .withPrepaymentTerm(2)
+        .withStartingFiscalYearId(UUID.randomUUID().toString())
+        .withFiscalYearDistributions(List.of(
+          new FiscalYearDistribution().withFiscalYearId(UUID.randomUUID().toString()),
+          new FiscalYearDistribution().withFiscalYearId(UUID.randomUUID().toString())
+        )))
+      .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
+      .withCost(new Cost().withQuantityPhysical(1).withListUnitPrice(10.0))
+      .withLocations(List.of(new Location().withLocationId(UUID.randomUUID().toString()).withQuantityPhysical(1)));
+
+    doReturn(succeededFuture(null))
+      .when(expenseClassValidationService).validateExpenseClasses(eq(List.of(poLine)), eq(false), eq(requestContext));
+
+    Future<List<Error>> future = poLineValidationService.validatePoLine(poLine, requestContext);
+
+    if (future.failed()) fail(future.cause());
+    boolean hasPrepaymentError = future.result().stream()
+      .anyMatch(e -> FISCAL_YEAR_DISTRIBUTION_COUNT_MISMATCH.getCode().equals(e.getCode()));
+    assertFalse(hasPrepaymentError);
+  }
+
+  @Test
+  void shouldReturnErrorWhenPrepaymentTermExceedsFiscalYears() {
+    PoLine poLine = new PoLine()
+      .withMultiYearPayment(true)
+      .withPaymentTerms(new PaymentTerms()
+        .withTotalPrice(100.0)
+        .withPrepaymentTerm(3)
+        .withStartingFiscalYearId(UUID.randomUUID().toString())
+        .withFiscalYearDistributions(List.of(
+          new FiscalYearDistribution().withFiscalYearId(UUID.randomUUID().toString()),
+          new FiscalYearDistribution().withFiscalYearId(UUID.randomUUID().toString())
+        )))
+      .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
+      .withCost(new Cost().withQuantityPhysical(1).withListUnitPrice(10.0))
+      .withLocations(List.of(new Location().withLocationId(UUID.randomUUID().toString()).withQuantityPhysical(1)));
+
+    doReturn(succeededFuture(null))
+      .when(expenseClassValidationService).validateExpenseClasses(eq(List.of(poLine)), eq(false), eq(requestContext));
+
+    Future<List<Error>> future = poLineValidationService.validatePoLine(poLine, requestContext);
+
+    if (future.failed()) fail(future.cause());
+    boolean hasPrepaymentError = future.result().stream()
+      .anyMatch(e -> FISCAL_YEAR_DISTRIBUTION_COUNT_MISMATCH.getCode().equals(e.getCode()));
+    assertTrue(hasPrepaymentError);
   }
 
   private Set<String> errorsToCodes(List<Error> errors) {

@@ -2,22 +2,137 @@ package org.folio.orders.utils;
 
 import static java.util.Collections.singletonList;
 import static org.folio.rest.core.exceptions.ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL;
+import static org.folio.rest.core.exceptions.ErrorCodes.FISCAL_YEAR_DISTRIBUTION_COUNT_MISMATCH;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
+import java.util.stream.Stream;
 
 import org.folio.rest.core.exceptions.HttpException;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.FiscalYearDistribution;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.FundDistribution.DistributionType;
+import org.folio.rest.jaxrs.model.PaymentTerms;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 public class FundDistributionUtilsTest {
+
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("noThrowCases")
+  void shouldReturnNoErrors_whenValidatePrepaymentTermConditionBypassed(String scenario, PoLine poLine) {
+    List<Error> errors = FundDistributionUtils.validatePrepaymentTerm(poLine);
+
+    assertTrue(errors.isEmpty());
+  }
+
+  static Stream<Arguments> noThrowCases() {
+    return Stream.of(
+      Arguments.of("multiYearPayment is false",
+        new PoLine()
+          .withMultiYearPayment(false)
+          .withPaymentTerms(new PaymentTerms()
+            .withTotalPrice(100.0)
+            .withPrepaymentTerm(3)
+            .withStartingFiscalYearId(UUID.randomUUID().toString())
+            .withFiscalYearDistributions(List.of(
+              new FiscalYearDistribution().withFiscalYearId(UUID.randomUUID().toString())
+            )))),
+      Arguments.of("paymentTerms is null",
+        new PoLine()
+          .withMultiYearPayment(true)
+          .withPaymentTerms(null)),
+      Arguments.of("prepaymentTerm is null",
+        new PoLine()
+          .withMultiYearPayment(true)
+          .withPaymentTerms(new PaymentTerms()
+            .withTotalPrice(100.0)
+            .withPrepaymentTerm(null)
+            .withStartingFiscalYearId(UUID.randomUUID().toString()))),
+      Arguments.of("prepaymentTerm is zero",
+        new PoLine()
+          .withMultiYearPayment(true)
+          .withPaymentTerms(new PaymentTerms()
+            .withTotalPrice(100.0)
+            .withPrepaymentTerm(0)
+            .withStartingFiscalYearId(UUID.randomUUID().toString()))),
+      Arguments.of("prepaymentTerm is negative",
+        new PoLine()
+          .withMultiYearPayment(true)
+          .withPaymentTerms(new PaymentTerms()
+            .withTotalPrice(100.0)
+            .withPrepaymentTerm(-1)
+            .withStartingFiscalYearId(UUID.randomUUID().toString()))),
+      Arguments.of("fiscalYearDistributions count equals prepaymentTerm",
+        new PoLine()
+          .withMultiYearPayment(true)
+          .withPaymentTerms(new PaymentTerms()
+            .withTotalPrice(100.0)
+            .withPrepaymentTerm(2)
+            .withStartingFiscalYearId(UUID.randomUUID().toString())
+            .withFiscalYearDistributions(List.of(
+              new FiscalYearDistribution().withFiscalYearId(UUID.randomUUID().toString()),
+              new FiscalYearDistribution().withFiscalYearId(UUID.randomUUID().toString())
+            ))))
+    );
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("errorCases")
+  void shouldReturnError_whenFiscalYearDistributionCountMismatch(
+    String scenario, int prepaymentTerm, Integer distributionCount,
+    String expectedTermParam, String expectedCountParam) {
+
+    PaymentTerms paymentTerms = new PaymentTerms()
+      .withTotalPrice(100.0)
+      .withPrepaymentTerm(prepaymentTerm)
+      .withStartingFiscalYearId(UUID.randomUUID().toString());
+
+    if (distributionCount != null) {
+      List<FiscalYearDistribution> distributions = new ArrayList<>();
+      for (int i = 0; i < distributionCount; i++) {
+        distributions.add(new FiscalYearDistribution().withFiscalYearId(UUID.randomUUID().toString()));
+      }
+      paymentTerms.withFiscalYearDistributions(distributions);
+    }
+
+    PoLine poLine = new PoLine()
+      .withMultiYearPayment(true)
+      .withPaymentTerms(paymentTerms);
+
+    List<Error> errors = FundDistributionUtils.validatePrepaymentTerm(poLine);
+
+    assertEquals(1, errors.size());
+    Error error = errors.get(0);
+    assertEquals(FISCAL_YEAR_DISTRIBUTION_COUNT_MISMATCH.getCode(), error.getCode());
+    var parameters = error.getParameters();
+    assertEquals(2, parameters.size());
+    assertEquals(FundDistributionUtils.PREPAYMENT_TERM_PARAM, parameters.get(0).getKey());
+    assertEquals(expectedTermParam, parameters.get(0).getValue());
+    assertEquals(FundDistributionUtils.FISCAL_YEAR_DISTRIBUTION_COUNT_PARAM, parameters.get(1).getKey());
+    assertEquals(expectedCountParam, parameters.get(1).getValue());
+  }
+
+  static Stream<Arguments> errorCases() {
+    return Stream.of(
+      Arguments.of("more distributions than prepaymentTerm", 2, 3, "2", "3"),
+      Arguments.of("fewer distributions than prepaymentTerm", 3, 2, "3", "2"),
+      Arguments.of("empty distributions list", 2, 0, "2", "0"),
+      Arguments.of("no distributions (null list)", 1, null, "1", "0"),
+      Arguments.of("prepaymentTerm=3 distributions=1", 3, 1, "3", "1")
+    );
+  }
+
 
   @ParameterizedTest
   @CsvSource(value = {

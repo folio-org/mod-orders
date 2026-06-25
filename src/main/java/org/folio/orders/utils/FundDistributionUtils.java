@@ -3,24 +3,31 @@ package org.folio.orders.utils;
 import static java.math.RoundingMode.HALF_EVEN;
 import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_MIX_TYPES_FOR_ZERO_PRICE;
 import static org.folio.rest.core.exceptions.ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL;
+import static org.folio.rest.core.exceptions.ErrorCodes.FISCAL_YEAR_DISTRIBUTION_COUNT_MISMATCH;
 import static org.folio.rest.jaxrs.model.FundDistribution.DistributionType.AMOUNT;
 import static org.folio.rest.jaxrs.model.FundDistribution.DistributionType.PERCENTAGE;
 
 import java.math.BigDecimal;
 import java.util.List;
 
+import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
+import org.folio.rest.jaxrs.model.PaymentTerms;
 
 import com.google.common.collect.Lists;
 
 public final class FundDistributionUtils {
 
   public static final String REMAINING_AMOUNT_FIELD = "remainingAmount";
+  public static final String PREPAYMENT_TERM_PARAM = "prepaymentTerm";
+  public static final String FISCAL_YEAR_DISTRIBUTION_COUNT_PARAM = "fiscalYearDistributionCount";
 
   private static final BigDecimal ZERO_REMAINING_AMOUNT = BigDecimal.ZERO.setScale(2, HALF_EVEN);
   private static final BigDecimal ONE_HUNDRED_PERCENT = BigDecimal.valueOf(100);
@@ -81,6 +88,43 @@ public final class FundDistributionUtils {
 
   public static boolean isFundDistributionsPresent(List<PoLine> poLines) {
     return poLines.stream().mapToLong(poLine -> poLine.getFundDistribution().size()).sum() >= 1;
+  }
+
+  public static void validateFundDistributionForMultiYear(List<PoLine> poLines) {
+    for (PoLine poLine : poLines) {
+      List<Error> errors = validatePrepaymentTerm(poLine);
+      if (!errors.isEmpty()) {
+        throw new HttpException(422, errors.getFirst());
+      }
+    }
+  }
+
+  public static List<Error> validatePrepaymentTerm(PoLine poLine) {
+    if (BooleanUtils.isNotTrue(poLine.getMultiYearPayment())) {
+      return List.of();
+    }
+    PaymentTerms paymentTerms = poLine.getPaymentTerms();
+    if (paymentTerms == null) {
+      return List.of();
+    }
+    Integer prepaymentTerm = paymentTerms.getPrepaymentTerm();
+    if (prepaymentTerm == null || prepaymentTerm <= 0) {
+      return List.of();
+    }
+    long fiscalYearDistributionCount = StreamEx.of(paymentTerms.getFiscalYearDistributions())
+      .nonNull()
+      .count();
+    if (fiscalYearDistributionCount != prepaymentTerm) {
+      return List.of(buildPrepaymentTermMismatchError(prepaymentTerm, fiscalYearDistributionCount));
+    }
+    return List.of();
+  }
+
+  private static Error buildPrepaymentTermMismatchError(int prepaymentTerm, long fiscalYearDistributionCount) {
+    return FISCAL_YEAR_DISTRIBUTION_COUNT_MISMATCH.toError().withParameters(Lists.newArrayList(
+      new Parameter().withKey(PREPAYMENT_TERM_PARAM).withValue(String.valueOf(prepaymentTerm)),
+      new Parameter().withKey(FISCAL_YEAR_DISTRIBUTION_COUNT_PARAM).withValue(String.valueOf(fiscalYearDistributionCount))
+    ));
   }
 
   private static void checkRemainingPercentMatchesToZero(BigDecimal remainingPercent, Double poLineEstimatedPrice) {
