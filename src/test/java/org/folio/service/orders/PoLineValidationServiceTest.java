@@ -9,6 +9,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -436,7 +437,7 @@ public class PoLineValidationServiceTest {
     if (future.failed()) fail(future.cause());
     boolean hasPrepaymentError = future.result().stream()
       .anyMatch(e -> FISCAL_YEAR_DISTRIBUTION_COUNT_MISMATCH.getCode().equals(e.getCode()));
-    assertEquals(false, hasPrepaymentError);
+    assertFalse(hasPrepaymentError);
   }
 
   @Test
@@ -463,7 +464,7 @@ public class PoLineValidationServiceTest {
     if (future.failed()) fail(future.cause());
     boolean hasPrepaymentError = future.result().stream()
       .anyMatch(e -> FISCAL_YEAR_DISTRIBUTION_COUNT_MISMATCH.getCode().equals(e.getCode()));
-    assertEquals(false, hasPrepaymentError);
+    assertFalse(hasPrepaymentError);
   }
 
   @Test
@@ -490,7 +491,7 @@ public class PoLineValidationServiceTest {
     if (future.failed()) fail(future.cause());
     boolean hasPrepaymentError = future.result().stream()
       .anyMatch(e -> FISCAL_YEAR_DISTRIBUTION_COUNT_MISMATCH.getCode().equals(e.getCode()));
-    assertEquals(true, hasPrepaymentError);
+    assertTrue(hasPrepaymentError);
   }
 
   private Set<String> errorsToCodes(List<Error> errors) {
