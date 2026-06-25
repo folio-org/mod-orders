@@ -26,6 +26,7 @@ import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.FiscalYearDistribution;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PaymentTerms;
@@ -833,10 +834,9 @@ public class OpenCompositeOrderFlowValidatorTest {
       .withPaymentTerms(new PaymentTerms()
         .withTotalPrice(100.0)
         .withPrepaymentTerm(2)
-        .withStartingFiscalYear("FY2025")
-        .withFundDistributions(List.of(
-          new FundDistribution().withFundId(UUID.randomUUID().toString())
-            .withDistributionType(FundDistribution.DistributionType.PERCENTAGE).withValue(100.0)
+        .withStartingFiscalYearId(UUID.randomUUID().toString())
+        .withFiscalYearDistributions(List.of(
+          new FiscalYearDistribution().withFiscalYearId(UUID.randomUUID().toString())
         )));
     CompositePurchaseOrder compPO = new CompositePurchaseOrder()
       .withId(UUID.randomUUID().toString())
@@ -879,12 +879,10 @@ public class OpenCompositeOrderFlowValidatorTest {
       .withPaymentTerms(new PaymentTerms()
         .withTotalPrice(100.0)
         .withPrepaymentTerm(2)
-        .withStartingFiscalYear("FY2025")
-        .withFundDistributions(List.of(
-          new FundDistribution().withFundId(UUID.randomUUID().toString())
-            .withDistributionType(FundDistribution.DistributionType.PERCENTAGE).withValue(50.0),
-          new FundDistribution().withFundId(UUID.randomUUID().toString())
-            .withDistributionType(FundDistribution.DistributionType.PERCENTAGE).withValue(50.0)
+        .withStartingFiscalYearId(UUID.randomUUID().toString())
+        .withFiscalYearDistributions(List.of(
+          new FiscalYearDistribution().withFiscalYearId(UUID.randomUUID().toString()),
+          new FiscalYearDistribution().withFiscalYearId(UUID.randomUUID().toString())
         )));
     CompositePurchaseOrder compPO = new CompositePurchaseOrder()
       .withId(UUID.randomUUID().toString())

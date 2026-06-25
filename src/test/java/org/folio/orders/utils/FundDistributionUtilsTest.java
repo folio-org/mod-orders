@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.folio.rest.core.exceptions.HttpException;
+import org.folio.rest.jaxrs.model.FiscalYearDistribution;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.FundDistribution;
@@ -30,9 +31,9 @@ public class FundDistributionUtilsTest {
       .withPaymentTerms(new PaymentTerms()
         .withTotalPrice(100.0)
         .withPrepaymentTerm(3)
-        .withStartingFiscalYear("FY2025")
-        .withFundDistributions(List.of(
-          new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(100.0)
+        .withStartingFiscalYearId(UUID.randomUUID().toString())
+        .withFiscalYearDistributions(List.of(
+          new FiscalYearDistribution().withFiscalYearId(UUID.randomUUID().toString())
         )));
 
     assertDoesNotThrow(() -> FundDistributionUtils.validatePrepaymentTerm(poLine));
@@ -54,7 +55,7 @@ public class FundDistributionUtilsTest {
       .withPaymentTerms(new PaymentTerms()
         .withTotalPrice(100.0)
         .withPrepaymentTerm(null)
-        .withStartingFiscalYear("FY2025"));
+        .withStartingFiscalYearId(UUID.randomUUID().toString()));
 
     assertDoesNotThrow(() -> FundDistributionUtils.validatePrepaymentTerm(poLine));
   }
@@ -66,7 +67,7 @@ public class FundDistributionUtilsTest {
       .withPaymentTerms(new PaymentTerms()
         .withTotalPrice(100.0)
         .withPrepaymentTerm(0)
-        .withStartingFiscalYear("FY2025"));
+        .withStartingFiscalYearId(UUID.randomUUID().toString()));
 
     assertDoesNotThrow(() -> FundDistributionUtils.validatePrepaymentTerm(poLine));
   }
@@ -78,7 +79,7 @@ public class FundDistributionUtilsTest {
       .withPaymentTerms(new PaymentTerms()
         .withTotalPrice(100.0)
         .withPrepaymentTerm(-1)
-        .withStartingFiscalYear("FY2025"));
+        .withStartingFiscalYearId(UUID.randomUUID().toString()));
 
     assertDoesNotThrow(() -> FundDistributionUtils.validatePrepaymentTerm(poLine));
   }
@@ -90,10 +91,10 @@ public class FundDistributionUtilsTest {
       .withPaymentTerms(new PaymentTerms()
         .withTotalPrice(100.0)
         .withPrepaymentTerm(2)
-        .withStartingFiscalYear("FY2025")
-        .withFundDistributions(List.of(
-          new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(50.0),
-          new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(50.0)
+        .withStartingFiscalYearId(UUID.randomUUID().toString())
+        .withFiscalYearDistributions(List.of(
+          new FiscalYearDistribution().withFiscalYearId(UUID.randomUUID().toString()),
+          new FiscalYearDistribution().withFiscalYearId(UUID.randomUUID().toString())
         )));
 
     assertDoesNotThrow(() -> FundDistributionUtils.validatePrepaymentTerm(poLine));
@@ -106,11 +107,11 @@ public class FundDistributionUtilsTest {
       .withPaymentTerms(new PaymentTerms()
         .withTotalPrice(100.0)
         .withPrepaymentTerm(2)
-        .withStartingFiscalYear("FY2025")
-        .withFundDistributions(List.of(
-          new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(34.0),
-          new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(33.0),
-          new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(33.0)
+        .withStartingFiscalYearId(UUID.randomUUID().toString())
+        .withFiscalYearDistributions(List.of(
+          new FiscalYearDistribution().withFiscalYearId(UUID.randomUUID().toString()),
+          new FiscalYearDistribution().withFiscalYearId(UUID.randomUUID().toString()),
+          new FiscalYearDistribution().withFiscalYearId(UUID.randomUUID().toString())
         )));
 
     var exception = assertThrows(HttpException.class,
@@ -127,10 +128,10 @@ public class FundDistributionUtilsTest {
       .withPaymentTerms(new PaymentTerms()
         .withTotalPrice(100.0)
         .withPrepaymentTerm(3)
-        .withStartingFiscalYear("FY2025")
-        .withFundDistributions(List.of(
-          new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(50.0),
-          new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(50.0)
+        .withStartingFiscalYearId(UUID.randomUUID().toString())
+        .withFiscalYearDistributions(List.of(
+          new FiscalYearDistribution().withFiscalYearId(UUID.randomUUID().toString()),
+          new FiscalYearDistribution().withFiscalYearId(UUID.randomUUID().toString())
         )));
 
     var exception = assertThrows(HttpException.class,
@@ -147,8 +148,8 @@ public class FundDistributionUtilsTest {
       .withPaymentTerms(new PaymentTerms()
         .withTotalPrice(100.0)
         .withPrepaymentTerm(2)
-        .withStartingFiscalYear("FY2025")
-        .withFundDistributions(List.of()));
+        .withStartingFiscalYearId(UUID.randomUUID().toString())
+        .withFiscalYearDistributions(List.of()));
 
     var exception = assertThrows(HttpException.class,
       () -> FundDistributionUtils.validatePrepaymentTerm(poLine));
@@ -164,7 +165,7 @@ public class FundDistributionUtilsTest {
       .withPaymentTerms(new PaymentTerms()
         .withTotalPrice(100.0)
         .withPrepaymentTerm(1)
-        .withStartingFiscalYear("FY2025"));
+        .withStartingFiscalYearId(UUID.randomUUID().toString()));
 
     var exception = assertThrows(HttpException.class,
       () -> FundDistributionUtils.validatePrepaymentTerm(poLine));
@@ -180,9 +181,9 @@ public class FundDistributionUtilsTest {
       .withPaymentTerms(new PaymentTerms()
         .withTotalPrice(100.0)
         .withPrepaymentTerm(3)
-        .withStartingFiscalYear("FY2025")
-        .withFundDistributions(List.of(
-          new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(100.0)
+        .withStartingFiscalYearId(UUID.randomUUID().toString())
+        .withFiscalYearDistributions(List.of(
+          new FiscalYearDistribution().withFiscalYearId(UUID.randomUUID().toString())
         )));
     PoLine validPoLine = new PoLine()
       .withMultiYearPayment(false);
@@ -201,9 +202,9 @@ public class FundDistributionUtilsTest {
       .withPaymentTerms(new PaymentTerms()
         .withTotalPrice(100.0)
         .withPrepaymentTerm(3)
-        .withStartingFiscalYear("FY2025")
-        .withFundDistributions(List.of(
-          new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(DistributionType.PERCENTAGE).withValue(100.0)
+        .withStartingFiscalYearId(UUID.randomUUID().toString())
+        .withFiscalYearDistributions(List.of(
+          new FiscalYearDistribution().withFiscalYearId(UUID.randomUUID().toString())
         )));
 
     var exception = assertThrows(HttpException.class,

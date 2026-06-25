@@ -106,11 +106,11 @@ public final class FundDistributionUtils {
     if (prepaymentTerm == null || prepaymentTerm <= 0) {
       return;
     }
-    long fundDistributionCount = CollectionUtils.emptyIfNull(paymentTerms.getFundDistributions()).stream()
+    long fiscalYearDistributionCount = CollectionUtils.emptyIfNull(paymentTerms.getFiscalYearDistributions()).stream()
       .filter(Objects::nonNull)
       .count();
-    if (fundDistributionCount != prepaymentTerm) {
-      throwPrepaymentTermExceedsFiscalYears(prepaymentTerm, fundDistributionCount);
+    if (fiscalYearDistributionCount != prepaymentTerm) {
+      throwPrepaymentTermExceedsFiscalYears(prepaymentTerm, fiscalYearDistributionCount);
     }
   }
 

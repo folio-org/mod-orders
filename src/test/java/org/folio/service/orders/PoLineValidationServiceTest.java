@@ -39,6 +39,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.FiscalYearDistribution;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.PaymentTerms;
 import org.folio.rest.jaxrs.model.Physical;
@@ -422,7 +423,7 @@ public class PoLineValidationServiceTest {
       .withPaymentTerms(new PaymentTerms()
         .withTotalPrice(100.0)
         .withPrepaymentTerm(3)
-        .withStartingFiscalYear("FY2025"))
+        .withStartingFiscalYearId(UUID.randomUUID().toString()))
       .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
       .withCost(new Cost().withQuantityPhysical(1).withListUnitPrice(10.0))
       .withLocations(List.of(new Location().withLocationId(UUID.randomUUID().toString()).withQuantityPhysical(1)));
@@ -445,10 +446,10 @@ public class PoLineValidationServiceTest {
       .withPaymentTerms(new PaymentTerms()
         .withTotalPrice(100.0)
         .withPrepaymentTerm(2)
-        .withStartingFiscalYear("FY2025")
-        .withFundDistributions(List.of(
-          new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(PERCENTAGE).withValue(50.0),
-          new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(PERCENTAGE).withValue(50.0)
+        .withStartingFiscalYearId(UUID.randomUUID().toString())
+        .withFiscalYearDistributions(List.of(
+          new FiscalYearDistribution().withFiscalYearId(UUID.randomUUID().toString()),
+          new FiscalYearDistribution().withFiscalYearId(UUID.randomUUID().toString())
         )))
       .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
       .withCost(new Cost().withQuantityPhysical(1).withListUnitPrice(10.0))
@@ -472,10 +473,10 @@ public class PoLineValidationServiceTest {
       .withPaymentTerms(new PaymentTerms()
         .withTotalPrice(100.0)
         .withPrepaymentTerm(3)
-        .withStartingFiscalYear("FY2025")
-        .withFundDistributions(List.of(
-          new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(PERCENTAGE).withValue(50.0),
-          new FundDistribution().withFundId(UUID.randomUUID().toString()).withDistributionType(PERCENTAGE).withValue(50.0)
+        .withStartingFiscalYearId(UUID.randomUUID().toString())
+        .withFiscalYearDistributions(List.of(
+          new FiscalYearDistribution().withFiscalYearId(UUID.randomUUID().toString()),
+          new FiscalYearDistribution().withFiscalYearId(UUID.randomUUID().toString())
         )))
       .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
       .withCost(new Cost().withQuantityPhysical(1).withListUnitPrice(10.0))
