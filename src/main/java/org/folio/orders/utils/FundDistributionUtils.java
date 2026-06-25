@@ -9,9 +9,10 @@ import static org.folio.rest.jaxrs.model.FundDistribution.DistributionType.PERCE
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Objects;
 
+import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Cost;
@@ -99,7 +100,7 @@ public final class FundDistributionUtils {
   }
 
   public static List<Error> validatePrepaymentTerm(PoLine poLine) {
-    if (!Boolean.TRUE.equals(poLine.getMultiYearPayment())) {
+    if (BooleanUtils.isNotTrue(poLine.getMultiYearPayment())) {
       return List.of();
     }
     PaymentTerms paymentTerms = poLine.getPaymentTerms();
@@ -110,8 +111,8 @@ public final class FundDistributionUtils {
     if (prepaymentTerm == null || prepaymentTerm <= 0) {
       return List.of();
     }
-    long fiscalYearDistributionCount = CollectionUtils.emptyIfNull(paymentTerms.getFiscalYearDistributions()).stream()
-      .filter(Objects::nonNull)
+    long fiscalYearDistributionCount = StreamEx.of(paymentTerms.getFiscalYearDistributions())
+      .nonNull()
       .count();
     if (fiscalYearDistributionCount != prepaymentTerm) {
       return List.of(buildPrepaymentTermMismatchError(prepaymentTerm, fiscalYearDistributionCount));

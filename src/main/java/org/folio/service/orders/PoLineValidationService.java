@@ -77,10 +77,8 @@ public class PoLineValidationService extends BaseValidationService {
       .map(v -> errors.addAll(validateForBinadryActive(poLine)))
       .map(b -> errors.addAll(validateLocations(poLine)))
       .map(b -> errors.addAll(validateCostPrices(poLine)))
-      .map(b -> {
-        errors.addAll(validatePrepaymentTerm(poLine));
-        return errors;
-      });
+      .map(b -> errors.addAll(validatePrepaymentTerm(poLine)))
+      .map(b -> errors);
   }
 
   private List<Error> validatePoLineFormats(PoLine poLine) {
