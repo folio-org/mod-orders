@@ -24,6 +24,7 @@ import org.folio.CopilotGenerated;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.FiscalYearDistribution;
@@ -826,7 +827,8 @@ public class OpenCompositeOrderFlowValidatorTest {
   @Test
   public void testValidateMultiYearPrepayment_ShouldThrowWhenPrepaymentTermNotMet(VertxTestContext vertxTestContext) {
     // given one POL with multiYearPayment=true, prepaymentTerm=2, only 1 fund distribution in paymentTerms
-    org.folio.rest.jaxrs.model.Cost cost = new org.folio.rest.jaxrs.model.Cost().withPoLineEstimatedPrice(null);
+    Cost cost = new Cost().withPoLineEstimatedPrice(null);
+    org.folio.rest.jaxrs.model.
     PoLine poLine = new PoLine()
       .withId(UUID.randomUUID().toString())
       .withCost(cost)
