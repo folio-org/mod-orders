@@ -27,7 +27,7 @@ public class CommonSettingsCache extends AbstractConfigCache {
   private AsyncCache<String, String> systemCurrencyCache;
   private AsyncCache<String, String> systemTimezoneCache;
 
-  @Value("${orders.cache.configuration-entries.expiration.time.seconds:30}")
+  @Value("${orders.cache.configuration-entries.expiration.time.seconds:60}")
   private long cacheExpirationTime;
   @Value("${orders.cache.configuration-entries.bypass-cache:false}")
   private boolean byPassCache;
