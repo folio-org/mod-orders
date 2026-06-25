@@ -1,7 +1,7 @@
 package org.folio.service.orders.flows.update.open;
 
 import static org.folio.rest.core.exceptions.ErrorCodes.FUND_LOCATION_RESTRICTION_VIOLATION;
-import static org.folio.rest.core.exceptions.ErrorCodes.FUND_DISTRIBUTION_COUNT_MISMATCH;
+import static org.folio.rest.core.exceptions.ErrorCodes.FISCAL_YEAR_DISTRIBUTION_COUNT_MISMATCH;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -863,7 +863,7 @@ public class OpenCompositeOrderFlowValidatorTest {
         assertTrue(result.failed());
         HttpException exception = (HttpException) result.cause();
         assertEquals(422, exception.getCode());
-        assertEquals(FUND_DISTRIBUTION_COUNT_MISMATCH.getCode(), exception.getError().getCode());
+        assertEquals(FISCAL_YEAR_DISTRIBUTION_COUNT_MISMATCH.getCode(), exception.getError().getCode());
         vertxTestContext.completeNow();
       });
   }

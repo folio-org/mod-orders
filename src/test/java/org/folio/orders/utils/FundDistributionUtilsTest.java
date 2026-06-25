@@ -2,7 +2,7 @@ package org.folio.orders.utils;
 
 import static java.util.Collections.singletonList;
 import static org.folio.rest.core.exceptions.ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL;
-import static org.folio.rest.core.exceptions.ErrorCodes.FUND_DISTRIBUTION_COUNT_MISMATCH;
+import static org.folio.rest.core.exceptions.ErrorCodes.FISCAL_YEAR_DISTRIBUTION_COUNT_MISMATCH;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -118,7 +118,7 @@ public class FundDistributionUtilsTest {
       () -> FundDistributionUtils.validatePrepaymentTerm(poLine));
 
     assertEquals(422, exception.getCode());
-    assertEquals(FUND_DISTRIBUTION_COUNT_MISMATCH.getCode(), exception.getError().getCode());
+    assertEquals(FISCAL_YEAR_DISTRIBUTION_COUNT_MISMATCH.getCode(), exception.getError().getCode());
   }
 
   @Test
@@ -138,7 +138,7 @@ public class FundDistributionUtilsTest {
       () -> FundDistributionUtils.validatePrepaymentTerm(poLine));
 
     assertEquals(422, exception.getCode());
-    assertEquals(FUND_DISTRIBUTION_COUNT_MISMATCH.getCode(), exception.getError().getCode());
+    assertEquals(FISCAL_YEAR_DISTRIBUTION_COUNT_MISMATCH.getCode(), exception.getError().getCode());
   }
 
   @Test
@@ -155,7 +155,7 @@ public class FundDistributionUtilsTest {
       () -> FundDistributionUtils.validatePrepaymentTerm(poLine));
 
     assertEquals(422, exception.getCode());
-    assertEquals(FUND_DISTRIBUTION_COUNT_MISMATCH.getCode(), exception.getError().getCode());
+    assertEquals(FISCAL_YEAR_DISTRIBUTION_COUNT_MISMATCH.getCode(), exception.getError().getCode());
   }
 
   @Test
@@ -171,7 +171,7 @@ public class FundDistributionUtilsTest {
       () -> FundDistributionUtils.validatePrepaymentTerm(poLine));
 
     assertEquals(422, exception.getCode());
-    assertEquals(FUND_DISTRIBUTION_COUNT_MISMATCH.getCode(), exception.getError().getCode());
+    assertEquals(FISCAL_YEAR_DISTRIBUTION_COUNT_MISMATCH.getCode(), exception.getError().getCode());
   }
 
   @Test
@@ -192,7 +192,7 @@ public class FundDistributionUtilsTest {
       () -> FundDistributionUtils.validateFundDistributionForMultiYear(List.of(violatingPoLine, validPoLine)));
 
     assertEquals(422, exception.getCode());
-    assertEquals(FUND_DISTRIBUTION_COUNT_MISMATCH.getCode(), exception.getError().getCode());
+    assertEquals(FISCAL_YEAR_DISTRIBUTION_COUNT_MISMATCH.getCode(), exception.getError().getCode());
   }
 
   @Test
@@ -214,7 +214,7 @@ public class FundDistributionUtilsTest {
     assertEquals(2, parameters.size());
     assertEquals(FundDistributionUtils.PREPAYMENT_TERM_PARAM, parameters.get(0).getKey());
     assertEquals("3", parameters.get(0).getValue());
-    assertEquals(FundDistributionUtils.DISTINCT_FISCAL_YEAR_COUNT_PARAM, parameters.get(1).getKey());
+    assertEquals(FundDistributionUtils.FISCAL_YEAR_DISTRIBUTION_COUNT_PARAM, parameters.get(1).getKey());
     assertEquals("1", parameters.get(1).getValue());
   }
 

@@ -435,7 +435,7 @@ public class PoLineValidationServiceTest {
 
     if (future.failed()) fail(future.cause());
     boolean hasPrepaymentError = future.result().stream()
-      .anyMatch(e -> FUND_DISTRIBUTION_COUNT_MISMATCH.getCode().equals(e.getCode()));
+      .anyMatch(e -> FISCAL_YEAR_DISTRIBUTION_COUNT_MISMATCH.getCode().equals(e.getCode()));
     assertEquals(false, hasPrepaymentError);
   }
 
@@ -462,7 +462,7 @@ public class PoLineValidationServiceTest {
 
     if (future.failed()) fail(future.cause());
     boolean hasPrepaymentError = future.result().stream()
-      .anyMatch(e -> FUND_DISTRIBUTION_COUNT_MISMATCH.getCode().equals(e.getCode()));
+      .anyMatch(e -> FISCAL_YEAR_DISTRIBUTION_COUNT_MISMATCH.getCode().equals(e.getCode()));
     assertEquals(false, hasPrepaymentError);
   }
 
@@ -489,7 +489,7 @@ public class PoLineValidationServiceTest {
 
     if (future.failed()) fail(future.cause());
     boolean hasPrepaymentError = future.result().stream()
-      .anyMatch(e -> FUND_DISTRIBUTION_COUNT_MISMATCH.getCode().equals(e.getCode()));
+      .anyMatch(e -> FISCAL_YEAR_DISTRIBUTION_COUNT_MISMATCH.getCode().equals(e.getCode()));
     assertEquals(true, hasPrepaymentError);
   }
 
