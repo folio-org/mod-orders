@@ -35,7 +35,7 @@ public class SettingsRetriever {
   private final RestClient restClient;
   private AsyncCache<String, Optional<Setting>> asyncCache;
 
-  @Value("${orders.cache.orders-settings.expiration.time.seconds:300}")
+  @Value("${orders.cache.orders-settings.expiration.time.seconds:30}")
   private long cacheExpirationTime;
 
   public SettingsRetriever(RestClient restClient) {
