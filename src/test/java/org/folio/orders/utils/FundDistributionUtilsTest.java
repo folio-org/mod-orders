@@ -6,6 +6,7 @@ import static org.folio.rest.core.exceptions.ErrorCodes.FISCAL_YEAR_DISTRIBUTION
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,6 +14,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 import org.folio.rest.core.exceptions.HttpException;
+import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.FiscalYearDistribution;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Cost;
@@ -28,8 +30,10 @@ public class FundDistributionUtilsTest {
 
   @ParameterizedTest(name = "{0}")
   @MethodSource("noThrowCases")
-  void shouldNotThrow_whenValidatePrepaymentTermConditionBypassed(String scenario, PoLine poLine) {
-    assertDoesNotThrow(() -> FundDistributionUtils.validatePrepaymentTerm(poLine));
+  void shouldReturnNoErrors_whenValidatePrepaymentTermConditionBypassed(String scenario, PoLine poLine) {
+    List<Error> errors = FundDistributionUtils.validatePrepaymentTerm(poLine);
+
+    assertTrue(errors.isEmpty());
   }
 
   static Stream<Arguments> noThrowCases() {
@@ -84,8 +88,8 @@ public class FundDistributionUtilsTest {
   }
 
   @ParameterizedTest(name = "{0}")
-  @MethodSource("throwCases")
-  void shouldThrow_whenFiscalYearDistributionCountMismatch(
+  @MethodSource("errorCases")
+  void shouldReturnError_whenFiscalYearDistributionCountMismatch(
     String scenario, int prepaymentTerm, Integer distributionCount,
     String expectedTermParam, String expectedCountParam) {
 
@@ -106,12 +110,12 @@ public class FundDistributionUtilsTest {
       .withMultiYearPayment(true)
       .withPaymentTerms(paymentTerms);
 
-    var exception = assertThrows(HttpException.class,
-      () -> FundDistributionUtils.validatePrepaymentTerm(poLine));
+    List<Error> errors = FundDistributionUtils.validatePrepaymentTerm(poLine);
 
-    assertEquals(422, exception.getCode());
-    assertEquals(FISCAL_YEAR_DISTRIBUTION_COUNT_MISMATCH.getCode(), exception.getError().getCode());
-    var parameters = exception.getError().getParameters();
+    assertEquals(1, errors.size());
+    Error error = errors.get(0);
+    assertEquals(FISCAL_YEAR_DISTRIBUTION_COUNT_MISMATCH.getCode(), error.getCode());
+    var parameters = error.getParameters();
     assertEquals(2, parameters.size());
     assertEquals(FundDistributionUtils.PREPAYMENT_TERM_PARAM, parameters.get(0).getKey());
     assertEquals(expectedTermParam, parameters.get(0).getValue());
@@ -119,7 +123,7 @@ public class FundDistributionUtilsTest {
     assertEquals(expectedCountParam, parameters.get(1).getValue());
   }
 
-  static Stream<Arguments> throwCases() {
+  static Stream<Arguments> errorCases() {
     return Stream.of(
       Arguments.of("more distributions than prepaymentTerm", 2, 3, "2", "3"),
       Arguments.of("fewer distributions than prepaymentTerm", 3, 2, "3", "2"),

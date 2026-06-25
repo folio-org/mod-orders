@@ -76,16 +76,9 @@ public class PoLineValidationService extends BaseValidationService {
       .map(v -> errors.addAll(validateReceivingWorkflowForReceiptNotRequired(poLine)))
       .map(v -> errors.addAll(validateForBinadryActive(poLine)))
       .map(b -> errors.addAll(validateLocations(poLine)))
+      .map(b -> errors.addAll(validateCostPrices(poLine)))
       .map(b -> {
-        errors.addAll(validateCostPrices(poLine));
-        return errors;
-      })
-      .map(b -> {
-        try {
-          validatePrepaymentTerm(poLine);
-        } catch (HttpException e) {
-          errors.add(e.getError());
-        }
+        errors.addAll(validatePrepaymentTerm(poLine));
         return errors;
       });
   }

@@ -15,6 +15,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PaymentTerms;
@@ -90,32 +91,36 @@ public final class FundDistributionUtils {
 
   public static void validateFundDistributionForMultiYear(List<PoLine> poLines) {
     for (PoLine poLine : poLines) {
-      validatePrepaymentTerm(poLine);
+      List<Error> errors = validatePrepaymentTerm(poLine);
+      if (!errors.isEmpty()) {
+        throw new HttpException(422, errors.getFirst());
+      }
     }
   }
 
-  public static void validatePrepaymentTerm(PoLine poLine) {
+  public static List<Error> validatePrepaymentTerm(PoLine poLine) {
     if (!Boolean.TRUE.equals(poLine.getMultiYearPayment())) {
-      return;
+      return List.of();
     }
     PaymentTerms paymentTerms = poLine.getPaymentTerms();
     if (paymentTerms == null) {
-      return;
+      return List.of();
     }
     Integer prepaymentTerm = paymentTerms.getPrepaymentTerm();
     if (prepaymentTerm == null || prepaymentTerm <= 0) {
-      return;
+      return List.of();
     }
     long fiscalYearDistributionCount = CollectionUtils.emptyIfNull(paymentTerms.getFiscalYearDistributions()).stream()
       .filter(Objects::nonNull)
       .count();
     if (fiscalYearDistributionCount != prepaymentTerm) {
-      throwPrepaymentTermExceedsFiscalYears(prepaymentTerm, fiscalYearDistributionCount);
+      return List.of(buildPrepaymentTermMismatchError(prepaymentTerm, fiscalYearDistributionCount));
     }
+    return List.of();
   }
 
-  private static void throwPrepaymentTermExceedsFiscalYears(int prepaymentTerm, long fiscalYearDistributionCount) {
-    throw new HttpException(422, FISCAL_YEAR_DISTRIBUTION_COUNT_MISMATCH, Lists.newArrayList(
+  private static Error buildPrepaymentTermMismatchError(int prepaymentTerm, long fiscalYearDistributionCount) {
+    return FISCAL_YEAR_DISTRIBUTION_COUNT_MISMATCH.toError().withParameters(Lists.newArrayList(
       new Parameter().withKey(PREPAYMENT_TERM_PARAM).withValue(String.valueOf(prepaymentTerm)),
       new Parameter().withKey(FISCAL_YEAR_DISTRIBUTION_COUNT_PARAM).withValue(String.valueOf(fiscalYearDistributionCount))
     ));
