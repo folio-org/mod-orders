@@ -132,6 +132,8 @@ import static org.folio.service.inventory.InventoryManagerIT.NEW_LOCATION_ID;
 import static org.folio.service.inventory.InventoryManagerIT.NON_EXISTED_NEW_HOLDING_ID;
 import static org.folio.service.inventory.InventoryManagerIT.OLD_LOCATION_ID;
 import static org.folio.service.inventory.InventoryManagerIT.ONLY_NEW_HOLDING_EXIST_ID;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import io.vertx.core.MultiMap;
 
@@ -419,6 +421,17 @@ public class MockServer {
       throw new RuntimeException(e);
     }
     return serverRqRs.get(PO_LINES_BATCH_STORAGE, HttpMethod.PUT);
+  }
+
+  public static List<PoLine> getPoLineBatchUpdateLines() {
+    List<JsonObject> lineCollections = serverRqRs.get(PO_LINES_BATCH_STORAGE, HttpMethod.PUT);
+    if (lineCollections == null) {
+      return List.of();
+    }
+    return lineCollections.stream()
+      .map(json -> json.mapTo(PoLineCollection.class).getPoLines())
+      .flatMap(Collection::stream)
+      .toList();
   }
 
   public static List<JsonObject> getPoLineSearches() {

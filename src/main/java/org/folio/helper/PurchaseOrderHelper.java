@@ -250,10 +250,6 @@ public class PurchaseOrderHelper {
   public Future<Void> updateOrderWithoutValidation(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage,
       boolean deleteHoldings, RequestContext requestContext) {
     CompositePurchaseOrder clonedPoFromStorage = JsonObject.mapFrom(poFromStorage).mapTo(CompositePurchaseOrder.class);
-    boolean isTransitionToOpen = isTransitionToOpen(poFromStorage, compPO);
-    if (isTransitionToOpen && CollectionUtils.isEmpty(compPO.getPoLines())) {
-      compPO.setPoLines(clonedPoFromStorage.getPoLines());
-    }
     return Future.succeededFuture()
       .compose(v -> {
         if (isTransitionToPending(poFromStorage, compPO)) {
@@ -267,12 +263,6 @@ public class PurchaseOrderHelper {
         }
         return Future.succeededFuture();
       })
-      .map(v -> {
-        if (isTransitionToOpen) {
-          compPO.getPoLines().forEach(poLine -> PoLineCommonUtil.updateLocationsQuantity(poLine.getLocations()));
-        }
-        return null;
-      })
       .compose(v -> {
         if (isTransitionToReopen(poFromStorage, compPO)) {
           return reOpenCompositeOrderManager.process(compPO, poFromStorage, requestContext);
@@ -281,7 +271,11 @@ public class PurchaseOrderHelper {
       })
       .compose(v -> purchaseOrderLineHelper.updatePoLines(poFromStorage, compPO, requestContext))
       .compose(v -> {
-        if (isTransitionToOpen) {
+        if (isTransitionToOpen(poFromStorage, compPO)) {
+          if (CollectionUtils.isEmpty(compPO.getPoLines())) {
+            compPO.setPoLines(clonedPoFromStorage.getPoLines());
+          }
+          compPO.getPoLines().forEach(poLine -> PoLineCommonUtil.updateLocationsQuantity(poLine.getLocations()));
           setOrderApprovalDetails(compPO, requestContext);
           return commonSettingsCache.loadSettings(requestContext)
             .compose(tenantConfiguration -> openCompositeOrderManager.process(compPO, poFromStorage, tenantConfiguration, requestContext));
