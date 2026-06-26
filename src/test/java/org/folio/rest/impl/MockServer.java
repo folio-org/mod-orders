@@ -132,8 +132,6 @@ import static org.folio.service.inventory.InventoryManagerIT.NEW_LOCATION_ID;
 import static org.folio.service.inventory.InventoryManagerIT.NON_EXISTED_NEW_HOLDING_ID;
 import static org.folio.service.inventory.InventoryManagerIT.OLD_LOCATION_ID;
 import static org.folio.service.inventory.InventoryManagerIT.ONLY_NEW_HOLDING_EXIST_ID;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import io.vertx.core.MultiMap;
 
