@@ -60,6 +60,7 @@ import static org.folio.rest.impl.MockServer.getCreatedHoldings;
 import static org.folio.rest.impl.MockServer.getCreatedInstances;
 import static org.folio.rest.impl.MockServer.getCreatedItems;
 import static org.folio.rest.impl.MockServer.getCreatedPiecesBatch;
+import static org.folio.rest.impl.MockServer.getPoLineBatchUpdateLines;
 import static org.folio.rest.impl.MockServer.getPurchaseOrderUpdates;
 import static org.folio.rest.impl.TitlesApiIT.SAMPLE_TITLE_ID;
 import static org.folio.rest.jaxrs.model.EntityType.HOLDINGS;
@@ -308,8 +309,8 @@ public class OrderPostProcessingEventHandlerIT extends DiAbstractRestIT {
     assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().getLast());
     verifyPoLine(eventPayload);
 
-    List<JsonObject> updatedPoLines = MockServer.getRqRsEntries(HttpMethod.PUT, PO_LINES_STORAGE);
-    PoLine updatedPoLine = updatedPoLines.getFirst().mapTo(PoLine.class);
+    List<PoLine> updatedPoLines = getPoLineBatchUpdateLines();
+    PoLine updatedPoLine = updatedPoLines.getFirst();
     assertNull(updatedPoLine.getInstanceId());
 
     assertNull(getCreatedInstances());

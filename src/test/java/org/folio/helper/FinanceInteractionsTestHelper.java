@@ -1,7 +1,7 @@
 package org.folio.helper;
 
 import static org.folio.rest.impl.MockServer.getCreatedEncumbrances;
-import static org.folio.rest.impl.MockServer.getPoLineUpdates;
+import static org.folio.rest.impl.MockServer.getPoLineBatchUpdateLines;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
@@ -24,8 +24,7 @@ public final class FinanceInteractionsTestHelper {
     // Check that number of linked encumbrances corresponds to FundDistribution count
     List<Transaction> createdEncumbrances = getCreatedEncumbrances();
 
-    Map<String, List<PoLine>> polUpdates = getPoLineUpdates().stream()
-      .map(json -> json.mapTo(PoLine.class))
+    Map<String, List<PoLine>> polUpdates = getPoLineBatchUpdateLines().stream()
       .filter(poLine -> poLine.getFundDistribution()
         .stream()
         .allMatch(distr -> distr.getEncumbrance() != null))

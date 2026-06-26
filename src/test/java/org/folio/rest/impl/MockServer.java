@@ -421,6 +421,17 @@ public class MockServer {
     return serverRqRs.get(PO_LINES_BATCH_STORAGE, HttpMethod.PUT);
   }
 
+  public static List<PoLine> getPoLineBatchUpdateLines() {
+    List<JsonObject> lineCollections = serverRqRs.get(PO_LINES_BATCH_STORAGE, HttpMethod.PUT);
+    if (lineCollections == null) {
+      return List.of();
+    }
+    return lineCollections.stream()
+      .map(json -> json.mapTo(PoLineCollection.class).getPoLines())
+      .flatMap(Collection::stream)
+      .toList();
+  }
+
   public static List<JsonObject> getPoLineSearches() {
     return serverRqRs.get(PO_LINES_STORAGE, HttpMethod.GET);
   }
