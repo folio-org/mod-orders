@@ -754,7 +754,6 @@
                     <include name="PoLine.java" />
                     <include name="PurchaseOrder.java" />
                     <include name="Piece.java" />
-                    <include name="Organization.java" />
                   </fileset>
                 </delete>
                 <move todir="${generated_sources_dir}/raml-jaxrs" failonerror="false" overwrite="true">
