@@ -749,13 +749,6 @@
             </goals>
             <configuration>
               <target>
-                <delete failonerror="false">
-                  <fileset dir="${jsonschema2pojo_output_dir}/org/folio/rest/jaxrs/model">
-                    <include name="PoLine.java" />
-                    <include name="PurchaseOrder.java" />
-                    <include name="Piece.java" />
-                  </fileset>
-                </delete>
                 <move todir="${generated_sources_dir}/raml-jaxrs" failonerror="false" overwrite="true">
                   <fileset dir="${jsonschema2pojo_output_dir}" erroronmissingdir="false">
                     <include name="org/folio/rest/jaxrs/**" />
