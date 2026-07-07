@@ -92,23 +92,23 @@ public class OpenCompositeOrderManager {
 
   public Future<Void> openOrderUpdatePoLinesSummary(List<PoLine> poLines, RequestContext requestContext) {
     logger.debug("OpenCompositeOrderManager.openOrderUpdatePoLinesSummary");
-    return Future.join(poLines.stream()
-        .map(this::removeLocationId)
-        .map(line -> purchaseOrderLineService.saveOrderLine(line, requestContext))
-        .toList())
-      .mapEmpty();
+    if (poLines.isEmpty()) {
+      return Future.succeededFuture();
+    }
+    for (PoLine poLine : poLines) {
+      removeLocationId(poLine);
+    }
+    return purchaseOrderLineService.saveOrderLines(poLines, requestContext);
   }
 
-  private PoLine removeLocationId(PoLine poLine) {
+  private void removeLocationId(PoLine poLine) {
     poLine.getLocations().forEach(location ->
     {
       if (location.getHoldingId() != null) {
         location.setLocationId(null);
       }
     });
-    return poLine;
   }
-
 
   private Map<String, List<Title>> populateInstanceId(Map<String, List<Title>> lineIdsTitles, List<PoLine> lines) {
     getNonPackageLines(lines).forEach(line -> {

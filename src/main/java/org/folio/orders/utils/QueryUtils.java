@@ -8,8 +8,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class QueryUtils {
 
@@ -19,7 +17,6 @@ public class QueryUtils {
   private static final String CQL_PREFIX = "(";
   private static final String CQL_SUFFIX = ")";
   private static final String CQL_UNDEFINED_FIELD_EXPRESSION = "cql.allRecords=1 NOT %s=\"\"";
-  private static final Pattern CQL_SORT_BY_PATTERN = Pattern.compile("(.*)(\\ssortBy\\s.*)", Pattern.CASE_INSENSITIVE); //NOSONAR
 
   public static String encodeQuery(String query) {
     return URLEncoder.encode(query, StandardCharsets.UTF_8);
@@ -48,10 +45,11 @@ public class QueryUtils {
     }
     var sorting = StringUtils.EMPTY;
     // Check whether last expression contains sorting query. If it does, extract it to be added in the end of the resulting query
-    Matcher matcher = CQL_SORT_BY_PATTERN.matcher(expressions[expressions.length - 1]);
-    if (matcher.find()) {
-      expressions[expressions.length - 1] = matcher.group(1);
-      sorting = matcher.group(2);
+    String lastExpression = expressions[expressions.length - 1];
+    int sortByIndex = lastExpression.toLowerCase().indexOf(" sortby ");
+    if (sortByIndex != -1) {
+      expressions[expressions.length - 1] = lastExpression.substring(0, sortByIndex);
+      sorting = lastExpression.substring(sortByIndex);
     }
 
     var suffix = CQL_SUFFIX + sorting;

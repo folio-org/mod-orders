@@ -118,29 +118,31 @@ public class PurchaseOrderLineService {
   public Future<Void> saveOrderLinesWithLocations(List<PoLineLocationsPair> pairs, RequestContext requestContext) {
     List<PoLineCollection> poLineCollections = getPartitionedPoLines(pairs.stream().map(PoLineLocationsPair::getPoLine).toList());
 
-    for (PoLineCollection collection: poLineCollections) {
-      for (PoLine poLine: collection.getPoLines()) {
+    List<Future<Void>> searchLocationFutures = poLineCollections.stream()
+      .flatMap(collection -> collection.getPoLines().stream())
+      .map(poLine -> {
         List<Location> locations = pairs.stream()
           .filter(pair -> StringUtils.equals(pair.getPoLine().getId(), poLine.getId()))
           .findFirst().orElseThrow(() -> new NoSuchElementException("No matching PoLine found"))
           .getLocations();
-        updateSearchLocations(poLine, locations, requestContext);
-      }
-    }
+        return updateSearchLocations(poLine, locations, requestContext);
+      })
+      .toList();
 
-    return saveOrderLinesCollections(poLineCollections, requestContext);
+    return Future.all(searchLocationFutures)
+      .compose(v -> saveOrderLinesCollections(poLineCollections, requestContext));
   }
 
   public Future<Void> saveOrderLines(List<PoLine> orderLines, RequestContext requestContext) {
     List<PoLineCollection> poLineCollections = getPartitionedPoLines(orderLines);
 
-    for (PoLineCollection collection: poLineCollections) {
-      for (PoLine poLine: collection.getPoLines()) {
-        updateSearchLocations(poLine, requestContext);
-      }
-    }
+    List<Future<Void>> searchLocationFutures = poLineCollections.stream()
+      .flatMap(collection -> collection.getPoLines().stream())
+      .map(poLine -> updateSearchLocations(poLine, requestContext))
+      .toList();
 
-    return saveOrderLinesCollections(poLineCollections, requestContext);
+    return Future.all(searchLocationFutures)
+      .compose(v -> saveOrderLinesCollections(poLineCollections, requestContext));
   }
 
   public int getPoLinePartitionSize() {
