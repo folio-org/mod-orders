@@ -28,7 +28,6 @@ import static org.folio.helper.InventoryInteractionTestHelper.joinExistingAndNew
 import static org.folio.helper.InventoryInteractionTestHelper.verifyHoldingsCreated;
 import static org.folio.helper.InventoryInteractionTestHelper.verifyInstanceLinksForUpdatedOrder;
 import static org.folio.helper.InventoryInteractionTestHelper.verifyInventoryInteraction;
-import static org.folio.helper.InventoryInteractionTestHelper.verifyInventoryNonInteraction;
 import static org.folio.helper.InventoryInteractionTestHelper.verifyItemsCreated;
 import static org.folio.helper.InventoryInteractionTestHelper.verifyOpenOrderPiecesCreated;
 import static org.folio.helper.InventoryInteractionTestHelper.verifyPiecesCreated;
@@ -157,6 +156,7 @@ import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLine.OrderFormat;
+import org.folio.rest.jaxrs.model.PoLine.PaymentStatus;
 import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
@@ -987,7 +987,7 @@ public class PurchaseOrdersApiIT {
     line2.setOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE);
     line2.getEresource().setCreateInventory(Eresource.CreateInventory.NONE);
     reqData.getPoLines().forEach(s -> s.setReceiptStatus(PoLine.ReceiptStatus.PENDING));
-    reqData.getPoLines().forEach(s -> s.setPaymentStatus(PoLine.PaymentStatus.PAYMENT_NOT_REQUIRED));
+    reqData.getPoLines().forEach(s -> s.setPaymentStatus(PaymentStatus.PAYMENT_NOT_REQUIRED));
 
     reqData.getPoLines().forEach(this::createMockTitle);
 
@@ -1035,8 +1035,8 @@ public class PurchaseOrdersApiIT {
     List<JsonObject> createdPieces = getCreatedPieces();
     verifyOpenOrderPiecesCreated(items, compPo.getPoLines(), createdPieces, 0);
 
-    verifyReceiptStatusChangedTo(PoLine.ReceiptStatus.AWAITING_RECEIPT.value(), compPo.getPoLines().size());
-    verifyPaymentStatusChangedTo(PoLine.PaymentStatus.PAYMENT_NOT_REQUIRED.value(), compPo.getPoLines().size());
+    verifyReceiptStatusChangedTo(PoLine.ReceiptStatus.AWAITING_RECEIPT);
+    verifyPaymentStatusChangedTo(PaymentStatus.PAYMENT_NOT_REQUIRED);
   }
 
   @Test
@@ -1428,20 +1428,16 @@ public class PurchaseOrdersApiIT {
     assertFalse(respOrder.isEmpty());
 
     CompositePurchaseOrder compPo = respOrder.get(0).mapTo(CompositePurchaseOrder.class);
-    List<JsonObject> respLines =  MockServer.serverRqRs.get(PO_LINES_STORAGE, HttpMethod.PUT);
-
-    assertNotNull(respLines);
+    List<PoLine> respLines = MockServer.getPoLineBatchUpdateLines();
     assertFalse(respLines.isEmpty());
 
     PoLine respLine1 = respLines.stream()
-      .filter(line -> line.getString(ID).equals(line1.getId()))
-      .map(line -> line.mapTo(PoLine.class))
+      .filter(line -> line.getId().equals(line1.getId()))
       .filter(line -> Objects.nonNull(line.getLocations().get(0).getHoldingId()))
       .distinct().findAny().orElseThrow();
 
     PoLine respLine2 = respLines.stream()
-      .filter(line -> line.getString(ID).equals(line2.getId()))
-      .map(line -> line.mapTo(PoLine.class))
+      .filter(line -> line.getId().equals(line2.getId()))
       .filter(line -> Objects.nonNull(line.getLocations().get(0).getHoldingId()))
       .findAny().orElseThrow();
 
@@ -1465,8 +1461,8 @@ public class PurchaseOrdersApiIT {
     List<JsonObject> createdPieces = getCreatedPiecesBatch();
     verifyOpenOrderPiecesCreated(items, compPo.getPoLines(), createdPieces, 0);
 
-    verifyReceiptStatusChangedTo(PoLine.ReceiptStatus.AWAITING_RECEIPT.value(), compPo.getPoLines().size());
-    verifyPaymentStatusChangedTo(PoLine.PaymentStatus.AWAITING_PAYMENT.value(), compPo.getPoLines().size());
+    verifyReceiptStatusChangedTo(PoLine.ReceiptStatus.AWAITING_RECEIPT);
+    verifyPaymentStatusChangedTo(PaymentStatus.AWAITING_PAYMENT);
   }
 
   @Test
@@ -1495,24 +1491,23 @@ public class PurchaseOrdersApiIT {
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
-    verifyReceiptStatusChangedTo(ReceiptStatus.RECEIPT_NOT_REQUIRED.value(), reqData.getPoLines().size());
-    verifyPaymentStatusChangedTo(PoLine.PaymentStatus.PAYMENT_NOT_REQUIRED.value(), reqData.getPoLines().size());
+    verifyReceiptStatusChangedTo(ReceiptStatus.RECEIPT_NOT_REQUIRED);
+    verifyPaymentStatusChangedTo(PaymentStatus.PAYMENT_NOT_REQUIRED);
   }
-  private void verifyReceiptStatusChangedTo(String expectedStatus, int poLinesQuantity) {
-    List<JsonObject> polUpdates = MockServer.getPoLineUpdates();
-    assertNotNull(polUpdates);
-    // check receipt status of the last poLinesQuantity updated polines
-    for (JsonObject jsonObj : polUpdates.subList(polUpdates.size() - poLinesQuantity, polUpdates.size())) {
-      assertEquals(expectedStatus, jsonObj.getString(RECEIPT_STATUS));
+
+  private void verifyReceiptStatusChangedTo(ReceiptStatus expectedStatus) {
+    List<PoLine> updatedLines = MockServer.getPoLineBatchUpdateLines();
+    assertFalse(updatedLines.isEmpty());
+    for (PoLine poLine : updatedLines) {
+      assertEquals(expectedStatus, poLine.getReceiptStatus());
     }
   }
 
-  private void verifyPaymentStatusChangedTo(String expectedStatus, int poLinesQuantity) {
-    List<JsonObject> polUpdates = MockServer.getPoLineUpdates();
-    assertNotNull(polUpdates);
-
-    for (JsonObject jsonObj : polUpdates.subList(polUpdates.size() - poLinesQuantity, polUpdates.size())) {
-      assertEquals(expectedStatus, jsonObj.getString(PAYMENT_STATUS));
+  private void verifyPaymentStatusChangedTo(PaymentStatus expectedStatus) {
+    List<PoLine> updatedLines = MockServer.getPoLineBatchUpdateLines();
+    assertFalse(updatedLines.isEmpty());
+    for (PoLine poLine : updatedLines) {
+      assertEquals(expectedStatus, poLine.getPaymentStatus());
     }
   }
 
@@ -2210,13 +2205,13 @@ public class PurchaseOrdersApiIT {
     // check the payment and receipt status of the last 3 updated polines
     JsonObject line1 = polUpdates.stream().filter(pol -> EMPTY_RECEIPT_POL_UUID.equals(pol.getString(HelperUtils.ID))).findFirst().orElseThrow();
     assertEquals(ReceiptStatus.CANCELLED.value(), line1.getString(RECEIPT_STATUS));
-    assertEquals(PoLine.PaymentStatus.CANCELLED.value(), line1.getString(PAYMENT_STATUS));
+    assertEquals(PaymentStatus.CANCELLED.value(), line1.getString(PAYMENT_STATUS));
     JsonObject line2 = polUpdates.stream().filter(pol -> AWAITING_RECEIPT_POL_UUID.equals(pol.getString(HelperUtils.ID))).findFirst().orElseThrow();
     assertEquals(ReceiptStatus.CANCELLED.value(), line2.getString(RECEIPT_STATUS));
-    assertEquals(PoLine.PaymentStatus.PAYMENT_NOT_REQUIRED.value(), line2.getString(PAYMENT_STATUS));
+    assertEquals(PaymentStatus.PAYMENT_NOT_REQUIRED.value(), line2.getString(PAYMENT_STATUS));
     JsonObject line3 = polUpdates.stream().filter(pol -> FULLY_RECEIVED_POL_UUID.equals(pol.getString(HelperUtils.ID))).findFirst().orElseThrow();
     assertEquals(ReceiptStatus.FULLY_RECEIVED.value(), line3.getString(RECEIPT_STATUS));
-    assertEquals(PoLine.PaymentStatus.CANCELLED.value(), line3.getString(PAYMENT_STATUS));
+    assertEquals(PaymentStatus.CANCELLED.value(), line3.getString(PAYMENT_STATUS));
   }
 
   @Test
