@@ -3,6 +3,9 @@
 ### Stories
 * [MODORDERS-1463](https://folio-org.atlassian.net/browse/MODORDERS-1463) - Bump acquisition-methods interfaces to 1.1 for the deprecated flag
 
+### Tech debts
+* Remove unused .github/workflows/buildMaven.yml Jenkinsfile-disabled
+
 ## 13.1.0 - Released (Trillium R2 2025)
 This release focused on upgrading to Vert.x 5.0, improving holdings/instance connection handling, enhancing fiscal year and encumbrance logic, piece/receiving improvements, and a large round of bug fixes across the acquisitions flow.
 
