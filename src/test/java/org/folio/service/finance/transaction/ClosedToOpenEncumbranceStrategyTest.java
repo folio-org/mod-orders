@@ -5,10 +5,14 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.helper.PurchaseOrderHelperTest.ORDER_PATH;
+import static org.folio.rest.core.exceptions.ErrorCodes.FUND_CANNOT_BE_PAID;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -23,7 +27,9 @@ import java.util.UUID;
 
 import io.vertx.junit5.VertxExtension;
 import org.folio.models.EncumbranceRelationsHolder;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
@@ -110,6 +116,51 @@ public class ClosedToOpenEncumbranceStrategyTest {
         // Then
         verify(encumbranceService, times(1)).createOrUpdateEncumbrances(
           argThat(h -> h.getEncumbrancesForCreate().size() == 1), eq(requestContext));
+        vertxTestContext.completeNow();
+      });
+  }
+
+  @Test
+  void shouldPreserveHttpExceptionWhenBudgetRestrictionFails(VertxTestContext vertxTestContext) {
+    // Given
+    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+
+    Map<String, List<PoLine>> mapFiscalYearsWithPoLines = new HashMap<>();
+    String fiscalYearId = UUID.randomUUID().toString();
+    mapFiscalYearsWithPoLines.put(fiscalYearId, singletonList(new PoLine().withId(UUID.randomUUID().toString())));
+    CompositePurchaseOrder orderFromStorage = JsonObject.mapFrom(order).mapTo(CompositePurchaseOrder.class);
+    orderFromStorage.setWorkflowStatus(WorkflowStatus.CLOSED);
+    doReturn(succeededFuture(mapFiscalYearsWithPoLines)).when(encumbranceRelationsHoldersBuilder).retrieveMapFiscalYearsWithPoLines(eq(order), eq(orderFromStorage), eq(requestContext));
+
+    doReturn(succeededFuture(emptyList())).when(encumbranceService).getOrderEncumbrancesToUnrelease(any(), any(), any());
+
+    List<EncumbranceRelationsHolder> encumbranceRelationsHolders = new ArrayList<>();
+    encumbranceRelationsHolders.add(new EncumbranceRelationsHolder()
+      .withFundDistribution(new FundDistribution()));
+    doReturn(encumbranceRelationsHolders).when(encumbranceRelationsHoldersBuilder).buildBaseHolders(any());
+    doReturn(succeededFuture()).when(encumbranceRelationsHoldersBuilder).withFinances(any(), any());
+
+    doReturn(encumbranceRelationsHolders).when(fundsDistributionService).distributeFunds(any());
+    doReturn(succeededFuture(List.of())).when(invoiceLineService).getInvoiceLinesByOrderLineIds(any(), any());
+    doReturn(succeededFuture(List.of())).when(transactionService).getPendingPaymentsByEncumbranceIds(any(), any());
+    doReturn(succeededFuture(List.of())).when(transactionService).getPaymentsByEncumbranceIds(any(), any());
+
+    Parameter fundParameter = new Parameter().withKey("finance.funds").withValue("[TSTFND]");
+    HttpException fundCannotBePaidException = new HttpException(422,
+      FUND_CANNOT_BE_PAID.toError().withParameters(singletonList(fundParameter)));
+    doAnswer(invocation -> {
+      throw fundCannotBePaidException;
+    }).when(budgetRestrictionService).checkEncumbranceRestrictions(any());
+
+    // When
+    Future<Void> future = closedToOpenEncumbranceStrategy.processEncumbrances(order, orderFromStorage, requestContext);
+    vertxTestContext.assertFailure(future)
+      .onComplete(result -> {
+        // Then
+        HttpException cause = assertInstanceOf(HttpException.class, result.cause());
+        assertEquals(422, cause.getCode());
+        assertEquals(FUND_CANNOT_BE_PAID.getCode(), cause.getError().getCode());
+        assertEquals(fundParameter, cause.getError().getParameters().get(0));
         vertxTestContext.completeNow();
       });
   }
