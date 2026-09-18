@@ -83,7 +83,6 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
       }
 
       Map<String, String> okapiHeaders = DataImportUtils.extractOkapiHeaders(eventPayload);
-      LOGGER.error("handle:: Kafka headers: {}, extracted okapi headers: {}", headersMap, okapiHeaders);
       OkapiConnectionParams okapiParams = new OkapiConnectionParams(okapiHeaders, vertx);
       eventPayload.getContext().put(RECORD_ID_HEADER, recordId);
       populatePayloadWithUserIdAndPermissions(kafkaRecord, eventPayload);
