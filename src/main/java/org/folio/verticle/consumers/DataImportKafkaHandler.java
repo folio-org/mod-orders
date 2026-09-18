@@ -82,7 +82,8 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
         return Future.succeededFuture(kafkaRecord.key());
       }
 
-      OkapiConnectionParams okapiParams = new OkapiConnectionParams(headersMap, vertx);
+      Map<String, String> okapiHeaders = DataImportUtils.extractOkapiHeaders(eventPayload);
+      OkapiConnectionParams okapiParams = new OkapiConnectionParams(okapiHeaders, vertx);
       eventPayload.getContext().put(RECORD_ID_HEADER, recordId);
       populatePayloadWithUserIdAndPermissions(kafkaRecord, eventPayload);
       String profileSnapshotId = eventPayload.getContext().get(JOB_PROFILE_SNAPSHOT_ID_KEY);
