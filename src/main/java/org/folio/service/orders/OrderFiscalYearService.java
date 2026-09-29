@@ -24,6 +24,10 @@ import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 
 public class OrderFiscalYearService {
 
+  private static final Comparator<FiscalYear> FISCAL_YEAR_COMPARATOR = Comparator
+    .comparing(FiscalYear::getSeries, Comparator.nullsLast(Comparator.naturalOrder()))
+    .thenComparing(FiscalYear::getPeriodStart, Comparator.nullsLast(Comparator.reverseOrder()));
+
   private final TransactionService transactionService;
   private final FiscalYearService fiscalYearService;
   private final FundService fundService;
@@ -136,11 +140,11 @@ public class OrderFiscalYearService {
 
     return new FiscalYearsHolder()
       .withCurrent(StreamEx.of(mutableCurrentFiscalYears)
-        .reverseSorted(Comparator.comparing(FiscalYear::getName))
+        .sorted(FISCAL_YEAR_COMPARATOR)
         .distinct(FiscalYear::getId)
         .toList())
       .withPrevious(StreamEx.of(filteredAvailableFiscalYears)
-        .reverseSorted(Comparator.comparing(FiscalYear::getName))
+        .sorted(FISCAL_YEAR_COMPARATOR)
         .distinct(FiscalYear::getId)
         .toList());
   }
