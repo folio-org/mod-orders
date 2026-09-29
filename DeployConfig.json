@@ -1,0 +1,260 @@
+{
+  "description": "mod-orders deployment configuration template.",
+  "moduleDefaults": {
+    "resources": [
+      {
+        "name": "cpu",
+        "value": "128",
+        "description": "CPU request/limit for the mod-orders container"
+      },
+      {
+        "name": "memory",
+        "value": "2048",
+        "description": "Memory hard limit for the mod-orders container, in MB"
+      },
+      {
+        "name": "memoryReservation",
+        "value": "1740",
+        "description": "Memory reservation (soft limit) for the mod-orders container, in MB"
+      }
+    ],
+    "java": [
+      {
+        "name": "xmx",
+        "value": "1024m",
+        "description": "Maximum Java heap size"
+      },
+      {
+        "name": "MaxMetaspaceSize",
+        "value": "512m",
+        "description": "Maximum Java metaspace size"
+      },
+      {
+        "name": "MetaspaceSize",
+        "value": "384m",
+        "description": "Initial Java metaspace size"
+      }
+    ],
+    "deployment": {
+      "isHaSupported": true,
+      "replicasRecommendedCount": 2,
+      "description": "mod-orders is stateless (aside from Kafka consumer group coordination) and supports horizontal scaling / multiple replicas for HA. Adjust replicas based on expected order-processing and receiving load."
+    },
+    "kong": {
+      "timeouts": {
+        "connect": "60s",
+        "send": "60s",
+        "read": "60s"
+      },
+      "description": "Default Kong proxy timeouts are sufficient for mod-orders composite-order, receiving and rollover endpoints. Use this only if different from default Kong configuration."
+    },
+    "EnvVars": [
+      {
+        "name": "DB_HOST",
+        "value": null,
+        "description": "PostgreSQL database host",
+        "type": "DB",
+        "essential": true
+      },
+      {
+        "name": "DB_PORT",
+        "value": "5432",
+        "description": "PostgreSQL database port",
+        "type": "DB",
+        "essential": true
+      },
+      {
+        "name": "DB_USERNAME",
+        "value": null,
+        "description": "PostgreSQL database username (sourced from secret store)",
+        "type": "DB",
+        "essential": true
+      },
+      {
+        "name": "DB_PASSWORD",
+        "value": null,
+        "description": "PostgreSQL database password (sourced from secret store)",
+        "type": "DB",
+        "essential": true
+      },
+      {
+        "name": "DB_DATABASE",
+        "value": null,
+        "description": "PostgreSQL database name",
+        "type": "DB",
+        "essential": true
+      },
+      {
+        "name": "DB_MAXPOOLSIZE",
+        "value": "20",
+        "description": "Maximum PostgreSQL connection pool size for mod-orders",
+        "type": "DB",
+        "essential": false
+      },
+      {
+        "name": "DB_EXPLAIN_QUERY_THRESHOLD",
+        "value": "300000",
+        "description": "Threshold in milliseconds above which query execution plans are logged for slow-query analysis",
+        "type": "DB",
+        "essential": false
+      },
+      {
+        "name": "KAFKA_HOST",
+        "value": null,
+        "description": "Kafka broker host",
+        "type": "KAFKA",
+        "essential": true
+      },
+      {
+        "name": "KAFKA_PORT",
+        "value": "9092",
+        "description": "Kafka broker port",
+        "type": "KAFKA",
+        "essential": true
+      },
+      {
+        "name": "REPLICATION_FACTOR",
+        "value": "2",
+        "description": "Kafka topic replication factor used when mod-orders creates its producer topics on tenant init",
+        "type": "KAFKA",
+        "essential": false
+      },
+      {
+        "name": "KAFKA_PRODUCER_TENANT_COLLECTION",
+        "value": "ALL",
+        "description": "Scope of tenants for which the Kafka producer is initialized (e.g. ALL, or a specific tenant collection)",
+        "type": "KAFKA",
+        "essential": false
+      },
+      {
+        "name": "KAFKA_EVENTS_CONCURRENCY",
+        "value": "4",
+        "description": "Number of concurrent consumer threads for general order-events Kafka consumers",
+        "type": "KAFKA",
+        "essential": false
+      },
+      {
+        "name": "KAFKA_CONTRIBUTOR_CONCURRENCY",
+        "value": "2",
+        "description": "Number of concurrent consumer threads for contributor-related Kafka event processing",
+        "type": "KAFKA",
+        "essential": false
+      },
+      {
+        "name": "DI_ORDER_CREATED_PARTITIONS",
+        "value": "8",
+        "description": "Number of partitions for the DI_ORDER_CREATED Kafka topic created during data-import order processing",
+        "type": "FUNCTIONAL",
+        "essential": true
+      },
+      {
+        "name": "DI_ORDER_CREATED_READY_FOR_POST_PROCESSING_PARTITIONS",
+        "value": "8",
+        "description": "Number of partitions for the DI_ORDER_CREATED_READY_FOR_POST_PROCESSING Kafka topic used during data-import post-processing",
+        "type": "FUNCTIONAL",
+        "essential": true
+      },
+      {
+        "name": "DI_PENDING_ORDER_CREATED_PARTITIONS",
+        "value": "8",
+        "description": "Number of partitions for the DI_PENDING_ORDER_CREATED Kafka topic used during data-import for pending orders",
+        "type": "FUNCTIONAL",
+        "essential": true
+      },
+      {
+        "name": "ENV",
+        "value": null,
+        "description": "Deployment environment identifier, also used as the Kafka environment/topic-naming prefix",
+        "type": "CONFIG",
+        "essential": false
+      },
+      {
+        "name": "JAVA_OPTS",
+        "value": null,
+        "description": "Additional JVM options for the mod-orders process (heap sizing, GC, agent flags, etc.)",
+        "type": "CONFIG",
+        "essential": true
+      },
+      {
+        "name": "SYSTEM_USER_ENABLED",
+        "value": false,
+        "description": "Defines if the mod-orders system user must be created/used at tenant initialization for internal (data-import) service requests",
+        "type": "FUNCTIONAL",
+        "essential": true
+      }
+    ]
+  },
+  "sidecarDefaults": {
+    "resources": [
+      {
+        "name": "cpu",
+        "value": "64",
+        "description": "CPU request/limit for the sidecar container"
+      },
+      {
+        "name": "memory",
+        "value": "1024",
+        "description": "Memory hard limit for the sidecar container, in MB"
+      },
+      {
+        "name": "memoryReservation",
+        "value": "512",
+        "description": "Memory reservation for the sidecar container, in MB"
+      }
+    ],
+    "java": [
+      {
+        "name": "xms",
+        "value": "128m",
+        "description": "Initial Java heap size"
+      },
+      {
+        "name": "xmx",
+        "value": "256m",
+        "description": "Maximum Java heap size"
+      },
+      {
+        "name": "MaxMetaspaceSize",
+        "value": "96m",
+        "description": "Maximum Java metaspace size"
+      }
+    ],
+    "EnvVars": [
+      {
+        "name": "ENV",
+        "value": null,
+        "description": "Deployment environment identifier",
+        "type": "CONFIG",
+        "essential": false
+      },
+      {
+        "name": "JAVA_OPTS",
+        "value": null,
+        "description": "Additional JVM options for the sidecar process",
+        "type": "CONFIG",
+        "essential": true
+      },
+      {
+        "name": "MODULE_NAME",
+        "value": "mod-orders",
+        "description": "Name of the backend module the sidecar fronts",
+        "type": "CONFIG",
+        "essential": true
+      },
+      {
+        "name": "MODULE_URL",
+        "value": null,
+        "description": "Internal URL (host:port) at which the mod-orders backend container is reachable from its sidecar",
+        "type": "CONFIG",
+        "essential": true
+      },
+      {
+        "name": "MODULE_VERSION",
+        "value": null,
+        "description": "Version of the mod-orders module deployed alongside this sidecar",
+        "type": "CONFIG",
+        "essential": true
+      }
+    ]
+  }
+}
