@@ -81,6 +81,18 @@ import io.vertx.core.Future;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.mockito.stubbing.Answer;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import org.folio.helper.PurchaseOrderHelper;
+import static org.folio.orders.utils.PermissionsUtil.OKAPI_HEADER_PERMISSIONS;
+import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_REOPEN_PERMISSIONS;
+import static org.mockito.Mockito.verifyNoInteractions;
+import java.util.HashMap;
+import org.folio.rest.core.exceptions.HttpException;
+import static org.folio.rest.core.exceptions.ErrorCodes.COMPOSITE_ORDER_MISSING_PO_LINES;
+import static org.mockito.Mockito.doThrow;
+import static org.folio.rest.core.exceptions.ErrorCodes.PROHIBITED_FIELD_CHANGING;
+import static org.folio.rest.core.exceptions.ErrorCodes.APPROVAL_REQUIRED_TO_OPEN;
+import org.folio.rest.jaxrs.model.Error;
 
 @ExtendWith(VertxExtension.class)
 public class PurchaseOrderHelperTest {
@@ -497,6 +509,238 @@ public class PurchaseOrderHelperTest {
     assertTrue(future.succeeded());
     // dateOrdered should be preserved from storage when reopening the order
     assertEquals(originalDateOrdered, compPO.getDateOrdered(), "dateOrdered should be preserved when reopening order from CLOSED to OPEN");
+  }
+
+    @Test
+  @DisplayName("Test updateOrderWithValidation should preserve dateOrdered from storage when request has null")
+  void testUpdateOrderWithValidationShouldPreserveDateOrderedFromStorage(VertxTestContext vertxTestContext) {
+    // TestMate-5dd4e0ac7bb62b20ae308549c94109ca
+    // Given
+    String orderId = UUID.randomUUID().toString();
+    Date originalDateOrdered = new Date(1705314600000L); // 2024-01-15T10:30:00Z
+    CompositePurchaseOrder compPO = new CompositePurchaseOrder()
+      .withId(orderId)
+      .withWorkflowStatus(OPEN)
+      .withDateOrdered(null);
+    CompositePurchaseOrder poFromStorage = new CompositePurchaseOrder()
+      .withId(orderId)
+      .withWorkflowStatus(OPEN)
+      .withDateOrdered(originalDateOrdered);
+    JsonObject storageOrderJson = JsonObject.mapFrom(poFromStorage);
+    doReturn(succeededFuture(storageOrderJson))
+      .when(purchaseOrderStorageService).getPurchaseOrderByIdAsJson(eq(orderId), eq(requestContext));
+    doReturn(succeededFuture(poFromStorage))
+      .when(purchaseOrderLineService).populateOrderLines(any(CompositePurchaseOrder.class), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(poLineValidationService).validateUserUnaffiliatedLocations(anyString(), anyList(), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(orderValidationService).validateOrderForUpdate(any(CompositePurchaseOrder.class), any(CompositePurchaseOrder.class), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(purchaseOrderLineHelper).updatePoLines(any(CompositePurchaseOrder.class), any(CompositePurchaseOrder.class), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(purchaseOrderStorageService).saveOrder(any(PurchaseOrder.class), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(encumbranceService).updateEncumbrancesOrderStatusAndReleaseIfClosed(any(CompositePurchaseOrder.class), eq(requestContext));
+    // Mock getPoLinesByOrderId which is called inside handleFinalOrderStatus when compPO.getPoLines() is empty
+    doReturn(succeededFuture(Collections.emptyList()))
+      .when(purchaseOrderLineService).getPoLinesByOrderId(eq(orderId), eq(requestContext));
+    // When
+    Future<Void> future = purchaseOrderHelper.updateOrderWithValidation(compPO, false, requestContext);
+    // Then
+    vertxTestContext.assertComplete(future)
+      .onSuccess(v -> vertxTestContext.verify(() -> {
+        assertNotNull(compPO.getDateOrdered());
+        assertEquals(originalDateOrdered, compPO.getDateOrdered());
+        vertxTestContext.completeNow();
+      }))
+      .onFailure(vertxTestContext::failNow);
+  }
+
+    @Test
+  @DisplayName("Test updateOrderWithValidation when reopening without permission should throw exception")
+  void testUpdateOrderWithValidationWhenReopeningWithoutPermissionShouldThrowException(VertxTestContext vertxTestContext) {
+    // TestMate-bf0b124dd4ae2b1cc32b0e26960b1ea3
+    // Given
+    String orderId = "550e8400-e29b-41d4-a716-446655440000";
+    CompositePurchaseOrder requestOrder = new CompositePurchaseOrder()
+      .withId(orderId)
+      .withWorkflowStatus(OPEN);
+    CompositePurchaseOrder poFromStorage = new CompositePurchaseOrder()
+      .withId(orderId)
+      .withWorkflowStatus(CLOSED);
+    JsonObject storageOrderJson = JsonObject.mapFrom(poFromStorage);
+    Map<String, String> headers = new HashMap<>();
+    headers.put(OKAPI_HEADER_PERMISSIONS, "[\"orders.item.approve\"]");
+    doReturn(headers).when(requestContext).getHeaders();
+    doReturn(succeededFuture(storageOrderJson))
+      .when(purchaseOrderStorageService).getPurchaseOrderByIdAsJson(eq(orderId), eq(requestContext));
+    doReturn(succeededFuture(poFromStorage))
+      .when(purchaseOrderLineService).populateOrderLines(any(CompositePurchaseOrder.class), eq(requestContext));
+    // When
+    Future<Void> future = purchaseOrderHelper.updateOrderWithValidation(requestOrder, false, requestContext);
+    // Then
+    vertxTestContext.assertFailure(future)
+      .onComplete(result -> {
+        assertTrue(result.failed());
+        HttpException exception = (HttpException) result.cause();
+        assertEquals(403, exception.getCode());
+        assertEquals(USER_HAS_NO_REOPEN_PERMISSIONS.getCode(), exception.getError().getCode());
+        verify(purchaseOrderStorageService).getPurchaseOrderByIdAsJson(eq(orderId), eq(requestContext));
+        verifyNoInteractions(orderValidationService);
+        verifyNoInteractions(openCompositeOrderManager);
+        vertxTestContext.completeNow();
+      });
+  }
+
+    @Test
+  @DisplayName("Test updateOrderWithValidation when opening order without PO Lines should throw exception")
+  void testUpdateOrderWithValidationWhenOpeningWithoutPoLinesShouldThrowException(VertxTestContext vertxTestContext) {
+    // TestMate-071766ace1b9b005bc19b30674e608d5
+    // Given
+    String orderId = UUID.randomUUID().toString();
+    CompositePurchaseOrder requestOrder = new CompositePurchaseOrder()
+      .withId(orderId)
+      .withWorkflowStatus(OPEN)
+      .withPoLines(Collections.emptyList());
+    CompositePurchaseOrder poFromStorage = new CompositePurchaseOrder()
+      .withId(orderId)
+      .withWorkflowStatus(PENDING)
+      .withPoLines(Collections.emptyList());
+    JsonObject storageOrderJson = JsonObject.mapFrom(poFromStorage);
+    doReturn(succeededFuture(storageOrderJson))
+      .when(purchaseOrderStorageService).getPurchaseOrderByIdAsJson(eq(orderId), eq(requestContext));
+    doReturn(succeededFuture(poFromStorage))
+      .when(purchaseOrderLineService).populateOrderLines(any(CompositePurchaseOrder.class), eq(requestContext));
+    doThrow(new HttpException(422, COMPOSITE_ORDER_MISSING_PO_LINES))
+      .when(poLineValidationService).checkPurchaseOrderHasPoLines(anyList());
+    // When
+    Future<Void> future = purchaseOrderHelper.updateOrderWithValidation(requestOrder, false, requestContext);
+    // Then
+    vertxTestContext.assertFailure(future)
+      .onComplete(result -> {
+        assertTrue(result.failed());
+        HttpException exception = (HttpException) result.cause();
+        assertEquals(422, exception.getCode());
+        assertEquals(COMPOSITE_ORDER_MISSING_PO_LINES.getCode(), exception.getError().getCode());
+        verify(purchaseOrderStorageService).getPurchaseOrderByIdAsJson(eq(orderId), eq(requestContext));
+        verify(poLineValidationService).checkPurchaseOrderHasPoLines(anyList());
+        verifyNoInteractions(orderValidationService);
+        vertxTestContext.completeNow();
+      });
+  }
+
+    @Test
+  @DisplayName("Test updateOrderWithValidation when protected fields changed on non-pending order should throw exception")
+  void testUpdateOrderWithValidationWhenProtectedFieldsChangedOnNonPendingOrderShouldThrowException(VertxTestContext vertxTestContext) {
+    // TestMate-5444b42d34ec4c7dc9dcb43680387ef7
+    // Given
+    String orderId = "550e8400-e29b-41d4-a716-446655440000";
+    CompositePurchaseOrder requestOrder = new CompositePurchaseOrder()
+      .withId(orderId)
+      .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN)
+      .withPoNumber("NEW-PO-NUMBER");
+    JsonObject storageOrderJson = new JsonObject()
+      .put("id", orderId)
+      .put("workflowStatus", "Open")
+      .put("poNumber", "OLD-PO-NUMBER")
+      .put("nextPolNumber", 1);
+    doReturn(succeededFuture(storageOrderJson))
+      .when(purchaseOrderStorageService).getPurchaseOrderByIdAsJson(eq(orderId), eq(requestContext));
+    // When
+    Future<Void> future = purchaseOrderHelper.updateOrderWithValidation(requestOrder, false, requestContext);
+    // Then
+    vertxTestContext.assertFailure(future)
+      .onComplete(result -> {
+        assertTrue(result.failed());
+        HttpException exception = (HttpException) result.cause();
+        assertEquals(400, exception.getCode());
+        assertEquals(PROHIBITED_FIELD_CHANGING.getCode(), exception.getError().getCode());
+        verify(purchaseOrderStorageService).getPurchaseOrderByIdAsJson(eq(orderId), eq(requestContext));
+        verifyNoInteractions(purchaseOrderLineService);
+        verifyNoInteractions(openCompositeOrderManager);
+        vertxTestContext.completeNow();
+      });
+  }
+
+    @Test
+  @DisplayName("Test updateOrderWithValidation when opening and approval required but not approved should throw exception")
+  void testUpdateOrderWithValidationWhenOpeningAndApprovalRequiredButNotApprovedShouldThrowException(VertxTestContext vertxTestContext) {
+    // TestMate-be0f677cabad69266ce5b9254e0a7424
+    // Given
+    String orderId = "550e8400-e29b-41d4-a716-446655440000";
+    CompositePurchaseOrder requestOrder = new CompositePurchaseOrder()
+      .withId(orderId)
+      .withWorkflowStatus(OPEN)
+      .withApproved(false);
+    CompositePurchaseOrder poFromStorage = new CompositePurchaseOrder()
+      .withId(orderId)
+      .withWorkflowStatus(PENDING)
+      .withApproved(false);
+    JsonObject storageOrderJson = JsonObject.mapFrom(poFromStorage);
+    storageOrderJson.put("workflowStatus", PENDING.value());
+    doReturn(succeededFuture(storageOrderJson))
+      .when(purchaseOrderStorageService).getPurchaseOrderByIdAsJson(eq(orderId), eq(requestContext));
+    doReturn(succeededFuture(poFromStorage))
+      .when(purchaseOrderLineService).populateOrderLines(any(CompositePurchaseOrder.class), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(poLineValidationService).validateUserUnaffiliatedLocations(anyString(), anyList(), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(orderValidationService).validateOrderForUpdate(any(CompositePurchaseOrder.class), any(CompositePurchaseOrder.class), eq(requestContext));
+    doReturn(failedFuture(new HttpException(400, APPROVAL_REQUIRED_TO_OPEN)))
+      .when(orderValidationService).checkOrderApprovalRequired(any(CompositePurchaseOrder.class), eq(requestContext));
+    // When
+    Future<Void> future = purchaseOrderHelper.updateOrderWithValidation(requestOrder, false, requestContext);
+    // Then
+    vertxTestContext.assertFailure(future)
+      .onComplete(result -> {
+        assertTrue(result.failed());
+        HttpException exception = (HttpException) result.cause();
+        assertEquals(400, exception.getCode());
+        assertEquals(APPROVAL_REQUIRED_TO_OPEN.getCode(), exception.getError().getCode());
+        verify(purchaseOrderStorageService).getPurchaseOrderByIdAsJson(eq(orderId), eq(requestContext));
+        verify(orderValidationService).checkOrderApprovalRequired(any(CompositePurchaseOrder.class), eq(requestContext));
+        vertxTestContext.completeNow();
+      });
+  }
+
+    @Test
+  @DisplayName("Test updateOrderWithValidation when general update validation fails should throw exception")
+  void testUpdateOrderWithValidationWhenGeneralUpdateValidationFailsShouldThrowException(VertxTestContext vertxTestContext) {
+    // TestMate-240e65657069105af1c71dd8aff18141
+    // Given
+    String orderId = UUID.randomUUID().toString();
+    CompositePurchaseOrder requestOrder = new CompositePurchaseOrder()
+      .withId(orderId)
+      .withWorkflowStatus(PENDING);
+    CompositePurchaseOrder storageOrder = new CompositePurchaseOrder()
+      .withId(orderId)
+      .withWorkflowStatus(PENDING);
+    JsonObject storageOrderJson = JsonObject.mapFrom(storageOrder);
+    Error validationError = new Error().withCode("validationError").withMessage("Validation Error");
+    HttpException validationException = new HttpException(422, validationError);
+    doReturn(succeededFuture(storageOrderJson))
+      .when(purchaseOrderStorageService).getPurchaseOrderByIdAsJson(eq(orderId), eq(requestContext));
+    doReturn(succeededFuture(storageOrder))
+      .when(purchaseOrderLineService).populateOrderLines(any(CompositePurchaseOrder.class), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(poLineValidationService).validateUserUnaffiliatedLocations(anyString(), anyList(), eq(requestContext));
+    doReturn(failedFuture(validationException))
+      .when(orderValidationService).validateOrderForUpdate(any(CompositePurchaseOrder.class), any(CompositePurchaseOrder.class), eq(requestContext));
+    // When
+    Future<Void> future = purchaseOrderHelper.updateOrderWithValidation(requestOrder, false, requestContext);
+    // Then
+    vertxTestContext.assertFailure(future)
+      .onComplete(result -> {
+        assertTrue(result.failed());
+        HttpException exception = (HttpException) result.cause();
+        assertEquals(422, exception.getCode());
+        assertEquals("validationError", exception.getError().getCode());
+        verify(purchaseOrderStorageService).getPurchaseOrderByIdAsJson(eq(orderId), eq(requestContext));
+        verify(orderValidationService).validateOrderForUpdate(any(CompositePurchaseOrder.class), any(CompositePurchaseOrder.class), eq(requestContext));
+        verifyNoInteractions(openCompositeOrderManager);
+        verifyNoInteractions(reOpenCompositeOrderManager);
+        vertxTestContext.completeNow();
+      });
   }
 
   private void prepareOrderForPostRequest(CompositePurchaseOrder reqData) {
