@@ -21,6 +21,8 @@ import org.junit.jupiter.params.provider.CsvSource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 @CopilotGenerated(partiallyGenerated = true)
 public class PoLineCommonUtilTest {
@@ -245,6 +247,72 @@ public class PoLineCommonUtilTest {
     var result = PoLineCommonUtil.extractUnaffiliatedLocations(locations, tenantIds);
     assertEquals(1, result.size());
     assertTrue(result.contains(locations.get(1)));
+  }
+
+    @ParameterizedTest
+  @CsvSource(value = {
+    "Physical Resource:Instance, Holding:true",
+    "Physical Resource:Instance, Holding, Item:true",
+    "P/E Mix:Instance, Holding:true",
+    "Other:Instance, Holding, Item:true",
+    "Physical Resource:Instance:false",
+    "Physical Resource:None:false",
+    "Electronic Resource:Instance, Holding:false"
+  }, delimiter = ':')
+  void testIsHoldingUpdateRequiredForPhysicalShouldReturnTrueOnlyForPhysicalFormatsWithHoldingInventory(
+      String orderFormat, String createInventory, boolean expectedResult) {
+    // TestMate-6290640ccd4b99fc5a9ce69b4a4d7cda
+    //given
+    PoLine poLine = new PoLine().withOrderFormat(PoLine.OrderFormat.fromValue(orderFormat));
+    if (poLine.getOrderFormat() != PoLine.OrderFormat.ELECTRONIC_RESOURCE) {
+      Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.fromValue(createInventory));
+      poLine.setPhysical(physical);
+    } else {
+      // For Electronic Resource, even if Eresource has holding policy, the method for Physical should return false
+      Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.fromValue(createInventory));
+      poLine.setEresource(eresource);
+    }
+    //when
+    boolean result = PoLineCommonUtil.isHoldingUpdateRequiredForPhysical(poLine);
+    //then
+    assertEquals(expectedResult, result);
+  }
+
+    @Test
+  void testIsHoldingUpdateRequiredForPhysicalWhenPhysicalIsNullShouldReturnFalse() {
+    // TestMate-fbbe9654509d56e51a19f9b703eefeb0
+    //given
+    PoLine poLine = new PoLine().withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE);
+    //When
+    boolean result = PoLineCommonUtil.isHoldingUpdateRequiredForPhysical(poLine);
+    //Then
+    assertFalse(result);
+  }
+
+    @ParameterizedTest
+  @CsvSource(value = {
+    "Electronic Resource:Instance, Holding:true",
+    "Electronic Resource:Instance, Holding, Item:true",
+    "Electronic Resource:Instance:false",
+    "Electronic Resource:None:false",
+    "P/E Mix:Instance, Holding:true",
+    "P/E Mix:Instance, Holding, Item:true",
+    "P/E Mix:Instance:false",
+    "P/E Mix:None:false",
+    "Physical Resource:Instance, Holding:false",
+    "Other:Instance, Holding:false"
+  }, delimiter = ':')
+  void testIsHoldingUpdateRequiredForEresourceShouldReturnExpectedResultForVariousFormatsAndInventorySettings(
+      String orderFormat, String createInventory, boolean expectedResult) {
+    // TestMate-c80a703b6f3859353c7dda7201c02998
+    //given
+    PoLine poLine = new PoLine().withOrderFormat(PoLine.OrderFormat.fromValue(orderFormat));
+    Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.fromValue(createInventory));
+    poLine.setEresource(eresource);
+    //when
+    boolean result = PoLineCommonUtil.isHoldingUpdateRequiredForEresource(poLine);
+    //then
+    assertEquals(expectedResult, result);
   }
 
   private static Location createLocation(String tenantId) {
