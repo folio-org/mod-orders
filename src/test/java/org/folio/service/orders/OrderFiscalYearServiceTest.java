@@ -8,7 +8,10 @@ import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 
 import io.vertx.junit5.VertxExtension;
@@ -81,9 +84,9 @@ public class OrderFiscalYearServiceTest {
     Transaction transaction3 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_3).withFromFundId("other-fund");
     List<Transaction> transactions = List.of(transaction1, transaction2, transaction3);
 
-    FiscalYear fy1 = new FiscalYear().withId(FISCAL_YEAR_ID_1).withName("FY2022");
-    FiscalYear fy2 = new FiscalYear().withId(FISCAL_YEAR_ID_2).withName("FY2023");
-    FiscalYear fy3 = new FiscalYear().withId(FISCAL_YEAR_ID_3).withName("FY2021");
+    FiscalYear fy1 = getFiscalYear(FISCAL_YEAR_ID_1, "FY2022");
+    FiscalYear fy2 = getFiscalYear(FISCAL_YEAR_ID_2, "FY2023");
+    FiscalYear fy3 = getFiscalYear(FISCAL_YEAR_ID_3, "FY2021");
     List<FiscalYear> fiscalYears = List.of(fy1, fy2, fy3);
 
     Fund fund1 = new Fund().withId(FUND_ID_1).withLedgerId(LEDGER_ID_1);
@@ -91,8 +94,8 @@ public class OrderFiscalYearServiceTest {
     Fund fund3 = new Fund().withId("other-fund").withLedgerId(LEDGER_ID_2);
     List<Fund> funds = List.of(fund1, fund2, fund3);
 
-    FiscalYear currentFy1 = new FiscalYear().withId("current-fy-1").withName("FY2025");
-    FiscalYear currentFy2 = new FiscalYear().withId("current-fy-2").withName("FY2024");
+    FiscalYear currentFy1 = getFiscalYear("current-fy-1", "FY2025");
+    FiscalYear currentFy2 = getFiscalYear("current-fy-2", "FY2024");
 
     mockServices(transactions, fiscalYears, funds);
     when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_1, requestContext))
@@ -130,8 +133,8 @@ public class OrderFiscalYearServiceTest {
     Transaction transaction2 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_2).withFromFundId(FUND_ID_2);
     List<Transaction> transactions = List.of(transaction1, transaction2);
 
-    FiscalYear fy1 = new FiscalYear().withId(FISCAL_YEAR_ID_1).withName("FY2023");
-    FiscalYear fy2 = new FiscalYear().withId(FISCAL_YEAR_ID_2).withName("FY2022");
+    FiscalYear fy1 = getFiscalYear(FISCAL_YEAR_ID_1, "FY2023");
+    FiscalYear fy2 = getFiscalYear(FISCAL_YEAR_ID_2, "FY2022");
     List<FiscalYear> fiscalYears = List.of(fy1, fy2);
 
     Fund fund1 = new Fund().withId(FUND_ID_1).withLedgerId(LEDGER_ID_1);
@@ -171,8 +174,8 @@ public class OrderFiscalYearServiceTest {
     Transaction transaction2 = new Transaction().withFiscalYearId("planned-fiscal-year").withFromFundId(FUND_ID_2);
     List<Transaction> transactions = List.of(transaction1, transaction2);
 
-    FiscalYear fy1 = new FiscalYear().withId(FISCAL_YEAR_ID_1).withName("FY2022");
-    FiscalYear plannedFy = new FiscalYear().withId("planned-fiscal-year").withName("FY2024");
+    FiscalYear fy1 = getFiscalYear(FISCAL_YEAR_ID_1, "FY2022");
+    FiscalYear plannedFy = getFiscalYear("planned-fiscal-year", "FY2024");
     List<FiscalYear> fiscalYears = List.of(fy1, plannedFy);
 
     Fund fund1 = new Fund().withId(FUND_ID_1).withLedgerId(LEDGER_ID_1);
@@ -212,8 +215,8 @@ public class OrderFiscalYearServiceTest {
     Transaction transaction2 = new Transaction().withFiscalYearId("current-fiscal-year").withFromFundId(FUND_ID_2);
     List<Transaction> transactions = List.of(transaction1, transaction2);
 
-    FiscalYear fy1 = new FiscalYear().withId(FISCAL_YEAR_ID_1).withName("FY2022");
-    FiscalYear currentFy = new FiscalYear().withId("current-fiscal-year").withName("FY2024");
+    FiscalYear fy1 = getFiscalYear(FISCAL_YEAR_ID_1, "FY2022");
+    FiscalYear currentFy = getFiscalYear("current-fiscal-year", "FY2024");
     List<FiscalYear> fiscalYears = List.of(fy1, currentFy);
 
     Fund fund1 = new Fund().withId(FUND_ID_1).withLedgerId(LEDGER_ID_1);
@@ -253,8 +256,8 @@ public class OrderFiscalYearServiceTest {
     Transaction transaction2 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_2);
     List<Transaction> transactions = List.of(transaction1, transaction2);
 
-    FiscalYear fy1 = new FiscalYear().withId(FISCAL_YEAR_ID_1).withName("FY2023");
-    FiscalYear fy2 = new FiscalYear().withId(FISCAL_YEAR_ID_2).withName("FY2022");
+    FiscalYear fy1 = getFiscalYear(FISCAL_YEAR_ID_1, "FY2023");
+    FiscalYear fy2 = getFiscalYear(FISCAL_YEAR_ID_2, "FY2022");
     List<FiscalYear> fiscalYears = List.of(fy1, fy2);
 
     mockServices(transactions, fiscalYears, List.of());
@@ -282,8 +285,8 @@ public class OrderFiscalYearServiceTest {
     Transaction transaction2 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_2).withFromFundId(FUND_ID_2);
     List<Transaction> transactions = List.of(transaction1, transaction2);
 
-    FiscalYear fy1 = new FiscalYear().withId(FISCAL_YEAR_ID_1).withName("FY2023");
-    FiscalYear fy2 = new FiscalYear().withId(FISCAL_YEAR_ID_2).withName("FY2022");
+    FiscalYear fy1 = getFiscalYear(FISCAL_YEAR_ID_1, "FY2023");
+    FiscalYear fy2 = getFiscalYear(FISCAL_YEAR_ID_2, "FY2022");
     List<FiscalYear> fiscalYears = List.of(fy1, fy2);
 
     Fund fund1 = new Fund().withId(FUND_ID_1); // No ledger ID
@@ -332,10 +335,10 @@ public class OrderFiscalYearServiceTest {
     Transaction t4 = new Transaction().withFiscalYearId("fy-2024").withFromFundId("another-fund");
     List<Transaction> transactions = List.of(t1, t2, t3, t4);
 
-    FiscalYear fy2021 = new FiscalYear().withId("fy-2021").withName("FY2021");
-    FiscalYear fy2022 = new FiscalYear().withId("fy-2022").withName("FY2022");
-    FiscalYear fy2023 = new FiscalYear().withId("fy-2023").withName("FY2023");
-    FiscalYear fy2024 = new FiscalYear().withId("fy-2024").withName("FY2024");
+    FiscalYear fy2021 = getFiscalYear("fy-2021", "FY2021");
+    FiscalYear fy2022 = getFiscalYear("fy-2022", "FY2022");
+    FiscalYear fy2023 = getFiscalYear("fy-2023", "FY2023");
+    FiscalYear fy2024 = getFiscalYear("fy-2024", "FY2024");
     List<FiscalYear> fiscalYears = List.of(fy2021, fy2022, fy2023, fy2024);
 
     Fund fund1 = new Fund().withId(FUND_ID_1).withLedgerId(LEDGER_ID_1);
@@ -344,8 +347,8 @@ public class OrderFiscalYearServiceTest {
     Fund fund4 = new Fund().withId("another-fund").withLedgerId(LEDGER_ID_2); // Same ledger
     List<Fund> funds = List.of(fund1, fund2, fund3, fund4);
 
-    FiscalYear currentFy1 = new FiscalYear().withId("current-1").withName("FY2025");
-    FiscalYear currentFy2 = new FiscalYear().withId("current-2").withName("FY2026");
+    FiscalYear currentFy1 = getFiscalYear("current-1", "FY2025");
+    FiscalYear currentFy2 = getFiscalYear("current-2", "FY2026");
 
     mockServices(transactions, fiscalYears, funds);
     when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_1, requestContext))
@@ -401,8 +404,8 @@ public class OrderFiscalYearServiceTest {
     Transaction transaction2 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_2).withFromFundId(FUND_ID_2);
     List<Transaction> transactions = List.of(transaction1, transaction2);
 
-    FiscalYear fy1 = new FiscalYear().withId(FISCAL_YEAR_ID_1).withName("EE2025").withSeries("EE");
-    FiscalYear fy2 = new FiscalYear().withId(FISCAL_YEAR_ID_2).withName("FY2025").withSeries("FY"); // Different series
+    FiscalYear fy1 = getFiscalYear(FISCAL_YEAR_ID_1, "EE2025");
+    FiscalYear fy2 = getFiscalYear(FISCAL_YEAR_ID_2, "FY2025"); // Different series
     List<FiscalYear> fiscalYears = List.of(fy1, fy2);
 
     Fund fund1 = new Fund().withId(FUND_ID_1).withLedgerId(LEDGER_ID_1);
@@ -442,15 +445,15 @@ public class OrderFiscalYearServiceTest {
     Transaction transaction2 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_2).withFromFundId(FUND_ID_2);
     List<Transaction> transactions = List.of(transaction1, transaction2);
 
-    FiscalYear fy1 = new FiscalYear().withId(FISCAL_YEAR_ID_1).withName("FY2023");
-    FiscalYear fy2 = new FiscalYear().withId(FISCAL_YEAR_ID_2).withName("FY2022");
+    FiscalYear fy1 = getFiscalYear(FISCAL_YEAR_ID_1, "FY2023");
+    FiscalYear fy2 = getFiscalYear(FISCAL_YEAR_ID_2, "FY2022");
     List<FiscalYear> fiscalYears = List.of(fy1, fy2);
 
     Fund fund1 = new Fund().withId(FUND_ID_1).withLedgerId(LEDGER_ID_1);
     Fund fund2 = new Fund().withId(FUND_ID_2).withLedgerId(LEDGER_ID_2);
     List<Fund> funds = List.of(fund1, fund2);
 
-    FiscalYear currentFy = new FiscalYear().withId("current-fy").withName("FY2024");
+    FiscalYear currentFy = getFiscalYear("current-fy", "FY2024");
 
     mockServices(transactions, fiscalYears, funds);
     when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_1, requestContext))
@@ -486,16 +489,16 @@ public class OrderFiscalYearServiceTest {
     Transaction transaction2 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_2).withFromFundId(FUND_ID_2);
     List<Transaction> transactions = List.of(transaction1, transaction2);
 
-    FiscalYear fy1 = new FiscalYear().withId(FISCAL_YEAR_ID_1).withName("FY2023");
-    FiscalYear fy2 = new FiscalYear().withId(FISCAL_YEAR_ID_2).withName("FY2022");
+    FiscalYear fy1 = getFiscalYear(FISCAL_YEAR_ID_1, "FY2023");
+    FiscalYear fy2 = getFiscalYear(FISCAL_YEAR_ID_2, "FY2022");
     List<FiscalYear> fiscalYears = List.of(fy1, fy2);
 
     Fund fund1 = new Fund().withId(FUND_ID_1).withLedgerId(LEDGER_ID_1);
     Fund fund2 = new Fund().withId(FUND_ID_2).withLedgerId(LEDGER_ID_2);
     List<Fund> funds = List.of(fund1, fund2);
 
-    FiscalYear plannedFy1 = new FiscalYear().withId(FISCAL_YEAR_ID_1).withName("FY2023"); // Same as transaction FY
-    FiscalYear plannedFy2 = new FiscalYear().withId("planned-fy-2").withName("FY2024");
+    FiscalYear plannedFy1 = getFiscalYear(FISCAL_YEAR_ID_1, "FY2023"); // Same as transaction FY
+    FiscalYear plannedFy2 = getFiscalYear("planned-fy-2", "FY2024");
 
     mockServices(transactions, fiscalYears, funds);
     // getCurrentFiscalYear fails for both ledgers
@@ -532,7 +535,7 @@ public class OrderFiscalYearServiceTest {
     Transaction transaction2 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withFromFundId(FUND_ID_2);
     List<Transaction> transactions = List.of(transaction1, transaction2);
 
-    FiscalYear fy = new FiscalYear().withId(FISCAL_YEAR_ID_1).withName("FY2025");
+    FiscalYear fy = getFiscalYear(FISCAL_YEAR_ID_1, "FY2025");
     List<FiscalYear> fiscalYears = List.of(fy);
 
     Fund fund1 = new Fund().withId(FUND_ID_1).withLedgerId(LEDGER_ID_1);
@@ -573,5 +576,59 @@ public class OrderFiscalYearServiceTest {
       when(fundService.getAllFunds(anyCollection(), any(RequestContext.class)))
         .thenReturn(Future.succeededFuture(funds));
     }
+  }
+
+  @Test
+  void testGetAvailableFiscalYears_SortedBySeriesAndPeriodStartDescending() {
+    // Given - Fiscal years whose names are not in chronological order and belong to different series
+    Transaction transaction1 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_1).withFromFundId(FUND_ID_1);
+    Transaction transaction2 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_2).withFromFundId(FUND_ID_1);
+    Transaction transaction3 = new Transaction().withFiscalYearId(FISCAL_YEAR_ID_3).withFromFundId(FUND_ID_1);
+    Transaction transaction4 = new Transaction().withFiscalYearId("fiscal-year-4").withFromFundId(FUND_ID_2);
+    List<Transaction> transactions = List.of(transaction1, transaction2, transaction3, transaction4);
+
+    FiscalYear fy24 = getFiscalYear(FISCAL_YEAR_ID_1, "FY24", "FY", 2024);
+    FiscalYear fy2025 = getFiscalYear(FISCAL_YEAR_ID_2, "FY2025", "FY", 2025);
+    FiscalYear fy26 = getFiscalYear(FISCAL_YEAR_ID_3, "FY26", "FY", 2026);
+    FiscalYear aa2023 = getFiscalYear("fiscal-year-4", "AA2023", "AA", 2023);
+    List<FiscalYear> fiscalYears = List.of(fy24, fy26, aa2023, fy2025);
+
+    Fund fund1 = new Fund().withId(FUND_ID_1).withLedgerId(LEDGER_ID_1);
+    Fund fund2 = new Fund().withId(FUND_ID_2).withLedgerId(LEDGER_ID_2);
+    List<Fund> funds = List.of(fund1, fund2);
+
+    FiscalYear currentFy = getFiscalYear("current-fy", "FY27", "FY", 2027);
+    FiscalYear currentAa = getFiscalYear("current-aa", "AA2027", "AA", 2027);
+
+    mockServices(transactions, fiscalYears, funds);
+    when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_1, requestContext)).thenReturn(Future.succeededFuture(currentFy));
+    when(fiscalYearService.getCurrentFiscalYear(LEDGER_ID_2, requestContext)).thenReturn(Future.succeededFuture(currentAa));
+    when(fiscalYearService.getPlannedFiscalYear(LEDGER_ID_1, requestContext)).thenReturn(Future.succeededFuture(null));
+    when(fiscalYearService.getPlannedFiscalYear(LEDGER_ID_2, requestContext)).thenReturn(Future.succeededFuture(null));
+
+    // When
+    Future<FiscalYearsHolder> result = orderFiscalYearService.getAvailableFiscalYears(ORDER_ID, requestContext);
+
+    // Then
+    assertTrue(result.succeeded());
+    FiscalYearsHolder holder = result.result();
+
+    assertEquals(List.of("AA2027", "FY27"), holder.getCurrent().stream().map(FiscalYear::getName).toList());
+    assertEquals(List.of("AA2023", "FY26", "FY2025", "FY24"), holder.getPrevious().stream().map(FiscalYear::getName).toList());
+  }
+
+  private FiscalYear getFiscalYear(String id, String name) {
+    String series = name.replaceAll("\\d", "");
+    int year = Integer.parseInt(name.replaceAll("\\D", ""));
+    return getFiscalYear(id, name, series, year);
+  }
+
+  private FiscalYear getFiscalYear(String id, String name, String series, int year) {
+    return new FiscalYear()
+      .withId(id)
+      .withName(name)
+      .withSeries(series)
+      .withPeriodStart(Date.from(LocalDate.of(year, 1, 1).atStartOfDay(ZoneOffset.UTC).toInstant()))
+      .withPeriodEnd(Date.from(LocalDate.of(year, 12, 31).atStartOfDay(ZoneOffset.UTC).toInstant()));
   }
 }
