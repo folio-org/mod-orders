@@ -62,6 +62,9 @@ import org.mockito.ArgumentCaptor;
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.ArgumentMatchers.isNull;
+import org.folio.models.EncumbranceConversionHolder;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 
 @ExtendWith(VertxExtension.class)
 public class FinanceHoldersBuilderTest {
@@ -424,5 +427,169 @@ public class FinanceHoldersBuilderTest {
     assertEquals(validFundId, capturedFundIds.getFirst());
     assertThat(holderWithFund.getLedgerId(), is(validLedgerId));
     assertThat(holderWithNullFund.getLedgerId(), nullValue());
+  }
+
+    @Test
+  void testGetExchangeRatesPerCurrencyHolderShouldFilterOutHoldersWithoutPoLines(VertxTestContext vertxTestContext) {
+    // TestMate-889f7f4ac3125f03846c04247965fca4
+    // Given
+    String fyCurrency = "EUR";
+    String poLineCurrency = "USD";
+    PoLine poLine = new PoLine().withCost(new Cost().withCurrency(poLineCurrency));
+    EncumbranceRelationsHolder validHolder = new EncumbranceRelationsHolder()
+      .withPoLine(poLine)
+      .withCurrency(fyCurrency);
+    EncumbranceRelationsHolder invalidHolder = new EncumbranceRelationsHolder()
+      .withPoLine(null)
+      .withCurrency(fyCurrency);
+    List<EncumbranceRelationsHolder> holders = List.of(validHolder, invalidHolder);
+    ExchangeRate exchangeRate = mock(ExchangeRate.class);
+    when(exchangeRate.getExchangeRate()).thenReturn(1.0);
+    when(exchangeRate.getOperationMode()).thenReturn(ExchangeRate.OperationMode.MULTIPLY);
+    when(cacheableExchangeRateService.getExchangeRate(eq(poLineCurrency), eq(fyCurrency), isNull(), eq(requestContext)))
+      .thenReturn(succeededFuture(exchangeRate));
+    // When
+    Future<List<EncumbranceConversionHolder>> future = financeHoldersBuilder.getExchangeRatesPerCurrencyHolder(holders, requestContext);
+    // Then
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        List<EncumbranceConversionHolder> conversionHolders = result.result();
+        assertThat(conversionHolders, hasSize(1));
+        EncumbranceConversionHolder conversionHolder = conversionHolders.get(0);
+        assertThat(conversionHolder.getEncumbranceRelationsHolders(), hasSize(1));
+        assertThat(conversionHolder.getEncumbranceRelationsHolders(), contains(validHolder));
+        verify(cacheableExchangeRateService, times(1))
+          .getExchangeRate(eq(poLineCurrency), eq(fyCurrency), any(), eq(requestContext));
+        vertxTestContext.completeNow();
+      });
+  }
+
+    @Test
+  void testGetExchangeRatesPerCurrencyHolderShouldGroupHoldersByCurrencyAndRetrieveRates(VertxTestContext vertxTestContext) {
+    // TestMate-d4e825ce318718d4d1f7fdb9ca9d51ae
+    // Given
+    String fyCurrency = "RUB";
+    String usd = "USD";
+    String gbp = "GBP";
+    holder1.withCurrency(fyCurrency);
+    holder2.withCurrency(fyCurrency);
+    holder3.withCurrency(fyCurrency);
+    holder3.getPoLine().getCost().setCurrency(gbp);
+    List<EncumbranceRelationsHolder> holders = List.of(holder1, holder2, holder3);
+    ExchangeRate usdRate = mock(ExchangeRate.class);
+    when(usdRate.getExchangeRate()).thenReturn(75.0);
+    when(usdRate.getOperationMode()).thenReturn(ExchangeRate.OperationMode.MULTIPLY);
+    ExchangeRate gbpRate = mock(ExchangeRate.class);
+    when(gbpRate.getExchangeRate()).thenReturn(95.0);
+    when(gbpRate.getOperationMode()).thenReturn(ExchangeRate.OperationMode.MULTIPLY);
+    when(cacheableExchangeRateService.getExchangeRate(eq(usd), eq(fyCurrency), any(), eq(requestContext)))
+      .thenReturn(succeededFuture(usdRate));
+    when(cacheableExchangeRateService.getExchangeRate(eq(gbp), eq(fyCurrency), any(), eq(requestContext)))
+      .thenReturn(succeededFuture(gbpRate));
+    when(requestContext.getContext())
+      .thenReturn(Vertx.vertx().getOrCreateContext());
+    // When
+    Future<List<EncumbranceConversionHolder>> future = financeHoldersBuilder.getExchangeRatesPerCurrencyHolder(holders, requestContext);
+    // Then
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        List<EncumbranceConversionHolder> conversionHolders = result.result();
+        assertThat(conversionHolders, hasSize(2));
+        EncumbranceConversionHolder usdConversion = conversionHolders.stream()
+          .filter(h -> h.getEncumbranceRelationsHolders().stream().anyMatch(erh -> erh.getPoLine().getCost().getCurrency().equals(usd)))
+          .findFirst()
+          .orElseThrow();
+        assertThat(usdConversion.getEncumbranceRelationsHolders(), hasSize(2));
+        assertThat(usdConversion.getEncumbranceRelationsHolders(), containsInAnyOrder(holder1, holder2));
+        EncumbranceConversionHolder gbpConversion = conversionHolders.stream()
+          .filter(h -> h.getEncumbranceRelationsHolders().stream().anyMatch(erh -> erh.getPoLine().getCost().getCurrency().equals(gbp)))
+          .findFirst()
+          .orElseThrow();
+        assertThat(gbpConversion.getEncumbranceRelationsHolders(), hasSize(1));
+        assertEquals(holder3, gbpConversion.getEncumbranceRelationsHolders().get(0));
+        verify(cacheableExchangeRateService, times(1)).getExchangeRate(eq(usd), eq(fyCurrency), any(), eq(requestContext));
+        verify(cacheableExchangeRateService, times(1)).getExchangeRate(eq(gbp), eq(fyCurrency), any(), eq(requestContext));
+        vertxTestContext.completeNow();
+      });
+  }
+
+    @Test
+  void testGetExchangeRatesPerCurrencyHolderShouldUseFirstAvailableFixedExchangeRateInGroup(VertxTestContext vertxTestContext) {
+    // TestMate-06227643b9a22e84d54690ebdcd6c34e
+    // Given
+    String poLineCurrency = "USD";
+    String fyCurrency = "EUR";
+    Double firstManualRate = 1.5;
+    Double ignoredManualRate = 1.8;
+    PoLine line1 = new PoLine().withId("00000000-0000-0000-0000-000000000001")
+      .withCost(new Cost().withCurrency(poLineCurrency).withExchangeRate(null))
+      .withFundDistribution(List.of(new FundDistribution().withFundId(UUID.randomUUID().toString())));
+    PoLine line2 = new PoLine().withId("00000000-0000-0000-0000-000000000002")
+      .withCost(new Cost().withCurrency(poLineCurrency).withExchangeRate(firstManualRate))
+      .withFundDistribution(List.of(new FundDistribution().withFundId(UUID.randomUUID().toString())));
+    PoLine line3 = new PoLine().withId("00000000-0000-0000-0000-000000000003")
+      .withCost(new Cost().withCurrency(poLineCurrency).withExchangeRate(ignoredManualRate))
+      .withFundDistribution(List.of(new FundDistribution().withFundId(UUID.randomUUID().toString())));
+    EncumbranceRelationsHolder holderA = new EncumbranceRelationsHolder()
+      .withPoLine(line1)
+      .withCurrency(fyCurrency);
+    EncumbranceRelationsHolder holderB = new EncumbranceRelationsHolder()
+      .withPoLine(line2)
+      .withCurrency(fyCurrency);
+    EncumbranceRelationsHolder holderC = new EncumbranceRelationsHolder()
+      .withPoLine(line3)
+      .withCurrency(fyCurrency);
+    List<EncumbranceRelationsHolder> holders = List.of(holderA, holderB, holderC);
+    ExchangeRate exchangeRate = mock(ExchangeRate.class);
+    when(exchangeRate.getExchangeRate()).thenReturn(firstManualRate);
+    when(exchangeRate.getOperationMode()).thenReturn(ExchangeRate.OperationMode.MULTIPLY);
+    when(cacheableExchangeRateService.getExchangeRate(eq(poLineCurrency), eq(fyCurrency), eq(firstManualRate), eq(requestContext)))
+      .thenReturn(succeededFuture(exchangeRate));
+    when(requestContext.getContext())
+      .thenReturn(Vertx.vertx().getOrCreateContext());
+    // When
+    Future<List<EncumbranceConversionHolder>> future = financeHoldersBuilder.getExchangeRatesPerCurrencyHolder(holders, requestContext);
+    // Then
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        List<EncumbranceConversionHolder> conversionHolders = result.result();
+        
+        assertThat(conversionHolders, hasSize(1));
+        EncumbranceConversionHolder conversionHolder = conversionHolders.get(0);
+        
+        assertThat(conversionHolder.getEncumbranceRelationsHolders(), hasSize(3));
+        assertThat(conversionHolder.getEncumbranceRelationsHolders(), containsInAnyOrder(holderA, holderB, holderC));
+        
+        verify(cacheableExchangeRateService, times(1))
+          .getExchangeRate(eq(poLineCurrency), eq(fyCurrency), eq(firstManualRate), eq(requestContext));
+        
+        vertxTestContext.completeNow();
+      });
+  }
+
+    @Test
+  void testGetExchangeRatesPerCurrencyHolderShouldPropagateFailureFromExchangeRateService(VertxTestContext vertxTestContext) {
+    // TestMate-7de4e182d028e1b0a04a3c79fb5a6fb2
+    // Given
+    String fyCurrency = "RUB";
+    String poLineCurrency = holder1.getPoLine().getCost().getCurrency();
+    holder1.withCurrency(fyCurrency);
+    HttpException expectedException = new HttpException(500, "API Error");
+    when(cacheableExchangeRateService.getExchangeRate(eq(poLineCurrency), eq(fyCurrency), any(), eq(requestContext)))
+      .thenReturn(failedFuture(expectedException));
+    // When
+    Future<List<EncumbranceConversionHolder>> future = financeHoldersBuilder.getExchangeRatesPerCurrencyHolder(List.of(holder1), requestContext);
+    // Then
+    vertxTestContext.assertFailure(future)
+      .onComplete(result -> {
+        HttpException actualException = (HttpException) result.cause();
+        assertEquals(expectedException.getCode(), actualException.getCode());
+        assertEquals("API Error", actualException.getError().getMessage());
+        verify(cacheableExchangeRateService, times(1))
+          .getExchangeRate(eq(poLineCurrency), eq(fyCurrency), any(), eq(requestContext));
+        vertxTestContext.completeNow();
+      });
   }
 }
