@@ -3,6 +3,7 @@
 ### Stories
 * [MODORDERS-1463](https://folio-org.atlassian.net/browse/MODORDERS-1463) - Bump acquisition-methods interfaces to 1.1 for the deprecated flag
 * [MODORDERS-1486](https://folio-org.atlassian.net/browse/MODORDERS-1486) - Order import jobs hanging indefinitely
+* [MODORDERS-1484](https://folio-org.atlassian.net/browse/MODORDERS-1484) - Upgrade from Java 21 to Java 25
 
 ### Tech debts
 * Remove unused .github/workflows/buildMaven.yml Jenkinsfile-disabled
