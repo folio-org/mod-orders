@@ -46,6 +46,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(VertxExtension.class)
 public class OpenCompositeOrderFlowValidatorTest {
@@ -909,6 +911,66 @@ public class OpenCompositeOrderFlowValidatorTest {
     vertxTestContext.assertComplete(future)
       .onComplete(result -> {
         assertTrue(result.succeeded());
+        vertxTestContext.completeNow();
+      });
+  }
+
+    @Test
+  public void testCheckLocationsAndPiecesConsistencyShouldFilterLinesAndFetchPieces(VertxTestContext vertxTestContext) {
+    // TestMate-655563c704a785e7bea2d3ffd4c6641c
+    // given
+    String processedId = UUID.fromString("00000000-0000-0000-0000-000000000001").toString();
+    String ignoredId = UUID.fromString("00000000-0000-0000-0000-000000000002").toString();
+    String locationId = UUID.fromString("00000000-0000-0000-0000-000000000003").toString();
+    PoLine validLine = new PoLine()
+      .withId(processedId)
+      .withCheckinItems(false)
+      .withLocations(List.of(new Location().withLocationId(locationId).withQuantity(1).withQuantityPhysical(1)));
+    PoLine manualCheckinLine = new PoLine()
+      .withId(ignoredId)
+      .withCheckinItems(true);
+    PoLine unpersistedLine = new PoLine()
+      .withId(null)
+      .withCheckinItems(false);
+    List<PoLine> poLines = List.of(validLine, manualCheckinLine, unpersistedLine);
+    Piece piece = new Piece()
+      .withId(UUID.fromString("00000000-0000-0000-0000-000000000004").toString())
+      .withPoLineId(processedId)
+      .withLocationId(locationId)
+      .withReceivingStatus(Piece.ReceivingStatus.EXPECTED);
+    when(pieceStorageService.getPiecesByLineIdsByChunks(eq(List.of(processedId)), any())).thenReturn(Future.succeededFuture(List.of(piece)));
+    // when
+    Future<Void> future = openCompositeOrderFlowValidator.checkLocationsAndPiecesConsistency(poLines, requestContext);
+    // then
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        verify(pieceStorageService).getPiecesByLineIdsByChunks(eq(List.of(processedId)), any());
+        vertxTestContext.completeNow();
+      });
+  }
+
+    @Test
+  public void testCheckLocationsAndPiecesConsistencyWhenStorageFailsShouldReturnFailedFuture(VertxTestContext vertxTestContext) {
+    // TestMate-5a8064b35621afcc5a18a8c7a14ac83d
+    // Given
+    String poLineId = UUID.fromString("00000000-0000-0000-0000-000000000001").toString();
+    PoLine poLine = new PoLine()
+      .withId(poLineId)
+      .withCheckinItems(false);
+    List<PoLine> poLines = List.of(poLine);
+    RuntimeException storageException = new RuntimeException("Storage connection timeout");
+    when(pieceStorageService.getPiecesByLineIdsByChunks(eq(List.of(poLineId)), any()))
+      .thenReturn(Future.failedFuture(storageException));
+    // When
+    Future<Void> future = openCompositeOrderFlowValidator.checkLocationsAndPiecesConsistency(poLines, requestContext);
+    // Then
+    vertxTestContext.assertFailure(future)
+      .onComplete(result -> {
+        assertTrue(result.failed());
+        assertEquals(storageException, result.cause());
+        assertEquals("Storage connection timeout", result.cause().getMessage());
+        verify(pieceStorageService).getPiecesByLineIdsByChunks(eq(List.of(poLineId)), any());
         vertxTestContext.completeNow();
       });
   }
