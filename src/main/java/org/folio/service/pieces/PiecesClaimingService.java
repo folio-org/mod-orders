@@ -4,7 +4,6 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import one.util.streamex.StreamEx;
 import org.apache.commons.lang3.tuple.Pair;
 import org.folio.HttpStatus;
 import org.folio.models.claiming.ClaimJob;
@@ -30,7 +29,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,7 +38,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static org.folio.models.claiming.IntegrationDetailField.CLAIM_PIECE_IDS;
 import static org.folio.models.claiming.IntegrationDetailField.CONFIG_ID;
@@ -50,10 +47,8 @@ import static org.folio.models.claiming.IntegrationDetailField.VENDOR_EDI_ORDERS
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.ResourcePathResolver.DATA_EXPORT_SPRING_CREATE_JOB;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_CREATE_JOBS_AND_UPDATE_PIECES;
 import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_FIND_PIECES_WITH_LATE_STATUS_TO_PROCESS;
 import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_FIND_PIECE_BY_ID;
-import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_GROUP_PIECES_BY_VENDOR;
 import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_RETRIEVE_CONFIG_ENTRIES;
 import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_SEND_CLAIMS_PIECE_IDS_ARE_EMPTY;
 import static org.folio.rest.core.exceptions.ErrorCodes.UNABLE_TO_GENERATE_CLAIMS_FOR_ORG_NO_INTEGRATION_DETAILS;
@@ -102,12 +97,9 @@ public class PiecesClaimingService {
           log.info("sendClaims:: Cannot find pieces with late status to process - No claims are sent");
           throwHttpException(CANNOT_FIND_PIECES_WITH_LATE_STATUS_TO_PROCESS, claimingCollection, HttpStatus.HTTP_BAD_REQUEST);
         }
-        var pieceIdsByVendors = groupPieceIdsByVendor(claimPieces);
-        pieceIdsByVendors.forEach((vendor, pieceIdsByVendor) ->
-          log.info("sendClaims:: Using pieces by vendor map, vendorId: {}, pieceIdsByVendor: {}", vendor.getId(), pieceIdsByVendor));
         return resolveIntegrations(claimPieces, requestContext)
           .compose(integrations -> validateIntegrations(claimingCollection, integrations, requestContext)
-            .compose(v -> createJobsByIntegration(claimingCollection, integrations.claimJobs(), pieceIdsByVendors, requestContext)));
+            .compose(v -> updatePiecesAndCreateJobs(claimingCollection, claimPieces, integrations.claimJobs(), requestContext)));
       })
       .onFailure(t -> log.error("sendClaims:: Failed send claims: {}", JsonObject.mapFrom(claimingCollection).encodePrettily(), t));
   }
@@ -208,34 +200,19 @@ public class PiecesClaimingService {
       });
   }
 
-  private Future<ClaimingResults> createJobsByIntegration(ClaimingCollection claimingCollection, Map<String, ClaimJob> claimJobs,
-                                                          Map<Organization, List<String>> pieceIdsByVendor, RequestContext requestContext) {
-    log.info("createJobsByIntegration:: Creating jobs by integration, integrations: {}, vendors: {}", claimJobs.size(), pieceIdsByVendor.size());
-    if (CollectionUtils.isEmpty(pieceIdsByVendor)) {
-      log.info("createJobsByIntegration:: Cannot group pieces by vendor - No jobs were create or pieces processed");
-      throwHttpException(CANNOT_GROUP_PIECES_BY_VENDOR, claimingCollection, HttpStatus.HTTP_NOT_FOUND);
-    }
-    return updatePiecesPerVendor(claimingCollection, pieceIdsByVendor, requestContext)
-      .compose(updatePiecesLists -> createJobs(claimJobs, requestContext).map(updatePiecesLists))
-      .map(updatedPieceLists -> {
-        if (CollectionUtils.isEmpty(updatedPieceLists)) {
-          log.info("createJobsByIntegration:: Cannot create jobs and update pieces - No jobs were create or pieces processed");
-          throwHttpException(CANNOT_CREATE_JOBS_AND_UPDATE_PIECES, claimingCollection, HttpStatus.HTTP_NOT_FOUND);
-        }
-        var successClaimingPieceResults = createSuccessClaimingResults(updatedPieceLists);
-        log.info("createJobsByIntegration:: Successfully processed pieces for claiming, count: {}", successClaimingPieceResults.size());
+  private Future<ClaimingResults> updatePiecesAndCreateJobs(ClaimingCollection claimingCollection, List<ClaimPiece> claimPieces,
+                                                            Map<String, ClaimJob> claimJobs, RequestContext requestContext) {
+    var pieceIds = claimPieces.stream().map(ClaimPiece::pieceId).distinct().toList();
+    log.info("updatePiecesAndCreateJobs:: Updating pieces and creating jobs, pieces: {}, integrations: {}", pieceIds.size(), claimJobs.size());
+    return updatePieces(claimingCollection, pieceIds, requestContext)
+      .compose(v -> createJobs(claimJobs, requestContext))
+      .map(v -> {
+        var successClaimingPieceResults = createSuccessClaimingResults(pieceIds);
+        log.info("updatePiecesAndCreateJobs:: Successfully processed pieces for claiming, count: {}", successClaimingPieceResults.size());
         var claimingResults = new ClaimingResults().withClaimingPieceResults(successClaimingPieceResults);
-        log.debug("createJobsByIntegration:: Returning claiming results, claimingResults: {}", JsonObject.mapFrom(claimingResults).encodePrettily());
+        log.debug("updatePiecesAndCreateJobs:: Returning claiming results, claimingResults: {}", JsonObject.mapFrom(claimingResults).encodePrettily());
         return claimingResults;
       });
-  }
-
-  private Future<List<List<String>>> updatePiecesPerVendor(ClaimingCollection claimingCollection, Map<Organization, List<String>> pieceIdsByVendor,
-                                                           RequestContext requestContext) {
-    var updatePiecesFutures = new ArrayList<Future<List<String>>>();
-    pieceIdsByVendor.forEach((vendor, pieceIds) -> updatePiecesFutures.add(updatePieces(claimingCollection, vendor.getId(), pieceIds, requestContext).map(pieceIds)));
-    log.info("updatePiecesPerVendor:: Updating pieces per vendor, total count: {}", updatePiecesFutures.size());
-    return collectResultsOnSuccess(updatePiecesFutures);
   }
 
   private Future<List<Void>> createJobs(Map<String, ClaimJob> claimJobs, RequestContext requestContext) {
@@ -245,8 +222,7 @@ public class PiecesClaimingService {
     return collectResultsOnSuccess(createJobFutures);
   }
 
-  private Future<Void> updatePieces(ClaimingCollection claimingCollection, String vendorId, List<String> pieceIds, RequestContext requestContext) {
-    log.info("updatePieces:: Updating pieces for vendor, vendorId: {}, pieces: {}", vendorId, pieceIds.size());
+  private Future<Void> updatePieces(ClaimingCollection claimingCollection, List<String> pieceIds, RequestContext requestContext) {
     var claimingInterval = claimingCollection.getClaimingInterval();
     var internalNote = claimingCollection.getInternalNote();
     var externalNote = claimingCollection.getExternalNote();
@@ -267,12 +243,8 @@ public class PiecesClaimingService {
       .mapEmpty();
   }
 
-  private static Map<Organization, List<String>> groupPieceIdsByVendor(List<ClaimPiece> claimPieces) {
-    return StreamEx.of(claimPieces).groupingBy(ClaimPiece::vendor, mapping(ClaimPiece::pieceId, toList()));
-  }
-
-  private List<ClaimingPieceResult> createSuccessClaimingResults(List<List<String>> updatedPieceLists) {
-    return updatedPieceLists.stream().flatMap(Collection::stream).distinct()
+  private List<ClaimingPieceResult> createSuccessClaimingResults(List<String> pieceIds) {
+    return pieceIds.stream()
       .map(pieceId -> new ClaimingPieceResult().withPieceId(pieceId).withStatus(SUCCESS))
       .toList();
   }

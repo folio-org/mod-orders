@@ -361,6 +361,7 @@ public class PiecesClaimingServiceTest {
     piecesClaimingService.sendClaims(claimingCollection, requestContext)
       .onComplete(testContext.succeeding(result -> testContext.verify(() -> {
         assertEquals(5, result.getClaimingPieceResults().size());
+        verify(pieceUpdateFlowManager).updatePiecesStatuses(eq(List.of("pieceId1", "pieceId2", "pieceId3", "pieceId4", "pieceId5")), any(), any(), any(), any(), any());
         var copiedSortedResults = new ArrayList<>(result.getClaimingPieceResults());
         copiedSortedResults.sort(Comparator.comparing(ClaimingPieceResult::getPieceId));
         assertEquals("pieceId1", copiedSortedResults.getFirst().getPieceId());
