@@ -216,17 +216,18 @@ public class PiecesClaimingService {
     return pieceUpdateFlowManager.updatePiecesStatuses(pieceIds, CLAIM_SENT, claimingInterval, internalNote, externalNote, requestContext);
   }
 
-  private Future<Void> createJob(String configKey, Object configValue, List<String> pieceIds, RequestContext requestContext) {
-    log.info("createJob:: Creating a job, job key: {}, pieces: {}", configKey, pieceIds.size());
-    var integrationDetail = new JsonObject(String.valueOf(configValue));
+  private Future<Void> createJob(String configId, JsonObject config, List<String> pieceIds, RequestContext requestContext) {
+    // The job gets its own id in the "id" field, so the config id is only kept in the logs
     var jobId = UUID.randomUUID().toString();
-    integrationDetail.put(JOB_ID.getValue(), jobId)
+    log.info("createJob:: Creating a job, configId: {}, jobId: {}, pieces: {}", configId, jobId, pieceIds.size());
+    var job = config.copy();
+    job.put(JOB_ID.getValue(), jobId)
       .getJsonObject(EXPORT_TYPE_SPECIFIC_PARAMETERS.getValue())
       .getJsonObject(VENDOR_EDI_ORDERS_EXPORT_CONFIG.getValue())
       .put(CLAIM_PIECE_IDS.getValue(), pieceIds);
-    return restClient.post(resourcesPath(DATA_EXPORT_SPRING_CREATE_JOB), integrationDetail, Object.class, requestContext)
-      .onSuccess(v -> log.info("createJob:: Created a job, job key: {}, pieces: {}", configKey, pieceIds.size()))
-      .onFailure(t -> log.error("Failed to create a job", t))
+    return restClient.post(resourcesPath(DATA_EXPORT_SPRING_CREATE_JOB), job, Object.class, requestContext)
+      .onSuccess(v -> log.info("createJob:: Created a job, configId: {}, jobId: {}, pieces: {}", configId, jobId, pieceIds.size()))
+      .onFailure(t -> log.error("createJob:: Failed to create a job, configId: {}, jobId: {}", configId, jobId, t))
       .mapEmpty();
   }
 

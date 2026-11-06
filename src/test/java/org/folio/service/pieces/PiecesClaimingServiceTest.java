@@ -498,6 +498,22 @@ public class PiecesClaimingServiceTest {
   }
 
   @Test
+  void testSendClaims_effectiveConfigsRequestFails_rejectedBeforeAnyWrite(VertxTestContext testContext) {
+    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1")).withClaimingInterval(1);
+    // e.g. a mod-data-export-spring version without GET /effective-configs
+    when(restClient.getAsJsonObject(any(), any())).thenReturn(Future.failedFuture(new HttpException(404, "Not found")));
+    mockClaimFlow(Map.of("pieceId1", "purchase"));
+
+    piecesClaimingService.sendClaims(claimingCollection, requestContext)
+      .onComplete(testContext.failing(throwable -> testContext.verify(() -> {
+        var httpException = Assertions.assertInstanceOf(HttpException.class, throwable);
+        assertEquals(404, httpException.getCode());
+        verifyNoClaimSent();
+        testContext.completeNow();
+      })));
+  }
+
+  @Test
   void testSendClaims_samePoLineValues_oneConfigRequest(VertxTestContext testContext) {
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1", "pieceId2")).withClaimingInterval(1);
     mockConfigsByAcquisitionMethod(Map.of("purchase", List.of("CLAIMS_vendorId_x")));
