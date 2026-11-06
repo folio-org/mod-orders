@@ -120,7 +120,7 @@ public class PiecesClaimingServiceTest {
   }
 
   @Test
-  void testSendClaims_noConfigInTenant(VertxTestContext testContext) {
+  void testSendClaims_noConfigEntries(VertxTestContext testContext) {
     var pieceId1 = UUID.randomUUID().toString();
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of(pieceId1)).withClaimingInterval(1);
     mockExportConfigs();
