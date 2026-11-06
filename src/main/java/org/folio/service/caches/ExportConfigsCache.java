@@ -43,7 +43,7 @@ public class ExportConfigsCache extends AbstractConfigCache {
   }
 
   /**
-   * Loads the Claims export configs that apply to a PO line, as a map of config name to config.
+   * Loads the Claims export configs that apply to a PO line, as a map of config id to config.
    *
    * @param vendorId          vendor of the PO line's order
    * @param acquisitionMethod acquisition method of the PO line, null if the PO line has none

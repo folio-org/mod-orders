@@ -40,7 +40,6 @@ import java.util.stream.Collectors;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static org.folio.models.claiming.IntegrationDetailField.CLAIM_PIECE_IDS;
-import static org.folio.models.claiming.IntegrationDetailField.CONFIG_ID;
 import static org.folio.models.claiming.IntegrationDetailField.EXPORT_TYPE_SPECIFIC_PARAMETERS;
 import static org.folio.models.claiming.IntegrationDetailField.JOB_ID;
 import static org.folio.models.claiming.IntegrationDetailField.VENDOR_EDI_ORDERS_EXPORT_CONFIG;
@@ -171,9 +170,9 @@ public class PiecesClaimingService {
         piecesWithoutConfig.addAll(pieces);
       }
       // A piece goes to every config returned for it
-      configs.fieldNames().forEach(configName -> {
-        var config = configs.getJsonObject(configName);
-        var pieceIds = claimJobs.computeIfAbsent(config.getString(CONFIG_ID.getValue()), id -> new ClaimJob(config, new ArrayList<>())).pieceIds();
+      configs.fieldNames().forEach(configId -> {
+        var config = configs.getJsonObject(configId);
+        var pieceIds = claimJobs.computeIfAbsent(configId, id -> new ClaimJob(config, new ArrayList<>())).pieceIds();
         pieces.forEach(piece -> pieceIds.add(piece.pieceId()));
       });
     });

@@ -477,6 +477,27 @@ public class PiecesClaimingServiceTest {
   }
 
   @Test
+  void testSendClaims_twoConfigsWithSameName_oneJobPerConfigId(VertxTestContext testContext) {
+    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1")).withClaimingInterval(1);
+    var config1 = JsonObject.mapFrom(createIntegrationDetail("CLAIMS_vendorId")).put(CONFIG_ID.getValue(), "configId1");
+    var config2 = JsonObject.mapFrom(createIntegrationDetail("CLAIMS_vendorId")).put(CONFIG_ID.getValue(), "configId2");
+    when(restClient.getAsJsonObject(any(), any()))
+      .thenReturn(Future.succeededFuture(JsonObject.of(CONFIGS.getValue(), JsonArray.of(config1, config2))));
+    mockClaimFlow(Map.of("pieceId1", "purchase"));
+
+    piecesClaimingService.sendClaims(claimingCollection, requestContext)
+      .onComplete(testContext.succeeding(result -> testContext.verify(() -> {
+        var jobs = ArgumentCaptor.forClass(Object.class);
+        verify(restClient, times(2)).post(eq(resourcesPath(DATA_EXPORT_SPRING_CREATE_JOB)), jobs.capture(), any(), any());
+        // Before keying by config id, the second config overwrote the first and only one job was created
+        jobs.getAllValues().stream().map(JsonObject.class::cast).forEach(job -> assertEquals(List.of("pieceId1"),
+          job.getJsonObject(EXPORT_TYPE_SPECIFIC_PARAMETERS.getValue()).getJsonObject(VENDOR_EDI_ORDERS_EXPORT_CONFIG.getValue())
+            .getJsonArray(CLAIM_PIECE_IDS.getValue()).getList()));
+        testContext.completeNow();
+      })));
+  }
+
+  @Test
   void testSendClaims_samePoLineValues_oneConfigRequest(VertxTestContext testContext) {
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1", "pieceId2")).withClaimingInterval(1);
     mockConfigsByAcquisitionMethod(Map.of("purchase", List.of("CLAIMS_vendorId_x")));
