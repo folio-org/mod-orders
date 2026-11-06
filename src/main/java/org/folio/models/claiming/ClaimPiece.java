@@ -3,7 +3,7 @@ package org.folio.models.claiming;
 import org.folio.rest.acq.model.Organization;
 
 /**
- * A piece to be claimed, with the PO line and order values that select its Claims integrations.
+ * A piece to be claimed, with the PO line and order values that select its Claims export configs.
  *
  * @param vendor            vendor of the piece's order
  * @param pieceId           id of the piece

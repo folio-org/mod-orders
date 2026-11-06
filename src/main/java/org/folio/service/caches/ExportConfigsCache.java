@@ -43,12 +43,12 @@ public class ExportConfigsCache extends AbstractConfigCache {
   }
 
   /**
-   * Loads the Claims integrations that apply to a PO line, as a map of config name to config.
+   * Loads the Claims export configs that apply to a PO line, as a map of config name to config.
    *
    * @param vendorId          vendor of the PO line's order
    * @param acquisitionMethod acquisition method of the PO line, null if the PO line has none
    * @param requestContext    Headers to make HTTP requests
-   * @return Future of the matching configs, empty if no integration applies
+   * @return Future of the matching configs, empty if no config applies
    */
   public Future<JsonObject> loadClaimsConfigsForPoLine(String vendorId, String acquisitionMethod, RequestContext requestContext) {
     var requestEntry = new RequestEntry(resourcesPath(DATA_EXPORT_SPRING_EFFECTIVE_CONFIGS))

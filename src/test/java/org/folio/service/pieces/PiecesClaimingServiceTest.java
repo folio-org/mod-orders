@@ -120,7 +120,7 @@ public class PiecesClaimingServiceTest {
   }
 
   @Test
-  void testSendClaims_noIntegrationInTenant(VertxTestContext testContext) {
+  void testSendClaims_noConfigInTenant(VertxTestContext testContext) {
     var pieceId1 = UUID.randomUUID().toString();
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of(pieceId1)).withClaimingInterval(1);
     mockExportConfigs();
@@ -433,7 +433,7 @@ public class PiecesClaimingServiceTest {
   }
 
   @Test
-  void testSendClaims_integrationsByAcquisitionMethod_eachJobOnlyItsPieces(VertxTestContext testContext) {
+  void testSendClaims_configsByAcquisitionMethod_eachJobOnlyItsPieces(VertxTestContext testContext) {
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1", "pieceId2", "pieceId3")).withClaimingInterval(1);
     mockConfigsByAcquisitionMethod(Map.of("purchase", List.of("CLAIMS_vendorId_x"), "exchange", List.of("CLAIMS_vendorId_y")));
     mockClaimFlow(Map.of("pieceId1", "purchase", "pieceId2", "exchange", "pieceId3", "purchase"));
@@ -448,7 +448,7 @@ public class PiecesClaimingServiceTest {
   }
 
   @Test
-  void testSendClaims_oneIntegrationForTwoMethods_oneJobWithAllPieces(VertxTestContext testContext) {
+  void testSendClaims_oneConfigForTwoMethods_oneJobWithAllPieces(VertxTestContext testContext) {
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1", "pieceId2")).withClaimingInterval(1);
     mockConfigsByAcquisitionMethod(Map.of("purchase", List.of("CLAIMS_vendorId_x"), "exchange", List.of("CLAIMS_vendorId_x")));
     mockClaimFlow(Map.of("pieceId1", "purchase", "pieceId2", "exchange"));
@@ -462,7 +462,7 @@ public class PiecesClaimingServiceTest {
   }
 
   @Test
-  void testSendClaims_twoIntegrationsForOnePiece_pieceInBothJobsUpdatedOnce(VertxTestContext testContext) {
+  void testSendClaims_twoConfigsForOnePiece_pieceInBothJobsUpdatedOnce(VertxTestContext testContext) {
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1")).withClaimingInterval(1);
     mockConfigsByAcquisitionMethod(Map.of("purchase", List.of("CLAIMS_vendorId_x", "CLAIMS_vendorId_y")));
     mockClaimFlow(Map.of("pieceId1", "purchase"));
@@ -509,7 +509,7 @@ public class PiecesClaimingServiceTest {
   }
 
   @Test
-  void testSendClaims_oneMethodWithoutIntegration_rejectedBeforeAnyWrite(VertxTestContext testContext) {
+  void testSendClaims_oneMethodWithoutConfig_rejectedBeforeAnyWrite(VertxTestContext testContext) {
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1", "pieceId2")).withClaimingInterval(1);
     mockConfigsByAcquisitionMethod(Map.of("purchase", List.of("CLAIMS_vendorId_x")));
     mockClaimFlow(Map.of("pieceId1", "purchase", "pieceId2", "exchange"));

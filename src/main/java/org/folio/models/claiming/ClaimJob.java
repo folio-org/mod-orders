@@ -5,10 +5,10 @@ import io.vertx.core.json.JsonObject;
 import java.util.List;
 
 /**
- * An export job to be created for one Claims integration.
+ * An export job to be created for one Claims export config.
  *
- * @param config   export config of the integration
- * @param pieceIds ids of the pieces this integration takes
+ * @param config   the export config
+ * @param pieceIds ids of the pieces this config takes
  */
 public record ClaimJob(JsonObject config, List<String> pieceIds) {
 }
