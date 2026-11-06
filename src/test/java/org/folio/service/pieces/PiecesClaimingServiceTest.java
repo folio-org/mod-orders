@@ -52,12 +52,10 @@ import static org.folio.models.claiming.IntegrationDetailField.CONFIG_NAME;
 import static org.folio.models.claiming.IntegrationDetailField.EXPORT_TYPE_SPECIFIC_PARAMETERS;
 import static org.folio.models.claiming.IntegrationDetailField.TENANT;
 import static org.folio.models.claiming.IntegrationDetailField.VENDOR_EDI_ORDERS_EXPORT_CONFIG;
-import static org.folio.orders.utils.ResourcePathResolver.DATA_EXPORT_SPRING_CONFIGURATIONS;
 import static org.folio.orders.utils.ResourcePathResolver.DATA_EXPORT_SPRING_CREATE_JOB;
 import static org.folio.orders.utils.ResourcePathResolver.DATA_EXPORT_SPRING_EFFECTIVE_CONFIGS;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_FIND_PIECES_WITH_LATE_STATUS_TO_PROCESS;
-import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_RETRIEVE_CONFIG_ENTRIES;
 import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_SEND_CLAIMS_PIECE_IDS_ARE_EMPTY;
 import static org.folio.rest.core.exceptions.ErrorCodes.UNABLE_TO_GENERATE_CLAIMS_FOR_ORG_NO_INTEGRATION_DETAILS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -122,7 +120,7 @@ public class PiecesClaimingServiceTest {
   }
 
   @Test
-  void testSendClaims_noConfigEntries(VertxTestContext testContext) {
+  void testSendClaims_noIntegrationInTenant(VertxTestContext testContext) {
     var pieceId1 = UUID.randomUUID().toString();
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of(pieceId1)).withClaimingInterval(1);
     mockExportConfigs();
@@ -137,12 +135,16 @@ public class PiecesClaimingServiceTest {
         var httpException = (HttpException) throwable;
         var error = httpException.getErrors().getErrors().getFirst();
         verifyNoClaimSent();
-        assertEquals(CANNOT_RETRIEVE_CONFIG_ENTRIES.getCode(), error.getCode());
-        assertEquals(CANNOT_RETRIEVE_CONFIG_ENTRIES.getDescription(), error.getMessage());
-        Assertions.assertEquals(1, error.getParameters().size());
+        assertEquals(422, httpException.getCode());
+        assertEquals(UNABLE_TO_GENERATE_CLAIMS_FOR_ORG_NO_INTEGRATION_DETAILS.getCode(), error.getCode());
+        assertEquals(String.format(UNABLE_TO_GENERATE_CLAIMS_FOR_ORG_NO_INTEGRATION_DETAILS.getDescription(), "VENDOR"), error.getMessage());
+        Assertions.assertEquals(2, error.getParameters().size());
         var parameter = error.getParameters().getFirst();
         Assertions.assertEquals("pieceId", parameter.getKey());
         Assertions.assertEquals(pieceId1, parameter.getValue());
+        Assertions.assertEquals("vendorCode", error.getParameters().get(1).getKey());
+        Assertions.assertEquals("VENDOR", error.getParameters().get(1).getValue());
+        verify(restClient, times(1)).getAsJsonObject(any(), any());
         testContext.completeNow();
       })));
   }
@@ -517,7 +519,7 @@ public class PiecesClaimingServiceTest {
         var error = ((HttpException) throwable).getErrors().getErrors().getFirst();
         assertEquals(UNABLE_TO_GENERATE_CLAIMS_FOR_ORG_NO_INTEGRATION_DETAILS.getCode(), error.getCode());
         verifyNoClaimSent();
-        // At least one piece matched, so no lookup of all Claims configs is needed
+        // One call per acquisition method, no other lookup
         verify(restClient, times(2)).getAsJsonObject(any(), any());
         testContext.completeNow();
       })));
@@ -559,14 +561,11 @@ public class PiecesClaimingServiceTest {
 
   /**
    * Answers like mod-data-export-spring with the vendor-only Claims rule: /effective-configs returns the configs named
-   * CLAIMS_&lt;vendorId&gt; or CLAIMS_&lt;vendorId&gt;_*, and /configs returns all of them.
+   * CLAIMS_&lt;vendorId&gt; or CLAIMS_&lt;vendorId&gt;_*.
    */
   private void mockExportConfigs(String... configNames) {
     when(restClient.getAsJsonObject(any(), any())).thenAnswer(invocation -> {
       RequestEntry requestEntry = invocation.getArgument(0);
-      if (resourcesPath(DATA_EXPORT_SPRING_CONFIGURATIONS).equals(requestEntry.getBaseEndpoint())) {
-        return Future.succeededFuture(createExportConfigs(configNames));
-      }
       var configName = "CLAIMS_" + requestEntry.getQueryParams().get("vendorId");
       return Future.succeededFuture(createExportConfigs(Arrays.stream(configNames)
         .filter(name -> name.equals(configName) || name.startsWith(configName + "_"))

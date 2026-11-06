@@ -15,7 +15,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import static org.folio.orders.utils.CacheUtils.buildAsyncCache;
-import static org.folio.orders.utils.ResourcePathResolver.DATA_EXPORT_SPRING_CONFIGURATIONS;
 import static org.folio.orders.utils.ResourcePathResolver.DATA_EXPORT_SPRING_EFFECTIVE_CONFIGS;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
@@ -24,7 +23,6 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 @RequiredArgsConstructor
 public class ExportConfigsCache extends AbstractConfigCache {
 
-  private static final String TYPE_QUERY = "type==%s";
   private static final String VENDOR_ID_PARAMETER = "vendorId";
   private static final String TYPE_PARAMETER = "type";
   private static final String ACQUISITION_METHOD_PARAMETER = "acquisitionMethod";
@@ -42,11 +40,6 @@ public class ExportConfigsCache extends AbstractConfigCache {
   void init() {
     var context = Vertx.currentContext();
     this.configsCache = buildAsyncCache(context, cacheExpirationTime);
-  }
-
-  public Future<JsonObject> loadExportConfigs(String exportType, RequestContext requestContext) {
-    return cacheData(resourcesPath(DATA_EXPORT_SPRING_CONFIGURATIONS), TYPE_QUERY.formatted(exportType), configsCache,
-      exportConfigsRetriever::getExportConfigs, byPassCache, requestContext);
   }
 
   /**

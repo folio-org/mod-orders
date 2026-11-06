@@ -49,7 +49,6 @@ import static org.folio.orders.utils.ResourcePathResolver.DATA_EXPORT_SPRING_CRE
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_FIND_PIECES_WITH_LATE_STATUS_TO_PROCESS;
 import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_FIND_PIECE_BY_ID;
-import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_RETRIEVE_CONFIG_ENTRIES;
 import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_SEND_CLAIMS_PIECE_IDS_ARE_EMPTY;
 import static org.folio.rest.core.exceptions.ErrorCodes.UNABLE_TO_GENERATE_CLAIMS_FOR_ORG_NO_INTEGRATION_DETAILS;
 import static org.folio.rest.jaxrs.model.ClaimingPieceResult.Status.SUCCESS;
@@ -61,7 +60,6 @@ import static org.folio.rest.jaxrs.model.PieceBatchStatusCollection.ReceivingSta
 @RequiredArgsConstructor
 public class PiecesClaimingService {
 
-  private static final String EXPORT_TYPE_CLAIMS = "CLAIMS";
   private static final String VENDOR_CODE_PARAMETER = "vendorCode";
   private static final String PIECE_ID_PARAMETER = "pieceId";
 
@@ -98,8 +96,10 @@ public class PiecesClaimingService {
           throwHttpException(CANNOT_FIND_PIECES_WITH_LATE_STATUS_TO_PROCESS, claimingCollection, HttpStatus.HTTP_BAD_REQUEST);
         }
         return resolveIntegrations(claimPieces, requestContext)
-          .compose(integrations -> validateIntegrations(claimingCollection, integrations, requestContext)
-            .compose(v -> updatePiecesAndCreateJobs(claimingCollection, claimPieces, integrations.claimJobs(), requestContext)));
+          .compose(integrations -> {
+            validateIntegrations(claimingCollection, integrations);
+            return updatePiecesAndCreateJobs(claimingCollection, claimPieces, integrations.claimJobs(), requestContext);
+          });
       })
       .onFailure(t -> log.error("sendClaims:: Failed send claims: {}", JsonObject.mapFrom(claimingCollection).encodePrettily(), t));
   }
@@ -180,24 +180,12 @@ public class PiecesClaimingService {
     return new ClaimIntegrations(claimJobs, piecesWithoutIntegration);
   }
 
-  private Future<Void> validateIntegrations(ClaimingCollection claimingCollection, ClaimIntegrations integrations, RequestContext requestContext) {
+  private void validateIntegrations(ClaimingCollection claimingCollection, ClaimIntegrations integrations) {
     if (integrations.piecesWithoutIntegration().isEmpty()) {
-      return Future.succeededFuture();
+      return;
     }
     log.info("validateIntegrations:: Pieces without Claims integration: {} - No claims are sent", integrations.piecesWithoutIntegration().size());
-    var firstVendor = integrations.piecesWithoutIntegration().getFirst().vendor();
-    if (!integrations.claimJobs().isEmpty()) {
-      throwHttpExceptionOnMissingVendorIntegrationDetails(claimingCollection, firstVendor);
-    }
-    // Only when no piece got an integration can the tenant have none at all, which has its own error
-    return exportConfigsCache.loadExportConfigs(EXPORT_TYPE_CLAIMS, requestContext)
-      .compose(allConfigs -> {
-        if (CollectionUtils.isEmpty(allConfigs.getMap())) {
-          throwHttpException(CANNOT_RETRIEVE_CONFIG_ENTRIES, claimingCollection, HttpStatus.HTTP_BAD_REQUEST);
-        }
-        throwHttpExceptionOnMissingVendorIntegrationDetails(claimingCollection, firstVendor);
-        return Future.succeededFuture();
-      });
+    throwHttpExceptionOnMissingVendorIntegrationDetails(claimingCollection, integrations.piecesWithoutIntegration().getFirst().vendor());
   }
 
   private Future<ClaimingResults> updatePiecesAndCreateJobs(ClaimingCollection claimingCollection, List<ClaimPiece> claimPieces,

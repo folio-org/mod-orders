@@ -233,7 +233,7 @@ public class PiecesClaimingApiIT {
 
       var error = exception.getJsonArray("errors").getJsonObject(0);
       assertThat(error.getString("code"), is("unableToGenerateClaimsForOrgNoIntegrationDetails"));
-      assertThat(error.getString("message"), is("Unable to generate claims for AMAZ because no claim integrations exist"));
+      assertThat(error.getString("message"), is("Unable to generate claims for AMAZ because no claims integration applies to the claimed pieces"));
 
       var parameters = error.getJsonArray("parameters");
       assertThat(parameters.getJsonObject(0).getValue("value"), is(piece.getId()));

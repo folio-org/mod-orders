@@ -61,7 +61,6 @@ public class ResourcePathResolver {
   public static final String ORDER_SETTINGS = "orderSettings";
   public static final String USERS = "users";
   public static final String CONSORTIA_USER_TENANTS = "consortia.user-tenants";
-  public static final String DATA_EXPORT_SPRING_CONFIGURATIONS = "data-export-spring.configs";
   public static final String DATA_EXPORT_SPRING_EFFECTIVE_CONFIGS = "data-export-spring.effective-configs";
   public static final String DATA_EXPORT_SPRING_CREATE_JOB = "data-export-spring.job";
   public static final String DATA_EXPORT_SPRING_EXECUTE_JOB = "data-export-spring.send-job";
@@ -119,7 +118,6 @@ public class ResourcePathResolver {
     apis.put(CONSORTIA_USER_TENANTS, "/consortia/{id}/user-tenants");
     apis.put(ORDER_SETTINGS, "/orders-storage/settings");
     apis.put(ROUTING_LISTS, "/orders-storage/routing-lists");
-    apis.put(DATA_EXPORT_SPRING_CONFIGURATIONS, "/data-export-spring/configs");
     apis.put(DATA_EXPORT_SPRING_EFFECTIVE_CONFIGS, "/data-export-spring/effective-configs");
     apis.put(DATA_EXPORT_SPRING_CREATE_JOB, "/data-export-spring/jobs");
     apis.put(DATA_EXPORT_SPRING_EXECUTE_JOB, "/data-export-spring/jobs/send");
