@@ -73,6 +73,22 @@ public class PieceUtilTest {
     assertEquals(piece.getExternalNote(), holder.getExternalNote());
   }
 
+  @Test
+  void testUpdatePieceStatusWithHolderKeepsExistingValuesWhenNotProvided() {
+    Piece piece = new Piece().withReceivingStatus(Piece.ReceivingStatus.LATE)
+      .withClaimingInterval(5).withInternalNote("internal").withExternalNote("external");
+    PieceBatchStatusUpdateHolder holder = new PieceBatchStatusUpdateHolder(Piece.ReceivingStatus.UNRECEIVABLE,
+      null, null, null, List.of(piece), UUID.randomUUID().toString());
+
+    boolean statusChanged = PieceUtil.updatePieceStatus(piece, holder);
+
+    assertTrue(statusChanged);
+    assertEquals(Piece.ReceivingStatus.UNRECEIVABLE, piece.getReceivingStatus());
+    assertEquals(5, piece.getClaimingInterval());
+    assertEquals("internal", piece.getInternalNote());
+    assertEquals("external", piece.getExternalNote());
+  }
+
   @ParameterizedTest
   @EnumSource(value = Piece.Format.class, names = { "PHYSICAL", "OTHER" })
   void returnsExpectedReceiptDateWhenPieceFormatIsPhysicalOrOtherAndPhysicalIsPresent(Piece.Format format) {
