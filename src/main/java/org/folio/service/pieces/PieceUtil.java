@@ -106,9 +106,15 @@ public class PieceUtil {
       piece.setStatusUpdatedDate(new Date());
     }
     piece.setReceivingStatus(holder.getReceivingStatus());
-    piece.setClaimingInterval(holder.getClaimingInterval());
-    piece.setInternalNote(holder.getInternalNote());
-    piece.setExternalNote(holder.getExternalNote());
+    if (holder.getClaimingInterval() != null) {
+      piece.setClaimingInterval(holder.getClaimingInterval());
+    }
+    if (holder.getInternalNote() != null) {
+      piece.setInternalNote(holder.getInternalNote());
+    }
+    if (holder.getExternalNote() != null) {
+      piece.setExternalNote(holder.getExternalNote());
+    }
     return isStatusChanged;
   }
 
