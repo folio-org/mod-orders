@@ -21,6 +21,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
@@ -314,7 +315,7 @@ public class PieceUpdateFlowManagerIT {
     assertTrue(result.succeeded());
     assertEquals(21, piece.getClaimingInterval());
     verify(pieceStorageService).updatePiecesBatch(any(), eq(requestContext));
-    verify(pieceService, Mockito.never()).receiptConsistencyPiecePoLine(anyString(), any());
+    verify(pieceService, never()).receiptConsistencyPiecePoLine(anyString(), any());
   }
 
   @Test
@@ -328,7 +329,7 @@ public class PieceUpdateFlowManagerIT {
     assertEquals("internal", piece.getInternalNote());
     assertEquals("external", piece.getExternalNote());
     verify(pieceStorageService).updatePiecesBatch(any(), eq(requestContext));
-    verify(pieceService, Mockito.never()).receiptConsistencyPiecePoLine(anyString(), any());
+    verify(pieceService, never()).receiptConsistencyPiecePoLine(anyString(), any());
   }
 
   @Test
@@ -339,8 +340,8 @@ public class PieceUpdateFlowManagerIT {
       PieceBatchStatusCollection.ReceivingStatus.LATE, null, null, null, requestContext);
 
     assertTrue(result.succeeded());
-    verify(pieceStorageService, Mockito.never()).updatePiecesBatch(any(), any());
-    verify(pieceService, Mockito.never()).receiptConsistencyPiecePoLine(anyString(), any());
+    verify(pieceStorageService, never()).updatePiecesBatch(any(), any());
+    verify(pieceService, never()).receiptConsistencyPiecePoLine(anyString(), any());
   }
 
   private Piece givenPieceForBatchStatusUpdate() {
