@@ -302,6 +302,36 @@ public class PieceUpdateFlowManagerIT {
     assertTrue(result.succeeded());
   }
 
+  @Test
+  void shouldSaveClaimingIntervalWhenPieceIsDelayedAgainWithSameStatus() {
+    Piece piece = givenPieceForBatchStatusUpdate()
+      .withReceivingStatus(Piece.ReceivingStatus.CLAIM_DELAYED)
+      .withClaimingInterval(1);
+
+    Future<Void> result = pieceUpdateFlowManager.updatePiecesStatuses(List.of(piece.getId()),
+      PieceBatchStatusCollection.ReceivingStatus.CLAIM_DELAYED, 21, null, null, requestContext);
+
+    assertTrue(result.succeeded());
+    assertEquals(21, piece.getClaimingInterval());
+    verify(pieceStorageService).updatePiecesBatch(any(), eq(requestContext));
+    verify(pieceService, Mockito.never()).receiptConsistencyPiecePoLine(anyString(), any());
+  }
+
+  private Piece givenPieceForBatchStatusUpdate() {
+    PurchaseOrder purchaseOrder = new PurchaseOrder().withId(UUID.randomUUID().toString());
+    PoLine poLine = new PoLine().withId(UUID.randomUUID().toString()).withPurchaseOrderId(purchaseOrder.getId());
+    Title title = new Title().withId(UUID.randomUUID().toString());
+    Piece piece = new Piece().withId(UUID.randomUUID().toString()).withPoLineId(poLine.getId()).withTitleId(title.getId());
+
+    doReturn(succeededFuture(List.of(piece))).when(pieceStorageService).getPiecesByIds(List.of(piece.getId()), requestContext);
+    doReturn(succeededFuture(List.of(title))).when(titlesService).getTitlesByPieceIds(List.of(piece.getId()), requestContext);
+    doReturn(succeededFuture()).when(protectionService).isOperationRestricted(any(), eq(ProtectedOperationType.UPDATE), eq(requestContext));
+    doReturn(succeededFuture(poLine)).when(purchaseOrderLineService).getOrderLineById(poLine.getId(), requestContext);
+    doReturn(succeededFuture(purchaseOrder)).when(purchaseOrderStorageService).getPurchaseOrderById(purchaseOrder.getId(), requestContext);
+    doReturn(succeededFuture()).when(pieceStorageService).updatePiecesBatch(any(), eq(requestContext));
+    return piece;
+  }
+
   private void givenPoLineHasPieces(String lineId, List<Piece> pieces) {
     doReturn(succeededFuture(pieces))
         .when(pieceStorageService)

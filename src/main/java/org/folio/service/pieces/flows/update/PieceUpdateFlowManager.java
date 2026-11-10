@@ -1,5 +1,6 @@
 package org.folio.service.pieces.flows.update;
 
+import org.apache.commons.lang3.ObjectUtils;
 import static org.folio.orders.utils.FutureUtils.asFuture;
 import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
 import static org.folio.service.orders.utils.StatusUtils.calculatePoLineReceiptStatus;
@@ -171,14 +172,17 @@ public class PieceUpdateFlowManager {
   }
 
   private Future<Void> updatePiecesStatusesByPoLine(PieceBatchStatusUpdateHolder holder, RequestContext requestContext) {
-    var isAnyPiecesUpdated = holder.getPieces().stream()
+    boolean isAnyPieceStatusChanged = holder.getPieces().stream()
       .map(piece -> updatePieceStatus(piece, holder))
       .reduce(Boolean.FALSE, Boolean::logicalOr); // Don't replace .map() with .anyMatch(), as it needs to iterate over all elements
-    if (!Boolean.TRUE.equals(isAnyPiecesUpdated)) {
-      return Future.succeededFuture();
+    if (isAnyPieceStatusChanged) {
+      return pieceStorageService.updatePiecesBatch(holder.getPieceCollection(), requestContext)
+        .compose(v -> asFuture(() -> pieceService.receiptConsistencyPiecePoLine(holder.getOrderLineId(), requestContext)));
     }
-    return pieceStorageService.updatePiecesBatch(holder.getPieceCollection(), requestContext)
-      .compose(v -> asFuture(() -> pieceService.receiptConsistencyPiecePoLine(holder.getOrderLineId(), requestContext)));
+    if (ObjectUtils.anyNotNull(holder.getClaimingInterval(), holder.getInternalNote(), holder.getExternalNote())) {
+      return pieceStorageService.updatePiecesBatch(holder.getPieceCollection(), requestContext);
+    }
+    return Future.succeededFuture();
   }
 
   private List<Location> getPieceLocations(List<Piece> pieces, PoLine poLine) {
