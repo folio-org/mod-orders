@@ -317,6 +317,32 @@ public class PieceUpdateFlowManagerIT {
     verify(pieceService, Mockito.never()).receiptConsistencyPiecePoLine(anyString(), any());
   }
 
+  @Test
+  void shouldSaveNotesWhenPieceStatusIsNotChanged() {
+    Piece piece = givenPieceForBatchStatusUpdate().withReceivingStatus(Piece.ReceivingStatus.LATE);
+
+    Future<Void> result = pieceUpdateFlowManager.updatePiecesStatuses(List.of(piece.getId()),
+      PieceBatchStatusCollection.ReceivingStatus.LATE, null, "internal", "external", requestContext);
+
+    assertTrue(result.succeeded());
+    assertEquals("internal", piece.getInternalNote());
+    assertEquals("external", piece.getExternalNote());
+    verify(pieceStorageService).updatePiecesBatch(any(), eq(requestContext));
+    verify(pieceService, Mockito.never()).receiptConsistencyPiecePoLine(anyString(), any());
+  }
+
+  @Test
+  void shouldNotSavePiecesWhenNothingIsChanged() {
+    Piece piece = givenPieceForBatchStatusUpdate().withReceivingStatus(Piece.ReceivingStatus.LATE);
+
+    Future<Void> result = pieceUpdateFlowManager.updatePiecesStatuses(List.of(piece.getId()),
+      PieceBatchStatusCollection.ReceivingStatus.LATE, null, null, null, requestContext);
+
+    assertTrue(result.succeeded());
+    verify(pieceStorageService, Mockito.never()).updatePiecesBatch(any(), any());
+    verify(pieceService, Mockito.never()).receiptConsistencyPiecePoLine(anyString(), any());
+  }
+
   private Piece givenPieceForBatchStatusUpdate() {
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(UUID.randomUUID().toString());
     PoLine poLine = new PoLine().withId(UUID.randomUUID().toString()).withPurchaseOrderId(purchaseOrder.getId());
