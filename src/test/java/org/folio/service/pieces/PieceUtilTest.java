@@ -89,6 +89,35 @@ public class PieceUtilTest {
     assertEquals("external", piece.getExternalNote());
   }
 
+  @Test
+  void testUpdatePieceStatusWithHolderResetsStatusUpdatedDateWhenClaimIsDelayedAgain() {
+    Date previousStatusUpdatedDate = new Date(0);
+    Piece piece = new Piece().withReceivingStatus(Piece.ReceivingStatus.CLAIM_DELAYED)
+      .withClaimingInterval(1).withStatusUpdatedDate(previousStatusUpdatedDate);
+    PieceBatchStatusUpdateHolder holder = new PieceBatchStatusUpdateHolder(Piece.ReceivingStatus.CLAIM_DELAYED,
+      21, null, null, List.of(piece), UUID.randomUUID().toString());
+
+    boolean statusChanged = PieceUtil.updatePieceStatus(piece, holder);
+
+    assertFalse(statusChanged);
+    assertEquals(21, piece.getClaimingInterval());
+    assertTrue(piece.getStatusUpdatedDate().after(previousStatusUpdatedDate));
+  }
+
+  @Test
+  void testUpdatePieceStatusWithHolderKeepsStatusUpdatedDateWhenNothingChanged() {
+    Date previousStatusUpdatedDate = new Date(0);
+    Piece piece = new Piece().withReceivingStatus(Piece.ReceivingStatus.CLAIM_DELAYED)
+      .withClaimingInterval(1).withStatusUpdatedDate(previousStatusUpdatedDate);
+    PieceBatchStatusUpdateHolder holder = new PieceBatchStatusUpdateHolder(Piece.ReceivingStatus.CLAIM_DELAYED,
+      null, "internal", null, List.of(piece), UUID.randomUUID().toString());
+
+    boolean statusChanged = PieceUtil.updatePieceStatus(piece, holder);
+
+    assertFalse(statusChanged);
+    assertEquals(previousStatusUpdatedDate, piece.getStatusUpdatedDate());
+  }
+
   @ParameterizedTest
   @EnumSource(value = Piece.Format.class, names = { "PHYSICAL", "OTHER" })
   void returnsExpectedReceiptDateWhenPieceFormatIsPhysicalOrOtherAndPhysicalIsPresent(Piece.Format format) {

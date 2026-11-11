@@ -307,6 +307,62 @@ public class PieceUpdateFlowManagerIT {
   }
 
   @Test
+  void shouldSaveClaimingIntervalWhenPieceIsDelayedAgainWithSameStatus() {
+    Piece piece = givenPieceForBatchStatusUpdate()
+      .withReceivingStatus(Piece.ReceivingStatus.CLAIM_DELAYED)
+      .withClaimingInterval(1);
+
+    Future<Void> result = pieceUpdateFlowManager.updatePiecesStatuses(List.of(piece.getId()),
+      PieceBatchStatusCollection.ReceivingStatus.CLAIM_DELAYED, 21, null, null, requestContext);
+
+    assertTrue(result.succeeded());
+    assertEquals(21, piece.getClaimingInterval());
+    verify(pieceStorageService).updatePiecesBatch(any(), eq(requestContext));
+    verify(pieceService, never()).receiptConsistencyPiecePoLine(anyString(), any());
+  }
+
+  @Test
+  void shouldSaveNotesWhenPieceStatusIsNotChanged() {
+    Piece piece = givenPieceForBatchStatusUpdate().withReceivingStatus(Piece.ReceivingStatus.LATE);
+
+    Future<Void> result = pieceUpdateFlowManager.updatePiecesStatuses(List.of(piece.getId()),
+      PieceBatchStatusCollection.ReceivingStatus.LATE, null, "internal", "external", requestContext);
+
+    assertTrue(result.succeeded());
+    assertEquals("internal", piece.getInternalNote());
+    assertEquals("external", piece.getExternalNote());
+    verify(pieceStorageService).updatePiecesBatch(any(), eq(requestContext));
+    verify(pieceService, never()).receiptConsistencyPiecePoLine(anyString(), any());
+  }
+
+  @Test
+  void shouldNotSavePiecesWhenNothingIsChanged() {
+    Piece piece = givenPieceForBatchStatusUpdate().withReceivingStatus(Piece.ReceivingStatus.LATE);
+
+    Future<Void> result = pieceUpdateFlowManager.updatePiecesStatuses(List.of(piece.getId()),
+      PieceBatchStatusCollection.ReceivingStatus.LATE, null, null, null, requestContext);
+
+    assertTrue(result.succeeded());
+    verify(pieceStorageService, never()).updatePiecesBatch(any(), any());
+    verify(pieceService, never()).receiptConsistencyPiecePoLine(anyString(), any());
+  }
+
+  private Piece givenPieceForBatchStatusUpdate() {
+    PurchaseOrder purchaseOrder = new PurchaseOrder().withId(UUID.randomUUID().toString());
+    PoLine poLine = new PoLine().withId(UUID.randomUUID().toString()).withPurchaseOrderId(purchaseOrder.getId());
+    Title title = new Title().withId(UUID.randomUUID().toString());
+    Piece piece = new Piece().withId(UUID.randomUUID().toString()).withPoLineId(poLine.getId()).withTitleId(title.getId());
+
+    doReturn(succeededFuture(List.of(piece))).when(pieceStorageService).getPiecesByIds(List.of(piece.getId()), requestContext);
+    doReturn(succeededFuture(List.of(title))).when(titlesService).getTitlesByPieceIds(List.of(piece.getId()), requestContext);
+    doReturn(succeededFuture()).when(protectionService).isOperationRestricted(any(), eq(ProtectedOperationType.UPDATE), eq(requestContext));
+    doReturn(succeededFuture(poLine)).when(purchaseOrderLineService).getOrderLineById(poLine.getId(), requestContext);
+    doReturn(succeededFuture(purchaseOrder)).when(purchaseOrderStorageService).getPurchaseOrderById(purchaseOrder.getId(), requestContext);
+    doReturn(succeededFuture()).when(pieceStorageService).updatePiecesBatch(any(), eq(requestContext));
+    return piece;
+  }
+
+  @Test
   void shouldNotUpdatePiecesStatusesWhenTitleAcqUnitRestrictsUpdate() {
     Title title = new Title().withId(UUID.randomUUID().toString());
     Piece piece = new Piece()
