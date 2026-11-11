@@ -156,7 +156,7 @@ public class PieceUpdateFlowManager {
       .map(titles -> titles.stream()
         .map(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext))
         .toList())
-      .map(Future::all)
+      .compose(Future::all)
       .mapEmpty();
   }
 
