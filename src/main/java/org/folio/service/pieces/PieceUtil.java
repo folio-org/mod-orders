@@ -102,7 +102,7 @@ public class PieceUtil {
 
   public static boolean updatePieceStatus(Piece piece, PieceBatchStatusUpdateHolder holder) {
     var isStatusChanged = !piece.getReceivingStatus().equals(holder.getReceivingStatus());
-    if (isStatusChanged) {
+    if (isStatusChanged || holder.getClaimingInterval() != null) {
       piece.setStatusUpdatedDate(new Date());
     }
     piece.setReceivingStatus(holder.getReceivingStatus());
