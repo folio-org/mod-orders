@@ -1,6 +1,8 @@
 package org.folio.service.pieces.flows.update;
 
+import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
+import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_PERMISSIONS;
 import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.clearVertxContext;
@@ -21,6 +23,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
@@ -35,6 +38,7 @@ import org.folio.models.ItemStatus;
 import org.folio.models.pieces.PieceUpdateHolder;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.RestClient;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Cost;
@@ -222,6 +226,28 @@ public class PieceUpdateFlowManagerTest {
     Future<Void> result = pieceUpdateFlowManager.updatePiecesStatuses(pieceIds, receivingStatus, null, null, null, requestContext);
 
     assertTrue(result.succeeded());
+  }
+
+  @Test
+  void shouldNotUpdatePiecesStatusesWhenTitleAcqUnitRestrictsUpdate() {
+    Title title = new Title().withId(UUID.randomUUID().toString());
+    Piece piece = new Piece()
+      .withId(UUID.randomUUID().toString())
+      .withTitleId(title.getId())
+      .withReceivingStatus(Piece.ReceivingStatus.LATE);
+    List<String> pieceIds = List.of(piece.getId());
+
+    doReturn(succeededFuture(List.of(title))).when(titlesService).getTitlesByPieceIds(pieceIds, requestContext);
+    doReturn(failedFuture(new HttpException(403, USER_HAS_NO_PERMISSIONS))).when(protectionService)
+      .isOperationRestricted(any(), eq(ProtectedOperationType.UPDATE), eq(requestContext));
+
+    Future<Void> result = pieceUpdateFlowManager.updatePiecesStatuses(pieceIds,
+      PieceBatchStatusCollection.ReceivingStatus.CLAIM_DELAYED, 21, null, null, requestContext);
+
+    assertTrue(result.failed());
+    assertEquals(Piece.ReceivingStatus.LATE, piece.getReceivingStatus());
+    verify(pieceStorageService, never()).getPiecesByIds(any(), any());
+    verify(pieceStorageService, never()).updatePiecesBatch(any(), any());
   }
 
   private void givenPoLineHasPieces(String lineId, List<Piece> pieces) {
