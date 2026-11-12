@@ -180,7 +180,7 @@
         "value": false,
         "description": "Defines if the mod-orders system user must be created/used at tenant initialization for internal (data-import) service requests",
         "type": "FUNCTIONAL",
-        "essential": true
+        "essential": false
       }
     ]
   },
