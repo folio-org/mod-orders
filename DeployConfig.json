@@ -166,7 +166,7 @@
         "value": null,
         "description": "Deployment environment identifier, also used as the Kafka environment/topic-naming prefix",
         "type": "CONFIG",
-        "essential": false
+        "essential": true
       },
       {
         "name": "JAVA_OPTS",
