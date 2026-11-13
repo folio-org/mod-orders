@@ -239,14 +239,14 @@
         "value": null,
         "description": "Deployment environment identifier",
         "type": "CONFIG",
-        "essential": false
+        "essential": true
       },
       {
         "name": "JAVA_OPTS",
         "value": null,
         "description": "Additional JVM options for the sidecar process",
         "type": "CONFIG",
-        "essential": true
+        "essential": false
       },
       {
         "name": "MODULE_NAME",
