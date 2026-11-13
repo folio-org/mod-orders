@@ -170,8 +170,8 @@
       },
       {
         "name": "JAVA_OPTS",
-        "value": null,
-        "description": "Additional JVM options for the mod-orders process (heap sizing, GC, agent flags, etc.)",
+        "value": "-Dhttp.port=8082",
+        "description": "JVM options for the module process. -Dhttp.port=8082 moves RMB off its default port 8081, which the Eureka sidecar uses; it must match the sidecar's MODULE_URL. Heap sizing comes from the java block.",
         "type": "CONFIG",
         "essential": true
       },
