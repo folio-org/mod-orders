@@ -51,7 +51,8 @@ import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
 import static org.folio.TestUtils.getTitle;
 import static org.folio.models.claiming.IntegrationDetailField.CONFIGS;
-import static org.folio.models.claiming.IntegrationDetailField.CONFIG_NAME;
+import static org.folio.models.claiming.IntegrationDetailField.VENDOR_EDI_ORDERS_EXPORT_CONFIG;
+import static org.folio.models.claiming.IntegrationDetailField.EXPORT_TYPE_SPECIFIC_PARAMETERS;
 import static org.folio.orders.utils.HelperUtils.PO_LINES;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.FUND_ID;
@@ -64,8 +65,8 @@ import static org.folio.orders.utils.ResourcePathResolver.BATCH_TRACKING;
 import static org.folio.orders.utils.ResourcePathResolver.BUDGETS;
 import static org.folio.orders.utils.ResourcePathResolver.CONFIGURATION_ENTRIES;
 import static org.folio.orders.utils.ResourcePathResolver.CURRENT_BUDGET;
-import static org.folio.orders.utils.ResourcePathResolver.DATA_EXPORT_SPRING_CONFIGURATIONS;
 import static org.folio.orders.utils.ResourcePathResolver.DATA_EXPORT_SPRING_CREATE_JOB;
+import static org.folio.orders.utils.ResourcePathResolver.DATA_EXPORT_SPRING_EFFECTIVE_CONFIGS;
 import static org.folio.orders.utils.ResourcePathResolver.DATA_EXPORT_SPRING_EXECUTE_JOB;
 import static org.folio.orders.utils.ResourcePathResolver.EXPENSE_CLASSES_URL;
 import static org.folio.orders.utils.ResourcePathResolver.EXPORT_HISTORY;
@@ -714,7 +715,7 @@ public class MockServer {
     router.get(resourcesPath(CONFIGURATION_ENTRIES)).handler(ctx -> handleConfigurationOrSettingResponse(CONFIG_MOCK_PATH, ctx));
     router.get(resourcesPath(ORDER_SETTINGS)).handler(ctx -> handleConfigurationOrSettingResponse(ORDER_SETTINGS_MOCK_PATH, ctx));
     router.get(resourcesPath(LOCALE)).handler(ctx -> handleGetJsonResource(ctx, LOCALE_MOCK_PATH));
-    router.get(resourcesPath(DATA_EXPORT_SPRING_CONFIGURATIONS)).handler(this::handleExportConfigsResponse);
+    router.get(resourcesPath(DATA_EXPORT_SPRING_EFFECTIVE_CONFIGS)).handler(this::handleEffectiveConfigsResponse);
     // PUT
     router.put(resourcePath(PURCHASE_ORDER_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER_STORAGE));
     router.put(resourcePath(PO_LINES_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES_STORAGE));
@@ -1681,14 +1682,16 @@ public class MockServer {
     }
   }
 
-  private void handleExportConfigsResponse(RoutingContext ctx) {
+  private void handleEffectiveConfigsResponse(RoutingContext ctx) {
     try {
       var config = new JsonObject(getMockData(EXPORT_CONFIG_MOCK_PATH));
+      var configVendorId = config.getJsonObject(EXPORT_TYPE_SPECIFIC_PARAMETERS.getValue())
+        .getJsonObject(VENDOR_EDI_ORDERS_EXPORT_CONFIG.getValue())
+        .getString("vendorId");
       var tenant = ctx.request().getHeader(OKAPI_HEADER_TENANT);
-      if (EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10.getValue().equals(tenant)) {
-        config.put(CONFIG_NAME.getValue(), "CLAIMS_%s_%s".formatted(UUID.randomUUID(), UUID.randomUUID()));
-      }
-      serverResponse(ctx, 200, APPLICATION_JSON, JsonObject.of(CONFIGS.getValue(), JsonArray.of(config)).encode());
+      var matches = !EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10.getValue().equals(tenant)
+        && configVendorId.equals(ctx.request().getParam("vendorId"));
+      serverResponse(ctx, 200, APPLICATION_JSON, JsonObject.of(CONFIGS.getValue(), matches ? JsonArray.of(config) : new JsonArray()).encode());
     } catch (IOException e) {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     }

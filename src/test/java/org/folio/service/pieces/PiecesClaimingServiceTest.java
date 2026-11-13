@@ -10,6 +10,7 @@ import org.folio.rest.acq.model.Organization;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.ClaimingCollection;
 import org.folio.rest.jaxrs.model.ClaimingPieceResult;
 import org.folio.rest.jaxrs.model.Piece;
@@ -26,6 +27,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -36,25 +38,33 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static org.folio.TestUtils.callPrivateMethod;
 import static org.folio.models.claiming.IntegrationDetailField.CLAIM_PIECE_IDS;
 import static org.folio.models.claiming.IntegrationDetailField.CONFIGS;
+import static org.folio.models.claiming.IntegrationDetailField.CONFIG_ID;
 import static org.folio.models.claiming.IntegrationDetailField.CONFIG_NAME;
 import static org.folio.models.claiming.IntegrationDetailField.EXPORT_TYPE_SPECIFIC_PARAMETERS;
 import static org.folio.models.claiming.IntegrationDetailField.TENANT;
 import static org.folio.models.claiming.IntegrationDetailField.VENDOR_EDI_ORDERS_EXPORT_CONFIG;
 import static org.folio.orders.utils.ResourcePathResolver.DATA_EXPORT_SPRING_CREATE_JOB;
+import static org.folio.orders.utils.ResourcePathResolver.DATA_EXPORT_SPRING_EFFECTIVE_CONFIGS;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_FIND_PIECES_WITH_LATE_STATUS_TO_PROCESS;
-import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_RETRIEVE_CONFIG_ENTRIES;
 import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_SEND_CLAIMS_PIECE_IDS_ARE_EMPTY;
 import static org.folio.rest.core.exceptions.ErrorCodes.UNABLE_TO_GENERATE_CLAIMS_FOR_ORG_NO_INTEGRATION_DETAILS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(VertxExtension.class)
@@ -113,21 +123,28 @@ public class PiecesClaimingServiceTest {
   void testSendClaims_noConfigEntries(VertxTestContext testContext) {
     var pieceId1 = UUID.randomUUID().toString();
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of(pieceId1)).withClaimingInterval(1);
-    var exportConfigs = createExportConfigs();
-
-    when(restClient.getAsJsonObject(any(), any())).thenReturn(Future.succeededFuture(exportConfigs));
+    mockExportConfigs();
+    when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of(new Piece().withId(pieceId1).withPoLineId("poLineId1").withReceivingStatus(Piece.ReceivingStatus.LATE))));
+    when(purchaseOrderLineService.getOrderLineById(any(), any())).thenReturn(Future.succeededFuture(new PoLine().withPurchaseOrderId("orderId1")));
+    when(purchaseOrderStorageService.getPurchaseOrderById(any(), any())).thenReturn(Future.succeededFuture(new PurchaseOrder().withVendor("vendorId")));
+    when(organizationService.getVendorById(any(), any())).thenReturn(Future.succeededFuture(new Organization().withId("vendorId").withCode("VENDOR").withIsVendor(true)));
 
     piecesClaimingService.sendClaims(claimingCollection, requestContext)
       .onComplete(testContext.failing(throwable -> testContext.verify(() -> {
         Assertions.assertInstanceOf(HttpException.class, throwable);
         var httpException = (HttpException) throwable;
         var error = httpException.getErrors().getErrors().getFirst();
-        assertEquals(CANNOT_RETRIEVE_CONFIG_ENTRIES.getCode(), error.getCode());
-        assertEquals(CANNOT_RETRIEVE_CONFIG_ENTRIES.getDescription(), error.getMessage());
-        Assertions.assertEquals(1, error.getParameters().size());
+        verifyNoClaimSent();
+        assertEquals(422, httpException.getCode());
+        assertEquals(UNABLE_TO_GENERATE_CLAIMS_FOR_ORG_NO_INTEGRATION_DETAILS.getCode(), error.getCode());
+        assertEquals(String.format(UNABLE_TO_GENERATE_CLAIMS_FOR_ORG_NO_INTEGRATION_DETAILS.getDescription(), "VENDOR"), error.getMessage());
+        Assertions.assertEquals(2, error.getParameters().size());
         var parameter = error.getParameters().getFirst();
         Assertions.assertEquals("pieceId", parameter.getKey());
         Assertions.assertEquals(pieceId1, parameter.getValue());
+        Assertions.assertEquals("vendorCode", error.getParameters().get(1).getKey());
+        Assertions.assertEquals("VENDOR", error.getParameters().get(1).getValue());
+        verify(restClient, times(1)).getAsJsonObject(any(), any());
         testContext.completeNow();
       })));
   }
@@ -136,9 +153,7 @@ public class PiecesClaimingServiceTest {
   void testSendClaims_noPiecesFound(VertxTestContext testContext) {
     var pieceId1 = UUID.randomUUID().toString();
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of(pieceId1)).withClaimingInterval(1);
-    var exportConfigs = createExportConfigs("name");
 
-    when(restClient.getAsJsonObject(any(), any())).thenReturn(Future.succeededFuture(exportConfigs));
     when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of()));
 
     piecesClaimingService.sendClaims(claimingCollection, requestContext)
@@ -159,9 +174,8 @@ public class PiecesClaimingServiceTest {
   @Test
   void testSendClaims_pieceStatusNotLate(VertxTestContext testContext) {
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1")).withClaimingInterval(1);
-    var exportConfig = createExportConfigs("CLAIMS_vendorId");
+    mockExportConfigs("CLAIMS_vendorId");
 
-    when(restClient.getAsJsonObject(any(), any())).thenReturn(Future.succeededFuture(exportConfig));
     when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of(new Piece().withId("pieceId1").withPoLineId("poLineId1").withReceivingStatus(Piece.ReceivingStatus.RECEIVED))));
     when(purchaseOrderLineService.getOrderLineById(any(), any())).thenReturn(Future.succeededFuture(new PoLine().withPurchaseOrderId("orderId1")));
     when(purchaseOrderStorageService.getPurchaseOrderById(any(), any())).thenReturn(Future.succeededFuture(new PurchaseOrder().withVendor("vendorId")));
@@ -190,9 +204,8 @@ public class PiecesClaimingServiceTest {
     var pieceId = UUID.randomUUID().toString();
     var piece = new Piece().withId(pieceId).withPoLineId("poLineId").withReceivingStatus(Piece.ReceivingStatus.LATE);
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of(pieceId));
-    var exportConfig = createExportConfigs("CLAIMS_vendorId1");
+    mockExportConfigs("CLAIMS_vendorId1");
 
-    when(restClient.getAsJsonObject(any(), any())).thenReturn(Future.succeededFuture(exportConfig));
     when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of(piece)));
     when(purchaseOrderLineService.getOrderLineById(any(), any())).thenReturn(Future.succeededFuture(new PoLine().withPurchaseOrderId("orderId")));
     when(purchaseOrderStorageService.getPurchaseOrderById(any(), any())).thenReturn(Future.succeededFuture(new PurchaseOrder().withVendor("vendorId2")));
@@ -225,9 +238,8 @@ public class PiecesClaimingServiceTest {
     var piece2 = new Piece().withId(pieceId2).withPoLineId("poLineId2").withReceivingStatus(Piece.ReceivingStatus.LATE);
     var piece3 = new Piece().withId(pieceId3).withPoLineId("poLineId3").withReceivingStatus(Piece.ReceivingStatus.LATE);
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of(pieceId1, pieceId2, pieceId3));
-    var exportConfig = createExportConfigs("CLAIMS_vendorId1");
+    mockExportConfigs("CLAIMS_vendorId1");
 
-    when(restClient.getAsJsonObject(any(), any())).thenReturn(Future.succeededFuture(exportConfig));
     when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of(piece1, piece2, piece3)));
     when(purchaseOrderLineService.getOrderLineById(any(), any())).thenAnswer(invocation -> {
       String poLineId = invocation.getArgument(0);
@@ -269,9 +281,8 @@ public class PiecesClaimingServiceTest {
   @Test
   void testSendClaims_success(VertxTestContext testContext) {
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1")).withClaimingInterval(1);
-    var exportConfig = createExportConfigs("CLAIMS_vendorId");
+    mockExportConfigs("CLAIMS_vendorId");
 
-    when(restClient.getAsJsonObject(any(), any())).thenReturn(Future.succeededFuture(exportConfig));
     when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of(new Piece().withId("pieceId1").withPoLineId("poLineId1").withReceivingStatus(Piece.ReceivingStatus.LATE))));
     when(purchaseOrderLineService.getOrderLineById(any(), any())).thenReturn(Future.succeededFuture(new PoLine().withPurchaseOrderId("orderId1")));
     when(purchaseOrderStorageService.getPurchaseOrderById(any(), any())).thenReturn(Future.succeededFuture(new PurchaseOrder().withVendor("vendorId")));
@@ -292,9 +303,8 @@ public class PiecesClaimingServiceTest {
   @Test
   void testSendClaims_successWithTwoPieces(VertxTestContext testContext) {
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1", "pieceId2")).withClaimingInterval(1);
-    var exportConfig = createExportConfigs("CLAIMS_vendorId");
+    mockExportConfigs("CLAIMS_vendorId");
 
-    when(restClient.getAsJsonObject(any(), any())).thenReturn(Future.succeededFuture(exportConfig));
     when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of(
       new Piece().withId("pieceId1").withPoLineId("poLineId1").withReceivingStatus(Piece.ReceivingStatus.LATE),
       new Piece().withId("pieceId2").withPoLineId("poLineId2").withReceivingStatus(Piece.ReceivingStatus.LATE)
@@ -320,9 +330,61 @@ public class PiecesClaimingServiceTest {
   @Test
   void testSendClaims_successWithMultipleOrganizations(VertxTestContext testContext) {
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1", "pieceId2", "pieceId3", "pieceId4", "pieceId5")).withClaimingInterval(1);
-    var exportConfig = createExportConfigs("CLAIMS_vendorId1", "CLAIMS_vendorId2");
+    mockExportConfigs("CLAIMS_vendorId1", "CLAIMS_vendorId2");
 
-    when(restClient.getAsJsonObject(any(), any())).thenReturn(Future.succeededFuture(exportConfig));
+
+    when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of(
+      new Piece().withId("pieceId1").withPoLineId("poLineId1").withReceivingStatus(Piece.ReceivingStatus.LATE),
+      new Piece().withId("pieceId2").withPoLineId("poLineId2").withReceivingStatus(Piece.ReceivingStatus.LATE),
+      new Piece().withId("pieceId3").withPoLineId("poLineId3").withReceivingStatus(Piece.ReceivingStatus.LATE),
+      new Piece().withId("pieceId4").withPoLineId("poLineId4").withReceivingStatus(Piece.ReceivingStatus.LATE),
+      new Piece().withId("pieceId5").withPoLineId("poLineId5").withReceivingStatus(Piece.ReceivingStatus.LATE)
+    )));
+
+    when(purchaseOrderLineService.getOrderLineById(any(), any())).thenAnswer(invocation -> {
+      String poLineId = invocation.getArgument(0);
+      return Future.succeededFuture(new PoLine().withPurchaseOrderId(poLineId.startsWith("poLineId1") || poLineId.startsWith("poLineId2") ? "orderId1" : "orderId2"));
+    });
+
+    when(purchaseOrderStorageService.getPurchaseOrderById(any(), any())).thenAnswer(invocation -> {
+      String orderId = invocation.getArgument(0);
+      return Future.succeededFuture(new PurchaseOrder().withVendor(orderId.equals("orderId1") ? "vendorId1" : "vendorId2"));
+    });
+
+    when(organizationService.getVendorById(any(), any())).thenAnswer(invocation -> {
+      String vendorId = invocation.getArgument(0);
+      return Future.succeededFuture(new Organization().withId(vendorId).withCode(vendorId.equals("vendorId1") ? "VENDOR1" : "VENDOR2").withIsVendor(true));
+    });
+
+    when(pieceUpdateFlowManager.updatePiecesStatuses(any(), any(), any(), any(), any(), any())).thenReturn(Future.succeededFuture());
+    when(restClient.post(eq(resourcesPath(DATA_EXPORT_SPRING_CREATE_JOB)), any(), any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("status", "CREATED")));
+    when(restClient.postEmptyResponse(any(), any(), any())).thenReturn(Future.succeededFuture());
+
+    piecesClaimingService.sendClaims(claimingCollection, requestContext)
+      .onComplete(testContext.succeeding(result -> testContext.verify(() -> {
+        assertEquals(5, result.getClaimingPieceResults().size());
+        verify(pieceUpdateFlowManager).updatePiecesStatuses(eq(List.of("pieceId1", "pieceId2", "pieceId3", "pieceId4", "pieceId5")), any(), any(), any(), any(), any());
+        var copiedSortedResults = new ArrayList<>(result.getClaimingPieceResults());
+        copiedSortedResults.sort(Comparator.comparing(ClaimingPieceResult::getPieceId));
+        assertEquals("pieceId1", copiedSortedResults.getFirst().getPieceId());
+        assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.getFirst().getStatus());
+        assertEquals("pieceId2", copiedSortedResults.get(1).getPieceId());
+        assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.get(1).getStatus());
+        assertEquals("pieceId3", copiedSortedResults.get(2).getPieceId());
+        assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.get(2).getStatus());
+        assertEquals("pieceId4", copiedSortedResults.get(3).getPieceId());
+        assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.get(3).getStatus());
+        assertEquals("pieceId5", copiedSortedResults.get(4).getPieceId());
+        assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.get(4).getStatus());
+        testContext.completeNow();
+      })));
+  }
+
+  @Test
+  void testSendClaims_successWithMultipleOrganizationsAndOneIntegrationDetail(VertxTestContext testContext) {
+    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1", "pieceId2", "pieceId3", "pieceId4", "pieceId5")).withClaimingInterval(1);
+    mockExportConfigs("CLAIMS_vendorId1", "CLAIMS_vendorId2");
+
 
     when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of(
       new Piece().withId("pieceId1").withPoLineId("poLineId1").withReceivingStatus(Piece.ReceivingStatus.LATE),
@@ -371,56 +433,189 @@ public class PiecesClaimingServiceTest {
   }
 
   @Test
-  void testSendClaims_successWithMultipleOrganizationsAndOneIntegrationDetail(VertxTestContext testContext) {
-    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1", "pieceId2", "pieceId3", "pieceId4", "pieceId5")).withClaimingInterval(1);
-    var exportConfig = createExportConfigs("CLAIMS_vendorId1", "CLAIMS_vendorId2");
-
-    when(restClient.getAsJsonObject(any(), any())).thenReturn(Future.succeededFuture(exportConfig));
-
-    when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of(
-      new Piece().withId("pieceId1").withPoLineId("poLineId1").withReceivingStatus(Piece.ReceivingStatus.LATE),
-      new Piece().withId("pieceId2").withPoLineId("poLineId2").withReceivingStatus(Piece.ReceivingStatus.LATE),
-      new Piece().withId("pieceId3").withPoLineId("poLineId3").withReceivingStatus(Piece.ReceivingStatus.LATE),
-      new Piece().withId("pieceId4").withPoLineId("poLineId4").withReceivingStatus(Piece.ReceivingStatus.LATE),
-      new Piece().withId("pieceId5").withPoLineId("poLineId5").withReceivingStatus(Piece.ReceivingStatus.LATE)
-    )));
-
-    when(purchaseOrderLineService.getOrderLineById(any(), any())).thenAnswer(invocation -> {
-      String poLineId = invocation.getArgument(0);
-      return Future.succeededFuture(new PoLine().withPurchaseOrderId(poLineId.startsWith("poLineId1") || poLineId.startsWith("poLineId2") ? "orderId1" : "orderId2"));
-    });
-
-    when(purchaseOrderStorageService.getPurchaseOrderById(any(), any())).thenAnswer(invocation -> {
-      String orderId = invocation.getArgument(0);
-      return Future.succeededFuture(new PurchaseOrder().withVendor(orderId.equals("orderId1") ? "vendorId1" : "vendorId2"));
-    });
-
-    when(organizationService.getVendorById(any(), any())).thenAnswer(invocation -> {
-      String vendorId = invocation.getArgument(0);
-      return Future.succeededFuture(new Organization().withId(vendorId).withCode(vendorId.equals("vendorId1") ? "VENDOR1" : "VENDOR2").withIsVendor(true));
-    });
-
-    when(pieceUpdateFlowManager.updatePiecesStatuses(any(), any(), any(), any(), any(), any())).thenReturn(Future.succeededFuture());
-    when(restClient.post(eq(resourcesPath(DATA_EXPORT_SPRING_CREATE_JOB)), any(), any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("status", "CREATED")));
-    when(restClient.postEmptyResponse(any(), any(), any())).thenReturn(Future.succeededFuture());
+  void testSendClaims_configsByAcquisitionMethod_eachJobOnlyItsPieces(VertxTestContext testContext) {
+    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1", "pieceId2", "pieceId3")).withClaimingInterval(1);
+    mockConfigsByAcquisitionMethod(Map.of("purchase", List.of("CLAIMS_vendorId_x"), "exchange", List.of("CLAIMS_vendorId_y")));
+    mockClaimFlow(Map.of("pieceId1", "purchase", "pieceId2", "exchange", "pieceId3", "purchase"));
 
     piecesClaimingService.sendClaims(claimingCollection, requestContext)
       .onComplete(testContext.succeeding(result -> testContext.verify(() -> {
-        assertEquals(5, result.getClaimingPieceResults().size());
-        var copiedSortedResults = new ArrayList<>(result.getClaimingPieceResults());
-        copiedSortedResults.sort(Comparator.comparing(ClaimingPieceResult::getPieceId));
-        assertEquals("pieceId1", copiedSortedResults.getFirst().getPieceId());
-        assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.getFirst().getStatus());
-        assertEquals("pieceId2", copiedSortedResults.get(1).getPieceId());
-        assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.get(1).getStatus());
-        assertEquals("pieceId3", copiedSortedResults.get(2).getPieceId());
-        assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.get(2).getStatus());
-        assertEquals("pieceId4", copiedSortedResults.get(3).getPieceId());
-        assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.get(3).getStatus());
-        assertEquals("pieceId5", copiedSortedResults.get(4).getPieceId());
-        assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.get(4).getStatus());
+        assertEquals(3, result.getClaimingPieceResults().size());
+        assertEquals(Map.of("CLAIMS_vendorId_x", Set.of("pieceId1", "pieceId3"), "CLAIMS_vendorId_y", Set.of("pieceId2")), createdJobs(2));
+        verify(restClient, times(2)).getAsJsonObject(any(), any());
         testContext.completeNow();
       })));
+  }
+
+  @Test
+  void testSendClaims_oneConfigForTwoMethods_oneJobWithAllPieces(VertxTestContext testContext) {
+    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1", "pieceId2")).withClaimingInterval(1);
+    mockConfigsByAcquisitionMethod(Map.of("purchase", List.of("CLAIMS_vendorId_x"), "exchange", List.of("CLAIMS_vendorId_x")));
+    mockClaimFlow(Map.of("pieceId1", "purchase", "pieceId2", "exchange"));
+
+    piecesClaimingService.sendClaims(claimingCollection, requestContext)
+      .onComplete(testContext.succeeding(result -> testContext.verify(() -> {
+        assertEquals(2, result.getClaimingPieceResults().size());
+        assertEquals(Map.of("CLAIMS_vendorId_x", Set.of("pieceId1", "pieceId2")), createdJobs(1));
+        testContext.completeNow();
+      })));
+  }
+
+  @Test
+  void testSendClaims_twoConfigsForOnePiece_pieceInBothJobsUpdatedOnce(VertxTestContext testContext) {
+    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1")).withClaimingInterval(1);
+    mockConfigsByAcquisitionMethod(Map.of("purchase", List.of("CLAIMS_vendorId_x", "CLAIMS_vendorId_y")));
+    mockClaimFlow(Map.of("pieceId1", "purchase"));
+
+    piecesClaimingService.sendClaims(claimingCollection, requestContext)
+      .onComplete(testContext.succeeding(result -> testContext.verify(() -> {
+        assertEquals(1, result.getClaimingPieceResults().size());
+        assertEquals(Map.of("CLAIMS_vendorId_x", Set.of("pieceId1"), "CLAIMS_vendorId_y", Set.of("pieceId1")), createdJobs(2));
+        verify(pieceUpdateFlowManager).updatePiecesStatuses(eq(List.of("pieceId1")), any(), any(), any(), any(), any());
+        testContext.completeNow();
+      })));
+  }
+
+  @Test
+  void testSendClaims_twoConfigsWithSameName_oneJobPerConfigId(VertxTestContext testContext) {
+    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1")).withClaimingInterval(1);
+    var config1 = JsonObject.mapFrom(createIntegrationDetail("CLAIMS_vendorId")).put(CONFIG_ID.getValue(), "configId1");
+    var config2 = JsonObject.mapFrom(createIntegrationDetail("CLAIMS_vendorId")).put(CONFIG_ID.getValue(), "configId2");
+    when(restClient.getAsJsonObject(any(), any()))
+      .thenReturn(Future.succeededFuture(JsonObject.of(CONFIGS.getValue(), JsonArray.of(config1, config2))));
+    mockClaimFlow(Map.of("pieceId1", "purchase"));
+
+    piecesClaimingService.sendClaims(claimingCollection, requestContext)
+      .onComplete(testContext.succeeding(result -> testContext.verify(() -> {
+        var jobs = ArgumentCaptor.forClass(Object.class);
+        verify(restClient, times(2)).post(eq(resourcesPath(DATA_EXPORT_SPRING_CREATE_JOB)), jobs.capture(), any(), any());
+        // Before keying by config id, the second config overwrote the first and only one job was created
+        jobs.getAllValues().stream().map(JsonObject.class::cast).forEach(job -> assertEquals(List.of("pieceId1"),
+          job.getJsonObject(EXPORT_TYPE_SPECIFIC_PARAMETERS.getValue()).getJsonObject(VENDOR_EDI_ORDERS_EXPORT_CONFIG.getValue())
+            .getJsonArray(CLAIM_PIECE_IDS.getValue()).getList()));
+        testContext.completeNow();
+      })));
+  }
+
+  @Test
+  void testSendClaims_effectiveConfigsRequestFails_rejectedBeforeAnyWrite(VertxTestContext testContext) {
+    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1")).withClaimingInterval(1);
+    // e.g. a mod-data-export-spring version without GET /effective-configs
+    when(restClient.getAsJsonObject(any(), any())).thenReturn(Future.failedFuture(new HttpException(404, "Not found")));
+    mockClaimFlow(Map.of("pieceId1", "purchase"));
+
+    piecesClaimingService.sendClaims(claimingCollection, requestContext)
+      .onComplete(testContext.failing(throwable -> testContext.verify(() -> {
+        var httpException = Assertions.assertInstanceOf(HttpException.class, throwable);
+        assertEquals(404, httpException.getCode());
+        verifyNoClaimSent();
+        testContext.completeNow();
+      })));
+  }
+
+  @Test
+  void testSendClaims_samePoLineValues_oneConfigRequest(VertxTestContext testContext) {
+    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1", "pieceId2")).withClaimingInterval(1);
+    mockConfigsByAcquisitionMethod(Map.of("purchase", List.of("CLAIMS_vendorId_x")));
+    mockClaimFlow(Map.of("pieceId1", "purchase", "pieceId2", "purchase"));
+
+    piecesClaimingService.sendClaims(claimingCollection, requestContext)
+      .onComplete(testContext.succeeding(result -> testContext.verify(() -> {
+        var requests = ArgumentCaptor.forClass(RequestEntry.class);
+        verify(restClient).getAsJsonObject(requests.capture(), any());
+        assertEquals(resourcesPath(DATA_EXPORT_SPRING_EFFECTIVE_CONFIGS), requests.getValue().getBaseEndpoint());
+        assertEquals(Map.of("vendorId", "vendorId", "acquisitionMethod", "purchase", "type", "CLAIMS"), requests.getValue().getQueryParams());
+        testContext.completeNow();
+      })));
+  }
+
+  @Test
+  void testSendClaims_poLineWithoutAcquisitionMethod_parameterLeftOut(VertxTestContext testContext) {
+    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1")).withClaimingInterval(1);
+    mockExportConfigs("CLAIMS_vendorId");
+    mockClaimFlow(Map.of());
+
+    piecesClaimingService.sendClaims(claimingCollection, requestContext)
+      .onComplete(testContext.succeeding(result -> testContext.verify(() -> {
+        var requests = ArgumentCaptor.forClass(RequestEntry.class);
+        verify(restClient).getAsJsonObject(requests.capture(), any());
+        assertEquals(Map.of("vendorId", "vendorId", "type", "CLAIMS"), requests.getValue().getQueryParams());
+        assertEquals(Map.of("CLAIMS_vendorId", Set.of("pieceId1")), createdJobs(1));
+        testContext.completeNow();
+      })));
+  }
+
+  @Test
+  void testSendClaims_oneMethodWithoutConfig_rejectedBeforeAnyWrite(VertxTestContext testContext) {
+    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1", "pieceId2")).withClaimingInterval(1);
+    mockConfigsByAcquisitionMethod(Map.of("purchase", List.of("CLAIMS_vendorId_x")));
+    mockClaimFlow(Map.of("pieceId1", "purchase", "pieceId2", "exchange"));
+
+    piecesClaimingService.sendClaims(claimingCollection, requestContext)
+      .onComplete(testContext.failing(throwable -> testContext.verify(() -> {
+        var error = ((HttpException) throwable).getErrors().getErrors().getFirst();
+        assertEquals(UNABLE_TO_GENERATE_CLAIMS_FOR_ORG_NO_INTEGRATION_DETAILS.getCode(), error.getCode());
+        verifyNoClaimSent();
+        // One call per acquisition method, no other lookup
+        verify(restClient, times(2)).getAsJsonObject(any(), any());
+        testContext.completeNow();
+      })));
+  }
+
+  private void verifyNoClaimSent() {
+    verify(pieceUpdateFlowManager, never()).updatePiecesStatuses(any(), any(), any(), any(), any(), any());
+    verify(restClient, never()).post(eq(resourcesPath(DATA_EXPORT_SPRING_CREATE_JOB)), any(), any(), any());
+  }
+
+  /**
+   * One vendor "vendorId" with one PO line per piece, the PO line id being the piece id. Pieces missing in the map have
+   * a PO line without acquisition method; "pieceId1" is always returned.
+   */
+  private void mockClaimFlow(Map<String, String> acquisitionMethodByPieceId) {
+    var pieceIds = new TreeSet<>(acquisitionMethodByPieceId.keySet());
+    pieceIds.add("pieceId1");
+    var pieces = pieceIds.stream()
+      .map(pieceId -> new Piece().withId(pieceId).withPoLineId(pieceId).withReceivingStatus(Piece.ReceivingStatus.LATE))
+      .toList();
+    when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(pieces));
+    when(purchaseOrderLineService.getOrderLineById(any(), any())).thenAnswer(invocation -> Future.succeededFuture(
+      new PoLine().withPurchaseOrderId("orderId").withAcquisitionMethod(acquisitionMethodByPieceId.get(invocation.<String>getArgument(0)))));
+    when(purchaseOrderStorageService.getPurchaseOrderById(any(), any())).thenReturn(Future.succeededFuture(new PurchaseOrder().withVendor("vendorId")));
+    when(organizationService.getVendorById(any(), any())).thenReturn(Future.succeededFuture(new Organization().withId("vendorId").withCode("VENDOR").withIsVendor(true)));
+    when(pieceUpdateFlowManager.updatePiecesStatuses(any(), any(), any(), any(), any(), any())).thenReturn(Future.succeededFuture());
+    when(restClient.post(eq(resourcesPath(DATA_EXPORT_SPRING_CREATE_JOB)), any(), any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("status", "CREATED")));
+  }
+
+  private Map<String, Set<String>> createdJobs(int expectedJobs) {
+    var jobs = ArgumentCaptor.forClass(Object.class);
+    verify(restClient, times(expectedJobs)).post(eq(resourcesPath(DATA_EXPORT_SPRING_CREATE_JOB)), jobs.capture(), any(), any());
+    return jobs.getAllValues().stream().map(JsonObject.class::cast).collect(Collectors.toMap(
+      job -> job.getString(CONFIG_NAME.getValue()),
+      job -> job.getJsonObject(EXPORT_TYPE_SPECIFIC_PARAMETERS.getValue())
+        .getJsonObject(VENDOR_EDI_ORDERS_EXPORT_CONFIG.getValue())
+        .getJsonArray(CLAIM_PIECE_IDS.getValue()).stream().map(String::valueOf).collect(Collectors.toSet())));
+  }
+
+  /**
+   * Answers like mod-data-export-spring with the vendor-only Claims rule: /effective-configs returns the configs named
+   * CLAIMS_&lt;vendorId&gt; or CLAIMS_&lt;vendorId&gt;_*.
+   */
+  private void mockExportConfigs(String... configNames) {
+    when(restClient.getAsJsonObject(any(), any())).thenAnswer(invocation -> {
+      RequestEntry requestEntry = invocation.getArgument(0);
+      var configName = "CLAIMS_" + requestEntry.getQueryParams().get("vendorId");
+      return Future.succeededFuture(createExportConfigs(Arrays.stream(configNames)
+        .filter(name -> name.equals(configName) || name.startsWith(configName + "_"))
+        .toArray(String[]::new)));
+    });
+  }
+
+  private void mockConfigsByAcquisitionMethod(Map<String, List<String>> configNamesByMethod) {
+    when(restClient.getAsJsonObject(any(), any())).thenAnswer(invocation -> {
+      RequestEntry requestEntry = invocation.getArgument(0);
+      var configNames = configNamesByMethod.getOrDefault(requestEntry.getQueryParams().get("acquisitionMethod"), List.of());
+      return Future.succeededFuture(createExportConfigs(configNames.toArray(String[]::new)));
+    });
   }
 
   private JsonObject createExportConfigs(String... configNames) {
@@ -433,6 +628,7 @@ public class PiecesClaimingServiceTest {
       CONFIG_NAME.getValue(), configName);
     var exportTypeSpecificParameters = JsonObject.of(VENDOR_EDI_ORDERS_EXPORT_CONFIG.getValue(), vendorEditOrdersExportConfig);
     return JsonObject.of(
+      CONFIG_ID.getValue(), "id-" + configName,
       TENANT.getValue(), "folio_shared",
       CONFIG_NAME.getValue(), configName,
       EXPORT_TYPE_SPECIFIC_PARAMETERS.getValue(), exportTypeSpecificParameters);

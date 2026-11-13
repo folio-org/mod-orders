@@ -1307,7 +1307,7 @@
             "orders-storage.purchase-orders.item.get",
             "orders-storage.titles.item.get",
             "organizations-storage.organizations.item.get",
-            "data-export.config.collection.get",
+            "data-export.effective-configs.collection.get",
             "data-export.job.item.post",
             "data-export.job.send.item.execute"
           ]
@@ -1571,7 +1571,7 @@
     },
     {
       "id": "data-export-spring",
-      "version": "2.0"
+      "version": "2.1"
     },
     {
       "id": "source-manager-job-executions",

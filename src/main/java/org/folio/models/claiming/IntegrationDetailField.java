@@ -7,6 +7,7 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum IntegrationDetailField {
   JOB_ID("id"),
+  CONFIG_ID("id"),
   TENANT("tenant"),
   CONFIGS("configs"),
   CONFIG_NAME("configName"),

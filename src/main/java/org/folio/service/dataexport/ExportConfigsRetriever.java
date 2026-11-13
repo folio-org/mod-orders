@@ -9,7 +9,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 
 import static org.folio.models.claiming.IntegrationDetailField.CONFIGS;
-import static org.folio.models.claiming.IntegrationDetailField.CONFIG_NAME;
+import static org.folio.models.claiming.IntegrationDetailField.CONFIG_ID;
 
 @Log4j2
 @RequiredArgsConstructor
@@ -24,7 +24,7 @@ public class ExportConfigsRetriever {
         var configs = exportConfigs.getJsonArray(CONFIGS.getValue());
         for (int i = 0; i < configs.size(); i++) {
           var exportConfig = configs.getJsonObject(i);
-          result.put(exportConfig.getString(CONFIG_NAME.getValue()), exportConfig);
+          result.put(exportConfig.getString(CONFIG_ID.getValue()), exportConfig);
         }
         return result;
       });
