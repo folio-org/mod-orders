@@ -106,6 +106,48 @@
         "essential": false
       },
       {
+        "name": "DB_MAXSHAREDPOOLSIZE",
+        "value": null,
+        "description": "When set, all tenants share one pool of this size instead of per-tenant pools of DB_MAXPOOLSIZE",
+        "type": "DB",
+        "essential": false
+      },
+      {
+        "name": "DB_CONNECTIONRELEASEDELAY",
+        "value": "60000",
+        "description": "Idle time in milliseconds before a pooled connection is closed (RMB default)",
+        "type": "DB",
+        "essential": false
+      },
+      {
+        "name": "DB_MAX_LIFETIME",
+        "value": "1800000",
+        "description": "Maximum lifetime of a pooled connection in milliseconds (RMB default)",
+        "type": "DB",
+        "essential": false
+      },
+      {
+        "name": "DB_RECONNECTATTEMPTS",
+        "value": "0",
+        "description": "Number of reconnect attempts when a database connection cannot be established (Vert.x default 0)",
+        "type": "DB",
+        "essential": false
+      },
+      {
+        "name": "DB_RECONNECTINTERVAL",
+        "value": "1000",
+        "description": "Interval in milliseconds between database reconnect attempts (Vert.x default)",
+        "type": "DB",
+        "essential": false
+      },
+      {
+        "name": "DB_SERVER_PEM",
+        "value": null,
+        "description": "PEM certificate of the PostgreSQL server; when set, connections use TLSv1.3 with full verification",
+        "type": "DB",
+        "essential": false
+      },
+      {
         "name": "DB_EXPLAIN_QUERY_THRESHOLD",
         "value": "300000",
         "description": "Threshold in milliseconds above which query execution plans are logged for slow-query analysis",
