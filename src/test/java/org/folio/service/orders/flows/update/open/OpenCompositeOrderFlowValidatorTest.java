@@ -46,6 +46,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(VertxExtension.class)
 public class OpenCompositeOrderFlowValidatorTest {
@@ -909,6 +911,64 @@ public class OpenCompositeOrderFlowValidatorTest {
     vertxTestContext.assertComplete(future)
       .onComplete(result -> {
         assertTrue(result.succeeded());
+        vertxTestContext.completeNow();
+      });
+  }
+
+    @Test
+  public void testCheckLocationsAndPiecesConsistencyShouldFilterLinesByIdAndSynchronizedWorkflow(VertxTestContext vertxTestContext) {
+    // TestMate-034f2c12526f0df4294caaad11da4dc8
+    // Given
+    String validId = "valid-synchronized-id";
+    String manualCheckinId = "manual-checkin-id";
+    
+    PoLine validLine = new PoLine()
+      .withId(validId)
+      .withCheckinItems(false);
+    
+    PoLine manualCheckinLine = new PoLine()
+      .withId(manualCheckinId)
+      .withCheckinItems(true);
+    
+    PoLine unsavedLine = new PoLine()
+      .withId(null)
+      .withCheckinItems(false);
+    List<PoLine> poLines = List.of(validLine, manualCheckinLine, unsavedLine);
+    List<String> expectedLineIds = List.of(validId);
+    when(pieceStorageService.getPiecesByLineIdsByChunks(eq(expectedLineIds), any()))
+      .thenReturn(Future.succeededFuture(Collections.emptyList()));
+    // When
+    Future<Void> future = openCompositeOrderFlowValidator.checkLocationsAndPiecesConsistency(poLines, requestContext);
+    // Then
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        verify(pieceStorageService).getPiecesByLineIdsByChunks(eq(expectedLineIds), eq(requestContext));
+        vertxTestContext.completeNow();
+      });
+  }
+
+    @Test
+  public void testCheckLocationsAndPiecesConsistencyWhenStorageServiceFailsShouldPropagateError(VertxTestContext vertxTestContext) {
+    // TestMate-f444cbc2e3dc99a704a270e902ee14db
+    // Given
+    String poLineId = "test-po-line-id";
+    PoLine poLine = new PoLine()
+      .withId(poLineId)
+      .withCheckinItems(false);
+    List<PoLine> poLines = List.of(poLine);
+    List<String> lineIds = List.of(poLineId);
+    HttpException expectedException = new HttpException(500, "Internal Server Error");
+    when(pieceStorageService.getPiecesByLineIdsByChunks(eq(lineIds), any()))
+      .thenReturn(Future.failedFuture(expectedException));
+    // When
+    Future<Void> future = openCompositeOrderFlowValidator.checkLocationsAndPiecesConsistency(poLines, requestContext);
+    // Then
+    vertxTestContext.assertFailure(future)
+      .onComplete(result -> {
+        assertTrue(result.failed());
+        Throwable cause = result.cause();
+        assertEquals(expectedException, cause);
         vertxTestContext.completeNow();
       });
   }
