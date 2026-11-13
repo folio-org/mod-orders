@@ -551,4 +551,237 @@ public class BudgetRestrictionServiceTest {
     assertDoesNotThrow(() -> restrictionService.checkEncumbranceRestrictions(holders));
   }
 
+    @Test
+  void testCheckEncumbranceRestrictionsWhenDeltaIsZeroShouldPass() {
+    // TestMate-c390151919dbb6577ffafb9cfb618e57
+    // Given
+    String fiscalYearId = UUID.fromString("6976696b-439d-4737-9208-a92705299092").toString();
+    String fundId = UUID.fromString("1607590d-2771-419b-a63e-63796f6e5653").toString();
+    String budgetId = UUID.fromString("06f89033-0669-42f8-953b-f458e0a39591").toString();
+    String fundCode = "ZERO-DELTA-FUND";
+    String currency = "USD";
+    Budget budget = new Budget()
+      .withId(budgetId)
+      .withFundId(fundId)
+      .withFiscalYearId(fiscalYearId)
+      .withTotalFunding(100.0)
+      .withUnavailable(100.0)
+      .withAllowableEncumbrance(100.0);
+    Transaction oldTransaction = new Transaction()
+      .withTransactionType(Transaction.TransactionType.ENCUMBRANCE)
+      .withAmount(50.0)
+      .withCurrency(currency)
+      .withFromFundId(fundId);
+    Transaction newTransaction = new Transaction()
+      .withTransactionType(Transaction.TransactionType.ENCUMBRANCE)
+      .withAmount(50.0)
+      .withCurrency(currency)
+      .withFromFundId(fundId);
+    FundDistribution fundDistribution = new FundDistribution()
+      .withFundId(fundId)
+      .withCode(fundCode);
+    EncumbranceRelationsHolder holder = new EncumbranceRelationsHolder()
+      .withOldEncumbrance(oldTransaction)
+      .withNewEncumbrance(newTransaction)
+      .withBudget(budget)
+      .withFundDistribution(fundDistribution)
+      .withRestrictEncumbrances(true)
+      .withCurrentFiscalYearId(fiscalYearId)
+      .withCurrency(currency);
+    List<EncumbranceRelationsHolder> holders = List.of(holder);
+    // When / Then
+    assertDoesNotThrow(() -> restrictionService.checkEncumbranceRestrictions(holders));
+  }
+
+    @Test
+  void testCheckEncumbranceRestrictionsWhenAllowableEncumbranceIsZeroShouldBlockAnyIncrease() {
+    // TestMate-ead15877a0555b67cdab9c2b67abfe26
+    // Given
+    String fiscalYearId = UUID.fromString("50917631-1555-46f0-9289-e9324b745426").toString();
+    String fundId = UUID.fromString("4351333c-3363-4886-90e8-07f79435f37d").toString();
+    String budgetId = UUID.fromString("67980556-340d-4050-985b-24905327244f").toString();
+    String fundCode = "LOCKED-FUND";
+    String currency = "USD";
+    Budget budget = new Budget()
+      .withId(budgetId)
+      .withFundId(fundId)
+      .withFiscalYearId(fiscalYearId)
+      .withTotalFunding(100.0)
+      .withUnavailable(0.0)
+      .withAllowableEncumbrance(0.0);
+    FundDistribution fundDistribution = new FundDistribution()
+      .withFundId(fundId)
+      .withCode(fundCode);
+    Transaction newTransaction = new Transaction()
+      .withTransactionType(Transaction.TransactionType.ENCUMBRANCE)
+      .withAmount(10.0)
+      .withCurrency(currency)
+      .withFromFundId(fundId);
+    EncumbranceRelationsHolder holder = new EncumbranceRelationsHolder()
+      .withOldEncumbrance(null)
+      .withNewEncumbrance(newTransaction)
+      .withBudget(budget)
+      .withFundDistribution(fundDistribution)
+      .withRestrictEncumbrances(true)
+      .withCurrentFiscalYearId(fiscalYearId)
+      .withCurrency(currency);
+    List<EncumbranceRelationsHolder> holders = List.of(holder);
+    // When
+    HttpException httpException = assertThrows(HttpException.class,
+      () -> restrictionService.checkEncumbranceRestrictions(holders));
+    // Then
+    assertEquals(422, httpException.getCode());
+    Error error = httpException.getError();
+    assertEquals(FUND_CANNOT_BE_PAID.getCode(), error.getCode());
+    assertEquals(FUNDS, error.getParameters().get(0).getKey());
+    assertEquals(Collections.singletonList(fundCode).toString(), error.getParameters().get(0).getValue());
+  }
+
+    @Test
+void testCheckEncumbranceRestrictionsWhenFundDistributionHasDuplicateIdsShouldUseFirstCode() {
+  // TestMate-efc2794d300492d7407d802fa4a32123
+  // Given
+  String fiscalYearId = UUID.fromString("6976696b-439d-4737-9208-a92705299092").toString();
+  String fundId = UUID.fromString("1607590d-2771-419b-a63e-63796f6e5653").toString();
+  String budgetId = UUID.fromString("06f89033-0669-42f8-953b-f458e0a39591").toString();
+  String fundCodeA = "CODE-A";
+  String fundCodeB = "CODE-B";
+  String currency = "USD";
+  Budget budget = new Budget()
+    .withId(budgetId)
+    .withFundId(fundId)
+    .withFiscalYearId(fiscalYearId)
+    .withTotalFunding(100.0)
+    .withUnavailable(100.0)
+    .withAllowableEncumbrance(100.0);
+  Transaction newTransaction = new Transaction()
+    .withTransactionType(Transaction.TransactionType.ENCUMBRANCE)
+    .withAmount(10.0)
+    .withCurrency(currency)
+    .withFromFundId(fundId);
+  FundDistribution fundDistribution1 = new FundDistribution()
+    .withFundId(fundId)
+    .withCode(fundCodeA);
+  FundDistribution fundDistribution2 = new FundDistribution()
+    .withFundId(fundId)
+    .withCode(fundCodeB);
+  EncumbranceRelationsHolder holder1 = new EncumbranceRelationsHolder()
+    .withNewEncumbrance(newTransaction)
+    .withOldEncumbrance(null)
+    .withBudget(budget)
+    .withFundDistribution(fundDistribution1)
+    .withRestrictEncumbrances(true)
+    .withCurrentFiscalYearId(fiscalYearId)
+    .withCurrency(currency);
+  EncumbranceRelationsHolder holder2 = new EncumbranceRelationsHolder()
+    .withNewEncumbrance(newTransaction)
+    .withOldEncumbrance(null)
+    .withBudget(budget)
+    .withFundDistribution(fundDistribution2)
+    .withRestrictEncumbrances(true)
+    .withCurrentFiscalYearId(fiscalYearId)
+    .withCurrency(currency);
+  List<EncumbranceRelationsHolder> holders = List.of(holder1, holder2);
+  // When
+  HttpException httpException = assertThrows(HttpException.class, () -> restrictionService.checkEncumbranceRestrictions(holders));
+  // Then
+  assertEquals(422, httpException.getCode());
+  Error error = httpException.getError();
+  assertEquals(FUND_CANNOT_BE_PAID.getCode(), error.getCode());
+  assertEquals(FUNDS, error.getParameters().get(0).getKey());
+  assertEquals(Collections.singletonList(fundCodeA).toString(), error.getParameters().get(0).getValue());
+}
+
+    @Test
+  void testCheckEncumbranceRestrictionsWhenBudgetUnavailableExceedsAllowableLimitShouldBlockIncrease() {
+    // TestMate-dae3a5b7ff1319bd7974fcbb13114829
+    // Given
+    String fiscalYearId = UUID.fromString("6976696b-439d-4737-9208-a92705299092").toString();
+    String fundId = UUID.fromString("1607590d-2771-419b-a63e-63796f6e5653").toString();
+    String budgetId = UUID.fromString("06f89033-0669-42f8-953b-f458e0a39591").toString();
+    String fundCode = "OVER-LIMIT-FUND";
+    String currency = "USD";
+    Budget budget = new Budget()
+      .withId(budgetId)
+      .withFundId(fundId)
+      .withFiscalYearId(fiscalYearId)
+      .withTotalFunding(100.0)
+      .withUnavailable(110.0)
+      .withAllowableEncumbrance(100.0);
+    FundDistribution fundDistribution = new FundDistribution()
+      .withFundId(fundId)
+      .withCode(fundCode);
+    Transaction newTransaction = new Transaction()
+      .withTransactionType(Transaction.TransactionType.ENCUMBRANCE)
+      .withAmount(5.0)
+      .withCurrency(currency)
+      .withFromFundId(fundId);
+    EncumbranceRelationsHolder holder = new EncumbranceRelationsHolder()
+      .withOldEncumbrance(null)
+      .withNewEncumbrance(newTransaction)
+      .withBudget(budget)
+      .withFundDistribution(fundDistribution)
+      .withRestrictEncumbrances(true)
+      .withCurrentFiscalYearId(fiscalYearId)
+      .withCurrency(currency);
+    List<EncumbranceRelationsHolder> holders = List.of(holder);
+    // When
+    HttpException httpException = assertThrows(HttpException.class,
+      () -> restrictionService.checkEncumbranceRestrictions(holders));
+    // Then
+    assertEquals(422, httpException.getCode());
+    Error error = httpException.getError();
+    assertEquals(FUND_CANNOT_BE_PAID.getCode(), error.getCode());
+    assertEquals(FUNDS, error.getParameters().get(0).getKey());
+    assertEquals(Collections.singletonList(fundCode).toString(), error.getParameters().get(0).getValue());
+  }
+
+    @Test
+  void testCheckEncumbranceRestrictionsWhenMultipleHoldersMixedRestrictFlagShouldOnlyCountRestricted() {
+    // TestMate-f50e937bc08070ede4208103fe91acb5
+    // Given
+    String fiscalYearId = UUID.fromString("6976696b-439d-4737-9208-a92705299092").toString();
+    String fundId = UUID.fromString("1607590d-2771-419b-a63e-63796f6e5653").toString();
+    String budgetId = UUID.fromString("06f89033-0669-42f8-953b-f458e0a39591").toString();
+    String fundCode = "MIXED-RESTRICT-FUND";
+    String currency = "USD";
+    Budget budget = new Budget()
+      .withId(budgetId)
+      .withFundId(fundId)
+      .withFiscalYearId(fiscalYearId)
+      .withTotalFunding(100.0)
+      .withUnavailable(90.0)
+      .withAllowableEncumbrance(100.0);
+    FundDistribution fundDistribution = new FundDistribution()
+      .withFundId(fundId)
+      .withCode(fundCode);
+    Transaction newEncumbrance1 = new Transaction()
+      .withAmount(5.0)
+      .withCurrency(currency)
+      .withFromFundId(fundId);
+    EncumbranceRelationsHolder holder1 = new EncumbranceRelationsHolder()
+      .withNewEncumbrance(newEncumbrance1)
+      .withOldEncumbrance(null)
+      .withBudget(budget)
+      .withFundDistribution(fundDistribution)
+      .withRestrictEncumbrances(true)
+      .withCurrentFiscalYearId(fiscalYearId)
+      .withCurrency(currency);
+    Transaction newEncumbrance2 = new Transaction()
+      .withAmount(15.0)
+      .withCurrency(currency)
+      .withFromFundId(fundId);
+    EncumbranceRelationsHolder holder2 = new EncumbranceRelationsHolder()
+      .withNewEncumbrance(newEncumbrance2)
+      .withOldEncumbrance(null)
+      .withBudget(budget)
+      .withFundDistribution(fundDistribution)
+      .withRestrictEncumbrances(false)
+      .withCurrentFiscalYearId(fiscalYearId)
+      .withCurrency(currency);
+    List<EncumbranceRelationsHolder> holders = List.of(holder1, holder2);
+    // When / Then
+    assertDoesNotThrow(() -> restrictionService.checkEncumbranceRestrictions(holders));
+  }
+
 }
