@@ -85,6 +85,20 @@
         "essential": true
       },
       {
+        "name": "DB_HOST_READER",
+        "value": null,
+        "description": "Optional synchronously replicated read instance host; reads go to DB_HOST when unset",
+        "type": "DB",
+        "essential": false
+      },
+      {
+        "name": "DB_PORT_READER",
+        "value": null,
+        "description": "Port of the read instance; reads go to DB_HOST when unset",
+        "type": "DB",
+        "essential": false
+      },
+      {
         "name": "DB_MAXPOOLSIZE",
         "value": "20",
         "description": "Maximum PostgreSQL connection pool size for mod-orders",
