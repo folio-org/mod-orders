@@ -152,7 +152,7 @@ public class PieceUpdateFlowManager {
       .onFailure(t -> log.error("Failed to update PO line with id: '{}' for pieceIds: {}", poLineToSave.getId(), pieceIds, t));
   }
 
-  private Future<Void> isOperationRestricted(List<String> pieceIds, RequestContext requestContext) {
+  public Future<Void> isOperationRestricted(List<String> pieceIds, RequestContext requestContext) {
     return titlesService.getTitlesByPieceIds(pieceIds, requestContext)
       .map(titles -> titles.stream()
         .map(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext))
