@@ -190,7 +190,7 @@ public class OpenCompositeOrderPieceService {
       .compose(vVoid -> pieceStorageService.getPieceById(piece.getId(), requestContext))
       .compose(pieceStorage -> inventoryItemManager.updateItemWithPieceFields(pieceStorage, piece, requestContext)
         .compose(aVoid -> {
-          var isReceivingStatusChanged = updatePieceStatus(piece, pieceStorage.getReceivingStatus(), piece.getReceivingStatus());
+          var isReceivingStatusChanged = updatePieceStatus(piece, pieceStorage);
           return pieceStorageService.updatePiece(piece, requestContext)
             .compose(v -> {
               logger.debug("updatePiece:: Status updated from: {} to {}", pieceStorage.getReceivingStatus(), piece.getReceivingStatus());
