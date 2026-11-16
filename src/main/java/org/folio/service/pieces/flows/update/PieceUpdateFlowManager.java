@@ -88,7 +88,7 @@ public class PieceUpdateFlowManager {
       .compose(v -> updatePoLineService.updatePoLineCostAndProcessEncumbrances(holder, requestContext))
       .compose(v -> pieceUpdateFlowInventoryManager.processInventory(holder, requestContext))
       .compose(v -> updatePoLineService.updateLocationsAndSavePoLine(holder, requestContext))
-      .map(v -> updatePieceStatus(holder.getPieceToUpdate(), holder.getPieceFromStorage().getReceivingStatus(), holder.getPieceToUpdate().getReceivingStatus()))
+      .map(v -> updatePieceStatus(holder.getPieceToUpdate(), holder.getPieceFromStorage()))
       .compose(verifyReceiptStatus -> pieceStorageService.updatePiece(holder.getPieceToUpdate(), requestContext).map(verifyReceiptStatus))
       .compose(verifyReceiptStatus -> asFuture(() -> {
         if (Boolean.TRUE.equals(verifyReceiptStatus)) {
