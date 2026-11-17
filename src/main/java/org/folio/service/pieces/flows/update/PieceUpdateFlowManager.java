@@ -1,5 +1,6 @@
 package org.folio.service.pieces.flows.update;
 
+import org.apache.commons.lang3.ObjectUtils;
 import static org.folio.orders.utils.FutureUtils.asFuture;
 import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
 import static org.folio.service.orders.utils.StatusUtils.calculatePoLineReceiptStatus;
@@ -87,7 +88,7 @@ public class PieceUpdateFlowManager {
       .compose(v -> updatePoLineService.updatePoLineCostAndProcessEncumbrances(holder, requestContext))
       .compose(v -> pieceUpdateFlowInventoryManager.processInventory(holder, requestContext))
       .compose(v -> updatePoLineService.updateLocationsAndSavePoLine(holder, requestContext))
-      .map(v -> updatePieceStatus(holder.getPieceToUpdate(), holder.getPieceFromStorage().getReceivingStatus(), holder.getPieceToUpdate().getReceivingStatus()))
+      .map(v -> updatePieceStatus(holder.getPieceToUpdate(), holder.getPieceFromStorage()))
       .compose(verifyReceiptStatus -> pieceStorageService.updatePiece(holder.getPieceToUpdate(), requestContext).map(verifyReceiptStatus))
       .compose(verifyReceiptStatus -> asFuture(() -> {
         if (Boolean.TRUE.equals(verifyReceiptStatus)) {
@@ -151,12 +152,12 @@ public class PieceUpdateFlowManager {
       .onFailure(t -> log.error("Failed to update PO line with id: '{}' for pieceIds: {}", poLineToSave.getId(), pieceIds, t));
   }
 
-  private Future<Void> isOperationRestricted(List<String> pieceIds, RequestContext requestContext) {
+  public Future<Void> isOperationRestricted(List<String> pieceIds, RequestContext requestContext) {
     return titlesService.getTitlesByPieceIds(pieceIds, requestContext)
       .map(titles -> titles.stream()
         .map(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext))
         .toList())
-      .map(Future::all)
+      .compose(Future::all)
       .mapEmpty();
   }
 
@@ -171,14 +172,17 @@ public class PieceUpdateFlowManager {
   }
 
   private Future<Void> updatePiecesStatusesByPoLine(PieceBatchStatusUpdateHolder holder, RequestContext requestContext) {
-    var isAnyPiecesUpdated = holder.getPieces().stream()
+    boolean isAnyPieceStatusChanged = holder.getPieces().stream()
       .map(piece -> updatePieceStatus(piece, holder))
       .reduce(Boolean.FALSE, Boolean::logicalOr); // Don't replace .map() with .anyMatch(), as it needs to iterate over all elements
-    if (!Boolean.TRUE.equals(isAnyPiecesUpdated)) {
-      return Future.succeededFuture();
+    if (isAnyPieceStatusChanged) {
+      return pieceStorageService.updatePiecesBatch(holder.getPieceCollection(), requestContext)
+        .compose(v -> asFuture(() -> pieceService.receiptConsistencyPiecePoLine(holder.getOrderLineId(), requestContext)));
     }
-    return pieceStorageService.updatePiecesBatch(holder.getPieceCollection(), requestContext)
-      .compose(v -> asFuture(() -> pieceService.receiptConsistencyPiecePoLine(holder.getOrderLineId(), requestContext)));
+    if (ObjectUtils.anyNotNull(holder.getClaimingInterval(), holder.getInternalNote(), holder.getExternalNote())) {
+      return pieceStorageService.updatePiecesBatch(holder.getPieceCollection(), requestContext);
+    }
+    return Future.succeededFuture();
   }
 
   private List<Location> getPieceLocations(List<Piece> pieces, PoLine poLine) {

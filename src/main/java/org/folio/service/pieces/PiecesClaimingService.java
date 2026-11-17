@@ -107,7 +107,9 @@ public class PiecesClaimingService {
               log.info("sendClaims:: Unable to generate claims because no claim integrations exist - No claims are sent");
               throwHttpExceptionOnMissingVendorIntegrationDetails(claimingCollection, vendorWithoutIntegrationDetails);
             }
-            return createJobsByVendor(claimingCollection, config, pieceIdsByVendors, requestContext);
+            var latePieceIds = pieceIdsByVendors.values().stream().flatMap(List::stream).toList();
+            return pieceUpdateFlowManager.isOperationRestricted(latePieceIds, requestContext)
+              .compose(v -> createJobsByVendor(claimingCollection, config, pieceIdsByVendors, requestContext));
           });
       })
       .onFailure(t -> log.error("sendClaims:: Failed send claims: {}", JsonObject.mapFrom(claimingCollection).encodePrettily(), t));

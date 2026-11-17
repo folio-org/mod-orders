@@ -21,10 +21,11 @@ public class PieceUtilTest {
 
   @Test
   void testUpdatePieceStatusWithOldAndNewStatus() {
-    Piece piece = new Piece().withReceivingStatus(Piece.ReceivingStatus.EXPECTED);
+    Piece pieceFromStorage = new Piece().withReceivingStatus(Piece.ReceivingStatus.EXPECTED);
     Piece.ReceivingStatus newStatus = Piece.ReceivingStatus.RECEIVED;
+    Piece piece = new Piece().withReceivingStatus(newStatus);
 
-    boolean statusChanged = PieceUtil.updatePieceStatus(piece, piece.getReceivingStatus(), newStatus);
+    boolean statusChanged = PieceUtil.updatePieceStatus(piece, pieceFromStorage);
 
     assertTrue(statusChanged);
     assertSame(newStatus, piece.getReceivingStatus());
@@ -33,13 +34,48 @@ public class PieceUtilTest {
 
   @Test
   void testUpdatePieceStatusWithSameOldAndNewStatus() {
-    Piece piece = new Piece().withReceivingStatus(Piece.ReceivingStatus.EXPECTED);
+    Piece pieceFromStorage = new Piece().withReceivingStatus(Piece.ReceivingStatus.EXPECTED);
     Piece.ReceivingStatus newStatus = Piece.ReceivingStatus.EXPECTED;
+    Piece piece = new Piece().withReceivingStatus(newStatus);
 
-    boolean statusChanged = PieceUtil.updatePieceStatus(piece, piece.getReceivingStatus(), newStatus);
+    boolean statusChanged = PieceUtil.updatePieceStatus(piece, pieceFromStorage);
 
     assertFalse(statusChanged);
     assertSame(newStatus, piece.getReceivingStatus());
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = Piece.ReceivingStatus.class, names = {"CLAIM_DELAYED", "CLAIM_SENT"})
+  void testUpdatePieceStatusFromStorageWithReappliedClaimingInterval(Piece.ReceivingStatus status) {
+    Date oldDate = new Date(0);
+    Piece pieceFromStorage = new Piece().withReceivingStatus(status).withClaimingInterval(1).withStatusUpdatedDate(oldDate);
+    Piece pieceToUpdate = new Piece().withReceivingStatus(status).withClaimingInterval(7).withStatusUpdatedDate(oldDate);
+
+    boolean statusChanged = PieceUtil.updatePieceStatus(pieceToUpdate, pieceFromStorage);
+
+    assertFalse(statusChanged);
+    assertTrue(pieceToUpdate.getStatusUpdatedDate().after(oldDate));
+  }
+
+  @Test
+  void testUpdatePieceStatusFromStorageWithSameClaimingInterval() {
+    Date oldDate = new Date(0);
+    Piece pieceFromStorage = new Piece().withReceivingStatus(Piece.ReceivingStatus.CLAIM_DELAYED).withClaimingInterval(7).withStatusUpdatedDate(oldDate);
+    Piece pieceToUpdate = new Piece().withReceivingStatus(Piece.ReceivingStatus.CLAIM_DELAYED).withClaimingInterval(7).withStatusUpdatedDate(oldDate);
+
+    boolean statusChanged = PieceUtil.updatePieceStatus(pieceToUpdate, pieceFromStorage);
+
+    assertFalse(statusChanged);
+    assertEquals(oldDate, pieceToUpdate.getStatusUpdatedDate());
+  }
+
+  @Test
+  void testUpdatePieceStatusFromStorageWithChangedStatus() {
+    Piece pieceFromStorage = new Piece().withReceivingStatus(Piece.ReceivingStatus.LATE);
+    Piece pieceToUpdate = new Piece().withReceivingStatus(Piece.ReceivingStatus.CLAIM_DELAYED).withClaimingInterval(3);
+
+    assertTrue(PieceUtil.updatePieceStatus(pieceToUpdate, pieceFromStorage));
+    assertNotNull(pieceToUpdate.getStatusUpdatedDate());
   }
 
   @Test
@@ -71,6 +107,51 @@ public class PieceUtilTest {
     assertSame(piece.getClaimingInterval(), holder.getClaimingInterval());
     assertEquals(piece.getInternalNote(), holder.getInternalNote());
     assertEquals(piece.getExternalNote(), holder.getExternalNote());
+  }
+
+  @Test
+  void testUpdatePieceStatusWithHolderKeepsExistingValuesWhenNotProvided() {
+    Piece piece = new Piece().withReceivingStatus(Piece.ReceivingStatus.LATE)
+      .withClaimingInterval(5).withInternalNote("internal").withExternalNote("external");
+    PieceBatchStatusUpdateHolder holder = new PieceBatchStatusUpdateHolder(Piece.ReceivingStatus.UNRECEIVABLE,
+      null, null, null, List.of(piece), UUID.randomUUID().toString());
+
+    boolean statusChanged = PieceUtil.updatePieceStatus(piece, holder);
+
+    assertTrue(statusChanged);
+    assertEquals(Piece.ReceivingStatus.UNRECEIVABLE, piece.getReceivingStatus());
+    assertEquals(5, piece.getClaimingInterval());
+    assertEquals("internal", piece.getInternalNote());
+    assertEquals("external", piece.getExternalNote());
+  }
+
+  @Test
+  void testUpdatePieceStatusWithHolderResetsStatusUpdatedDateWhenClaimIsDelayedAgain() {
+    Date previousStatusUpdatedDate = new Date(0);
+    Piece piece = new Piece().withReceivingStatus(Piece.ReceivingStatus.CLAIM_DELAYED)
+      .withClaimingInterval(1).withStatusUpdatedDate(previousStatusUpdatedDate);
+    PieceBatchStatusUpdateHolder holder = new PieceBatchStatusUpdateHolder(Piece.ReceivingStatus.CLAIM_DELAYED,
+      21, null, null, List.of(piece), UUID.randomUUID().toString());
+
+    boolean statusChanged = PieceUtil.updatePieceStatus(piece, holder);
+
+    assertFalse(statusChanged);
+    assertEquals(21, piece.getClaimingInterval());
+    assertTrue(piece.getStatusUpdatedDate().after(previousStatusUpdatedDate));
+  }
+
+  @Test
+  void testUpdatePieceStatusWithHolderKeepsStatusUpdatedDateWhenNothingChanged() {
+    Date previousStatusUpdatedDate = new Date(0);
+    Piece piece = new Piece().withReceivingStatus(Piece.ReceivingStatus.CLAIM_DELAYED)
+      .withClaimingInterval(1).withStatusUpdatedDate(previousStatusUpdatedDate);
+    PieceBatchStatusUpdateHolder holder = new PieceBatchStatusUpdateHolder(Piece.ReceivingStatus.CLAIM_DELAYED,
+      null, "internal", null, List.of(piece), UUID.randomUUID().toString());
+
+    boolean statusChanged = PieceUtil.updatePieceStatus(piece, holder);
+
+    assertFalse(statusChanged);
+    assertEquals(previousStatusUpdatedDate, piece.getStatusUpdatedDate());
   }
 
   @ParameterizedTest
