@@ -1,3 +1,16 @@
+## 13.1.7 - Released (Trillium R1 2026 Bug Fix)
+This release focused on fixing piece updates made from the "Claiming" app and adding DeployConfig.json.
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v13.1.6...v13.1.7)
+
+### Bug Fixes
+* [MODORDERS-1492](https://folio-org.atlassian.net/browse/MODORDERS-1492) - Piece internal and external notes are cleared after performing any action in "Claiming" app
+* [MODORDERS-1494](https://folio-org.atlassian.net/browse/MODORDERS-1494) - New "Delay to" date is not saved when "Delay claim" is applied to a piece already in "Claim delayed" status in "Claiming" app
+* [MODORDERS-1495](https://folio-org.atlassian.net/browse/MODORDERS-1495) - Enforce acquisition unit restrictions for piece status changes made from the "Claiming" app
+
+### Technical tasks
+* [MODORDERS-1478](https://folio-org.atlassian.net/browse/MODORDERS-1478) - Add DeployConfig.json to mod-orders (ADR-0013 Configuration Management)
+
 ## 13.1.6 - Released (Trillium R1 2026 Bug Fix)
 
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v13.1.5...v13.1.6)
