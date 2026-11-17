@@ -91,24 +91,33 @@ public class PieceUtil {
       || (Objects.nonNull(piece.getHoldingId()) && piece.getHoldingId().equals(loc.getHoldingId()));
   }
 
-  public static boolean updatePieceStatus(Piece piece, Piece.ReceivingStatus oldStatus, Piece.ReceivingStatus newStatus) {
-    var isStatusChanged = !oldStatus.equals(newStatus);
-    if (isStatusChanged) {
-      piece.setStatusUpdatedDate(new Date());
-    }
-    piece.setReceivingStatus(newStatus);
-    return isStatusChanged;
+  public static boolean updatePieceStatus(Piece pieceToUpdate, Piece pieceFromStorage) {
+    var isClaimingIntervalChanged = pieceToUpdate.getClaimingInterval() != null
+      && !Objects.equals(pieceToUpdate.getClaimingInterval(), pieceFromStorage.getClaimingInterval());
+    return updatePieceStatus(pieceToUpdate, pieceFromStorage.getReceivingStatus(), pieceToUpdate.getReceivingStatus(), isClaimingIntervalChanged);
   }
 
   public static boolean updatePieceStatus(Piece piece, PieceBatchStatusUpdateHolder holder) {
-    var isStatusChanged = !piece.getReceivingStatus().equals(holder.getReceivingStatus());
-    if (isStatusChanged) {
+    var isStatusChanged = updatePieceStatus(piece, piece.getReceivingStatus(), holder.getReceivingStatus(), holder.getClaimingInterval() != null);
+    if (holder.getClaimingInterval() != null) {
+      piece.setClaimingInterval(holder.getClaimingInterval());
+    }
+    if (holder.getInternalNote() != null) {
+      piece.setInternalNote(holder.getInternalNote());
+    }
+    if (holder.getExternalNote() != null) {
+      piece.setExternalNote(holder.getExternalNote());
+    }
+    return isStatusChanged;
+  }
+
+  private static boolean updatePieceStatus(Piece piece, Piece.ReceivingStatus oldStatus, Piece.ReceivingStatus newStatus,
+                                           boolean isClaimingIntervalApplied) {
+    var isStatusChanged = !oldStatus.equals(newStatus);
+    if (isStatusChanged || isClaimingIntervalApplied) {
       piece.setStatusUpdatedDate(new Date());
     }
-    piece.setReceivingStatus(holder.getReceivingStatus());
-    piece.setClaimingInterval(holder.getClaimingInterval());
-    piece.setInternalNote(holder.getInternalNote());
-    piece.setExternalNote(holder.getExternalNote());
+    piece.setReceivingStatus(newStatus);
     return isStatusChanged;
   }
 

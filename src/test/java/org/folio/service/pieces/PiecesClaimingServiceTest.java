@@ -28,10 +28,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.Spy;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -58,10 +56,11 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_FIND_PIECES_WITH_LATE_STATUS_TO_PROCESS;
 import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_SEND_CLAIMS_PIECE_IDS_ARE_EMPTY;
 import static org.folio.rest.core.exceptions.ErrorCodes.UNABLE_TO_GENERATE_CLAIMS_FOR_ORG_NO_INTEGRATION_DETAILS;
+import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_PERMISSIONS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.eq;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -181,6 +180,7 @@ public class PiecesClaimingServiceTest {
     when(purchaseOrderStorageService.getPurchaseOrderById(any(), any())).thenReturn(Future.succeededFuture(new PurchaseOrder().withVendor("vendorId")));
     when(organizationService.getVendorById(any(), any())).thenReturn(Future.succeededFuture(new Organization().withId("vendorId").withIsVendor(true)));
     when(pieceUpdateFlowManager.updatePiecesStatuses(any(), any(), any(), any(), any(), any())).thenReturn(Future.succeededFuture());
+    when(pieceUpdateFlowManager.isOperationRestricted(any(), any())).thenReturn(Future.succeededFuture());
     when(restClient.post(eq(resourcesPath(DATA_EXPORT_SPRING_CREATE_JOB)), any(), any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("status", "CREATED")));
     when(restClient.postEmptyResponse(any(), any(), any())).thenReturn(Future.succeededFuture());
 
@@ -288,6 +288,7 @@ public class PiecesClaimingServiceTest {
     when(purchaseOrderStorageService.getPurchaseOrderById(any(), any())).thenReturn(Future.succeededFuture(new PurchaseOrder().withVendor("vendorId")));
     when(organizationService.getVendorById(any(), any())).thenReturn(Future.succeededFuture(new Organization().withId("vendorId").withCode("VENDOR").withIsVendor(true)));
     when(pieceUpdateFlowManager.updatePiecesStatuses(any(), any(), any(), any(), any(), any())).thenReturn(Future.succeededFuture());
+    when(pieceUpdateFlowManager.isOperationRestricted(any(), any())).thenReturn(Future.succeededFuture());
     when(restClient.post(eq(resourcesPath(DATA_EXPORT_SPRING_CREATE_JOB)), any(), any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("status", "CREATED")));
     when(restClient.postEmptyResponse(any(), any(), any())).thenReturn(Future.succeededFuture());
 
@@ -313,6 +314,7 @@ public class PiecesClaimingServiceTest {
     when(purchaseOrderStorageService.getPurchaseOrderById(any(), any())).thenReturn(Future.succeededFuture(new PurchaseOrder().withVendor("vendorId")));
     when(organizationService.getVendorById(any(), any())).thenReturn(Future.succeededFuture(new Organization().withId("vendorId").withCode("VENDOR").withIsVendor(true)));
     when(pieceUpdateFlowManager.updatePiecesStatuses(any(), any(), any(), any(), any(), any())).thenReturn(Future.succeededFuture());
+    when(pieceUpdateFlowManager.isOperationRestricted(any(), any())).thenReturn(Future.succeededFuture());
     when(restClient.post(eq(resourcesPath(DATA_EXPORT_SPRING_CREATE_JOB)), any(), any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("status", "CREATED")));
     when(restClient.postEmptyResponse(any(), any(), any())).thenReturn(Future.succeededFuture());
 
@@ -357,6 +359,7 @@ public class PiecesClaimingServiceTest {
     });
 
     when(pieceUpdateFlowManager.updatePiecesStatuses(any(), any(), any(), any(), any(), any())).thenReturn(Future.succeededFuture());
+    when(pieceUpdateFlowManager.isOperationRestricted(any(), any())).thenReturn(Future.succeededFuture());
     when(restClient.post(eq(resourcesPath(DATA_EXPORT_SPRING_CREATE_JOB)), any(), any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("status", "CREATED")));
     when(restClient.postEmptyResponse(any(), any(), any())).thenReturn(Future.succeededFuture());
 
@@ -410,6 +413,7 @@ public class PiecesClaimingServiceTest {
     });
 
     when(pieceUpdateFlowManager.updatePiecesStatuses(any(), any(), any(), any(), any(), any())).thenReturn(Future.succeededFuture());
+    when(pieceUpdateFlowManager.isOperationRestricted(any(), any())).thenReturn(Future.succeededFuture());
     when(restClient.post(eq(resourcesPath(DATA_EXPORT_SPRING_CREATE_JOB)), any(), any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("status", "CREATED")));
     when(restClient.postEmptyResponse(any(), any(), any())).thenReturn(Future.succeededFuture());
 
@@ -428,6 +432,34 @@ public class PiecesClaimingServiceTest {
         assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.get(3).getStatus());
         assertEquals("pieceId5", copiedSortedResults.get(4).getPieceId());
         assertEquals(ClaimingPieceResult.Status.SUCCESS, copiedSortedResults.get(4).getStatus());
+        testContext.completeNow();
+      })));
+  }
+
+  @Test
+  void testSendClaims_restrictedByAcqUnitsForOneOfOrganizations(VertxTestContext testContext) {
+    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1", "pieceId2")).withClaimingInterval(1);
+    mockExportConfigs("CLAIMS_vendorId1", "CLAIMS_vendorId2");
+
+    when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of(
+      new Piece().withId("pieceId1").withPoLineId("poLineId1").withReceivingStatus(Piece.ReceivingStatus.LATE),
+      new Piece().withId("pieceId2").withPoLineId("poLineId2").withReceivingStatus(Piece.ReceivingStatus.LATE)
+    )));
+    when(purchaseOrderLineService.getOrderLineById(any(), any())).thenAnswer(invocation ->
+      Future.succeededFuture(new PoLine().withPurchaseOrderId(invocation.getArgument(0).equals("poLineId1") ? "orderId1" : "orderId2")));
+    when(purchaseOrderStorageService.getPurchaseOrderById(any(), any())).thenAnswer(invocation ->
+      Future.succeededFuture(new PurchaseOrder().withVendor(invocation.getArgument(0).equals("orderId1") ? "vendorId1" : "vendorId2")));
+    when(organizationService.getVendorById(any(), any())).thenAnswer(invocation ->
+      Future.succeededFuture(new Organization().withId(invocation.getArgument(0)).withCode(invocation.getArgument(0)).withIsVendor(true)));
+    when(pieceUpdateFlowManager.isOperationRestricted(any(), any()))
+      .thenReturn(Future.failedFuture(new HttpException(403, USER_HAS_NO_PERMISSIONS)));
+
+    piecesClaimingService.sendClaims(claimingCollection, requestContext)
+      .onComplete(testContext.failing(throwable -> testContext.verify(() -> {
+        Assertions.assertInstanceOf(HttpException.class, throwable);
+        assertEquals(USER_HAS_NO_PERMISSIONS.getCode(), ((HttpException) throwable).getErrors().getErrors().getFirst().getCode());
+        verify(pieceUpdateFlowManager).isOperationRestricted(argThat(ids -> ids.containsAll(List.of("pieceId1", "pieceId2"))), any());
+        verifyNoClaimSent();
         testContext.completeNow();
       })));
   }
@@ -583,6 +615,7 @@ public class PiecesClaimingServiceTest {
     when(purchaseOrderStorageService.getPurchaseOrderById(any(), any())).thenReturn(Future.succeededFuture(new PurchaseOrder().withVendor("vendorId")));
     when(organizationService.getVendorById(any(), any())).thenReturn(Future.succeededFuture(new Organization().withId("vendorId").withCode("VENDOR").withIsVendor(true)));
     when(pieceUpdateFlowManager.updatePiecesStatuses(any(), any(), any(), any(), any(), any())).thenReturn(Future.succeededFuture());
+    when(pieceUpdateFlowManager.isOperationRestricted(any(), any())).thenReturn(Future.succeededFuture());
     when(restClient.post(eq(resourcesPath(DATA_EXPORT_SPRING_CREATE_JOB)), any(), any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("status", "CREATED")));
   }
 

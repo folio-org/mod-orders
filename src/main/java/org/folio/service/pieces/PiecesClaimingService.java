@@ -97,7 +97,9 @@ public class PiecesClaimingService {
         return resolveConfigs(claimPieces, requestContext)
           .compose(claimConfigs -> {
             validateConfigs(claimingCollection, claimConfigs);
-            return updatePiecesAndCreateJobs(claimingCollection, claimPieces, claimConfigs.claimJobs(), requestContext);
+            var latePieceIds = claimPieces.stream().map(ClaimPiece::pieceId).distinct().toList();
+            return pieceUpdateFlowManager.isOperationRestricted(latePieceIds, requestContext)
+              .compose(v -> updatePiecesAndCreateJobs(claimingCollection, claimPieces, claimConfigs.claimJobs(), requestContext));
           });
       })
       .onFailure(t -> log.error("sendClaims:: Failed send claims: {}", JsonObject.mapFrom(claimingCollection).encodePrettily(), t));
