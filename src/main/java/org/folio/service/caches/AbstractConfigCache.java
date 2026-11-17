@@ -24,10 +24,16 @@ public class AbstractConfigCache {
                                     BiFunction<RequestEntry, RequestContext, Future<T>> configExtractor,
                                     boolean byPassCache, RequestContext requestContext) {
     var requestEntry = new RequestEntry(url).withQuery(query).withOffset(0).withLimit(Integer.MAX_VALUE);
+    return cacheData(requestEntry, cache, configExtractor, byPassCache, requestContext);
+  }
+
+  protected <T> Future<T> cacheData(RequestEntry requestEntry, AsyncCache<String, T> cache,
+                                    BiFunction<RequestEntry, RequestContext, Future<T>> configExtractor,
+                                    boolean byPassCache, RequestContext requestContext) {
     var cacheKey = buildUniqueKey(requestEntry, requestContext);
     boolean cacheBypassRequested = isCacheBypassRequested(requestContext.getHeaders());
-    log.debug("loadSettingsData:: Loading setting data, url: '{}', query: '{}', bypass-cache mode: '{}', cache-bypass header: '{}'",
-      url, query, byPassCache, cacheBypassRequested);
+    log.debug("loadSettingsData:: Loading setting data, cacheKey: '{}', bypass-cache mode: '{}', cache-bypass header: '{}'",
+      cacheKey, byPassCache, cacheBypassRequested);
     if (byPassCache || cacheBypassRequested) {
       return extractData(configExtractor, requestContext, requestEntry);
     }
